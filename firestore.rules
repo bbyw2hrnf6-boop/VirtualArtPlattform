@@ -6,13 +6,18 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.keys().hasOnly([
-          'title', 'artist', 'templateId', 'wall', 'floor', 'lighting',
+          'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling', 'lighting',
           'decor', 'artworks', 'coverSrc', 'ownerId', 'publishedAt', 'expiresAt', 'schemaVersion'
         ])
         && request.resource.data.title is string
         && request.resource.data.title.size() <= 100
         && request.resource.data.artist is string
         && request.resource.data.artist.size() <= 100
+        && request.resource.data.templateId in ['white-cube', 'nocturne', 'pavilion']
+        && request.resource.data.wall in ['chalk', 'warm', 'travertine', 'linen', 'charcoal']
+        && request.resource.data.floor in ['concrete', 'oak', 'terrazzo', 'marble']
+        && request.resource.data.ceiling in ['gallery', 'warm', 'dark']
+        && request.resource.data.lighting in ['daylight', 'museum', 'evening']
         && request.resource.data.artworks is list
         && request.resource.data.artworks.size() <= 8
         && request.resource.data.decor is list

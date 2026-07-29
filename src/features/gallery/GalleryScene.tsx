@@ -128,13 +128,19 @@ function createDecor(item: DecorPlacement, selected: boolean) {
 
 function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: string) {
   const [w, d] = getTemplate(draft.templateId).dimensions;
-  const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]); const floorTexture = createSurfaceTexture(draft.floor, floorColors[draft.floor]); const ceilingTexture = createSurfaceTexture('chalk', '#e5e2da');
+  const ceilingFinish = draft.ceiling ?? 'gallery';
+  const ceilingProfiles = {
+    gallery: { surface: 'chalk' as const, color: '#e5e2da', roughness: .88, bump: .005, emissive: '#fff8e9', glow: .018 },
+    warm: { surface: 'warm' as const, color: '#9f8d73', roughness: .9, bump: .012, emissive: '#6c5841', glow: .026 },
+    dark: { surface: 'charcoal' as const, color: '#252724', roughness: .78, bump: .009, emissive: '#111310', glow: .04 }
+  }[ceilingFinish];
+  const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]); const floorTexture = createSurfaceTexture(draft.floor, floorColors[draft.floor]); const ceilingTexture = createSurfaceTexture(ceilingProfiles.surface, ceilingProfiles.color);
   const wallProfile = {
     chalk: { bump: .008, roughness: .84, clearcoat: .02 }, warm: { bump: .014, roughness: .88, clearcoat: .01 },
     travertine: { bump: .018, roughness: .72, clearcoat: .025 }, linen: { bump: .026, roughness: .94, clearcoat: 0 }, charcoal: { bump: .007, roughness: .76, clearcoat: .035 }
   }[draft.wall];
   const wall = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: wallTexture, bumpMap: wallTexture, bumpScale: wallProfile.bump, roughness: wallProfile.roughness, clearcoat: wallProfile.clearcoat, clearcoatRoughness: .82 });
-  const ceiling = new THREE.MeshPhysicalMaterial({ color: '#f3f0e8', map: ceilingTexture, bumpMap: ceilingTexture, bumpScale: .005, roughness: .88, emissive: '#fff8e9', emissiveIntensity: .018 });
+  const ceiling = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: ceilingTexture, bumpMap: ceilingTexture, bumpScale: ceilingProfiles.bump, roughness: ceilingProfiles.roughness, emissive: ceilingProfiles.emissive, emissiveIntensity: ceilingProfiles.glow });
   const floor = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: floorTexture, bumpMap: floorTexture, bumpScale: draft.floor === 'oak' ? .018 : draft.floor === 'marble' ? .0025 : .018, roughness: draft.floor === 'marble' ? .31 : draft.floor === 'oak' ? .58 : .8, metalness: draft.floor === 'marble' ? .025 : .01, clearcoat: draft.floor === 'marble' ? .32 : .018, clearcoatRoughness: draft.floor === 'marble' ? .38 : .82 });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floor); floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; scene.add(floorMesh);
   const addWall = (geometry: THREE.BufferGeometry, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0], material: THREE.Material = wall) => { const mesh = new THREE.Mesh(geometry, material); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; scene.add(mesh); };
@@ -229,42 +235,30 @@ function createFirstPersonWalk(camera: THREE.PerspectiveCamera, canvas: HTMLCanv
 
 type WalkController = ReturnType<typeof createFirstPersonWalk>;
 
-function createCinematicIntro(camera: THREE.PerspectiveCamera, points: THREE.Vector3[], lookTarget: THREE.Vector3, navigation: WalkController, element: HTMLElement, onComplete?: () => void, labelText = 'Entering exhibition') {
-  const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', .42); const duration = THREE.MathUtils.clamp(curve.getLength() * 430, 5000, 7200); const startedAt = performance.now(); let complete = false;
-  const position = new THREE.Vector3(); const ahead = new THREE.Vector3(); const cinematicLook = new THREE.Vector3();
-  const overlay = document.createElement('div'); overlay.className = 'cinematic-intro'; const copy = document.createElement('div'); const label = document.createElement('span'); const line = document.createElement('i'); const skip = document.createElement('button'); label.textContent = labelText; skip.textContent = 'Skip intro'; copy.append(label, line); overlay.append(copy, skip); element.appendChild(overlay); navigation.setEnabled(false);
-  const finish = () => { if (complete) return; complete = true; camera.position.copy(points[points.length - 1]); navigation.lookAt(lookTarget); navigation.setEnabled(true); overlay.classList.add('is-finished'); window.setTimeout(() => overlay.remove(), 450); onComplete?.(); };
-  const update = () => { if (complete) return; if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { finish(); return; } const raw = Math.min(1, (performance.now() - startedAt) / duration); const eased = raw * raw * raw * (raw * (raw * 6 - 15) + 10); const lookAheadAt = Math.min(.995, eased + .035); curve.getPointAt(eased, position); curve.getPointAt(lookAheadAt, ahead); cinematicLook.copy(ahead).lerp(lookTarget, .24 + raw * .2); camera.position.copy(position); camera.lookAt(cinematicLook); line.style.transform = `scaleX(${raw})`; if (raw >= 1) finish(); };
+type CinematicTour = { positions: THREE.Vector3[]; looks: THREE.Vector3[]; finalLook: THREE.Vector3 };
+
+function createCinematicIntro(camera: THREE.PerspectiveCamera, tour: CinematicTour, navigation: WalkController, element: HTMLElement, onComplete?: () => void, labelText = 'Private view', titleText = 'Entering exhibition') {
+  const curve = new THREE.CatmullRomCurve3(tour.positions, false, 'centripetal', .38); const lookCurve = new THREE.CatmullRomCurve3(tour.looks, false, 'centripetal', .38); const desktopDuration = THREE.MathUtils.clamp(curve.getLength() * 410, 6200, 8400); const duration = innerWidth < 620 ? Math.min(desktopDuration, 6400) : desktopDuration; const startedAt = performance.now(); const baseFov = camera.fov; let complete = false; let phaseIndex = -1;
+  const position = new THREE.Vector3(); const cinematicLook = new THREE.Vector3(); const phases = ['Arrival', 'The architecture', 'The collection', 'Your visit'];
+  const overlay = document.createElement('div'); overlay.className = 'cinematic-intro'; overlay.setAttribute('aria-label', 'Cinematic gallery introduction'); const copy = document.createElement('div'); copy.className = 'cinematic-copy'; const label = document.createElement('span'); const title = document.createElement('strong'); const phase = document.createElement('small'); phase.setAttribute('aria-live', 'polite'); const line = document.createElement('i'); const skip = document.createElement('button'); skip.type = 'button'; skip.setAttribute('aria-label', 'Skip the gallery introduction and enter now'); label.textContent = labelText; title.textContent = titleText; phase.textContent = phases[0]; skip.textContent = 'Enter now'; copy.append(label, title, phase, line); overlay.append(copy, skip); element.appendChild(overlay); navigation.setEnabled(false);
+  const finish = () => { if (complete) return; complete = true; camera.fov = baseFov; camera.updateProjectionMatrix(); camera.position.copy(tour.positions[tour.positions.length - 1]); navigation.lookAt(tour.finalLook); navigation.setEnabled(true); overlay.classList.add('is-finished'); window.setTimeout(() => overlay.remove(), 650); onComplete?.(); };
+  const update = () => { if (complete) return; if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { finish(); return; } const raw = Math.min(1, (performance.now() - startedAt) / duration); const eased = raw * raw * raw * (raw * (raw * 6 - 15) + 10); curve.getPointAt(eased, position); lookCurve.getPointAt(eased, cinematicLook); camera.position.copy(position); camera.lookAt(cinematicLook); camera.fov = baseFov + Math.sin(raw * Math.PI) * 2.2; camera.updateProjectionMatrix(); const nextPhase = Math.min(phases.length - 1, Math.floor(raw * phases.length)); if (nextPhase !== phaseIndex) { phaseIndex = nextPhase; phase.textContent = phases[nextPhase]; } line.style.transform = `scaleX(${raw})`; overlay.style.setProperty('--cinematic-progress', String(raw)); if (raw >= 1) finish(); };
   skip.addEventListener('click', finish);
   return { update, skip: finish, isComplete: () => complete, dispose: () => { skip.removeEventListener('click', finish); overlay.remove(); } };
 }
 
-function galleryIntroPoints(templateId: GalleryDraft['templateId'], w: number, d: number) {
-  const finish = new THREE.Vector3(0, 1.68, d / 2 - 1);
-  if (templateId === 'pavilion') return [
-    new THREE.Vector3(0, 3.55, d / 2 - .8),
-    new THREE.Vector3(-w * .3, 2.8, d * .18),
-    new THREE.Vector3(-w * .32, 2.45, -d * .31),
-    new THREE.Vector3(-w * .32, 2.15, d * .08),
-    new THREE.Vector3(-w * .18, 1.9, d * .36),
-    finish
-  ];
-  if (templateId === 'nocturne') return [
-    new THREE.Vector3(0, 3.25, d / 2 - .8),
-    new THREE.Vector3(-w * .28, 2.55, d * .08),
-    new THREE.Vector3(-w * .2, 2.18, -d * .33),
-    new THREE.Vector3(w * .23, 2.05, -d * .25),
-    new THREE.Vector3(w * .18, 1.85, d * .28),
-    finish
-  ];
-  return [
-    new THREE.Vector3(0, 3.4, d / 2 - .8),
-    new THREE.Vector3(-w * .27, 2.6, d * .06),
-    new THREE.Vector3(-w * .12, 2.2, -d * .34),
-    new THREE.Vector3(w * .27, 2, -d * .18),
-    new THREE.Vector3(w * .16, 1.82, d * .3),
-    finish
-  ];
+function galleryIntroTour(draft: GalleryDraft, w: number, d: number): CinematicTour {
+  const finish = new THREE.Vector3(0, 1.68, d / 2 - 1); const finalLook = new THREE.Vector3(0, 1.68, -1);
+  const artworkLooks = draft.artworks.slice(0, 5).map((artwork) => { const [x, y, z] = WALLS[artwork.wall].position(artwork.x, artwork.y, w, d); return new THREE.Vector3(x, y, z); });
+  const focus = (index: number, fallback: THREE.Vector3) => artworkLooks.length ? artworkLooks[index % artworkLooks.length] : fallback;
+  if (draft.templateId === 'pavilion') {
+    const positions = [new THREE.Vector3(0, 3.5, d / 2 - .8), new THREE.Vector3(-w * .31, 2.75, d * .2), new THREE.Vector3(-w * .32, 2.35, -d * .3), new THREE.Vector3(0, 2.25, -d * .36), new THREE.Vector3(w * .32, 2.3, -d * .26), new THREE.Vector3(w * .31, 2, d * .24), finish];
+    const looks = [new THREE.Vector3(0, 1.8, -.5), focus(0, new THREE.Vector3(-w * .18, 1.9, -d / 2)), focus(1, new THREE.Vector3(0, 1.9, -.5)), focus(2, new THREE.Vector3(w * .2, 1.9, -d / 2)), focus(3, new THREE.Vector3(w / 2, 1.8, 0)), focus(4, new THREE.Vector3(0, 1.75, -.5)), finalLook]; return { positions, looks, finalLook };
+  }
+  const height = draft.templateId === 'nocturne' ? 3.15 : 3.35;
+  const positions = [new THREE.Vector3(0, height, d / 2 - .8), new THREE.Vector3(-w * .29, 2.55, d * .14), new THREE.Vector3(-w * .27, 2.2, -d * .31), new THREE.Vector3(0, 2.05, -d * .38), new THREE.Vector3(w * .27, 2.1, -d * .29), new THREE.Vector3(w * .28, 1.9, d * .2), finish];
+  const looks = [new THREE.Vector3(0, 1.8, -d * .15), focus(0, new THREE.Vector3(-w / 2, 1.8, -d * .1)), focus(1, new THREE.Vector3(0, 1.9, -d / 2)), focus(2, new THREE.Vector3(w * .2, 1.9, -d / 2)), focus(3, new THREE.Vector3(w / 2, 1.8, 0)), focus(4, new THREE.Vector3(0, 1.75, -d * .2)), finalLook];
+  return { positions, looks, finalLook };
 }
 
 export interface ArtworkFocusInfo { id: string; title: string; artist: string; description?: string; year?: string; image?: string }
@@ -273,24 +267,24 @@ export type GalleryViewMode = 'walk' | 'overview';
 
 interface GallerySceneProps {
   draft: GalleryDraft; selectedId?: string; selectedDecorId?: string;
-  onSelect?: (id: string) => void; onSelectDecor?: (id: string) => void; visitor?: boolean; viewMode?: GalleryViewMode;
+  onSelect?: (id: string) => void; onSelectDecor?: (id: string) => void; onMoveDecor?: (id: string, x: number, z: number) => void; visitor?: boolean; viewMode?: GalleryViewMode;
   playIntro?: boolean; onIntroComplete?: () => void; onArtworkFocus?: (artwork: ArtworkFocusInfo | null) => void;
 }
 
-export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onSelectDecor, visitor = false, viewMode = 'walk', playIntro = false, onIntroComplete, onArtworkFocus }: GallerySceneProps) {
+export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, visitor = false, viewMode = 'walk', playIntro = false, onIntroComplete, onArtworkFocus }: GallerySceneProps) {
   const host = useRef<HTMLDivElement>(null); const introPlayed = useRef(false);
   useEffect(() => {
     if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); const template = getTemplate(draft.templateId);
     const walk = visitor && viewMode === 'walk'; const camera = new THREE.PerspectiveCamera(walk ? 62 : 48, 1, .1, 70); camera.position.set(...template.camera);
     let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.03; element.appendChild(renderer.domElement);
     const controls = walk ? null : new OrbitControls(camera, renderer.domElement); if (controls) { controls.enableDamping = true; controls.target.set(0, 1.6, -1.5); controls.maxPolarAngle = Math.PI / 2 - .03; controls.minDistance = 2.1; controls.maxDistance = visitor ? 18 : 15; controls.enablePan = false; controls.autoRotate = visitor; controls.autoRotateSpeed = .38; }
-    const { w, d, decorObjects, floorMesh } = buildRoom(scene, draft, selectedDecorId); const installedLights = addLighting(scene, draft, w, d); element.dataset.roof = 'installed'; element.dataset.artLights = String(installedLights); element.dataset.wall = draft.wall; element.dataset.floor = draft.floor;
+    const { w, d, decorObjects, floorMesh } = buildRoom(scene, draft, selectedDecorId); const installedLights = addLighting(scene, draft, w, d); element.dataset.roof = 'installed'; element.dataset.ceiling = draft.ceiling ?? 'gallery'; element.dataset.artLights = String(installedLights); element.dataset.wall = draft.wall; element.dataset.floor = draft.floor;
     const roomBounds = { minX: -w / 2 + .45, maxX: w / 2 - .45, minZ: -d / 2 + .45, maxZ: d / 2 - .45 };
     if (walk) camera.position.set(0, 1.68, d / 2 - 1);
     const dividerCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => { if (Math.abs(next.x) > PAVILION_DIVIDER_WIDTH / 2 + .35 || Math.abs(next.z + .5) > .4) return; next.z = previous.z > -.5 ? -.09 : -.91; } : undefined;
     const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => roomBounds, dividerCollision) : null; const finalLook = new THREE.Vector3(0, 1.68, -1); if (navigation) navigation.lookAt(finalLook);
     const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({ color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide })); walkMarker.rotation.x = -Math.PI / 2; walkMarker.position.y = .018; walkMarker.visible = false; if (walk) scene.add(walkMarker);
-    let intro = navigation && playIntro && !introPlayed.current ? createCinematicIntro(camera, galleryIntroPoints(draft.templateId, w, d), finalLook, navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }) : null;
+    let intro = navigation && playIntro && !introPlayed.current ? createCinematicIntro(camera, galleryIntroTour(draft, w, d), navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }, 'Private view', draft.title) : null;
     const artworkObjects: THREE.Object3D[] = []; const artworkById = new Map(draft.artworks.map((artwork) => [artwork.id, artwork])); let focusedArtwork: THREE.Object3D | null = null; let focusedArtworkId: string | null = null;
     draft.artworks.forEach((artwork) => {
       const texture = new THREE.TextureLoader().load(artwork.src); texture.colorSpace = THREE.SRGBColorSpace; const height = 1.5 * artwork.scale; const width = height * artwork.aspect;
@@ -299,23 +293,36 @@ export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onS
       const canvas = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshStandardMaterial({ map: texture, roughness: .72 })); canvas.position.z = .041; group.add(frame, canvas);
       const config = WALLS[artwork.wall]; const [px, py, pz] = config.position(artwork.x, artwork.y, w, d); group.position.set(px, py, pz); group.rotation.set(...config.rotation); group.traverse((item) => { item.userData.artworkId = artwork.id; }); scene.add(group); artworkObjects.push(group);
     });
-    const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
+    const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2(); let draggedDecor: THREE.Group | null = null; let dragPointerId = -1; let pointerStartX = 0; let pointerStartY = 0; let pointerTravel = 0; let suppressFloorClick = false;
     const setPointer = (event: PointerEvent) => { const box = renderer.domElement.getBoundingClientRect(); pointer.set(((event.clientX - box.left) / box.width) * 2 - 1, -((event.clientY - box.top) / box.height) * 2 + 1); raycaster.setFromCamera(pointer, camera); };
+    const editorPointerDown = (event: PointerEvent) => {
+      if (visitor || event.button !== 0) return; pointerStartX = event.clientX; pointerStartY = event.clientY; pointerTravel = 0; setPointer(event);
+      const decorId = raycaster.intersectObjects(decorObjects, true)[0]?.object.userData.decorId as string | undefined; if (!decorId) return;
+      draggedDecor = decorObjects.find((item) => item.userData.decorId === decorId) ?? null; if (!draggedDecor) return; dragPointerId = event.pointerId; if (controls) controls.enabled = false; renderer.domElement.classList.add('is-dragging-object'); if (event.isTrusted) renderer.domElement.setPointerCapture(event.pointerId);
+    };
+    const editorPointerMove = (event: PointerEvent) => {
+      if (visitor) return; pointerTravel = Math.max(pointerTravel, Math.hypot(event.clientX - pointerStartX, event.clientY - pointerStartY)); if (!draggedDecor || event.pointerId !== dragPointerId) return;
+      setPointer(event); const floorHit = raycaster.intersectObject(floorMesh, false)[0]; if (!floorHit) return; draggedDecor.position.x = THREE.MathUtils.clamp(floorHit.point.x, roomBounds.minX, roomBounds.maxX); draggedDecor.position.z = THREE.MathUtils.clamp(floorHit.point.z, roomBounds.minZ, roomBounds.maxZ); suppressFloorClick = true;
+    };
+    const editorPointerUp = (event: PointerEvent) => {
+      if (visitor || event.pointerId !== dragPointerId || !draggedDecor) { if (!visitor) suppressFloorClick = pointerTravel > 5; return; }
+      const decorId = draggedDecor.userData.decorId as string; const { x, z } = draggedDecor.position; renderer.domElement.classList.remove('is-dragging-object'); if (renderer.domElement.hasPointerCapture(event.pointerId)) renderer.domElement.releasePointerCapture(event.pointerId); if (controls) controls.enabled = true; draggedDecor = null; dragPointerId = -1; suppressFloorClick = true; onSelectDecor?.(decorId); onMoveDecor?.(decorId, x, z);
+    };
     const handlePointer = (event: PointerEvent) => {
       setPointer(event);
-      if (!visitor) { const hit = raycaster.intersectObjects([...artworkObjects, ...decorObjects], true)[0]; const artworkId = hit?.object.userData.artworkId as string | undefined; const decorId = hit?.object.userData.decorId as string | undefined; if (artworkId) onSelect?.(artworkId); else if (decorId) onSelectDecor?.(decorId); return; }
+      if (!visitor) { const hit = raycaster.intersectObjects([...artworkObjects, ...decorObjects], true)[0]; const artworkId = hit?.object.userData.artworkId as string | undefined; const decorId = hit?.object.userData.decorId as string | undefined; if (artworkId) onSelect?.(artworkId); else if (decorId) onSelectDecor?.(decorId); else if (selectedDecorId && !suppressFloorClick) { const floorHit = raycaster.intersectObject(floorMesh, false)[0]; if (floorHit) onMoveDecor?.(selectedDecorId, THREE.MathUtils.clamp(floorHit.point.x, roomBounds.minX, roomBounds.maxX), THREE.MathUtils.clamp(floorHit.point.z, roomBounds.minZ, roomBounds.maxZ)); } suppressFloorClick = false; return; }
       if (!walk || !navigation?.consumeClick()) return;
       const artHit = raycaster.intersectObjects(artworkObjects, true)[0]; const artworkId = artHit?.object.userData.artworkId as string | undefined;
       if (artworkId) { const artwork = artworkById.get(artworkId); if (!artwork) return; focusedArtwork = artworkObjects.find((item) => item.userData.artworkId === artworkId) ?? artHit.object; focusedArtworkId = artworkId; onArtworkFocus?.({ id: artwork.id, title: artwork.title, artist: draft.artist, description: artwork.description, year: artwork.year, image: artwork.src }); return; }
       const floorHit = raycaster.intersectObject(floorMesh, false)[0]; if (floorHit) { focusedArtwork = null; focusedArtworkId = null; onArtworkFocus?.(null); navigation.moveTo(floorHit.point); walkMarker.position.set(floorHit.point.x, .018, floorHit.point.z); walkMarker.visible = true; }
     };
-    renderer.domElement.addEventListener('click', handlePointer);
+    renderer.domElement.addEventListener('pointerdown', editorPointerDown); renderer.domElement.addEventListener('pointermove', editorPointerMove); renderer.domElement.addEventListener('pointerup', editorPointerUp); renderer.domElement.addEventListener('pointercancel', editorPointerUp); renderer.domElement.addEventListener('click', handlePointer);
     let frame = 0; const resize = () => { const width = element.clientWidth; const height = element.clientHeight; renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); }; const observer = new ResizeObserver(resize); observer.observe(element); resize();
     const cameraDirection = new THREE.Vector3(); const artworkDirection = new THREE.Vector3(); const artworkPosition = new THREE.Vector3();
     const animate = () => { intro?.update(); navigation?.update(); controls?.update(); if (!visitor) artworkObjects.forEach((object) => { if (object.userData.wall === 'south') object.visible = camera.position.z < d / 2 - .12; }); if (walkMarker.visible) { walkMarker.rotation.z += .008; const material = walkMarker.material as THREE.MeshBasicMaterial; material.opacity = .5 + Math.sin(performance.now() * .006) * .25; if (!navigation?.hasDestination()) walkMarker.visible = false; } if (focusedArtwork && focusedArtworkId) { camera.getWorldDirection(cameraDirection); focusedArtwork.getWorldPosition(artworkPosition); artworkDirection.subVectors(artworkPosition, camera.position); const distance = artworkDirection.length(); const facing = cameraDirection.dot(artworkDirection.normalize()); if (facing < .48 || distance > 8) { focusedArtwork = null; focusedArtworkId = null; onArtworkFocus?.(null); } } element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); intro = null; navigation?.dispose(); controls?.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); if (material.bumpMap && material.bumpMap !== material.map) material.bumpMap.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.domElement.remove(); };
-  }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, visitor, viewMode, playIntro, onIntroComplete, onArtworkFocus]);
-  return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'}`} ref={host}><div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD / arrows to walk · Drag to look' : 'Overview · Drag to orbit · Scroll to zoom' : 'Drag to look · Scroll to move'}</div></div>;
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('pointerdown', editorPointerDown); renderer.domElement.removeEventListener('pointermove', editorPointerMove); renderer.domElement.removeEventListener('pointerup', editorPointerUp); renderer.domElement.removeEventListener('pointercancel', editorPointerUp); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); intro = null; navigation?.dispose(); controls?.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); if (material.bumpMap && material.bumpMap !== material.map) material.bumpMap.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.domElement.remove(); };
+  }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, visitor, viewMode, playIntro, onIntroComplete, onArtworkFocus]);
+  return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'} ${selectedDecorId ? 'gallery-scene--placing' : ''}`} ref={host}><div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD / arrows to walk · Drag to look' : 'Overview · Drag to orbit · Scroll to zoom' : selectedDecorId ? 'Drag object · Click floor to place · Scroll to move' : 'Drag to look · Scroll to move'}</div></div>;
 }
 
 export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroComplete, onArtworkFocus }: { viewMode?: GalleryViewMode; playIntro?: boolean; onIntroComplete?: () => void; onArtworkFocus?: (artwork: ArtworkFocusInfo | null) => void }) {
@@ -355,7 +362,8 @@ export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroCo
           new THREE.Vector3(centerX + radiusX, finalPosition.y + .48, centerZ + radiusZ),
           finalPosition
         ];
-        intro = createCinematicIntro(camera, tour, lookTarget, navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }, '360° gallery tour');
+        const tourLooks = [lookTarget.clone(), new THREE.Vector3(centerX, 2.2, centerZ - radiusZ), new THREE.Vector3(centerX + radiusX * .35, 2.1, centerZ), new THREE.Vector3(centerX, 2.15, centerZ + radiusZ), new THREE.Vector3(centerX - radiusX * .35, 2.05, centerZ), lookTarget.clone(), lookTarget.clone()];
+        intro = createCinematicIntro(camera, { positions: tour, looks: tourLooks, finalLook: lookTarget }, navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }, 'Featured exhibition', 'Threshold — Danny Hirsch');
       } else navigation?.setEnabled(true);
       controls?.update();
     }, undefined, () => { element.dataset.error = 'true'; modelErrorCleanup = showSceneError(element, 'The exhibition model could not be loaded. Please check your connection and try again.'); });
