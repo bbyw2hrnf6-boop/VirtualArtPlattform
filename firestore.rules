@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /galleries/{galleryId} {
+      allow read: if resource.data.expiresAt > request.time;
+      allow create: if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'title', 'artist', 'templateId', 'wall', 'floor', 'lighting',
+          'decor', 'artworks', 'ownerId', 'publishedAt', 'expiresAt', 'schemaVersion'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.artist is string
+        && request.resource.data.artist.size() <= 100
+        && request.resource.data.artworks is list
+        && request.resource.data.artworks.size() <= 8
+        && request.resource.data.decor is list
+        && request.resource.data.decor.size() <= 8
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt < request.time + duration.value(11, 'd');
+      allow update, delete: if false;
+    }
+  }
+}

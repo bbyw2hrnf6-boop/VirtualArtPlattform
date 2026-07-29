@@ -5,6 +5,15 @@ export type FloorFinish = 'concrete' | 'oak' | 'terrazzo';
 export type LightingPreset = 'daylight' | 'museum' | 'evening';
 export type DecorId = 'olive' | 'monstera' | 'arc-lamp' | 'pedestal';
 
+export interface DecorPlacement {
+  id: string;
+  type: DecorId;
+  x: number;
+  z: number;
+  rotation: number;
+  scale: number;
+}
+
 export interface Artwork {
   id: string;
   title: string;
@@ -23,7 +32,7 @@ export interface GalleryDraft {
   wall: WallFinish;
   floor: FloorFinish;
   lighting: LightingPreset;
-  decor: DecorId[];
+  decor: DecorPlacement[];
   artworks: Artwork[];
 }
 
