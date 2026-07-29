@@ -25,7 +25,7 @@ Push `main` to GitHub and enable **Settings → Pages → GitHub Actions**. The 
 - `public/assets/demo/` contains the reused, optimized Danny Hirsch Blender room.
 - `blender/templates/` contains exactly three editable `.blend` source blueprints; regenerate them with `blender --background --python blender/create_templates.py`.
 
-The editor intentionally exposes only three templates, three wall finishes, three floors, three lighting modes, and four decorative objects.
+The editor intentionally exposes only three templates, five curated wall finishes, four floors, three lighting modes, and four decorative objects.
 
 ## Visitor experience
 

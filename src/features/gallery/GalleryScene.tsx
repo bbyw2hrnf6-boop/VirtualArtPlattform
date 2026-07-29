@@ -17,16 +17,30 @@ const WALLS: Record<WallId, { position: (x: number, y: number, w: number, d: num
   'divider-back': { position: (x, y) => [x, y, -.605], rotation: [0, Math.PI, 0] }
 };
 const PAVILION_DIVIDER_WIDTH = 6.2;
-const wallColors = { chalk: '#dfdcd4', warm: '#ae9f8c', charcoal: '#292b29' };
+const wallColors = { chalk: '#dfdcd4', warm: '#ae9f8c', travertine: '#d7cbb6', linen: '#c8c0b3', charcoal: '#292b29' };
 const floorColors = { concrete: '#777672', oak: '#49382b', terrazzo: '#a7a299', marble: '#d8d4cb' };
+type SurfaceKind = GalleryDraft['wall'] | GalleryDraft['floor'];
+const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
+  marble: './assets/materials/carrara-marble.webp',
+  travertine: './assets/materials/roman-travertine.webp'
+};
 
-function createSurfaceTexture(kind: GalleryDraft['wall'] | GalleryDraft['floor'], base: string) {
+function createSurfaceTexture(kind: SurfaceKind, base: string) {
+  const asset = surfaceAssets[kind];
+  if (asset) {
+    const texture = new THREE.TextureLoader().load(asset); texture.colorSpace = THREE.SRGBColorSpace; texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = 8;
+    texture.repeat.set(kind === 'marble' ? 1.25 : 2.2, kind === 'marble' ? 1.25 : 1.8); return texture;
+  }
   const size = 512; const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
   const context = canvas.getContext('2d'); if (!context) throw new Error('Surface texture could not be created.');
   context.fillStyle = base; context.fillRect(0, 0, size, size);
   let seed = kind.split('').reduce((total, letter) => total + letter.charCodeAt(0), 17);
   const random = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
-  if (kind === 'oak') {
+  if (kind === 'linen') {
+    for (let x = 0; x < size; x += 4) { context.fillStyle = x % 8 ? '#ffffff12' : '#332d2515'; context.fillRect(x, 0, 1, size); }
+    for (let y = 0; y < size; y += 4) { context.fillStyle = y % 8 ? '#ffffff0e' : '#332d2512'; context.fillRect(0, y, size, 1); }
+    for (let fibre = 0; fibre < 1800; fibre++) { context.fillStyle = random() > .5 ? '#fffdf50d' : '#312c2610'; context.fillRect(random() * size, random() * size, .4 + random() * 1.2, .4 + random() * 2); }
+  } else if (kind === 'oak') {
     const rowHeight = 64;
     for (let row = 0; row < 8; row++) {
       const y = row * rowHeight; context.fillStyle = row % 2 ? '#f2c98d0b' : '#20140d12'; context.fillRect(0, y, size, rowHeight);
@@ -114,16 +128,21 @@ function createDecor(item: DecorPlacement, selected: boolean) {
 
 function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: string) {
   const [w, d] = getTemplate(draft.templateId).dimensions;
-  const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]); const floorTexture = createSurfaceTexture(draft.floor, floorColors[draft.floor]);
-  const wall = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: wallTexture, bumpMap: wallTexture, bumpScale: draft.wall === 'charcoal' ? .007 : .012, roughness: draft.wall === 'charcoal' ? .76 : .82, clearcoat: .035, clearcoatRoughness: .8 });
-  const floor = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: floorTexture, bumpMap: floorTexture, bumpScale: draft.floor === 'oak' ? .022 : draft.floor === 'marble' ? .009 : .03, roughness: draft.floor === 'marble' ? .26 : draft.floor === 'oak' ? .56 : .78, metalness: draft.floor === 'marble' ? .035 : .015, clearcoat: draft.floor === 'marble' ? .24 : .025, clearcoatRoughness: draft.floor === 'marble' ? .32 : .8 });
+  const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]); const floorTexture = createSurfaceTexture(draft.floor, floorColors[draft.floor]); const ceilingTexture = createSurfaceTexture('chalk', '#e5e2da');
+  const wallProfile = {
+    chalk: { bump: .008, roughness: .84, clearcoat: .02 }, warm: { bump: .014, roughness: .88, clearcoat: .01 },
+    travertine: { bump: .018, roughness: .72, clearcoat: .025 }, linen: { bump: .026, roughness: .94, clearcoat: 0 }, charcoal: { bump: .007, roughness: .76, clearcoat: .035 }
+  }[draft.wall];
+  const wall = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: wallTexture, bumpMap: wallTexture, bumpScale: wallProfile.bump, roughness: wallProfile.roughness, clearcoat: wallProfile.clearcoat, clearcoatRoughness: .82 });
+  const ceiling = new THREE.MeshPhysicalMaterial({ color: '#f3f0e8', map: ceilingTexture, bumpMap: ceilingTexture, bumpScale: .005, roughness: .88, emissive: '#fff8e9', emissiveIntensity: .018 });
+  const floor = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: floorTexture, bumpMap: floorTexture, bumpScale: draft.floor === 'oak' ? .018 : draft.floor === 'marble' ? .0025 : .018, roughness: draft.floor === 'marble' ? .31 : draft.floor === 'oak' ? .58 : .8, metalness: draft.floor === 'marble' ? .025 : .01, clearcoat: draft.floor === 'marble' ? .32 : .018, clearcoatRoughness: draft.floor === 'marble' ? .38 : .82 });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floor); floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; scene.add(floorMesh);
-  const addWall = (geometry: THREE.BufferGeometry, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]) => { const mesh = new THREE.Mesh(geometry, wall); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; scene.add(mesh); };
+  const addWall = (geometry: THREE.BufferGeometry, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0], material: THREE.Material = wall) => { const mesh = new THREE.Mesh(geometry, material); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; scene.add(mesh); };
   addWall(new THREE.PlaneGeometry(w, 4.8), [0, 2.4, -d / 2]);
   addWall(new THREE.PlaneGeometry(d, 4.8), [-w / 2, 2.4, 0], [0, Math.PI / 2, 0]);
   addWall(new THREE.PlaneGeometry(d, 4.8), [w / 2, 2.4, 0], [0, -Math.PI / 2, 0]);
   addWall(new THREE.PlaneGeometry(w, 4.8), [0, 2.4, d / 2], [0, Math.PI, 0]);
-  addWall(new THREE.PlaneGeometry(w, d), [0, 4.8, 0], [Math.PI / 2, 0, 0]);
+  addWall(new THREE.PlaneGeometry(w, d), [0, 4.8, 0], [Math.PI / 2, 0, 0], ceiling);
   if (draft.templateId === 'pavilion') {
     const divider = new THREE.Mesh(new THREE.BoxGeometry(PAVILION_DIVIDER_WIDTH, 4.1, .18), wall); divider.position.set(0, 2.05, -.5); divider.receiveShadow = true; scene.add(divider);
     const bench = new THREE.Mesh(new RoundedBoxGeometry(2.8, .42, .72, 5, .08), new THREE.MeshStandardMaterial({ color: '#26231f', roughness: .55 })); bench.position.set(0, .34, 3.15); bench.castShadow = true; scene.add(bench);
@@ -141,8 +160,8 @@ function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: numb
     evening: { bg: '#171416', hemi: .38, ambient: .16, key: 2.7, spot: 48, color: '#ffc987' }
   }[draft.lighting];
   scene.background = new THREE.Color(settings.bg);
-  scene.add(new THREE.AmbientLight(settings.color, settings.ambient), new THREE.HemisphereLight('#eef3ff', '#332d29', settings.hemi));
-  const main = new THREE.DirectionalLight(settings.color, settings.key); main.position.set(-3, 7, 5); main.castShadow = true; main.shadow.mapSize.set(1024, 1024); main.shadow.bias = -.0004; scene.add(main);
+  scene.add(new THREE.AmbientLight(settings.color, settings.ambient), new THREE.HemisphereLight('#eef3ff', '#706f69', settings.hemi));
+  const main = new THREE.DirectionalLight(settings.color, settings.key); main.position.set(-3, 7, 5); main.castShadow = true; main.shadow.mapSize.set(1536, 1536); main.shadow.bias = .00012; main.shadow.normalBias = .025; scene.add(main);
 
   const artworkTargets = draft.artworks.slice(0, 8).map((artwork) => {
     const [x, y, z] = WALLS[artwork.wall].position(artwork.x, artwork.y, w, d); const target = new THREE.Vector3(x, y, z);
@@ -163,10 +182,12 @@ function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: numb
   lightTargets.forEach(({ source, target }) => {
     const direction = target.clone().sub(source).normalize();
     const mount = new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .07, 24), fixtureMaterial); mount.position.set(source.x, 4.75, source.z);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.026, .026, .15, 14), fixtureMaterial); stem.position.set(source.x, 4.64, source.z);
+    const joint = new THREE.Mesh(new THREE.SphereGeometry(.075, 18, 12), fixtureMaterial); joint.position.set(source.x, 4.56, source.z);
     const head = new THREE.Mesh(new THREE.CylinderGeometry(.09, .14, .3, 24), fixtureMaterial); head.position.copy(source); head.quaternion.setFromUnitVectors(down, direction);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(.075, 16, 10), bulbMaterial); bulb.position.copy(source).addScaledVector(direction, .16);
     const spot = new THREE.SpotLight(settings.color, settings.spot, 12, .33, .72, 1.55); spot.position.copy(bulb.position); spot.target.position.copy(target); spot.castShadow = false;
-    scene.add(mount, head, bulb, spot, spot.target);
+    scene.add(mount, stem, joint, head, bulb, spot, spot.target);
   });
   return lightTargets.length;
 }
@@ -261,9 +282,9 @@ export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onS
   useEffect(() => {
     if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); const template = getTemplate(draft.templateId);
     const walk = visitor && viewMode === 'walk'; const camera = new THREE.PerspectiveCamera(walk ? 62 : 48, 1, .1, 70); camera.position.set(...template.camera);
-    let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; element.appendChild(renderer.domElement);
+    let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.03; element.appendChild(renderer.domElement);
     const controls = walk ? null : new OrbitControls(camera, renderer.domElement); if (controls) { controls.enableDamping = true; controls.target.set(0, 1.6, -1.5); controls.maxPolarAngle = Math.PI / 2 - .03; controls.minDistance = 2.1; controls.maxDistance = visitor ? 18 : 15; controls.enablePan = false; controls.autoRotate = visitor; controls.autoRotateSpeed = .38; }
-    const { w, d, decorObjects, floorMesh } = buildRoom(scene, draft, selectedDecorId); const installedLights = addLighting(scene, draft, w, d); element.dataset.roof = 'installed'; element.dataset.artLights = String(installedLights);
+    const { w, d, decorObjects, floorMesh } = buildRoom(scene, draft, selectedDecorId); const installedLights = addLighting(scene, draft, w, d); element.dataset.roof = 'installed'; element.dataset.artLights = String(installedLights); element.dataset.wall = draft.wall; element.dataset.floor = draft.floor;
     const roomBounds = { minX: -w / 2 + .45, maxX: w / 2 - .45, minZ: -d / 2 + .45, maxZ: d / 2 - .45 };
     if (walk) camera.position.set(0, 1.68, d / 2 - 1);
     const dividerCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => { if (Math.abs(next.x) > PAVILION_DIVIDER_WIDTH / 2 + .35 || Math.abs(next.z + .5) > .4) return; next.z = previous.z > -.5 ? -.09 : -.91; } : undefined;

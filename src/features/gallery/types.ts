@@ -1,6 +1,6 @@
 export type TemplateId = 'white-cube' | 'nocturne' | 'pavilion';
 export type WallId = 'north' | 'south' | 'west' | 'east' | 'divider-front' | 'divider-back';
-export type WallFinish = 'chalk' | 'warm' | 'charcoal';
+export type WallFinish = 'chalk' | 'warm' | 'travertine' | 'linen' | 'charcoal';
 export type FloorFinish = 'concrete' | 'oak' | 'terrazzo' | 'marble';
 export type LightingPreset = 'daylight' | 'museum' | 'evening';
 export type DecorId = 'olive' | 'monstera' | 'arc-lamp' | 'pedestal';
