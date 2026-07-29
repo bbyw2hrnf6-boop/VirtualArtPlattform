@@ -27,6 +27,10 @@ Push `main` to GitHub and enable **Settings → Pages → GitHub Actions**. The 
 
 The editor intentionally exposes only three templates, three wall finishes, three floors, three lighting modes, and four decorative objects.
 
+## Visitor experience
+
+Published exhibitions open with a short cinematic room introduction. Visitors can then walk with WASD or the arrow keys, drag to look around, or click a point on the floor to walk there automatically. Clicking an artwork opens its artist-supplied information card; the card closes when the visitor turns away. Walk mode uses an enclosed, fully finished room, while Overview mode provides an optional rotating presentation view.
+
 ## Firebase setup
 
 See `FIREBASE_SETUP.md`. The Spark-plan setup uses Firestore only. A scheduled GitHub Action removes expired gallery and artwork documents daily without Firebase Storage or paid Firestore TTL.

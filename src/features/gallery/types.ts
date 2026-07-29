@@ -18,6 +18,8 @@ export interface Artwork {
   id: string;
   assetId?: string;
   title: string;
+  year?: string;
+  description?: string;
   src: string;
   aspect: number;
   wall: WallId;
