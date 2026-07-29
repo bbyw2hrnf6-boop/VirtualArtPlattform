@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -130,17 +130,19 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
   const [w, d] = getTemplate(draft.templateId).dimensions;
   const ceilingFinish = draft.ceiling ?? 'gallery';
   const ceilingProfiles = {
-    gallery: { surface: 'chalk' as const, color: '#e5e2da', roughness: .88, bump: .005, emissive: '#fff8e9', glow: .018 },
-    warm: { surface: 'warm' as const, color: '#9f8d73', roughness: .9, bump: .012, emissive: '#6c5841', glow: .026 },
-    dark: { surface: 'charcoal' as const, color: '#252724', roughness: .78, bump: .009, emissive: '#111310', glow: .04 }
+    gallery: { surface: 'chalk' as const, color: '#e9e6df', roughness: .88, bump: .005, emissive: '#fffdf7', glow: .3 },
+    warm: { surface: 'warm' as const, color: '#a58d70', roughness: .9, bump: .012, emissive: '#d2ae80', glow: .22 },
+    dark: { surface: 'charcoal' as const, color: '#202320', roughness: .78, bump: .009, emissive: '#343834', glow: .075 }
   }[ceilingFinish];
   const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]); const floorTexture = createSurfaceTexture(draft.floor, floorColors[draft.floor]); const ceilingTexture = createSurfaceTexture(ceilingProfiles.surface, ceilingProfiles.color);
   const wallProfile = {
     chalk: { bump: .008, roughness: .84, clearcoat: .02 }, warm: { bump: .014, roughness: .88, clearcoat: .01 },
     travertine: { bump: .018, roughness: .72, clearcoat: .025 }, linen: { bump: .026, roughness: .94, clearcoat: 0 }, charcoal: { bump: .007, roughness: .76, clearcoat: .035 }
   }[draft.wall];
-  const wall = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: wallTexture, bumpMap: wallTexture, bumpScale: wallProfile.bump, roughness: wallProfile.roughness, clearcoat: wallProfile.clearcoat, clearcoatRoughness: .82 });
-  const ceiling = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: ceilingTexture, bumpMap: ceilingTexture, bumpScale: ceilingProfiles.bump, roughness: ceilingProfiles.roughness, emissive: ceilingProfiles.emissive, emissiveIntensity: ceilingProfiles.glow });
+  // Texture-matched emissive fill approximates indirect bounce light. It keeps
+  // one chosen wall finish visually consistent without flattening spotlights.
+  const wall = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: wallTexture, bumpMap: wallTexture, bumpScale: wallProfile.bump, roughness: wallProfile.roughness, clearcoat: wallProfile.clearcoat, clearcoatRoughness: .82, emissive: '#ffffff', emissiveMap: wallTexture, emissiveIntensity: .22 });
+  const ceiling = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: ceilingTexture, bumpMap: ceilingTexture, bumpScale: ceilingProfiles.bump, roughness: ceilingProfiles.roughness, emissive: ceilingProfiles.emissive, emissiveMap: ceilingTexture, emissiveIntensity: ceilingProfiles.glow });
   const floor = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: floorTexture, bumpMap: floorTexture, bumpScale: draft.floor === 'oak' ? .018 : draft.floor === 'marble' ? .0025 : .018, roughness: draft.floor === 'marble' ? .31 : draft.floor === 'oak' ? .58 : .8, metalness: draft.floor === 'marble' ? .025 : .01, clearcoat: draft.floor === 'marble' ? .32 : .018, clearcoatRoughness: draft.floor === 'marble' ? .38 : .82 });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floor); floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; scene.add(floorMesh);
   const addWall = (geometry: THREE.BufferGeometry, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0], material: THREE.Material = wall) => { const mesh = new THREE.Mesh(geometry, material); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; scene.add(mesh); };
@@ -148,7 +150,7 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
   addWall(new THREE.PlaneGeometry(d, 4.8), [-w / 2, 2.4, 0], [0, Math.PI / 2, 0]);
   addWall(new THREE.PlaneGeometry(d, 4.8), [w / 2, 2.4, 0], [0, -Math.PI / 2, 0]);
   addWall(new THREE.PlaneGeometry(w, 4.8), [0, 2.4, d / 2], [0, Math.PI, 0]);
-  addWall(new THREE.PlaneGeometry(w, d), [0, 4.8, 0], [Math.PI / 2, 0, 0], ceiling);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(w + .12, .16, d + .12), ceiling); roof.position.set(0, 4.88, 0); roof.receiveShadow = true; scene.add(roof);
   if (draft.templateId === 'pavilion') {
     const divider = new THREE.Mesh(new THREE.BoxGeometry(PAVILION_DIVIDER_WIDTH, 4.1, .18), wall); divider.position.set(0, 2.05, -.5); divider.receiveShadow = true; scene.add(divider);
     const bench = new THREE.Mesh(new RoundedBoxGeometry(2.8, .42, .72, 5, .08), new THREE.MeshStandardMaterial({ color: '#26231f', roughness: .55 })); bench.position.set(0, .34, 3.15); bench.castShadow = true; scene.add(bench);
@@ -161,13 +163,13 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
 
 function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: number) {
   const settings = {
-    daylight: { bg: '#d2d4d0', hemi: 1.45, ambient: .36, key: 2.6, spot: 38, color: '#fff8e9' },
-    museum: { bg: '#101210', hemi: .62, ambient: .22, key: 3.6, spot: 58, color: '#ffe6bd' },
-    evening: { bg: '#171416', hemi: .38, ambient: .16, key: 2.7, spot: 48, color: '#ffc987' }
+    daylight: { bg: '#d2d4d0', hemi: 1.1, ambient: .5, key: 2.25, spot: 38, color: '#fff8e9' },
+    museum: { bg: '#101210', hemi: .48, ambient: .44, key: 2.1, spot: 58, color: '#ffe6bd' },
+    evening: { bg: '#171416', hemi: .38, ambient: .34, key: 1.85, spot: 48, color: '#ffc987' }
   }[draft.lighting];
   scene.background = new THREE.Color(settings.bg);
-  scene.add(new THREE.AmbientLight(settings.color, settings.ambient), new THREE.HemisphereLight('#eef3ff', '#706f69', settings.hemi));
-  const main = new THREE.DirectionalLight(settings.color, settings.key); main.position.set(-3, 7, 5); main.castShadow = true; main.shadow.mapSize.set(1536, 1536); main.shadow.bias = .00012; main.shadow.normalBias = .025; scene.add(main);
+  scene.add(new THREE.AmbientLight('#fffdf8', settings.ambient), new THREE.HemisphereLight('#f4f2ea', '#d8d5cb', settings.hemi));
+  const main = new THREE.DirectionalLight(settings.color, settings.key); main.position.set(0, 7, 0); main.castShadow = true; main.shadow.mapSize.set(1536, 1536); main.shadow.bias = .00012; main.shadow.normalBias = .025; scene.add(main);
 
   const artworkTargets = draft.artworks.slice(0, 8).map((artwork) => {
     const [x, y, z] = WALLS[artwork.wall].position(artwork.x, artwork.y, w, d); const target = new THREE.Vector3(x, y, z);
@@ -181,7 +183,7 @@ function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: numb
     source.x = THREE.MathUtils.clamp(source.x, -w / 2 + .5, w / 2 - .5); source.z = THREE.MathUtils.clamp(source.z, -d / 2 + .5, d / 2 - .5);
     return { source, target };
   });
-  const lightTargets = artworkTargets.length ? artworkTargets : [-.27, 0, .27].map((ratio) => ({ source: new THREE.Vector3(w * ratio, 4.45, -d * .08), target: new THREE.Vector3(w * ratio, 1.55, -d / 2 + .05) }));
+  const lightTargets = artworkTargets.length ? artworkTargets : [-.27, 0, .27].map((ratio) => ({ source: new THREE.Vector3(w * ratio, 4.45, -d * .08), target: new THREE.Vector3(w * ratio, 0, -d * .08) }));
   const fixtureMaterial = new THREE.MeshStandardMaterial({ color: draft.lighting === 'daylight' ? '#deddd8' : '#171816', metalness: .72, roughness: .24 });
   const bulbMaterial = new THREE.MeshStandardMaterial({ color: '#fff7df', emissive: settings.color, emissiveIntensity: 3.2, roughness: .18 });
   const down = new THREE.Vector3(0, -1, 0);
@@ -271,7 +273,13 @@ interface GallerySceneProps {
   playIntro?: boolean; onIntroComplete?: () => void; onArtworkFocus?: (artwork: ArtworkFocusInfo | null) => void;
 }
 
-export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, visitor = false, viewMode = 'walk', playIntro = false, onIntroComplete, onArtworkFocus }: GallerySceneProps) {
+function sceneDraftKey(draft: GalleryDraft, visitor: boolean) {
+  const artworks = draft.artworks.map((artwork) => [artwork.id, artwork.aspect, artwork.wall, artwork.x, artwork.y, artwork.scale, visitor ? artwork.title : '', visitor ? artwork.year : '', visitor ? artwork.description : ''].join('~')).join('|');
+  const decor = draft.decor.map((item) => [item.id, item.type, item.x, item.z, item.rotation, item.scale].join('~')).join('|');
+  return [visitor ? 'visitor' : 'editor', visitor ? draft.title : '', visitor ? draft.artist : '', draft.templateId, draft.wall, draft.floor, draft.ceiling ?? 'gallery', draft.lighting, artworks, decor].join('||');
+}
+
+function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, visitor = false, viewMode = 'walk', playIntro = false, onIntroComplete, onArtworkFocus }: GallerySceneProps) {
   const host = useRef<HTMLDivElement>(null); const introPlayed = useRef(false);
   useEffect(() => {
     if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); const template = getTemplate(draft.templateId);
@@ -324,6 +332,14 @@ export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onS
   }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, visitor, viewMode, playIntro, onIntroComplete, onArtworkFocus]);
   return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'} ${selectedDecorId ? 'gallery-scene--placing' : ''}`} ref={host}><div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD / arrows to walk · Drag to look' : 'Overview · Drag to orbit · Scroll to zoom' : selectedDecorId ? 'Drag object · Click floor to place · Scroll to move' : 'Drag to look · Scroll to move'}</div></div>;
 }
+
+export const GalleryScene = memo(GallerySceneRenderer, (previous, next) =>
+  sceneDraftKey(previous.draft, previous.visitor ?? false) === sceneDraftKey(next.draft, next.visitor ?? false)
+  && previous.selectedId === next.selectedId && previous.selectedDecorId === next.selectedDecorId
+  && previous.onSelect === next.onSelect && previous.onSelectDecor === next.onSelectDecor && previous.onMoveDecor === next.onMoveDecor
+  && previous.visitor === next.visitor && previous.viewMode === next.viewMode && previous.playIntro === next.playIntro
+  && previous.onIntroComplete === next.onIntroComplete && previous.onArtworkFocus === next.onArtworkFocus
+);
 
 export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroComplete, onArtworkFocus }: { viewMode?: GalleryViewMode; playIntro?: boolean; onIntroComplete?: () => void; onArtworkFocus?: (artwork: ArtworkFocusInfo | null) => void }) {
   const host = useRef<HTMLDivElement>(null); const introPlayed = useRef(false);
