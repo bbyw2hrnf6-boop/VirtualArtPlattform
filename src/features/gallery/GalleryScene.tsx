@@ -17,28 +17,43 @@ const WALLS: Record<WallId, { position: (x: number, y: number, w: number, d: num
   'divider-back': { position: (x, y) => [x, y, -.605], rotation: [0, Math.PI, 0] }
 };
 const PAVILION_DIVIDER_WIDTH = 6.2;
-const wallColors = { chalk: '#e7e4dc', warm: '#b9a993', charcoal: '#30312f' };
-const floorColors = { concrete: '#777672', oak: '#49382b', terrazzo: '#a7a299' };
+const wallColors = { chalk: '#dfdcd4', warm: '#ae9f8c', charcoal: '#292b29' };
+const floorColors = { concrete: '#777672', oak: '#49382b', terrazzo: '#a7a299', marble: '#d8d4cb' };
 
 function createSurfaceTexture(kind: GalleryDraft['wall'] | GalleryDraft['floor'], base: string) {
-  const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
+  const size = 512; const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
   const context = canvas.getContext('2d'); if (!context) throw new Error('Surface texture could not be created.');
-  context.fillStyle = base; context.fillRect(0, 0, 256, 256);
+  context.fillStyle = base; context.fillRect(0, 0, size, size);
   let seed = kind.split('').reduce((total, letter) => total + letter.charCodeAt(0), 17);
   const random = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
   if (kind === 'oak') {
-    const rowHeight = 42;
-    for (let row = 0; row < 7; row++) {
-      const y = row * rowHeight; context.fillStyle = row % 2 ? '#f2c98d0a' : '#20140d0b'; context.fillRect(0, y, 256, rowHeight);
-      context.fillStyle = '#24160f70'; context.fillRect(0, y, 256, 1);
-      const offset = row % 2 ? 64 : 0; for (let x = offset; x < 256; x += 128) context.fillRect(x, y, 1, rowHeight);
-      for (let grain = 0; grain < 7; grain++) { const grainY = y + 5 + random() * 31; context.strokeStyle = `rgba(31,17,10,${.025 + random() * .045})`; context.beginPath(); context.moveTo(0, grainY); context.bezierCurveTo(65, grainY + random() * 4, 185, grainY - random() * 4, 256, grainY + random() * 2); context.stroke(); }
+    const rowHeight = 64;
+    for (let row = 0; row < 8; row++) {
+      const y = row * rowHeight; context.fillStyle = row % 2 ? '#f2c98d0b' : '#20140d12'; context.fillRect(0, y, size, rowHeight);
+      context.fillStyle = '#21150f66'; context.fillRect(0, y, size, 1);
+      const offset = row % 2 ? 128 : 0; for (let x = offset; x < size; x += 256) context.fillRect(x, y, 1, rowHeight);
+      for (let grain = 0; grain < 12; grain++) { const grainY = y + 6 + random() * 50; context.strokeStyle = `rgba(27,15,9,${.025 + random() * .055})`; context.lineWidth = .7 + random(); context.beginPath(); context.moveTo(0, grainY); context.bezierCurveTo(130, grainY + random() * 7, 360, grainY - random() * 7, size, grainY + random() * 3); context.stroke(); }
     }
+  } else if (kind === 'marble') {
+    const wash = context.createLinearGradient(0, 0, size, size); wash.addColorStop(0, '#f4f1e9'); wash.addColorStop(.48, base); wash.addColorStop(1, '#bbb8b1'); context.fillStyle = wash; context.fillRect(0, 0, size, size);
+    for (let vein = 0; vein < 16; vein++) {
+      const startY = -80 + random() * 670; const drift = -150 + random() * 300; const dark = random() > .3;
+      context.strokeStyle = dark ? `rgba(76,79,77,${.035 + random() * .09})` : `rgba(255,252,242,${.12 + random() * .16})`; context.lineWidth = 5 + random() * 18; context.beginPath(); context.moveTo(-30, startY); context.bezierCurveTo(120, startY + drift * .35, 330, startY + drift * .8, size + 30, startY + drift); context.stroke();
+      context.strokeStyle = dark ? `rgba(65,69,68,${.11 + random() * .13})` : `rgba(255,255,251,${.26 + random() * .18})`; context.lineWidth = .6 + random() * 2.2; context.beginPath(); context.moveTo(-30, startY); context.bezierCurveTo(120, startY + drift * .35, 330, startY + drift * .8, size + 30, startY + drift); context.stroke();
+    }
+  } else if (kind === 'terrazzo') {
+    const chips = ['#eee9dc', '#555652', '#b99a7d', '#8e8177', '#242624'];
+    for (let index = 0; index < 900; index++) { const x = random() * size; const y = random() * size; const radius = 1 + random() * 4; context.fillStyle = `${chips[Math.floor(random() * chips.length)]}${Math.floor(80 + random() * 100).toString(16).padStart(2, '0')}`; context.beginPath(); context.moveTo(x + radius, y); context.lineTo(x - radius * .65, y + radius * .72); context.lineTo(x - radius * .35, y - radius); context.closePath(); context.fill(); }
+  } else if (kind === 'concrete') {
+    for (let index = 0; index < 2100; index++) { const light = random() > .48; const alpha = .012 + random() * .05; const grainSize = .4 + random() * 1.7; context.fillStyle = light ? `rgba(255,250,238,${alpha})` : `rgba(25,24,22,${alpha})`; context.fillRect(random() * size, random() * size, grainSize, grainSize); }
+    for (let cloud = 0; cloud < 34; cloud++) { const gradient = context.createRadialGradient(random() * size, random() * size, 1, random() * size, random() * size, 25 + random() * 70); gradient.addColorStop(0, random() > .5 ? '#ffffff0a' : '#1818180c'); gradient.addColorStop(1, '#00000000'); context.fillStyle = gradient; context.fillRect(0, 0, size, size); }
   } else {
-    const count = kind === 'terrazzo' ? 780 : kind === 'concrete' ? 1500 : 1100;
-    for (let index = 0; index < count; index++) { const light = random() > .5; const alpha = kind === 'terrazzo' ? .1 + random() * .2 : .018 + random() * .045; const size = kind === 'terrazzo' ? .6 + random() * 2.4 : .35 + random() * 1.1; context.fillStyle = light ? `rgba(255,250,238,${alpha})` : `rgba(25,24,22,${alpha})`; context.fillRect(random() * 256, random() * 256, size, size); }
+    for (let patch = 0; patch < 70; patch++) { const x = random() * size; const y = random() * size; const radius = 8 + random() * 40; const gradient = context.createRadialGradient(x, y, 0, x, y, radius); gradient.addColorStop(0, random() > .5 ? '#ffffff0a' : '#1515130b'); gradient.addColorStop(1, '#00000000'); context.fillStyle = gradient; context.fillRect(x - radius, y - radius, radius * 2, radius * 2); }
+    for (let grain = 0; grain < 1350; grain++) { const light = random() > .5; context.fillStyle = light ? `rgba(255,252,242,${.012 + random() * .025})` : `rgba(20,20,18,${.012 + random() * .028})`; const grainSize = .35 + random(); context.fillRect(random() * size, random() * size, grainSize, grainSize); }
   }
-  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(kind === 'oak' ? 2.5 : 5, kind === 'oak' ? 3.5 : 4); return texture;
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = 4;
+  if (kind === 'oak') texture.repeat.set(2.5, 3.5); else if (kind === 'marble') texture.repeat.set(1.35, 1.15); else if (kind === 'chalk' || kind === 'warm' || kind === 'charcoal') texture.repeat.set(3, 2.5); else texture.repeat.set(4, 3);
+  return texture;
 }
 
 function showSceneError(element: HTMLElement, message = 'This gallery needs WebGL. Please enable hardware acceleration or open it in a current browser.') {
@@ -97,20 +112,18 @@ function createDecor(item: DecorPlacement, selected: boolean) {
   return group;
 }
 
-function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: string, enclosed = false) {
+function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: string) {
   const [w, d] = getTemplate(draft.templateId).dimensions;
   const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]); const floorTexture = createSurfaceTexture(draft.floor, floorColors[draft.floor]);
-  const wall = new THREE.MeshStandardMaterial({ color: '#ffffff', map: wallTexture, bumpMap: wallTexture, bumpScale: draft.wall === 'charcoal' ? .009 : .014, roughness: .9 });
-  const floor = new THREE.MeshStandardMaterial({ color: '#ffffff', map: floorTexture, bumpMap: floorTexture, bumpScale: draft.floor === 'oak' ? .025 : .035, roughness: draft.floor === 'oak' ? .62 : .86, metalness: .025 });
+  const wall = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: wallTexture, bumpMap: wallTexture, bumpScale: draft.wall === 'charcoal' ? .007 : .012, roughness: draft.wall === 'charcoal' ? .76 : .82, clearcoat: .035, clearcoatRoughness: .8 });
+  const floor = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: floorTexture, bumpMap: floorTexture, bumpScale: draft.floor === 'oak' ? .022 : draft.floor === 'marble' ? .009 : .03, roughness: draft.floor === 'marble' ? .26 : draft.floor === 'oak' ? .56 : .78, metalness: draft.floor === 'marble' ? .035 : .015, clearcoat: draft.floor === 'marble' ? .24 : .025, clearcoatRoughness: draft.floor === 'marble' ? .32 : .8 });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floor); floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; scene.add(floorMesh);
   const addWall = (geometry: THREE.BufferGeometry, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]) => { const mesh = new THREE.Mesh(geometry, wall); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; scene.add(mesh); };
   addWall(new THREE.PlaneGeometry(w, 4.8), [0, 2.4, -d / 2]);
   addWall(new THREE.PlaneGeometry(d, 4.8), [-w / 2, 2.4, 0], [0, Math.PI / 2, 0]);
   addWall(new THREE.PlaneGeometry(d, 4.8), [w / 2, 2.4, 0], [0, -Math.PI / 2, 0]);
   addWall(new THREE.PlaneGeometry(w, 4.8), [0, 2.4, d / 2], [0, Math.PI, 0]);
-  if (enclosed) {
-    addWall(new THREE.PlaneGeometry(w, d), [0, 4.8, 0], [Math.PI / 2, 0, 0]);
-  }
+  addWall(new THREE.PlaneGeometry(w, d), [0, 4.8, 0], [Math.PI / 2, 0, 0]);
   if (draft.templateId === 'pavilion') {
     const divider = new THREE.Mesh(new THREE.BoxGeometry(PAVILION_DIVIDER_WIDTH, 4.1, .18), wall); divider.position.set(0, 2.05, -.5); divider.receiveShadow = true; scene.add(divider);
     const bench = new THREE.Mesh(new RoundedBoxGeometry(2.8, .42, .72, 5, .08), new THREE.MeshStandardMaterial({ color: '#26231f', roughness: .55 })); bench.position.set(0, .34, 3.15); bench.castShadow = true; scene.add(bench);
@@ -121,15 +134,41 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
   return { w, d, decorObjects, floorMesh };
 }
 
-function addLighting(scene: THREE.Scene, preset: GalleryDraft['lighting']) {
+function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: number) {
   const settings = {
-    daylight: { bg: '#d6d8d5', hemi: 2.2, key: 3.2, color: '#fff7e8' },
-    museum: { bg: '#111311', hemi: 1, key: 5.4, color: '#ffe6bd' },
-    evening: { bg: '#171516', hemi: .7, key: 4.2, color: '#ffca8d' }
-  }[preset];
-  scene.background = new THREE.Color(settings.bg); scene.add(new THREE.HemisphereLight('#eef3ff', '#3b342e', settings.hemi));
-  const main = new THREE.DirectionalLight(settings.color, settings.key); main.position.set(-3, 7, 5); main.castShadow = true; main.shadow.mapSize.set(1024, 1024); scene.add(main);
-  [-3, 0, 3].forEach((x) => { const spot = new THREE.SpotLight(settings.color, 18, 9, .45, .8, 1.5); spot.position.set(x, 4.25, -1); spot.target.position.set(x, 1.6, -4); scene.add(spot, spot.target); });
+    daylight: { bg: '#d2d4d0', hemi: 1.45, ambient: .36, key: 2.6, spot: 38, color: '#fff8e9' },
+    museum: { bg: '#101210', hemi: .62, ambient: .22, key: 3.6, spot: 58, color: '#ffe6bd' },
+    evening: { bg: '#171416', hemi: .38, ambient: .16, key: 2.7, spot: 48, color: '#ffc987' }
+  }[draft.lighting];
+  scene.background = new THREE.Color(settings.bg);
+  scene.add(new THREE.AmbientLight(settings.color, settings.ambient), new THREE.HemisphereLight('#eef3ff', '#332d29', settings.hemi));
+  const main = new THREE.DirectionalLight(settings.color, settings.key); main.position.set(-3, 7, 5); main.castShadow = true; main.shadow.mapSize.set(1024, 1024); main.shadow.bias = -.0004; scene.add(main);
+
+  const artworkTargets = draft.artworks.slice(0, 8).map((artwork) => {
+    const [x, y, z] = WALLS[artwork.wall].position(artwork.x, artwork.y, w, d); const target = new THREE.Vector3(x, y, z);
+    const source = target.clone(); source.y = 4.45;
+    if (artwork.wall === 'north') source.z += 2.25;
+    if (artwork.wall === 'south') source.z -= 2.25;
+    if (artwork.wall === 'west') source.x += 2.25;
+    if (artwork.wall === 'east') source.x -= 2.25;
+    if (artwork.wall === 'divider-front') source.z += 2;
+    if (artwork.wall === 'divider-back') source.z -= 2;
+    source.x = THREE.MathUtils.clamp(source.x, -w / 2 + .5, w / 2 - .5); source.z = THREE.MathUtils.clamp(source.z, -d / 2 + .5, d / 2 - .5);
+    return { source, target };
+  });
+  const lightTargets = artworkTargets.length ? artworkTargets : [-.27, 0, .27].map((ratio) => ({ source: new THREE.Vector3(w * ratio, 4.45, -d * .08), target: new THREE.Vector3(w * ratio, 1.55, -d / 2 + .05) }));
+  const fixtureMaterial = new THREE.MeshStandardMaterial({ color: draft.lighting === 'daylight' ? '#deddd8' : '#171816', metalness: .72, roughness: .24 });
+  const bulbMaterial = new THREE.MeshStandardMaterial({ color: '#fff7df', emissive: settings.color, emissiveIntensity: 3.2, roughness: .18 });
+  const down = new THREE.Vector3(0, -1, 0);
+  lightTargets.forEach(({ source, target }) => {
+    const direction = target.clone().sub(source).normalize();
+    const mount = new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .07, 24), fixtureMaterial); mount.position.set(source.x, 4.75, source.z);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(.09, .14, .3, 24), fixtureMaterial); head.position.copy(source); head.quaternion.setFromUnitVectors(down, direction);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(.075, 16, 10), bulbMaterial); bulb.position.copy(source).addScaledVector(direction, .16);
+    const spot = new THREE.SpotLight(settings.color, settings.spot, 12, .33, .72, 1.55); spot.position.copy(bulb.position); spot.target.position.copy(target); spot.castShadow = false;
+    scene.add(mount, head, bulb, spot, spot.target);
+  });
+  return lightTargets.length;
 }
 
 type WalkCollision = (next: THREE.Vector3, previous: THREE.Vector3) => void;
@@ -224,7 +263,7 @@ export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onS
     const walk = visitor && viewMode === 'walk'; const camera = new THREE.PerspectiveCamera(walk ? 62 : 48, 1, .1, 70); camera.position.set(...template.camera);
     let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; element.appendChild(renderer.domElement);
     const controls = walk ? null : new OrbitControls(camera, renderer.domElement); if (controls) { controls.enableDamping = true; controls.target.set(0, 1.6, -1.5); controls.maxPolarAngle = Math.PI / 2 - .03; controls.minDistance = 2.1; controls.maxDistance = visitor ? 18 : 15; controls.enablePan = false; controls.autoRotate = visitor; controls.autoRotateSpeed = .38; }
-    const { w, d, decorObjects, floorMesh } = buildRoom(scene, draft, selectedDecorId, walk); addLighting(scene, draft.lighting);
+    const { w, d, decorObjects, floorMesh } = buildRoom(scene, draft, selectedDecorId); const installedLights = addLighting(scene, draft, w, d); element.dataset.roof = 'installed'; element.dataset.artLights = String(installedLights);
     const roomBounds = { minX: -w / 2 + .45, maxX: w / 2 - .45, minZ: -d / 2 + .45, maxZ: d / 2 - .45 };
     if (walk) camera.position.set(0, 1.68, d / 2 - 1);
     const dividerCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => { if (Math.abs(next.x) > PAVILION_DIVIDER_WIDTH / 2 + .35 || Math.abs(next.z + .5) > .4) return; next.z = previous.z > -.5 ? -.09 : -.91; } : undefined;
