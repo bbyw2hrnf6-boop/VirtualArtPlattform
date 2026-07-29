@@ -10,6 +10,7 @@ import { getTemplate } from './templates';
 type Bounds = { minX: number; maxX: number; minZ: number; maxZ: number };
 const WALLS: Record<WallId, { position: (x: number, y: number, w: number, d: number) => [number, number, number]; rotation: [number, number, number] }> = {
   north: { position: (x, y, _w, d) => [x, y, -d / 2 + .035], rotation: [0, 0, 0] },
+  south: { position: (x, y, _w, d) => [x, y, d / 2 - .035], rotation: [0, Math.PI, 0] },
   west: { position: (x, y, w) => [-w / 2 + .035, y, x], rotation: [0, Math.PI / 2, 0] },
   east: { position: (x, y, w) => [w / 2 - .035, y, x], rotation: [0, -Math.PI / 2, 0] },
   'divider-front': { position: (x, y) => [x, y, -.395], rotation: [0, 0, 0] },
@@ -17,7 +18,28 @@ const WALLS: Record<WallId, { position: (x: number, y: number, w: number, d: num
 };
 const PAVILION_DIVIDER_WIDTH = 6.2;
 const wallColors = { chalk: '#e7e4dc', warm: '#b9a993', charcoal: '#30312f' };
-const floorColors = { concrete: '#777672', oak: '#5c4633', terrazzo: '#a7a299' };
+const floorColors = { concrete: '#777672', oak: '#49382b', terrazzo: '#a7a299' };
+
+function createSurfaceTexture(kind: GalleryDraft['wall'] | GalleryDraft['floor'], base: string) {
+  const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
+  const context = canvas.getContext('2d'); if (!context) throw new Error('Surface texture could not be created.');
+  context.fillStyle = base; context.fillRect(0, 0, 256, 256);
+  let seed = kind.split('').reduce((total, letter) => total + letter.charCodeAt(0), 17);
+  const random = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  if (kind === 'oak') {
+    const rowHeight = 42;
+    for (let row = 0; row < 7; row++) {
+      const y = row * rowHeight; context.fillStyle = row % 2 ? '#f2c98d0a' : '#20140d0b'; context.fillRect(0, y, 256, rowHeight);
+      context.fillStyle = '#24160f70'; context.fillRect(0, y, 256, 1);
+      const offset = row % 2 ? 64 : 0; for (let x = offset; x < 256; x += 128) context.fillRect(x, y, 1, rowHeight);
+      for (let grain = 0; grain < 7; grain++) { const grainY = y + 5 + random() * 31; context.strokeStyle = `rgba(31,17,10,${.025 + random() * .045})`; context.beginPath(); context.moveTo(0, grainY); context.bezierCurveTo(65, grainY + random() * 4, 185, grainY - random() * 4, 256, grainY + random() * 2); context.stroke(); }
+    }
+  } else {
+    const count = kind === 'terrazzo' ? 780 : kind === 'concrete' ? 1500 : 1100;
+    for (let index = 0; index < count; index++) { const light = random() > .5; const alpha = kind === 'terrazzo' ? .1 + random() * .2 : .018 + random() * .045; const size = kind === 'terrazzo' ? .6 + random() * 2.4 : .35 + random() * 1.1; context.fillStyle = light ? `rgba(255,250,238,${alpha})` : `rgba(25,24,22,${alpha})`; context.fillRect(random() * 256, random() * 256, size, size); }
+  }
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(kind === 'oak' ? 2.5 : 5, kind === 'oak' ? 3.5 : 4); return texture;
+}
 
 function showSceneError(element: HTMLElement, message = 'This gallery needs WebGL. Please enable hardware acceleration or open it in a current browser.') {
   const notice = document.createElement('div'); const label = document.createElement('span'); const detail = document.createElement('p'); notice.className = 'scene-error'; label.textContent = '3D VIEW UNAVAILABLE'; detail.textContent = message; notice.append(label, detail); element.appendChild(notice);
@@ -77,16 +99,17 @@ function createDecor(item: DecorPlacement, selected: boolean) {
 
 function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: string, enclosed = false) {
   const [w, d] = getTemplate(draft.templateId).dimensions;
-  const wall = new THREE.MeshStandardMaterial({ color: wallColors[draft.wall], roughness: .83 });
-  const floor = new THREE.MeshStandardMaterial({ color: floorColors[draft.floor], roughness: draft.floor === 'oak' ? .55 : .88, metalness: .03 });
+  const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]); const floorTexture = createSurfaceTexture(draft.floor, floorColors[draft.floor]);
+  const wall = new THREE.MeshStandardMaterial({ color: '#ffffff', map: wallTexture, bumpMap: wallTexture, bumpScale: draft.wall === 'charcoal' ? .009 : .014, roughness: .9 });
+  const floor = new THREE.MeshStandardMaterial({ color: '#ffffff', map: floorTexture, bumpMap: floorTexture, bumpScale: draft.floor === 'oak' ? .025 : .035, roughness: draft.floor === 'oak' ? .62 : .86, metalness: .025 });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floor); floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; scene.add(floorMesh);
-  const addWall = (geometry: THREE.BufferGeometry, position: [number, number, number]) => { const mesh = new THREE.Mesh(geometry, wall); mesh.position.set(...position); mesh.receiveShadow = true; scene.add(mesh); };
-  addWall(new THREE.BoxGeometry(w, 4.8, .12), [0, 2.4, -d / 2]);
-  addWall(new THREE.BoxGeometry(.12, 4.8, d), [-w / 2, 2.4, 0]);
-  addWall(new THREE.BoxGeometry(.12, 4.8, d), [w / 2, 2.4, 0]);
+  const addWall = (geometry: THREE.BufferGeometry, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]) => { const mesh = new THREE.Mesh(geometry, wall); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; scene.add(mesh); };
+  addWall(new THREE.PlaneGeometry(w, 4.8), [0, 2.4, -d / 2]);
+  addWall(new THREE.PlaneGeometry(d, 4.8), [-w / 2, 2.4, 0], [0, Math.PI / 2, 0]);
+  addWall(new THREE.PlaneGeometry(d, 4.8), [w / 2, 2.4, 0], [0, -Math.PI / 2, 0]);
+  addWall(new THREE.PlaneGeometry(w, 4.8), [0, 2.4, d / 2], [0, Math.PI, 0]);
   if (enclosed) {
-    addWall(new THREE.BoxGeometry(w, 4.8, .12), [0, 2.4, d / 2]);
-    addWall(new THREE.BoxGeometry(w, .12, d), [0, 4.8, 0]);
+    addWall(new THREE.PlaneGeometry(w, d), [0, 4.8, 0], [Math.PI / 2, 0, 0]);
   }
   if (draft.templateId === 'pavilion') {
     const divider = new THREE.Mesh(new THREE.BoxGeometry(PAVILION_DIVIDER_WIDTH, 4.1, .18), wall); divider.position.set(0, 2.05, -.5); divider.receiveShadow = true; scene.add(divider);
@@ -146,10 +169,10 @@ function createFirstPersonWalk(camera: THREE.PerspectiveCamera, canvas: HTMLCanv
 
 type WalkController = ReturnType<typeof createFirstPersonWalk>;
 
-function createCinematicIntro(camera: THREE.PerspectiveCamera, points: THREE.Vector3[], lookTarget: THREE.Vector3, navigation: WalkController, element: HTMLElement, onComplete?: () => void) {
+function createCinematicIntro(camera: THREE.PerspectiveCamera, points: THREE.Vector3[], lookTarget: THREE.Vector3, navigation: WalkController, element: HTMLElement, onComplete?: () => void, labelText = 'Entering exhibition') {
   const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', .42); const duration = THREE.MathUtils.clamp(curve.getLength() * 430, 5000, 7200); const startedAt = performance.now(); let complete = false;
   const position = new THREE.Vector3(); const ahead = new THREE.Vector3(); const cinematicLook = new THREE.Vector3();
-  const overlay = document.createElement('div'); overlay.className = 'cinematic-intro'; const copy = document.createElement('div'); const label = document.createElement('span'); const line = document.createElement('i'); const skip = document.createElement('button'); label.textContent = 'Entering exhibition'; skip.textContent = 'Skip intro'; copy.append(label, line); overlay.append(copy, skip); element.appendChild(overlay); navigation.setEnabled(false);
+  const overlay = document.createElement('div'); overlay.className = 'cinematic-intro'; const copy = document.createElement('div'); const label = document.createElement('span'); const line = document.createElement('i'); const skip = document.createElement('button'); label.textContent = labelText; skip.textContent = 'Skip intro'; copy.append(label, line); overlay.append(copy, skip); element.appendChild(overlay); navigation.setEnabled(false);
   const finish = () => { if (complete) return; complete = true; camera.position.copy(points[points.length - 1]); navigation.lookAt(lookTarget); navigation.setEnabled(true); overlay.classList.add('is-finished'); window.setTimeout(() => overlay.remove(), 450); onComplete?.(); };
   const update = () => { if (complete) return; if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { finish(); return; } const raw = Math.min(1, (performance.now() - startedAt) / duration); const eased = raw * raw * raw * (raw * (raw * 6 - 15) + 10); const lookAheadAt = Math.min(.995, eased + .035); curve.getPointAt(eased, position); curve.getPointAt(lookAheadAt, ahead); cinematicLook.copy(ahead).lerp(lookTarget, .24 + raw * .2); camera.position.copy(position); camera.lookAt(cinematicLook); line.style.transform = `scaleX(${raw})`; if (raw >= 1) finish(); };
   skip.addEventListener('click', finish);
@@ -211,7 +234,7 @@ export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onS
     const artworkObjects: THREE.Object3D[] = []; const artworkById = new Map(draft.artworks.map((artwork) => [artwork.id, artwork])); let focusedArtwork: THREE.Object3D | null = null; let focusedArtworkId: string | null = null;
     draft.artworks.forEach((artwork) => {
       const texture = new THREE.TextureLoader().load(artwork.src); texture.colorSpace = THREE.SRGBColorSpace; const height = 1.5 * artwork.scale; const width = height * artwork.aspect;
-      const group = new THREE.Group(); group.userData.artworkId = artwork.id;
+      const group = new THREE.Group(); group.userData.artworkId = artwork.id; group.userData.wall = artwork.wall;
       const frame = new THREE.Mesh(new THREE.BoxGeometry(width + .12, height + .12, .07), new THREE.MeshStandardMaterial({ color: selectedId === artwork.id ? '#b8945f' : '#1c1b19', metalness: .2, roughness: .45 }));
       const canvas = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshStandardMaterial({ map: texture, roughness: .72 })); canvas.position.z = .041; group.add(frame, canvas);
       const config = WALLS[artwork.wall]; const [px, py, pz] = config.position(artwork.x, artwork.y, w, d); group.position.set(px, py, pz); group.rotation.set(...config.rotation); group.traverse((item) => { item.userData.artworkId = artwork.id; }); scene.add(group); artworkObjects.push(group);
@@ -229,8 +252,8 @@ export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onS
     renderer.domElement.addEventListener('click', handlePointer);
     let frame = 0; const resize = () => { const width = element.clientWidth; const height = element.clientHeight; renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); }; const observer = new ResizeObserver(resize); observer.observe(element); resize();
     const cameraDirection = new THREE.Vector3(); const artworkDirection = new THREE.Vector3(); const artworkPosition = new THREE.Vector3();
-    const animate = () => { intro?.update(); navigation?.update(); controls?.update(); if (walkMarker.visible) { walkMarker.rotation.z += .008; const material = walkMarker.material as THREE.MeshBasicMaterial; material.opacity = .5 + Math.sin(performance.now() * .006) * .25; if (!navigation?.hasDestination()) walkMarker.visible = false; } if (focusedArtwork && focusedArtworkId) { camera.getWorldDirection(cameraDirection); focusedArtwork.getWorldPosition(artworkPosition); artworkDirection.subVectors(artworkPosition, camera.position); const distance = artworkDirection.length(); const facing = cameraDirection.dot(artworkDirection.normalize()); if (facing < .48 || distance > 8) { focusedArtwork = null; focusedArtworkId = null; onArtworkFocus?.(null); } } element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); intro = null; navigation?.dispose(); controls?.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.domElement.remove(); };
+    const animate = () => { intro?.update(); navigation?.update(); controls?.update(); if (!visitor) artworkObjects.forEach((object) => { if (object.userData.wall === 'south') object.visible = camera.position.z < d / 2 - .12; }); if (walkMarker.visible) { walkMarker.rotation.z += .008; const material = walkMarker.material as THREE.MeshBasicMaterial; material.opacity = .5 + Math.sin(performance.now() * .006) * .25; if (!navigation?.hasDestination()) walkMarker.visible = false; } if (focusedArtwork && focusedArtworkId) { camera.getWorldDirection(cameraDirection); focusedArtwork.getWorldPosition(artworkPosition); artworkDirection.subVectors(artworkPosition, camera.position); const distance = artworkDirection.length(); const facing = cameraDirection.dot(artworkDirection.normalize()); if (facing < .48 || distance > 8) { focusedArtwork = null; focusedArtworkId = null; onArtworkFocus?.(null); } } element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); intro = null; navigation?.dispose(); controls?.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); if (material.bumpMap && material.bumpMap !== material.map) material.bumpMap.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.domElement.remove(); };
   }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, visitor, viewMode, playIntro, onIntroComplete, onArtworkFocus]);
   return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'}`} ref={host}><div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD / arrows to walk · Drag to look' : 'Overview · Drag to orbit · Scroll to zoom' : 'Drag to look · Scroll to move'}</div></div>;
 }
@@ -261,7 +284,19 @@ export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroCo
       const start = gltf.scene.getObjectByName('Walk_Start'); const target = gltf.scene.getObjectByName('Walk_LookTarget'); const minimum = gltf.scene.getObjectByName('Walk_Bounds_Min'); const maximum = gltf.scene.getObjectByName('Walk_Bounds_Max');
       if (start) camera.position.copy(start.getWorldPosition(new THREE.Vector3())); const finalPosition = camera.position.clone(); const lookTarget = target?.getWorldPosition(new THREE.Vector3()) ?? new THREE.Vector3(0, 2.4, -2.8); navigation?.lookAt(lookTarget); if (controls) controls.target.copy(lookTarget);
       if (minimum && maximum) { const a = minimum.getWorldPosition(new THREE.Vector3()); const b = maximum.getWorldPosition(new THREE.Vector3()); bounds = { minX: Math.min(a.x,b.x) + .35, maxX: Math.max(a.x,b.x) - .35, minZ: Math.min(a.z,b.z) + .35, maxZ: Math.max(a.z,b.z) - .35 }; }
-      if (navigation && playIntro && !introPlayed.current) { const width = bounds.maxX - bounds.minX; const depth = bounds.maxZ - bounds.minZ; intro = createCinematicIntro(camera, [finalPosition.clone().add(new THREE.Vector3(0, 1.05, 0)), new THREE.Vector3(bounds.minX + width * .28, finalPosition.y + .45, bounds.maxZ - depth * .35), new THREE.Vector3(bounds.maxX - width * .3, finalPosition.y + .25, bounds.minZ + depth * .3), finalPosition], lookTarget, navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }); } else navigation?.setEnabled(true);
+      if (navigation && playIntro && !introPlayed.current) {
+        const width = bounds.maxX - bounds.minX; const depth = bounds.maxZ - bounds.minZ; const centerX = lookTarget.x; const centerZ = (finalPosition.z + lookTarget.z) / 2; const radiusX = Math.min(width * .28, 4.6); const radiusZ = Math.min(Math.abs(finalPosition.z - lookTarget.z) * .46, depth * .24);
+        const tour = [
+          finalPosition.clone().add(new THREE.Vector3(0, 1.15, 0)),
+          new THREE.Vector3(centerX - radiusX, finalPosition.y + .95, centerZ + radiusZ),
+          new THREE.Vector3(centerX - radiusX, finalPosition.y + .78, centerZ - radiusZ),
+          new THREE.Vector3(centerX, finalPosition.y + .88, centerZ - radiusZ * 1.08),
+          new THREE.Vector3(centerX + radiusX, finalPosition.y + .68, centerZ - radiusZ),
+          new THREE.Vector3(centerX + radiusX, finalPosition.y + .48, centerZ + radiusZ),
+          finalPosition
+        ];
+        intro = createCinematicIntro(camera, tour, lookTarget, navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }, '360° gallery tour');
+      } else navigation?.setEnabled(true);
       controls?.update();
     }, undefined, () => { element.dataset.error = 'true'; modelErrorCleanup = showSceneError(element, 'The exhibition model could not be loaded. Please check your connection and try again.'); });
     let frame = 0; const resize = () => { const width = element.clientWidth; const height = element.clientHeight; renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); }; const observer = new ResizeObserver(resize); observer.observe(element); resize();

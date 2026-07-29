@@ -85,13 +85,17 @@ function TemplatePicker({ onChoose }: { onChoose: (id: TemplateId) => void }) {
 }
 
 async function imageFromFile(file: File): Promise<Pick<Artwork, 'src' | 'aspect'>> {
-  const url = URL.createObjectURL(file); const image = new Image(); image.src = url; await image.decode();
-  const max = 1200; const scale = Math.min(1, max / Math.max(image.width, image.height));
-  const canvas = document.createElement('canvas'); canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale); canvas.getContext('2d')!.drawImage(image, 0, 0, canvas.width, canvas.height); URL.revokeObjectURL(url);
-  let quality = .76; let src = canvas.toDataURL('image/webp', quality);
-  while (src.length > 720000 && quality > .42) { quality -= .08; src = canvas.toDataURL('image/webp', quality); }
-  if (src.length > 780000) throw new Error(`${file.name} could not be compressed below the Firestore image limit.`);
-  return { src, aspect: canvas.width / canvas.height };
+  if (file.size > 30 * 1024 * 1024) throw new Error(`${file.name} is larger than 30 MB.`);
+  const url = URL.createObjectURL(file); const image = new Image(); image.decoding = 'async';
+  try {
+    await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error(`${file.name} could not be opened. Please export it as JPG, PNG, or WebP.`)); image.src = url; });
+    const max = 1200; const scale = Math.min(1, max / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale)); const context = canvas.getContext('2d'); if (!context) throw new Error('Your browser could not prepare this image.'); context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    let quality = .78; let src = canvas.toDataURL('image/webp', quality); if (!src.startsWith('data:image/webp')) src = canvas.toDataURL('image/jpeg', .82);
+    while (src.length > 720000 && quality > .38) { quality -= .08; src = canvas.toDataURL(src.startsWith('data:image/webp') ? 'image/webp' : 'image/jpeg', quality); }
+    if (src.length > 780000) throw new Error(`${file.name} could not be compressed below the gallery limit.`);
+    return { src, aspect: canvas.width / canvas.height };
+  } finally { URL.revokeObjectURL(url); }
 }
 
 function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
@@ -100,11 +104,13 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   const [selectedDecorId, setSelectedDecorId] = useState<string>();
   const [published, setPublished] = useState<GalleryRecord>();
   const [publishing, setPublishing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string>();
   const selected = draft.artworks.find((item) => item.id === selectedId);
   const selectedDecor = draft.decor.find((item) => item.id === selectedDecorId);
   const roomDimensions = TEMPLATES.find((item) => item.id === draft.templateId)?.dimensions ?? [10, 7];
   const decorLimitX = roomDimensions[0] / 2 - .5; const decorLimitZ = roomDimensions[1] / 2 - .5;
-  const wallLimit = (wall: WallId) => wall.startsWith('divider') ? 2.65 : wall === 'north' ? roomDimensions[0] / 2 - .8 : roomDimensions[1] / 2 - .8;
+  const wallLimit = (wall: WallId) => wall.startsWith('divider') ? 2.65 : wall === 'north' || wall === 'south' ? roomDimensions[0] / 2 - .8 : roomDimensions[1] / 2 - .8;
   const artworkLimit = selected ? wallLimit(selected.wall) : 3.5;
   const selectArtwork = useCallback((id: string) => { setSelectedId(id); setSelectedDecorId(undefined); }, []);
   const selectDecor = useCallback((id: string) => { setSelectedDecorId(id); setSelectedId(undefined); }, []);
@@ -114,9 +120,14 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   const updateDecor = (value: Partial<DecorPlacement>) => setDraft((current) => ({ ...current, decor: current.decor.map((item) => item.id === selectedDecorId ? { ...item, ...value } : item) }));
   const addDecor = (type: DecorId) => { const item: DecorPlacement = { id: crypto.randomUUID(), type, x: (draft.decor.length % 3 - 1) * 1.4, z: 1 - Math.floor(draft.decor.length / 3) * 1.2, rotation: 0, scale: 1 }; update('decor', [...draft.decor, item]); setSelectedDecorId(item.id); setSelectedId(undefined); };
   const upload = async (files: FileList | null) => {
-    if (!files) return; const remaining = Math.max(0, 8 - draft.artworks.length); const next: Artwork[] = [];
-    for (const file of Array.from(files).filter((item) => item.type.startsWith('image/')).slice(0, remaining)) { const image = await imageFromFile(file); next.push({ id: crypto.randomUUID(), title: file.name.replace(/\.[^.]+$/, ''), ...image, wall: 'north', x: (next.length - 1) * 1.7, y: 2.2, scale: .9 }); }
-    setDraft((current) => ({ ...current, artworks: [...current.artworks, ...next] })); if (next[0]) selectArtwork(next[0].id);
+    if (!files?.length) return; const remaining = Math.max(0, 8 - draft.artworks.length); const supported = Array.from(files).filter((item) => item.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(item.name)).slice(0, remaining); const next: Artwork[] = []; const failures: string[] = [];
+    setUploading(true); setUploadError(undefined);
+    try {
+      for (const file of supported) { try { const image = await imageFromFile(file); next.push({ id: crypto.randomUUID(), title: file.name.replace(/\.[^.]+$/, ''), ...image, wall: 'north', x: (next.length - 1) * 1.7, y: 2.2, scale: .9 }); } catch (error) { failures.push(error instanceof Error ? error.message : `${file.name} could not be prepared.`); } }
+      if (!supported.length) failures.push('This file is not recognized as an image. Please choose JPG, PNG, WebP, HEIC, or HEIF.');
+      if (next.length) { setDraft((current) => ({ ...current, artworks: [...current.artworks, ...next] })); selectArtwork(next[0].id); }
+      if (failures.length) setUploadError(failures.join(' '));
+    } finally { setUploading(false); }
   };
   const publish = async () => {
     setPublishing(true);
@@ -131,7 +142,7 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   }
 
   return <main className="studio"><header className="studio-header"><Logo/><div className="studio-title"><input aria-label="Gallery title" value={draft.title} onChange={(event) => update('title', event.target.value)}/><span>by</span><input aria-label="Artist name" value={draft.artist} onChange={(event) => update('artist', event.target.value)}/></div><button className="publish-button" onClick={publish} disabled={publishing}>{publishing ? 'Publishing…' : 'Publish'} <span>↗</span></button></header>
-    <div className="studio-body"><aside className="tool-panel"><section><p className="tool-label">01 · Artwork</p><label className="upload"><input type="file" accept="image/*" multiple onChange={(event) => upload(event.target.files)}/><span>＋</span><strong>Upload artwork</strong><small>JPG, PNG or WebP · up to 8</small></label><div className="artwork-list">{draft.artworks.map((artwork, index) => <button key={artwork.id} className={selectedId === artwork.id ? 'active' : ''} onClick={() => selectArtwork(artwork.id)}><img src={artwork.src} alt=""/><span>{String(index + 1).padStart(2,'0')} · {artwork.title}</span></button>)}</div>{selected && <div className="placement"><label>Title<input type="text" value={selected.title} maxLength={80} onChange={(event) => updateArtwork({ title: event.target.value })}/></label><label>Year<input type="text" value={selected.year ?? ''} maxLength={12} placeholder="2026" onChange={(event) => updateArtwork({ year: event.target.value })}/></label><label className="placement-note">Artwork note<textarea value={selected.description ?? ''} maxLength={240} placeholder="A short note visitors can read…" onChange={(event) => updateArtwork({ description: event.target.value })}/></label><label>Wall<select value={selected.wall} onChange={(event) => changeArtworkWall(event.target.value as WallId)}><option value="north">Back wall</option><option value="west">Left wall</option><option value="east">Right wall</option>{draft.templateId === 'pavilion' && <><option value="divider-front">Center wall · Front</option><option value="divider-back">Center wall · Back</option></>}</select></label><Range label="Horizontal" min={-artworkLimit} max={artworkLimit} step={.1} value={selected.x} onChange={(x) => updateArtwork({ x })}/><Range label="Height" min={1} max={selected.wall.startsWith('divider') ? 3 : 3.6} step={.1} value={selected.y} onChange={(y) => updateArtwork({ y })}/><Range label="Size" min={.45} max={1.65} step={.05} value={selected.scale} onChange={(scale) => updateArtwork({ scale })}/><button className="remove" onClick={() => { update('artworks', draft.artworks.filter((item) => item.id !== selectedId)); setSelectedId(undefined); }}>Remove artwork</button></div>}</section>
+    <div className="studio-body"><aside className="tool-panel"><section><p className="tool-label">01 · Artwork</p><label className={`upload ${uploading ? 'is-uploading' : ''}`}><input type="file" accept="image/*,.heic,.heif" multiple disabled={uploading} onChange={(event) => { const input = event.currentTarget; void upload(input.files).finally(() => { input.value = ''; }); }}/><span>{uploading ? '◌' : '＋'}</span><strong>{uploading ? 'Preparing artwork…' : 'Upload artwork'}</strong><small>{uploading ? 'Optimizing for the gallery' : 'JPG, PNG, WebP or HEIC · up to 8'}</small></label>{uploadError && <p className="upload-error" role="alert">{uploadError}</p>}<div className="artwork-list">{draft.artworks.map((artwork, index) => <button key={artwork.id} className={selectedId === artwork.id ? 'active' : ''} onClick={() => selectArtwork(artwork.id)}><img src={artwork.src} alt=""/><span>{String(index + 1).padStart(2,'0')} · {artwork.title}</span></button>)}</div>{selected && <div className="placement"><label>Title<input type="text" value={selected.title} maxLength={80} onChange={(event) => updateArtwork({ title: event.target.value })}/></label><label>Year<input type="text" value={selected.year ?? ''} maxLength={12} placeholder="2026" onChange={(event) => updateArtwork({ year: event.target.value })}/></label><label className="placement-note">Artwork note<textarea value={selected.description ?? ''} maxLength={240} placeholder="A short note visitors can read…" onChange={(event) => updateArtwork({ description: event.target.value })}/></label><label>Wall<select value={selected.wall} onChange={(event) => changeArtworkWall(event.target.value as WallId)}><option value="north">Back wall</option><option value="south">Entrance wall · Behind you</option><option value="west">Left wall</option><option value="east">Right wall</option>{draft.templateId === 'pavilion' && <><option value="divider-front">Center wall · Front</option><option value="divider-back">Center wall · Back</option></>}</select></label>{selected.wall === 'south' && <p className="wall-preview-note">Rotate the room to preview this wall from inside.</p>}<Range label="Horizontal" min={-artworkLimit} max={artworkLimit} step={.1} value={selected.x} onChange={(x) => updateArtwork({ x })}/><Range label="Height" min={1} max={selected.wall.startsWith('divider') ? 3 : 3.6} step={.1} value={selected.y} onChange={(y) => updateArtwork({ y })}/><Range label="Size" min={.45} max={1.65} step={.05} value={selected.scale} onChange={(scale) => updateArtwork({ scale })}/><button className="remove" onClick={() => { update('artworks', draft.artworks.filter((item) => item.id !== selectedId)); setSelectedId(undefined); }}>Remove artwork</button></div>}</section>
       <Accordion title="02 · Walls"><Swatches options={[['chalk','#e7e4dc'],['warm','#b9a993'],['charcoal','#30312f']]} value={draft.wall} onChange={(value) => update('wall', value as GalleryDraft['wall'])}/></Accordion>
       <Accordion title="03 · Floor"><Swatches options={[['concrete','#777672'],['oak','#5c4633'],['terrazzo','#a7a299']]} value={draft.floor} onChange={(value) => update('floor', value as GalleryDraft['floor'])}/></Accordion>
       <Accordion title="04 · Lighting"><Choice options={['daylight','museum','evening']} value={draft.lighting} onChange={(value) => update('lighting', value as GalleryDraft['lighting'])}/></Accordion>
