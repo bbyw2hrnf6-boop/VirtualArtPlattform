@@ -1,0 +1,9 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    { "collectionGroup": "galleries", "fieldPath": "coverSrc", "indexes": [] },
+    { "collectionGroup": "galleries", "fieldPath": "artworks", "indexes": [] },
+    { "collectionGroup": "galleries", "fieldPath": "decor", "indexes": [] },
+    { "collectionGroup": "galleryArtworks", "fieldPath": "src", "indexes": [] }
+  ]
+}

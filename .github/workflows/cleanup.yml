@@ -1,0 +1,19 @@
+name: Clean up expired galleries
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Delete galleries older than ten days
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/cleanup-expired.mjs

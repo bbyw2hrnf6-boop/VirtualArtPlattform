@@ -16,6 +16,7 @@ export interface DecorPlacement {
 
 export interface Artwork {
   id: string;
+  assetId?: string;
   title: string;
   src: string;
   aspect: number;

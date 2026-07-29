@@ -38,7 +38,7 @@ function DiscoverGalleries() {
   return <section className="discover">
     <div className="discover-heading"><div><p className="eyebrow">Open for ten days</p><h2>Discover<br/><em>galleries.</em></h2></div><p>New spaces created by artists using AURA. Enter while the exhibition is live.</p></div>
     <div className={`discover-grid ${!galleries.length ? 'discover-grid--empty' : ''}`}>{!galleries.length && <div className="discover-empty"><span>{loaded ? 'No exhibitions are open yet.' : 'Looking for open exhibitions…'}</span><p>Publish the first gallery and it will appear here for ten days.</p><button className="text-link" onClick={() => navigate('/create')}>Create a gallery →</button></div>}{galleries.map((gallery) => {
-      const cover = gallery.artworks[0]?.src;
+      const cover = gallery.coverSrc || gallery.artworks[0]?.src;
       const days = Math.max(1, Math.ceil((new Date(gallery.expiresAt).getTime() - Date.now()) / 86400000));
       return <button key={gallery.id} className={`discover-card template-card--${gallery.templateId}`} onClick={() => navigate(`/g/${gallery.id}`)}>
         <div className="discover-cover">{cover ? <img src={cover} alt=""/> : <div className="mini-room"><i/><i/><i/></div>}<span>{days} days left</span></div>
@@ -66,9 +66,12 @@ function TemplatePicker({ onChoose }: { onChoose: (id: TemplateId) => void }) {
 
 async function imageFromFile(file: File): Promise<Pick<Artwork, 'src' | 'aspect'>> {
   const url = URL.createObjectURL(file); const image = new Image(); image.src = url; await image.decode();
-  const max = 1400; const scale = Math.min(1, max / Math.max(image.width, image.height));
+  const max = 1200; const scale = Math.min(1, max / Math.max(image.width, image.height));
   const canvas = document.createElement('canvas'); canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale); canvas.getContext('2d')!.drawImage(image, 0, 0, canvas.width, canvas.height); URL.revokeObjectURL(url);
-  return { src: canvas.toDataURL('image/jpeg', .82), aspect: canvas.width / canvas.height };
+  let quality = .76; let src = canvas.toDataURL('image/webp', quality);
+  while (src.length > 720000 && quality > .42) { quality -= .08; src = canvas.toDataURL('image/webp', quality); }
+  if (src.length > 780000) throw new Error(`${file.name} could not be compressed below the Firestore image limit.`);
+  return { src, aspect: canvas.width / canvas.height };
 }
 
 function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
@@ -95,7 +98,7 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   const publish = async () => {
     setPublishing(true);
     try { setPublished(await galleryRepository.publish(draft)); }
-    catch (error) { console.error(error); alert('Publishing could not connect to Firebase. Enable Anonymous Authentication and deploy the included Firestore and Storage rules.'); }
+    catch (error) { console.error(error); alert('Publishing could not connect to Firebase. Enable Anonymous Authentication and deploy the included Firestore rules.'); }
     finally { setPublishing(false); }
   };
 

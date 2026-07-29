@@ -21,7 +21,7 @@ Push `main` to GitHub and enable **Settings → Pages → GitHub Actions**. The 
 ## Architecture
 
 - `features/gallery/` owns gallery types, blueprints, and the Three.js renderer.
-- `services/galleryRepository.ts` is the Firebase persistence boundary. It uploads artwork to Storage and gallery documents to Firestore using invisible anonymous authentication.
+- `services/galleryRepository.ts` is the Firebase persistence boundary. It stores compressed artwork and gallery data in separate Firestore documents using invisible anonymous authentication, without Firebase Storage.
 - `public/assets/demo/` contains the reused, optimized Danny Hirsch Blender room.
 - `blender/templates/` contains exactly three editable `.blend` source blueprints; regenerate them with `blender --background --python blender/create_templates.py`.
 
@@ -29,11 +29,4 @@ The editor intentionally exposes only three templates, three wall finishes, thre
 
 ## Firebase setup
 
-1. In Firebase Authentication, enable the **Anonymous** sign-in provider.
-2. Create the default Cloud Firestore database.
-3. Create/enable Cloud Storage for Firebase.
-4. Deploy `firestore.rules` and `storage.rules` with `firebase deploy --only firestore:rules,storage` or paste them into their respective Rules tabs.
-5. Add `bbyw2hrnf6-boop.github.io` to Authentication → Settings → Authorized domains.
-6. In Google Cloud Firestore, create a TTL policy for collection group `galleries` and timestamp field `expiresAt`.
-
-Gallery documents are discoverable for exactly ten days. Firestore TTL removes expired documents asynchronously; use a Cloud Storage lifecycle rule for `gallery-assets/` if the corresponding image files should also be physically deleted after ten days.
+See `FIREBASE_SETUP.md`. The Spark-plan setup uses Firestore only. A scheduled GitHub Action removes expired gallery and artwork documents daily without Firebase Storage or paid Firestore TTL.
