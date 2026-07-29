@@ -29,32 +29,44 @@ function Header({ light = false }: { light?: boolean }) {
   </header>;
 }
 
-function RoomIllustration() {
-  return <div className="room-illustration" aria-hidden="true"><div className="room-ceiling"/><div className="room-wall room-wall--left"/><div className="room-wall room-wall--back"><i/><i/><i/></div><div className="room-wall room-wall--right"/><div className="room-floor"/><div className="artwork artwork--a"/><div className="artwork artwork--b"/><div className="artwork artwork--c"/><div className="plinth"/></div>;
+function HeroGalleryVisual() {
+  return <button className="hero-gallery-visual" onClick={() => navigate('/demo')} aria-label="Enter the Danny Hirsch live gallery"><img src="./assets/demo/aura-hero-gallery.webp" alt="Atmospheric AURA gallery with contemporary artworks"/><span className="hero-gallery-shade"/><span className="hero-gallery-label"><i>Live space · 01</i><strong>Enter the exhibition ↗</strong></span></button>;
 }
 
 function DiscoverGalleries() {
   const [galleries, setGalleries] = useState<GalleryRecord[]>([]);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string>();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [discoveredAt] = useState(Date.now);
   const load = useCallback(() => { setStatus('loading'); galleryRepository.discover().then((items) => { setGalleries(items); setStatus('ready'); }).catch((error) => { console.error('Discover unavailable', error); setStatus('error'); }); }, []);
-  useEffect(() => { galleryRepository.discover().then((items) => { setGalleries(items); setStatus('ready'); }).catch((error) => { console.error('Discover unavailable', error); setStatus('error'); }); }, []);
+  useEffect(() => { galleryRepository.discover().then((items) => { setGalleries(items); setStatus('ready'); }).catch((error) => { console.error('Discover unavailable', error); setStatus('error'); }); galleryRepository.currentUserId().then(setOwnerId).catch(() => setOwnerId(null)); }, []);
+  const removeGallery = async (gallery: GalleryRecord) => {
+    if (!window.confirm(`Remove “${gallery.title}” from Discover? This cannot be undone.`)) return;
+    setRemovingId(gallery.id);
+    try { await galleryRepository.delete(gallery.id); setGalleries((current) => current.filter((item) => item.id !== gallery.id)); }
+    catch (error) { console.error('Gallery deletion failed', error); alert('The gallery could not be removed. Deploy the updated Firestore rules, then try again.'); }
+    finally { setRemovingId(undefined); }
+  };
   return <section className="discover">
     <div className="discover-heading"><div><p className="eyebrow">Open for ten days</p><h2>Discover<br/><em>galleries.</em></h2></div><p>New spaces created by artists using AURA. Enter while the exhibition is live.</p></div>
     <div className={`discover-grid ${!galleries.length ? 'discover-grid--empty' : ''}`}>{!galleries.length && <div className="discover-empty"><span>{status === 'loading' ? 'Looking for open exhibitions…' : status === 'error' ? 'Discover is temporarily unavailable.' : 'No exhibitions are open yet.'}</span><p>{status === 'error' ? 'Your published gallery is safe. Please retry the connection.' : 'Publish the first gallery and it will appear here for ten days.'}</p><button className="text-link" onClick={status === 'error' ? load : () => navigate('/create')}>{status === 'error' ? 'Try again →' : 'Create a gallery →'}</button></div>}{galleries.map((gallery) => {
       const cover = gallery.coverSrc || gallery.artworks[0]?.src;
       const days = Math.max(1, Math.ceil((new Date(gallery.expiresAt).getTime() - discoveredAt) / 86400000));
-      return <button key={gallery.id} className={`discover-card template-card--${gallery.templateId}`} onClick={() => navigate(`/g/${gallery.id}`)}>
-        <div className="discover-cover">{cover ? <img src={cover} alt=""/> : <div className="mini-room"><i/><i/><i/></div>}<span>{days} days left</span></div>
-        <p>{gallery.artist}</p><h3>{gallery.title}</h3><small>Enter exhibition →</small>
-      </button>;
+      return <article key={gallery.id} className={`discover-card template-card--${gallery.templateId}`}>
+        <button className="discover-card-main" onClick={() => navigate(`/g/${gallery.id}`)}>
+          <div className="discover-cover">{cover ? <img src={cover} alt=""/> : <div className="mini-room"><i/><i/><i/></div>}<span>{days} days left</span></div>
+          <p>{gallery.artist}</p><h3>{gallery.title}</h3><small>Enter exhibition →</small>
+        </button>
+        {gallery.ownerId === ownerId && <button className="discover-delete" disabled={removingId === gallery.id} onClick={() => removeGallery(gallery)} aria-label={`Remove ${gallery.title}`}>{removingId === gallery.id ? 'Removing…' : 'Remove'}</button>}
+      </article>;
     })}</div>
   </section>;
 }
 
 function Landing() {
   return <main className="landing"><Header />
-    <section className="hero"><div className="hero-copy"><p className="eyebrow">Art should be experienced</p><h1>Your art.<br/><em>Beyond walls.</em></h1><p className="hero-intro">Create a cinematic, shareable 3D exhibition in minutes. No code. No downloads. No 3D software. Just your work, in a space it deserves.</p><div className="hero-actions"><button className="button button--light" onClick={() => navigate('/create')}>Create your gallery <span>↗</span></button><button className="text-link" onClick={() => navigate('/demo')}>Experience a live gallery <span>→</span></button></div><div className="hero-note"><span>01</span><p>Premium spaces<br/>Effortless creation</p></div></div><RoomIllustration /><p className="vertical-word">AURA / THE DIGITAL HOME FOR ARTISTS</p></section>
+    <section className="hero"><div className="hero-copy"><p className="eyebrow">Art should be experienced</p><h1>Your art.<br/><em>Beyond walls.</em></h1><p className="hero-intro">Create a cinematic, shareable 3D exhibition in minutes. No code. No downloads. No 3D software. Just your work, in a space it deserves.</p><div className="hero-actions"><button className="button button--light" onClick={() => navigate('/create')}>Create your gallery <span>↗</span></button><button className="text-link" onClick={() => navigate('/demo')}>Experience a live gallery <span>→</span></button></div><div className="hero-note"><span>01</span><p>Premium spaces<br/>Effortless creation</p></div></div><HeroGalleryVisual /><p className="vertical-word">AURA / THE DIGITAL HOME FOR ARTISTS</p></section>
     <section className="manifesto"><p className="eyebrow">Our mission</p><blockquote>We are not building another place to upload images.<br/><em>We are building a place where art is experienced.</em></blockquote><div><p>Social feeds move on. Static portfolios flatten the work. AURA gives every exhibition atmosphere, presence, and a space of its own.</p><span>Browser-based · No technical knowledge required</span></div></section>
     <DiscoverGalleries />
     <section className="promise"><p className="eyebrow">Quality over quantity</p><div><h2>From studio to<br/><em>space</em> in minutes.</h2><p>A small collection of carefully designed, Blender-based environments gives artists cinematic light and premium materials without the complexity of 3D software.</p></div><div className="steps">{['Choose a gallery','Upload artwork','Customize','Publish & share'].map((step, i) => <article key={step}><span>0{i+1}</span><h3>{step}</h3><p>{['Begin with one of three considered, photorealistic spaces.','Add up to eight works and compose them directly on the walls.','Set the mood with curated finishes, lighting, and objects.','Open your exhibition and share one simple link with the world.'][i]}</p></article>)}</div></section>
@@ -92,10 +104,13 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   const selectedDecor = draft.decor.find((item) => item.id === selectedDecorId);
   const roomDimensions = TEMPLATES.find((item) => item.id === draft.templateId)?.dimensions ?? [10, 7];
   const decorLimitX = roomDimensions[0] / 2 - .5; const decorLimitZ = roomDimensions[1] / 2 - .5;
+  const wallLimit = (wall: WallId) => wall.startsWith('divider') ? 2.65 : wall === 'north' ? roomDimensions[0] / 2 - .8 : roomDimensions[1] / 2 - .8;
+  const artworkLimit = selected ? wallLimit(selected.wall) : 3.5;
   const selectArtwork = useCallback((id: string) => { setSelectedId(id); setSelectedDecorId(undefined); }, []);
   const selectDecor = useCallback((id: string) => { setSelectedDecorId(id); setSelectedId(undefined); }, []);
   const update = <K extends keyof GalleryDraft>(key: K, value: GalleryDraft[K]) => setDraft((current) => ({ ...current, [key]: value }));
   const updateArtwork = (value: Partial<Artwork>) => setDraft((current) => ({ ...current, artworks: current.artworks.map((item) => item.id === selectedId ? { ...item, ...value } : item) }));
+  const changeArtworkWall = (wall: WallId) => updateArtwork({ wall, x: selected ? Math.max(-wallLimit(wall), Math.min(wallLimit(wall), selected.x)) : 0 });
   const updateDecor = (value: Partial<DecorPlacement>) => setDraft((current) => ({ ...current, decor: current.decor.map((item) => item.id === selectedDecorId ? { ...item, ...value } : item) }));
   const addDecor = (type: DecorId) => { const item: DecorPlacement = { id: crypto.randomUUID(), type, x: (draft.decor.length % 3 - 1) * 1.4, z: 1 - Math.floor(draft.decor.length / 3) * 1.2, rotation: 0, scale: 1 }; update('decor', [...draft.decor, item]); setSelectedDecorId(item.id); setSelectedId(undefined); };
   const upload = async (files: FileList | null) => {
@@ -116,7 +131,7 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   }
 
   return <main className="studio"><header className="studio-header"><Logo/><div className="studio-title"><input aria-label="Gallery title" value={draft.title} onChange={(event) => update('title', event.target.value)}/><span>by</span><input aria-label="Artist name" value={draft.artist} onChange={(event) => update('artist', event.target.value)}/></div><button className="publish-button" onClick={publish} disabled={publishing}>{publishing ? 'Publishing…' : 'Publish'} <span>↗</span></button></header>
-    <div className="studio-body"><aside className="tool-panel"><section><p className="tool-label">01 · Artwork</p><label className="upload"><input type="file" accept="image/*" multiple onChange={(event) => upload(event.target.files)}/><span>＋</span><strong>Upload artwork</strong><small>JPG, PNG or WebP · up to 8</small></label><div className="artwork-list">{draft.artworks.map((artwork, index) => <button key={artwork.id} className={selectedId === artwork.id ? 'active' : ''} onClick={() => selectArtwork(artwork.id)}><img src={artwork.src} alt=""/><span>{String(index + 1).padStart(2,'0')} · {artwork.title}</span></button>)}</div>{selected && <div className="placement"><label>Title<input type="text" value={selected.title} maxLength={80} onChange={(event) => updateArtwork({ title: event.target.value })}/></label><label>Year<input type="text" value={selected.year ?? ''} maxLength={12} placeholder="2026" onChange={(event) => updateArtwork({ year: event.target.value })}/></label><label className="placement-note">Artwork note<textarea value={selected.description ?? ''} maxLength={240} placeholder="A short note visitors can read…" onChange={(event) => updateArtwork({ description: event.target.value })}/></label><label>Wall<select value={selected.wall} onChange={(event) => updateArtwork({ wall: event.target.value as WallId })}><option value="north">Back wall</option><option value="west">Left wall</option><option value="east">Right wall</option></select></label><Range label="Horizontal" min={-3.5} max={3.5} step={.1} value={selected.x} onChange={(x) => updateArtwork({ x })}/><Range label="Height" min={1} max={3.6} step={.1} value={selected.y} onChange={(y) => updateArtwork({ y })}/><Range label="Size" min={.45} max={1.65} step={.05} value={selected.scale} onChange={(scale) => updateArtwork({ scale })}/><button className="remove" onClick={() => { update('artworks', draft.artworks.filter((item) => item.id !== selectedId)); setSelectedId(undefined); }}>Remove artwork</button></div>}</section>
+    <div className="studio-body"><aside className="tool-panel"><section><p className="tool-label">01 · Artwork</p><label className="upload"><input type="file" accept="image/*" multiple onChange={(event) => upload(event.target.files)}/><span>＋</span><strong>Upload artwork</strong><small>JPG, PNG or WebP · up to 8</small></label><div className="artwork-list">{draft.artworks.map((artwork, index) => <button key={artwork.id} className={selectedId === artwork.id ? 'active' : ''} onClick={() => selectArtwork(artwork.id)}><img src={artwork.src} alt=""/><span>{String(index + 1).padStart(2,'0')} · {artwork.title}</span></button>)}</div>{selected && <div className="placement"><label>Title<input type="text" value={selected.title} maxLength={80} onChange={(event) => updateArtwork({ title: event.target.value })}/></label><label>Year<input type="text" value={selected.year ?? ''} maxLength={12} placeholder="2026" onChange={(event) => updateArtwork({ year: event.target.value })}/></label><label className="placement-note">Artwork note<textarea value={selected.description ?? ''} maxLength={240} placeholder="A short note visitors can read…" onChange={(event) => updateArtwork({ description: event.target.value })}/></label><label>Wall<select value={selected.wall} onChange={(event) => changeArtworkWall(event.target.value as WallId)}><option value="north">Back wall</option><option value="west">Left wall</option><option value="east">Right wall</option>{draft.templateId === 'pavilion' && <><option value="divider-front">Center wall · Front</option><option value="divider-back">Center wall · Back</option></>}</select></label><Range label="Horizontal" min={-artworkLimit} max={artworkLimit} step={.1} value={selected.x} onChange={(x) => updateArtwork({ x })}/><Range label="Height" min={1} max={selected.wall.startsWith('divider') ? 3 : 3.6} step={.1} value={selected.y} onChange={(y) => updateArtwork({ y })}/><Range label="Size" min={.45} max={1.65} step={.05} value={selected.scale} onChange={(scale) => updateArtwork({ scale })}/><button className="remove" onClick={() => { update('artworks', draft.artworks.filter((item) => item.id !== selectedId)); setSelectedId(undefined); }}>Remove artwork</button></div>}</section>
       <Accordion title="02 · Walls"><Swatches options={[['chalk','#e7e4dc'],['warm','#b9a993'],['charcoal','#30312f']]} value={draft.wall} onChange={(value) => update('wall', value as GalleryDraft['wall'])}/></Accordion>
       <Accordion title="03 · Floor"><Swatches options={[['concrete','#777672'],['oak','#5c4633'],['terrazzo','#a7a299']]} value={draft.floor} onChange={(value) => update('floor', value as GalleryDraft['floor'])}/></Accordion>
       <Accordion title="04 · Lighting"><Choice options={['daylight','museum','evening']} value={draft.lighting} onChange={(value) => update('lighting', value as GalleryDraft['lighting'])}/></Accordion>

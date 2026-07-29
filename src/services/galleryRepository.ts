@@ -1,5 +1,5 @@
 import { signInAnonymously } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, where, writeBatch } from 'firebase/firestore';
 import type { GalleryDraft } from '../features/gallery/types';
 import { firebaseAuth, firebaseDb } from './firebase';
 
@@ -15,6 +15,8 @@ export interface GalleryRepository {
   publish(draft: GalleryDraft): Promise<GalleryRecord>;
   find(id: string): Promise<GalleryRecord | null>;
   discover(): Promise<GalleryRecord[]>;
+  currentUserId(): Promise<string | null>;
+  delete(id: string): Promise<void>;
 }
 
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 38);
@@ -35,6 +37,11 @@ async function createThumbnail(source?: string) {
 
 class FirebaseGalleryRepository implements GalleryRepository {
   private async userId() { return firebaseAuth.currentUser?.uid ?? (await signInAnonymously(firebaseAuth)).user.uid; }
+
+  async currentUserId() {
+    await firebaseAuth.authStateReady();
+    return firebaseAuth.currentUser?.uid ?? null;
+  }
 
   async publish(draft: GalleryDraft): Promise<GalleryRecord> {
     const ownerId = await this.userId(); const base = slugify(`${draft.artist}-${draft.title}`) || 'gallery'; const id = `${base}-${crypto.randomUUID().slice(0, 7)}`;
@@ -68,6 +75,17 @@ class FirebaseGalleryRepository implements GalleryRepository {
     const safelyActiveAt = Timestamp.fromMillis(Date.now() + 60_000);
     const active = query(collection(firebaseDb, 'galleries'), where('expiresAt', '>', safelyActiveAt), orderBy('expiresAt', 'desc'), limit(12));
     return (await getDocs(active)).docs.map((item) => fromFirestore(item.id, item.data())).filter((item) => new Date(item.expiresAt).getTime() > Date.now());
+  }
+
+  async delete(id: string): Promise<void> {
+    const ownerId = await this.userId();
+    const galleryRef = doc(firebaseDb, 'galleries', id);
+    const snapshot = await getDoc(galleryRef);
+    if (!snapshot.exists()) return;
+    const gallery = fromFirestore(snapshot.id, snapshot.data());
+    if (gallery.ownerId !== ownerId) throw new Error('Only the artist who published this gallery can delete it.');
+    const assetIds = gallery.artworks.map((artwork) => artwork.assetId).filter((assetId): assetId is string => Boolean(assetId));
+    const batch = writeBatch(firebaseDb); assetIds.forEach((assetId) => batch.delete(doc(firebaseDb, 'galleryArtworks', assetId))); batch.delete(galleryRef); await batch.commit();
   }
 }
 

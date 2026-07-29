@@ -1,5 +1,5 @@
 export type TemplateId = 'white-cube' | 'nocturne' | 'pavilion';
-export type WallId = 'north' | 'west' | 'east';
+export type WallId = 'north' | 'west' | 'east' | 'divider-front' | 'divider-back';
 export type WallFinish = 'chalk' | 'warm' | 'charcoal';
 export type FloorFinish = 'concrete' | 'oak' | 'terrazzo';
 export type LightingPreset = 'daylight' | 'museum' | 'evening';

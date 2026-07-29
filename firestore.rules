@@ -19,7 +19,8 @@ service cloud.firestore {
         && request.resource.data.decor.size() <= 8
         && request.resource.data.expiresAt > request.time
         && request.resource.data.expiresAt < request.time + duration.value(11, 'd');
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
 
     match /galleryArtworks/{assetId} {
@@ -33,7 +34,8 @@ service cloud.firestore {
         && request.resource.data.src.size() < 780000
         && request.resource.data.expiresAt > request.time
         && request.resource.data.expiresAt < request.time + duration.value(11, 'd');
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
   }
 }

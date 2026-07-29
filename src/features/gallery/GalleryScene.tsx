@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { DecorPlacement, GalleryDraft, WallId } from './types';
@@ -10,8 +11,11 @@ type Bounds = { minX: number; maxX: number; minZ: number; maxZ: number };
 const WALLS: Record<WallId, { position: (x: number, y: number, w: number, d: number) => [number, number, number]; rotation: [number, number, number] }> = {
   north: { position: (x, y, _w, d) => [x, y, -d / 2 + .035], rotation: [0, 0, 0] },
   west: { position: (x, y, w) => [-w / 2 + .035, y, x], rotation: [0, Math.PI / 2, 0] },
-  east: { position: (x, y, w) => [w / 2 - .035, y, x], rotation: [0, -Math.PI / 2, 0] }
+  east: { position: (x, y, w) => [w / 2 - .035, y, x], rotation: [0, -Math.PI / 2, 0] },
+  'divider-front': { position: (x, y) => [x, y, -.395], rotation: [0, 0, 0] },
+  'divider-back': { position: (x, y) => [x, y, -.605], rotation: [0, Math.PI, 0] }
 };
+const PAVILION_DIVIDER_WIDTH = 6.2;
 const wallColors = { chalk: '#e7e4dc', warm: '#b9a993', charcoal: '#30312f' };
 const floorColors = { concrete: '#777672', oak: '#5c4633', terrazzo: '#a7a299' };
 
@@ -22,16 +26,27 @@ function showSceneError(element: HTMLElement, message = 'This gallery needs WebG
 
 function createPlant(broad = false) {
   const group = new THREE.Group();
-  const pot = new THREE.Mesh(new THREE.CylinderGeometry(.35, .27, .65, 18), new THREE.MeshStandardMaterial({ color: '#282521', roughness: .8 }));
-  pot.position.y = .34; group.add(pot);
-  const leafMaterial = new THREE.MeshStandardMaterial({ color: broad ? '#365d39' : '#3c573a', roughness: .75 });
-  for (let index = 0; index < (broad ? 6 : 9); index++) {
-    const leaf = new THREE.Mesh(new THREE.SphereGeometry(broad ? .34 : .18, 12, 8), leafMaterial);
-    leaf.scale.set(broad ? .7 : .45, broad ? 1.5 : 2.8, .18);
-    leaf.rotation.z = (index % 2 ? 1 : -1) * (.25 + index * .04);
-    leaf.position.set(Math.sin(index * 1.9) * .3, .82 + index * .11, Math.cos(index * 2.1) * .22);
-    group.add(leaf);
+  const ceramic = new THREE.MeshStandardMaterial({ color: broad ? '#c7bda9' : '#3b342c', roughness: .42, metalness: .04 });
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(.36, .27, .58, 32), ceramic); pot.position.y = .3;
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.345, .045, 10, 32), ceramic); rim.rotation.x = Math.PI / 2; rim.position.y = .59;
+  const soil = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .035, 28), new THREE.MeshStandardMaterial({ color: '#17120e', roughness: 1 })); soil.position.y = .585;
+  group.add(pot, rim, soil);
+  const stemMaterial = new THREE.MeshStandardMaterial({ color: broad ? '#395235' : '#51472f', roughness: .82 });
+  const leafMaterials = [
+    new THREE.MeshStandardMaterial({ color: broad ? '#2e5637' : '#506640', roughness: .68 }),
+    new THREE.MeshStandardMaterial({ color: broad ? '#3e6946' : '#68764b', roughness: .74 })
+  ];
+  const count = broad ? 8 : 13;
+  for (let index = 0; index < count; index++) {
+    const angle = index * 2.35 + (broad ? .25 : 0); const reach = broad ? .46 : .32; const height = .82 + (index % 5) * (broad ? .18 : .2);
+    const end = new THREE.Vector3(Math.sin(angle) * reach, height, Math.cos(angle) * reach);
+    const stemCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, .59, 0), new THREE.Vector3(end.x * .3, height * .8, end.z * .3), end);
+    const stem = new THREE.Mesh(new THREE.TubeGeometry(stemCurve, 8, broad ? .018 : .012, 6, false), stemMaterial); group.add(stem);
+    const leaf = new THREE.Mesh(new THREE.SphereGeometry(broad ? .3 : .145, 16, 10), leafMaterials[index % 2]);
+    leaf.scale.set(broad ? .72 : .5, broad ? 1.55 : 2.15, broad ? .14 : .18); leaf.position.copy(end);
+    leaf.rotation.set(Math.cos(angle) * .28, -angle, (index % 2 ? 1 : -1) * (broad ? .65 : .45)); group.add(leaf);
   }
+  group.traverse((child) => { const mesh = child as THREE.Mesh; if (mesh.isMesh) { mesh.castShadow = true; mesh.receiveShadow = true; } });
   return group;
 }
 
@@ -39,20 +54,24 @@ function createDecor(item: DecorPlacement, selected: boolean) {
   const group = new THREE.Group(); group.userData.decorId = item.id;
   if (item.type === 'olive' || item.type === 'monstera') group.add(createPlant(item.type === 'monstera'));
   if (item.type === 'pedestal') {
-    const pedestal = new THREE.Mesh(new THREE.BoxGeometry(.8, 1.15, .8), new THREE.MeshStandardMaterial({ color: '#d8d4cb', roughness: .76 })); pedestal.position.y = .575; group.add(pedestal);
+    const plaster = new THREE.MeshStandardMaterial({ color: '#d8d4cb', roughness: .68 });
+    const pedestal = new THREE.Mesh(new RoundedBoxGeometry(.84, 1.15, .84, 5, .035), plaster); pedestal.position.y = .575;
+    const top = new THREE.Mesh(new RoundedBoxGeometry(.91, .075, .91, 4, .025), new THREE.MeshStandardMaterial({ color: '#e5e1d8', roughness: .58 })); top.position.y = 1.16; group.add(pedestal, top);
   }
   if (item.type === 'arc-lamp') {
-    const metal = new THREE.MeshStandardMaterial({ color: '#181818', metalness: .7, roughness: .3 });
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(.35, .42, .08, 18), metal); base.position.y = .04; group.add(base);
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, 2.8, 12), metal); stem.position.y = 1.4; group.add(stem);
-    const shade = new THREE.Mesh(new THREE.ConeGeometry(.32, .42, 20, 1, true), metal); shade.rotation.x = Math.PI; shade.position.y = 2.65; group.add(shade);
-    const glow = new THREE.PointLight('#ffd9a0', 4, 4); glow.position.y = 2.45; group.add(glow);
+    const metal = new THREE.MeshStandardMaterial({ color: '#171816', metalness: .82, roughness: .22 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.37, .43, .085, 32), metal); base.position.y = .045; group.add(base);
+    const arc = new THREE.CatmullRomCurve3([new THREE.Vector3(0, .08, 0), new THREE.Vector3(0, 1.65, 0), new THREE.Vector3(.32, 2.55, 0), new THREE.Vector3(1.05, 2.75, 0)]);
+    const stem = new THREE.Mesh(new THREE.TubeGeometry(arc, 28, .028, 9, false), metal); group.add(stem);
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(.2, .38, .4, 32, 1, true), metal); shade.position.set(1.05, 2.56, 0); group.add(shade);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(.11, 18, 12), new THREE.MeshStandardMaterial({ color: '#fff2d3', emissive: '#ffbf72', emissiveIntensity: 2.4, roughness: .25 })); bulb.position.set(1.05, 2.39, 0); group.add(bulb);
+    const glow = new THREE.PointLight('#ffd39a', 5.5, 5.5, 1.7); glow.position.copy(bulb.position); group.add(glow);
   }
   if (selected) {
     const marker = new THREE.Mesh(new THREE.RingGeometry(.46, .53, 32), new THREE.MeshBasicMaterial({ color: '#d9ff43', side: THREE.DoubleSide })); marker.rotation.x = -Math.PI / 2; marker.position.y = .015; group.add(marker);
   }
   group.position.set(item.x, 0, item.z); group.rotation.y = item.rotation; group.scale.setScalar(item.scale);
-  group.traverse((child) => { child.userData.decorId = item.id; });
+  group.traverse((child) => { child.userData.decorId = item.id; const mesh = child as THREE.Mesh; if (mesh.isMesh) { mesh.castShadow = true; mesh.receiveShadow = true; } });
   return group;
 }
 
@@ -70,8 +89,8 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
     addWall(new THREE.BoxGeometry(w, .12, d), [0, 4.8, 0]);
   }
   if (draft.templateId === 'pavilion') {
-    const divider = new THREE.Mesh(new THREE.BoxGeometry(4.4, 3.5, .18), wall); divider.position.set(0, 1.75, -.5); scene.add(divider);
-    const bench = new THREE.Mesh(new THREE.BoxGeometry(2.2, .4, .65), new THREE.MeshStandardMaterial({ color: '#26231f', roughness: .6 })); bench.position.set(0, .35, 2.4); bench.castShadow = true; scene.add(bench);
+    const divider = new THREE.Mesh(new THREE.BoxGeometry(PAVILION_DIVIDER_WIDTH, 4.1, .18), wall); divider.position.set(0, 2.05, -.5); divider.receiveShadow = true; scene.add(divider);
+    const bench = new THREE.Mesh(new RoundedBoxGeometry(2.8, .42, .72, 5, .08), new THREE.MeshStandardMaterial({ color: '#26231f', roughness: .55 })); bench.position.set(0, .34, 3.15); bench.castShadow = true; scene.add(bench);
   }
   if (draft.templateId === 'nocturne') { const plinth = new THREE.Mesh(new THREE.CylinderGeometry(.75, .75, .7, 32), new THREE.MeshStandardMaterial({ color: '#151615', roughness: .75 })); plinth.position.set(0, .35, 1); scene.add(plinth); }
   const decorObjects = draft.decor.map((item) => createDecor(item, selectedDecorId === item.id));
@@ -128,12 +147,41 @@ function createFirstPersonWalk(camera: THREE.PerspectiveCamera, canvas: HTMLCanv
 type WalkController = ReturnType<typeof createFirstPersonWalk>;
 
 function createCinematicIntro(camera: THREE.PerspectiveCamera, points: THREE.Vector3[], lookTarget: THREE.Vector3, navigation: WalkController, element: HTMLElement, onComplete?: () => void) {
-  const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', .38); const duration = 4800; const startedAt = performance.now(); let complete = false;
+  const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', .42); const duration = THREE.MathUtils.clamp(curve.getLength() * 430, 5000, 7200); const startedAt = performance.now(); let complete = false;
+  const position = new THREE.Vector3(); const ahead = new THREE.Vector3(); const cinematicLook = new THREE.Vector3();
   const overlay = document.createElement('div'); overlay.className = 'cinematic-intro'; const copy = document.createElement('div'); const label = document.createElement('span'); const line = document.createElement('i'); const skip = document.createElement('button'); label.textContent = 'Entering exhibition'; skip.textContent = 'Skip intro'; copy.append(label, line); overlay.append(copy, skip); element.appendChild(overlay); navigation.setEnabled(false);
   const finish = () => { if (complete) return; complete = true; camera.position.copy(points[points.length - 1]); navigation.lookAt(lookTarget); navigation.setEnabled(true); overlay.classList.add('is-finished'); window.setTimeout(() => overlay.remove(), 450); onComplete?.(); };
-  const update = () => { if (complete) return; if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { finish(); return; } const raw = Math.min(1, (performance.now() - startedAt) / duration); const eased = raw < .5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2; camera.position.copy(curve.getPointAt(eased)); camera.lookAt(lookTarget); line.style.transform = `scaleX(${raw})`; if (raw >= 1) finish(); };
+  const update = () => { if (complete) return; if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { finish(); return; } const raw = Math.min(1, (performance.now() - startedAt) / duration); const eased = raw * raw * raw * (raw * (raw * 6 - 15) + 10); const lookAheadAt = Math.min(.995, eased + .035); curve.getPointAt(eased, position); curve.getPointAt(lookAheadAt, ahead); cinematicLook.copy(ahead).lerp(lookTarget, .24 + raw * .2); camera.position.copy(position); camera.lookAt(cinematicLook); line.style.transform = `scaleX(${raw})`; if (raw >= 1) finish(); };
   skip.addEventListener('click', finish);
   return { update, skip: finish, isComplete: () => complete, dispose: () => { skip.removeEventListener('click', finish); overlay.remove(); } };
+}
+
+function galleryIntroPoints(templateId: GalleryDraft['templateId'], w: number, d: number) {
+  const finish = new THREE.Vector3(0, 1.68, d / 2 - 1);
+  if (templateId === 'pavilion') return [
+    new THREE.Vector3(0, 3.55, d / 2 - .8),
+    new THREE.Vector3(-w * .3, 2.8, d * .18),
+    new THREE.Vector3(-w * .32, 2.45, -d * .31),
+    new THREE.Vector3(-w * .32, 2.15, d * .08),
+    new THREE.Vector3(-w * .18, 1.9, d * .36),
+    finish
+  ];
+  if (templateId === 'nocturne') return [
+    new THREE.Vector3(0, 3.25, d / 2 - .8),
+    new THREE.Vector3(-w * .28, 2.55, d * .08),
+    new THREE.Vector3(-w * .2, 2.18, -d * .33),
+    new THREE.Vector3(w * .23, 2.05, -d * .25),
+    new THREE.Vector3(w * .18, 1.85, d * .28),
+    finish
+  ];
+  return [
+    new THREE.Vector3(0, 3.4, d / 2 - .8),
+    new THREE.Vector3(-w * .27, 2.6, d * .06),
+    new THREE.Vector3(-w * .12, 2.2, -d * .34),
+    new THREE.Vector3(w * .27, 2, -d * .18),
+    new THREE.Vector3(w * .16, 1.82, d * .3),
+    finish
+  ];
 }
 
 export interface ArtworkFocusInfo { id: string; title: string; artist: string; description?: string; year?: string; image?: string }
@@ -156,10 +204,10 @@ export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onS
     const { w, d, decorObjects, floorMesh } = buildRoom(scene, draft, selectedDecorId, walk); addLighting(scene, draft.lighting);
     const roomBounds = { minX: -w / 2 + .45, maxX: w / 2 - .45, minZ: -d / 2 + .45, maxZ: d / 2 - .45 };
     if (walk) camera.position.set(0, 1.68, d / 2 - 1);
-    const dividerCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => { if (Math.abs(next.x) > 2.55 || Math.abs(next.z + .5) > .4) return; next.z = previous.z > -.5 ? -.09 : -.91; } : undefined;
+    const dividerCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => { if (Math.abs(next.x) > PAVILION_DIVIDER_WIDTH / 2 + .35 || Math.abs(next.z + .5) > .4) return; next.z = previous.z > -.5 ? -.09 : -.91; } : undefined;
     const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => roomBounds, dividerCollision) : null; const finalLook = new THREE.Vector3(0, 1.68, -1); if (navigation) navigation.lookAt(finalLook);
     const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({ color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide })); walkMarker.rotation.x = -Math.PI / 2; walkMarker.position.y = .018; walkMarker.visible = false; if (walk) scene.add(walkMarker);
-    let intro = navigation && playIntro && !introPlayed.current ? createCinematicIntro(camera, [new THREE.Vector3(0, 3.35, d / 2 - .75), new THREE.Vector3(-w * .22, 2.45, .3), new THREE.Vector3(w * .2, 2.15, -d / 2 + 1.25), new THREE.Vector3(0, 1.68, d / 2 - 1)], finalLook, navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }) : null;
+    let intro = navigation && playIntro && !introPlayed.current ? createCinematicIntro(camera, galleryIntroPoints(draft.templateId, w, d), finalLook, navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }) : null;
     const artworkObjects: THREE.Object3D[] = []; const artworkById = new Map(draft.artworks.map((artwork) => [artwork.id, artwork])); let focusedArtwork: THREE.Object3D | null = null; let focusedArtworkId: string | null = null;
     draft.artworks.forEach((artwork) => {
       const texture = new THREE.TextureLoader().load(artwork.src); texture.colorSpace = THREE.SRGBColorSpace; const height = 1.5 * artwork.scale; const width = height * artwork.aspect;
