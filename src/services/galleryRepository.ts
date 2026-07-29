@@ -1,6 +1,6 @@
 import { signInAnonymously } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, where } from 'firebase/firestore';
-import type { Artwork, GalleryDraft } from '../features/gallery/types';
+import type { GalleryDraft } from '../features/gallery/types';
 import { firebaseAuth, firebaseDb } from './firebase';
 
 export interface GalleryRecord extends GalleryDraft {
@@ -63,8 +63,11 @@ class FirebaseGalleryRepository implements GalleryRepository {
   }
 
   async discover(): Promise<GalleryRecord[]> {
-    const active = query(collection(firebaseDb, 'galleries'), where('expiresAt', '>', Timestamp.now()), orderBy('expiresAt', 'desc'), limit(12));
-    return (await getDocs(active)).docs.map((item) => fromFirestore(item.id, item.data()));
+    // The public-read rule compares against request.time. A small future cutoff lets
+    // Firestore prove that every query result is still live when the request arrives.
+    const safelyActiveAt = Timestamp.fromMillis(Date.now() + 60_000);
+    const active = query(collection(firebaseDb, 'galleries'), where('expiresAt', '>', safelyActiveAt), orderBy('expiresAt', 'desc'), limit(12));
+    return (await getDocs(active)).docs.map((item) => fromFirestore(item.id, item.data())).filter((item) => new Date(item.expiresAt).getTime() > Date.now());
   }
 }
 

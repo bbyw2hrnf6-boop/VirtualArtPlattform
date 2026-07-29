@@ -15,6 +15,11 @@ const WALLS: Record<WallId, { position: (x: number, y: number, w: number, d: num
 const wallColors = { chalk: '#e7e4dc', warm: '#b9a993', charcoal: '#30312f' };
 const floorColors = { concrete: '#777672', oak: '#5c4633', terrazzo: '#a7a299' };
 
+function showSceneError(element: HTMLElement, message = 'This gallery needs WebGL. Please enable hardware acceleration or open it in a current browser.') {
+  const notice = document.createElement('div'); const label = document.createElement('span'); const detail = document.createElement('p'); notice.className = 'scene-error'; label.textContent = '3D VIEW UNAVAILABLE'; detail.textContent = message; notice.append(label, detail); element.appendChild(notice);
+  return () => notice.remove();
+}
+
 function createPlant(broad = false) {
   const group = new THREE.Group();
   const pot = new THREE.Mesh(new THREE.CylinderGeometry(.35, .27, .65, 18), new THREE.MeshStandardMaterial({ color: '#282521', roughness: .8 }));
@@ -81,42 +86,56 @@ function addLighting(scene: THREE.Scene, preset: GalleryDraft['lighting']) {
   [-3, 0, 3].forEach((x) => { const spot = new THREE.SpotLight(settings.color, 18, 9, .45, .8, 1.5); spot.position.set(x, 4.25, -1); spot.target.position.set(x, 1.6, -4); scene.add(spot, spot.target); });
 }
 
-function createBoundedWalk(camera: THREE.PerspectiveCamera, controls: OrbitControls, bounds: () => Bounds) {
+type WalkCollision = (next: THREE.Vector3, previous: THREE.Vector3) => void;
+
+function createFirstPersonWalk(camera: THREE.PerspectiveCamera, canvas: HTMLCanvasElement, bounds: () => Bounds, collision?: WalkCollision) {
   const keys = new Set<string>();
-  const keyDown = (event: KeyboardEvent) => { if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.code)) { keys.add(event.code); event.preventDefault(); } };
+  const movementKeys = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+  const keyDown = (event: KeyboardEvent) => { if (movementKeys.includes(event.code)) { keys.add(event.code); event.preventDefault(); } };
   const keyUp = (event: KeyboardEvent) => keys.delete(event.code);
   window.addEventListener('keydown', keyDown); window.addEventListener('keyup', keyUp);
-  const clock = new THREE.Clock(); const forward = new THREE.Vector3(); const right = new THREE.Vector3(); const move = new THREE.Vector3();
+  camera.rotation.order = 'YXZ';
+  let dragging = false; let pointerId = -1; let lastX = 0; let lastY = 0; let yaw = camera.rotation.y; let pitch = camera.rotation.x; let eyeHeight = camera.position.y;
+  const syncRotation = () => { const rotation = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); pitch = rotation.x; yaw = rotation.y; camera.rotation.set(pitch, yaw, 0, 'YXZ'); };
+  const lookAt = (target: THREE.Vector3) => { eyeHeight = camera.position.y; camera.lookAt(target); syncRotation(); };
+  const pointerDown = (event: PointerEvent) => { if (event.button !== 0) return; dragging = true; pointerId = event.pointerId; lastX = event.clientX; lastY = event.clientY; canvas.setPointerCapture(event.pointerId); canvas.classList.add('is-looking'); };
+  const pointerMove = (event: PointerEvent) => { if (!dragging || event.pointerId !== pointerId) return; yaw -= (event.clientX - lastX) * .0032; pitch -= (event.clientY - lastY) * .0032; pitch = THREE.MathUtils.clamp(pitch, -1.22, 1.22); camera.rotation.set(pitch, yaw, 0, 'YXZ'); lastX = event.clientX; lastY = event.clientY; };
+  const pointerUp = (event: PointerEvent) => { if (event.pointerId !== pointerId) return; dragging = false; pointerId = -1; canvas.classList.remove('is-looking'); };
+  const contextMenu = (event: Event) => event.preventDefault();
+  canvas.addEventListener('pointerdown', pointerDown); canvas.addEventListener('pointermove', pointerMove); canvas.addEventListener('pointerup', pointerUp); canvas.addEventListener('pointercancel', pointerUp); canvas.addEventListener('contextmenu', contextMenu);
+  let previousTime = performance.now(); const forward = new THREE.Vector3(); const right = new THREE.Vector3(); const desired = new THREE.Vector3(); const velocity = new THREE.Vector3(); const previous = new THREE.Vector3();
   const update = () => {
-    const delta = Math.min(clock.getDelta(), .05); forward.subVectors(controls.target, camera.position); forward.y = 0; if (forward.lengthSq() < .001) forward.set(0, 0, -1); forward.normalize(); right.crossVectors(forward, camera.up).normalize(); move.set(0, 0, 0);
-    if (keys.has('KeyW') || keys.has('ArrowUp')) move.add(forward);
-    if (keys.has('KeyS') || keys.has('ArrowDown')) move.sub(forward);
-    if (keys.has('KeyD') || keys.has('ArrowRight')) move.add(right);
-    if (keys.has('KeyA') || keys.has('ArrowLeft')) move.sub(right);
-    if (move.lengthSq()) { move.normalize().multiplyScalar(delta * 2.6); camera.position.add(move); controls.target.add(move); }
-    const current = bounds(); const oldX = camera.position.x; const oldZ = camera.position.z;
-    camera.position.x = THREE.MathUtils.clamp(camera.position.x, current.minX, current.maxX); camera.position.z = THREE.MathUtils.clamp(camera.position.z, current.minZ, current.maxZ);
-    controls.target.x += camera.position.x - oldX; controls.target.z += camera.position.z - oldZ;
+    const now = performance.now(); const delta = Math.min((now - previousTime) / 1000, .05); previousTime = now; camera.getWorldDirection(forward); forward.y = 0; if (forward.lengthSq() < .001) forward.set(0, 0, -1); forward.normalize(); right.crossVectors(forward, camera.up).normalize(); desired.set(0, 0, 0);
+    if (keys.has('KeyW') || keys.has('ArrowUp')) desired.add(forward);
+    if (keys.has('KeyS') || keys.has('ArrowDown')) desired.sub(forward);
+    if (keys.has('KeyD') || keys.has('ArrowRight')) desired.add(right);
+    if (keys.has('KeyA') || keys.has('ArrowLeft')) desired.sub(right);
+    if (desired.lengthSq()) desired.normalize().multiplyScalar(2.75);
+    velocity.lerp(desired, 1 - Math.exp(-9 * delta)); previous.copy(camera.position); camera.position.addScaledVector(velocity, delta);
+    const current = bounds(); camera.position.x = THREE.MathUtils.clamp(camera.position.x, current.minX, current.maxX); camera.position.z = THREE.MathUtils.clamp(camera.position.z, current.minZ, current.maxZ); camera.position.y = eyeHeight; collision?.(camera.position, previous);
   };
-  return { update, dispose: () => { window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); } };
+  return { update, lookAt, dispose: () => { window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); canvas.removeEventListener('pointerdown', pointerDown); canvas.removeEventListener('pointermove', pointerMove); canvas.removeEventListener('pointerup', pointerUp); canvas.removeEventListener('pointercancel', pointerUp); canvas.removeEventListener('contextmenu', contextMenu); } };
 }
+
+export type GalleryViewMode = 'walk' | 'overview';
 
 interface GallerySceneProps {
   draft: GalleryDraft; selectedId?: string; selectedDecorId?: string;
-  onSelect?: (id: string) => void; onSelectDecor?: (id: string) => void; visitor?: boolean;
+  onSelect?: (id: string) => void; onSelectDecor?: (id: string) => void; visitor?: boolean; viewMode?: GalleryViewMode;
 }
 
-export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onSelectDecor, visitor = false }: GallerySceneProps) {
+export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onSelectDecor, visitor = false, viewMode = 'walk' }: GallerySceneProps) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); const template = getTemplate(draft.templateId);
-    const camera = new THREE.PerspectiveCamera(visitor ? 62 : 48, 1, .1, 70); camera.position.set(...template.camera);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; element.appendChild(renderer.domElement);
-    const controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0, 1.6, -1.5); controls.maxPolarAngle = Math.PI / 2 - .03; controls.minDistance = visitor ? .3 : 2.1; controls.maxDistance = visitor ? 25 : 15; controls.enablePan = false;
+    const walk = visitor && viewMode === 'walk'; const camera = new THREE.PerspectiveCamera(walk ? 62 : 48, 1, .1, 70); camera.position.set(...template.camera);
+    let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; element.appendChild(renderer.domElement);
+    const controls = walk ? null : new OrbitControls(camera, renderer.domElement); if (controls) { controls.enableDamping = true; controls.target.set(0, 1.6, -1.5); controls.maxPolarAngle = Math.PI / 2 - .03; controls.minDistance = 2.1; controls.maxDistance = visitor ? 18 : 15; controls.enablePan = false; controls.autoRotate = visitor; controls.autoRotateSpeed = .38; }
     const { w, d, decorObjects } = buildRoom(scene, draft, selectedDecorId); addLighting(scene, draft.lighting);
     const roomBounds = { minX: -w / 2 + .45, maxX: w / 2 - .45, minZ: -d / 2 + .45, maxZ: d / 2 - .45 };
-    if (visitor) { camera.position.set(0, 1.68, d / 2 - 1); controls.target.set(0, 1.68, -1); }
-    const navigation = visitor ? createBoundedWalk(camera, controls, () => roomBounds) : null;
+    if (walk) camera.position.set(0, 1.68, d / 2 - 1);
+    const dividerCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => { if (Math.abs(next.x) > 2.55 || Math.abs(next.z + .5) > .4) return; next.z = previous.z > -.5 ? -.09 : -.91; } : undefined;
+    const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => roomBounds, dividerCollision) : null; if (navigation) navigation.lookAt(new THREE.Vector3(0, 1.68, -1));
     const artworkObjects: THREE.Object3D[] = [];
     draft.artworks.forEach((artwork) => {
       const texture = new THREE.TextureLoader().load(artwork.src); texture.colorSpace = THREE.SRGBColorSpace; const height = 1.5 * artwork.scale; const width = height * artwork.aspect;
@@ -129,21 +148,21 @@ export function GalleryScene({ draft, selectedId, selectedDecorId, onSelect, onS
     const handlePointer = (event: PointerEvent) => { if (visitor) return; const box = renderer.domElement.getBoundingClientRect(); pointer.set(((event.clientX - box.left) / box.width) * 2 - 1, -((event.clientY - box.top) / box.height) * 2 + 1); raycaster.setFromCamera(pointer, camera); const hit = raycaster.intersectObjects([...artworkObjects, ...decorObjects], true)[0]; const artworkId = hit?.object.userData.artworkId as string | undefined; const decorId = hit?.object.userData.decorId as string | undefined; if (artworkId) onSelect?.(artworkId); else if (decorId) onSelectDecor?.(decorId); };
     renderer.domElement.addEventListener('click', handlePointer);
     let frame = 0; const resize = () => { const width = element.clientWidth; const height = element.clientHeight; renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); }; const observer = new ResizeObserver(resize); observer.observe(element); resize();
-    const animate = () => { navigation?.update(); controls.update(); element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('click', handlePointer); navigation?.dispose(); controls.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.domElement.remove(); };
-  }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, visitor]);
-  return <div className="gallery-scene" ref={host}><div className="scene-hint">{visitor ? 'WASD / arrows to walk · Drag to look' : 'Drag to look · Scroll to move'}</div></div>;
+    const animate = () => { navigation?.update(); controls?.update(); element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('click', handlePointer); navigation?.dispose(); controls?.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.domElement.remove(); };
+  }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, visitor, viewMode]);
+  return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'}`} ref={host}><div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD / arrows to walk · Drag to look' : 'Overview · Drag to orbit · Scroll to zoom' : 'Drag to look · Scroll to move'}</div></div>;
 }
 
-export function DannyDemoScene() {
+export function DannyDemoScene({ viewMode = 'walk' }: { viewMode?: GalleryViewMode }) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); scene.background = new THREE.Color('#080908');
     const camera = new THREE.PerspectiveCamera(62, 1, .04, 120); camera.position.set(0, 1.68, 4.8);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); renderer.setPixelRatio(Math.min(devicePixelRatio, 1.4)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .48; element.appendChild(renderer.domElement);
-    const controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0, 2.4, -2.8); controls.maxPolarAngle = Math.PI / 2; controls.minDistance = .3; controls.maxDistance = 30; controls.enablePan = false;
+    let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.4)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .48; element.appendChild(renderer.domElement);
+    const walk = viewMode === 'walk'; const controls = walk ? null : new OrbitControls(camera, renderer.domElement); if (controls) { controls.enableDamping = true; controls.target.set(0, 2.4, -2.8); controls.maxPolarAngle = Math.PI / 2; controls.minDistance = 2.5; controls.maxDistance = 22; controls.enablePan = false; controls.autoRotate = true; controls.autoRotateSpeed = .32; }
     scene.add(new THREE.AmbientLight('#fff4df', .08), new THREE.HemisphereLight('#ffe6ba', '#111310', .2));
-    let bounds: Bounds = { minX: -7, maxX: 7, minZ: -8, maxZ: 7 }; const navigation = createBoundedWalk(camera, controls, () => bounds); let destroyed = false;
+    let bounds: Bounds = { minX: -7, maxX: 7, minZ: -8, maxZ: 7 }; const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => bounds) : null; let destroyed = false;
     const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder); loader.load('./assets/demo/danny-gallery.glb', (gltf) => {
       if (destroyed) return; scene.add(gltf.scene); gltf.scene.updateMatrixWorld(true);
       gltf.scene.traverse((object) => {
@@ -153,13 +172,13 @@ export function DannyDemoScene() {
         materials.forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; const name = `${object.name} ${material.name}`.toLowerCase(); const metadataRole = String(object.userData?.theme_role || material.userData?.theme_role || '').toLowerCase(); const isArtwork = metadataRole === 'artwork' || /artwork|surface|wartrobe/.test(name) || Boolean(object.userData?.artwork_id); if (material.emissive) { material.emissive.set('#000000'); material.emissiveIntensity = 0; } if (isArtwork) { material.color?.set('#ffffff'); material.roughness = .68; } else if (material.color) { const color = metadataRole === 'floor' || /floor|marble|stone/.test(name) ? '#101111' : metadataRole === 'wall' || /wall/.test(name) ? '#393631' : metadataRole === 'ceiling' || /ceiling/.test(name) ? '#1b1c1a' : metadataRole === 'bronze' || /bronze|frame|trim/.test(name) ? '#8e6c3e' : /leaf|stem|botanical/.test(name) ? '#29452a' : '#181916'; material.color.set(color); material.roughness = metadataRole === 'bronze' || /bronze|frame|trim/.test(name) ? .38 : .72; } material.needsUpdate = true; });
       });
       const start = gltf.scene.getObjectByName('Walk_Start'); const target = gltf.scene.getObjectByName('Walk_LookTarget'); const minimum = gltf.scene.getObjectByName('Walk_Bounds_Min'); const maximum = gltf.scene.getObjectByName('Walk_Bounds_Max');
-      if (start) camera.position.copy(start.getWorldPosition(new THREE.Vector3())); if (target) controls.target.copy(target.getWorldPosition(new THREE.Vector3()));
+      if (start) camera.position.copy(start.getWorldPosition(new THREE.Vector3())); const lookTarget = target?.getWorldPosition(new THREE.Vector3()) ?? new THREE.Vector3(0, 2.4, -2.8); navigation?.lookAt(lookTarget); if (controls) controls.target.copy(lookTarget);
       if (minimum && maximum) { const a = minimum.getWorldPosition(new THREE.Vector3()); const b = maximum.getWorldPosition(new THREE.Vector3()); bounds = { minX: Math.min(a.x,b.x) + .35, maxX: Math.max(a.x,b.x) - .35, minZ: Math.min(a.z,b.z) + .35, maxZ: Math.max(a.z,b.z) - .35 }; }
-      controls.update();
+      controls?.update();
     }, undefined, () => { element.dataset.error = 'true'; });
     let frame = 0; const resize = () => { const width = element.clientWidth; const height = element.clientHeight; renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); }; const observer = new ResizeObserver(resize); observer.observe(element); resize();
-    const animate = () => { navigation.update(); controls.update(); element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
-    return () => { destroyed = true; cancelAnimationFrame(frame); observer.disconnect(); navigation.dispose(); controls.dispose(); renderer.dispose(); renderer.domElement.remove(); };
-  }, []);
-  return <div className="gallery-scene" ref={host}><div className="scene-hint">Danny Hirsch Arts · WASD / arrows to walk</div></div>;
+    const animate = () => { navigation?.update(); controls?.update(); element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
+    return () => { destroyed = true; cancelAnimationFrame(frame); observer.disconnect(); navigation?.dispose(); controls?.dispose(); renderer.dispose(); renderer.domElement.remove(); };
+  }, [viewMode]);
+  return <div className={`gallery-scene gallery-scene--${viewMode}`} ref={host}><div className="scene-hint">{viewMode === 'walk' ? 'Danny Hirsch Arts · WASD / arrows · Drag to look' : 'Danny Hirsch Arts · Overview orbit'}</div></div>;
 }

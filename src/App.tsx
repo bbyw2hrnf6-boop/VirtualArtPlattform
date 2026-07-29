@@ -11,6 +11,7 @@ const GalleryScene = lazy(() => import('./features/gallery/GalleryScene').then((
 const DannyDemoScene = lazy(() => import('./features/gallery/GalleryScene').then((module) => ({ default: module.DannyDemoScene })));
 
 type Route = { page: 'home' | 'create' | 'demo' | 'gallery'; id?: string };
+type ViewMode = 'walk' | 'overview';
 const routeFromHash = (): Route => {
   const hash = location.hash.replace(/^#/, '');
   if (hash === '/create') return { page: 'create' };
@@ -33,13 +34,15 @@ function RoomIllustration() {
 
 function DiscoverGalleries() {
   const [galleries, setGalleries] = useState<GalleryRecord[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  useEffect(() => { galleryRepository.discover().then(setGalleries).catch((error) => console.warn('Discover unavailable', error)).finally(() => setLoaded(true)); }, []);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [discoveredAt] = useState(Date.now);
+  const load = useCallback(() => { setStatus('loading'); galleryRepository.discover().then((items) => { setGalleries(items); setStatus('ready'); }).catch((error) => { console.error('Discover unavailable', error); setStatus('error'); }); }, []);
+  useEffect(() => { galleryRepository.discover().then((items) => { setGalleries(items); setStatus('ready'); }).catch((error) => { console.error('Discover unavailable', error); setStatus('error'); }); }, []);
   return <section className="discover">
     <div className="discover-heading"><div><p className="eyebrow">Open for ten days</p><h2>Discover<br/><em>galleries.</em></h2></div><p>New spaces created by artists using AURA. Enter while the exhibition is live.</p></div>
-    <div className={`discover-grid ${!galleries.length ? 'discover-grid--empty' : ''}`}>{!galleries.length && <div className="discover-empty"><span>{loaded ? 'No exhibitions are open yet.' : 'Looking for open exhibitions…'}</span><p>Publish the first gallery and it will appear here for ten days.</p><button className="text-link" onClick={() => navigate('/create')}>Create a gallery →</button></div>}{galleries.map((gallery) => {
+    <div className={`discover-grid ${!galleries.length ? 'discover-grid--empty' : ''}`}>{!galleries.length && <div className="discover-empty"><span>{status === 'loading' ? 'Looking for open exhibitions…' : status === 'error' ? 'Discover is temporarily unavailable.' : 'No exhibitions are open yet.'}</span><p>{status === 'error' ? 'Your published gallery is safe. Please retry the connection.' : 'Publish the first gallery and it will appear here for ten days.'}</p><button className="text-link" onClick={status === 'error' ? load : () => navigate('/create')}>{status === 'error' ? 'Try again →' : 'Create a gallery →'}</button></div>}{galleries.map((gallery) => {
       const cover = gallery.coverSrc || gallery.artworks[0]?.src;
-      const days = Math.max(1, Math.ceil((new Date(gallery.expiresAt).getTime() - Date.now()) / 86400000));
+      const days = Math.max(1, Math.ceil((new Date(gallery.expiresAt).getTime() - discoveredAt) / 86400000));
       return <button key={gallery.id} className={`discover-card template-card--${gallery.templateId}`} onClick={() => navigate(`/g/${gallery.id}`)}>
         <div className="discover-cover">{cover ? <img src={cover} alt=""/> : <div className="mini-room"><i/><i/><i/></div>}<span>{days} days left</span></div>
         <p>{gallery.artist}</p><h3>{gallery.title}</h3><small>Enter exhibition →</small>
@@ -104,7 +107,7 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
 
   if (published) {
     const url = `${location.href.split('#')[0]}#/g/${published.id}`;
-    return <main className="publish-success"><div><Logo/><p className="eyebrow">Gallery published · Live for 10 days</p><h1>Your space is<br/><em>ready to share.</em></h1><p>Anyone with this link can enter your exhibition. It also appears in Discover for ten days.</p><div className="share-field"><input readOnly value={url}/><button onClick={() => navigator.clipboard.writeText(url)}>Copy link</button></div><div className="success-actions"><button className="button button--light" onClick={() => navigate(`/g/${published.id}`)}>Open gallery ↗</button><button className="text-link" onClick={() => setPublished(undefined)}>Back to editor</button></div></div><GalleryScene draft={published} visitor/></main>;
+    return <main className="publish-success"><div><Logo/><p className="eyebrow">Gallery published · Live for 10 days</p><h1>Your space is<br/><em>ready to share.</em></h1><p>Anyone with this link can enter your exhibition. It also appears in Discover for ten days.</p><div className="share-field"><input readOnly value={url}/><button onClick={() => navigator.clipboard.writeText(url)}>Copy link</button></div><div className="success-actions"><button className="button button--light" onClick={() => navigate(`/g/${published.id}`)}>Open gallery ↗</button><button className="text-link" onClick={() => navigate('/')}>View in Discover</button><button className="text-link" onClick={() => setPublished(undefined)}>Back to editor</button></div></div><GalleryScene draft={published} visitor/></main>;
   }
 
   return <main className="studio"><header className="studio-header"><Logo/><div className="studio-title"><input aria-label="Gallery title" value={draft.title} onChange={(event) => update('title', event.target.value)}/><span>by</span><input aria-label="Artist name" value={draft.artist} onChange={(event) => update('artist', event.target.value)}/></div><button className="publish-button" onClick={publish} disabled={publishing}>{publishing ? 'Publishing…' : 'Publish'} <span>↗</span></button></header>
@@ -122,14 +125,22 @@ function Accordion({ title, children }: { title: string; children: React.ReactNo
 function Swatches({ options, value, onChange }: { options: [string,string][]; value: string; onChange: (value: string) => void }) { return <div className="swatches">{options.map(([name,color]) => <button key={name} className={value === name ? 'active' : ''} onClick={() => onChange(name)}><i style={{ background: color }}/><span>{name}</span></button>)}</div>; }
 function Choice({ options, value, onChange }: { options: string[]; value: string; onChange: (value: string) => void }) { return <div className="choices">{options.map((item) => <button key={item} className={value === item ? 'active' : ''} onClick={() => onChange(item)}>{item}</button>)}</div>; }
 
-function Demo() { return <main className="viewer"><header className="viewer-header"><Logo/><div><p>Danny Hirsch Arts</p><span>Threshold · 2026</span></div><button onClick={() => navigate('/create')}>Create your own ↗</button></header><DannyDemoScene/><div className="viewer-caption"><p className="eyebrow">Public demo gallery</p><h1>Threshold</h1><p>Material, movement, and atmosphere by Danny Hirsch.</p></div><div className="movement-hint">WASD / Arrow keys · Drag to look</div></main>; }
+function ViewSwitch({ value, onChange }: { value: ViewMode; onChange: (value: ViewMode) => void }) {
+  return <div className="view-switch" role="group" aria-label="Gallery view"><button className={value === 'walk' ? 'active' : ''} onClick={() => onChange('walk')} aria-pressed={value === 'walk'}><span>⌖</span> Walk</button><button className={value === 'overview' ? 'active' : ''} onClick={() => onChange('overview')} aria-pressed={value === 'overview'}><span>◫</span> Overview</button></div>;
+}
+
+function Demo() {
+  const [viewMode, setViewMode] = useState<ViewMode>('walk');
+  return <main className="viewer"><header className="viewer-header"><Logo/><div><p>Danny Hirsch Arts</p><span>Threshold · 2026</span></div><button onClick={() => navigate('/create')}>Create your own ↗</button></header><DannyDemoScene viewMode={viewMode}/><ViewSwitch value={viewMode} onChange={setViewMode}/><div className="viewer-caption"><p className="eyebrow">Public demo gallery</p><h1>Threshold</h1><p>Material, movement, and atmosphere by Danny Hirsch.</p></div><div className="movement-hint">{viewMode === 'walk' ? 'WASD / Arrow keys · Drag to look' : 'Drag to orbit · Scroll to zoom'}</div></main>;
+}
 
 function PublishedGallery({ id }: { id: string }) {
   const [gallery, setGallery] = useState<GalleryRecord | null | undefined>();
+  const [viewMode, setViewMode] = useState<ViewMode>('walk');
   useEffect(() => { galleryRepository.find(id).then(setGallery); }, [id]);
   if (gallery === undefined) return <div className="loading">Loading space…</div>;
   if (!gallery) return <main className="not-found"><Logo/><h1>This gallery isn't available.</h1><p>The exhibition may have reached the end of its ten-day run.</p><button className="button button--light" onClick={() => navigate('/create')}>Create a gallery</button></main>;
-  return <main className="viewer"><header className="viewer-header"><Logo/><div><p>{gallery.title}</p><span>{gallery.artist}</span></div><button onClick={() => navigate('/create')}>Create your own ↗</button></header><GalleryScene draft={gallery} visitor/><div className="viewer-caption"><p className="eyebrow">Virtual exhibition</p><h1>{gallery.title}</h1><p>by {gallery.artist}</p></div><div className="movement-hint">WASD / Arrow keys · Drag to look</div></main>;
+  return <main className="viewer"><header className="viewer-header"><Logo/><div><p>{gallery.title}</p><span>{gallery.artist}</span></div><button onClick={() => navigate('/create')}>Create your own ↗</button></header><GalleryScene draft={gallery} visitor viewMode={viewMode}/><ViewSwitch value={viewMode} onChange={setViewMode}/><div className="viewer-caption"><p className="eyebrow">Virtual exhibition</p><h1>{gallery.title}</h1><p>by {gallery.artist}</p></div><div className="movement-hint">{viewMode === 'walk' ? 'WASD / Arrow keys · Drag to look' : 'Drag to orbit · Scroll to zoom'}</div></main>;
 }
 
 export default function App() {

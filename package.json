@@ -20,10 +20,15 @@
     "vite": "latest"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/three": "latest",
     "eslint": "latest",
-    "gh-pages": "latest"
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "gh-pages": "latest",
+    "globals": "^17.8.0",
+    "typescript-eslint": "^8.65.0"
   }
 }
