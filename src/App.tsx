@@ -1,4 +1,4 @@
-import { lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Logo } from './components/Logo';
 import { TEMPLATES } from './features/gallery/templates';
 import {
@@ -38,9 +38,13 @@ function DiscoverGalleries() {
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string>();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [page, setPage] = useState(0);
   const [discoveredAt] = useState(Date.now);
   const load = useCallback(() => { setStatus('loading'); galleryRepository.discover().then((items) => { setGalleries(items); setStatus('ready'); }).catch((error) => { console.error('Discover unavailable', error); setStatus('error'); }); }, []);
   useEffect(() => { galleryRepository.discover().then((items) => { setGalleries(items); setStatus('ready'); }).catch((error) => { console.error('Discover unavailable', error); setStatus('error'); }); galleryRepository.currentUserId().then(setOwnerId).catch(() => setOwnerId(null)); }, []);
+  const pageCount = Math.max(1, Math.ceil(galleries.length / 3));
+  const visiblePage = Math.min(page, pageCount - 1);
+  const visibleGalleries = galleries.slice(visiblePage * 3, visiblePage * 3 + 3);
   const removeGallery = async (gallery: GalleryRecord) => {
     if (!window.confirm(`Remove “${gallery.title}” from Discover? This cannot be undone.`)) return;
     setRemovingId(gallery.id);
@@ -49,8 +53,8 @@ function DiscoverGalleries() {
     finally { setRemovingId(undefined); }
   };
   return <section className="discover">
-    <div className="discover-heading"><div><p className="eyebrow">Open for ten days</p><h2>Discover<br/><em>galleries.</em></h2></div><p>New spaces created by artists using AURA. Enter while the exhibition is live.</p></div>
-    <div className={`discover-grid ${!galleries.length ? 'discover-grid--empty' : ''}`}>{!galleries.length && <div className="discover-empty"><span>{status === 'loading' ? 'Looking for open exhibitions…' : status === 'error' ? 'Discover is temporarily unavailable.' : 'No exhibitions are open yet.'}</span><p>{status === 'error' ? 'Your published gallery is safe. Please retry the connection.' : 'Publish the first gallery and it will appear here for ten days.'}</p><button className="text-link" onClick={status === 'error' ? load : () => navigate('/create')}>{status === 'error' ? 'Try again →' : 'Create a gallery →'}</button></div>}{galleries.map((gallery) => {
+    <div className="discover-heading"><div><p className="eyebrow">Open for ten days</p><h2>Discover<br/><em>galleries.</em></h2></div><div className="discover-intro"><p>New spaces created by artists using AURA. Enter while the exhibition is live.</p>{galleries.length > 3 && <div className="discover-controls" role="group" aria-label="Browse open galleries"><span>{String(visiblePage + 1).padStart(2, '0')} / {String(pageCount).padStart(2, '0')}</span><button onClick={() => setPage(Math.max(0, visiblePage - 1))} disabled={visiblePage === 0} aria-label="Previous galleries">←</button><button onClick={() => setPage(Math.min(pageCount - 1, visiblePage + 1))} disabled={visiblePage === pageCount - 1} aria-label="Next galleries">→</button></div>}</div></div>
+    <div className={`discover-grid ${!galleries.length ? 'discover-grid--empty' : ''}`}>{!galleries.length && <div className="discover-empty"><span>{status === 'loading' ? 'Looking for open exhibitions…' : status === 'error' ? 'Discover is temporarily unavailable.' : 'No exhibitions are open yet.'}</span><p>{status === 'error' ? 'Your published gallery is safe. Please retry the connection.' : 'Publish the first gallery and it will appear here for ten days.'}</p><button className="text-link" onClick={status === 'error' ? load : () => navigate('/create')}>{status === 'error' ? 'Try again →' : 'Create a gallery →'}</button></div>}{visibleGalleries.map((gallery) => {
       const cover = gallery.coverSrc || gallery.artworks[0]?.src;
       const days = Math.max(1, Math.ceil((new Date(gallery.expiresAt).getTime() - discoveredAt) / 86400000));
       return <article key={gallery.id} className={`discover-card template-card--${gallery.templateId}`}>
@@ -98,6 +102,21 @@ async function imageFromFile(file: File): Promise<Pick<Artwork, 'src' | 'aspect'
   } finally { URL.revokeObjectURL(url); }
 }
 
+function initialArtworkPlacement(templateId: TemplateId, slot: number): Pick<Artwork, 'wall' | 'x' | 'y' | 'scale'> {
+  if (templateId === 'pavilion') {
+    const placements: Array<[WallId, number]> = [
+      ['divider-front', -1.65], ['divider-front', 0], ['divider-front', 1.65],
+      ['north', -4.6], ['north', 4.6], ['west', -2.1], ['east', 2.1], ['divider-back', 0]
+    ];
+    const [wall, x] = placements[slot % placements.length]; return { wall, x, y: 2.2, scale: .9 };
+  }
+  const placements: Array<[WallId, number]> = [
+    ['north', -3], ['north', 0], ['north', 3], ['west', -1.7],
+    ['east', 1.7], ['south', -2.1], ['south', 2.1], ['north', 0]
+  ];
+  const [wall, x] = placements[slot % placements.length]; return { wall, x, y: 2.2, scale: .9 };
+}
+
 function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   const [draft, setDraft] = useState<GalleryDraft>({ ...EMPTY_DRAFT, templateId: initialTemplate });
   const [selectedId, setSelectedId] = useState<string>();
@@ -108,6 +127,7 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string>();
+  const decorInsertion = useRef({ x: 0, z: 1 });
   const selected = draft.artworks.find((item) => item.id === selectedId);
   const selectedDecor = draft.decor.find((item) => item.id === selectedDecorId);
   const roomDimensions = TEMPLATES.find((item) => item.id === draft.templateId)?.dimensions ?? [10, 7];
@@ -121,12 +141,14 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   const changeArtworkWall = (wall: WallId) => updateArtwork({ wall, x: selected ? Math.max(-wallLimit(wall), Math.min(wallLimit(wall), selected.x)) : 0 });
   const updateDecor = (value: Partial<DecorPlacement>) => setDraft((current) => ({ ...current, decor: current.decor.map((item) => item.id === selectedDecorId ? { ...item, ...value } : item) }));
   const placeDecor = useCallback((id: string, x: number, z: number) => setDraft((current) => ({ ...current, decor: current.decor.map((item) => item.id === id ? { ...item, x, z } : item) })), []);
-  const addDecor = (type: DecorId) => { const item: DecorPlacement = { id: crypto.randomUUID(), type, x: (draft.decor.length % 3 - 1) * 1.4, z: 1 - Math.floor(draft.decor.length / 3) * 1.2, rotation: 0, scale: 1 }; update('decor', [...draft.decor, item]); setSelectedDecorId(item.id); setSelectedId(undefined); };
+  const placeArtwork = useCallback((id: string, wall: WallId, x: number, y: number) => setDraft((current) => ({ ...current, artworks: current.artworks.map((item) => item.id === id ? { ...item, wall, x, y } : item) })), []);
+  const rememberDecorInsertion = useCallback((x: number, z: number) => { decorInsertion.current = { x, z }; }, []);
+  const addDecor = (type: DecorId) => { const item: DecorPlacement = { id: crypto.randomUUID(), type, x: decorInsertion.current.x, z: decorInsertion.current.z, rotation: 0, scale: 1 }; update('decor', [...draft.decor, item]); setSelectedDecorId(item.id); setSelectedId(undefined); };
   const upload = async (files: FileList | null) => {
     if (!files?.length) return; const remaining = Math.max(0, 8 - draft.artworks.length); const supported = Array.from(files).filter((item) => item.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(item.name)).slice(0, remaining); const next: Artwork[] = []; const failures: string[] = [];
     setUploading(true); setUploadError(undefined);
     try {
-      for (const file of supported) { try { const image = await imageFromFile(file); const slot = draft.artworks.length + next.length; next.push({ id: crypto.randomUUID(), title: file.name.replace(/\.[^.]+$/, ''), ...image, wall: 'north', x: ((slot % 5) - 2) * 1.5, y: 2.2, scale: .9 }); } catch (error) { failures.push(error instanceof Error ? error.message : `${file.name} could not be prepared.`); } }
+      for (const file of supported) { try { const image = await imageFromFile(file); const slot = draft.artworks.length + next.length; next.push({ id: crypto.randomUUID(), title: file.name.replace(/\.[^.]+$/, ''), ...image, ...initialArtworkPlacement(draft.templateId, slot) }); } catch (error) { failures.push(error instanceof Error ? error.message : `${file.name} could not be prepared.`); } }
       if (!remaining) failures.push('This gallery already contains the maximum of eight artworks.');
       else if (!supported.length) failures.push('This file is not recognized as an image. Please choose JPG, PNG, WebP, HEIC, or HEIF.');
       if (next.length) { setDraft((current) => ({ ...current, artworks: [...current.artworks, ...next] })); selectArtwork(next[0].id); }
@@ -152,11 +174,11 @@ function Studio({ initialTemplate }: { initialTemplate: TemplateId }) {
   return <main className="studio"><header className="studio-header"><Logo/><div className="studio-title"><input aria-label="Gallery title" maxLength={100} value={draft.title} onChange={(event) => update('title', event.target.value)}/><span>by</span><input aria-label="Artist name" maxLength={100} value={draft.artist} onChange={(event) => update('artist', event.target.value)}/></div><button className="publish-button" onClick={publish} disabled={publishing || uploading}>{publishing ? 'Publishing…' : 'Publish'} <span>↗</span></button></header>{publishError && <div className="studio-alert" role="alert"><span>Before publishing</span>{publishError}<button onClick={() => setPublishError(undefined)} aria-label="Dismiss publishing message">×</button></div>}
     <div className="studio-body"><aside className="tool-panel"><section className="mobile-exhibition"><p className="tool-label">Exhibition details</p><label>Gallery title<input maxLength={100} value={draft.title} onChange={(event) => update('title', event.target.value)}/></label><label>Artist name<input maxLength={100} value={draft.artist} onChange={(event) => update('artist', event.target.value)}/></label></section><section><p className="tool-label">01 · Artwork</p><label className={`upload ${uploading ? 'is-uploading' : ''}`}><input type="file" accept="image/*,.heic,.heif" multiple disabled={uploading} onChange={(event) => { const input = event.currentTarget; void upload(input.files).finally(() => { input.value = ''; }); }}/><span>{uploading ? '◌' : '＋'}</span><strong>{uploading ? 'Preparing artwork…' : 'Upload artwork'}</strong><small>{uploading ? 'Optimizing for the gallery' : 'JPG, PNG, WebP or HEIC · up to 8'}</small></label>{uploadError && <p className="upload-error" role="alert">{uploadError}</p>}<div className="artwork-list">{draft.artworks.map((artwork, index) => <button key={artwork.id} className={selectedId === artwork.id ? 'active' : ''} onClick={() => selectArtwork(artwork.id)}><img src={artwork.src} alt=""/><span>{String(index + 1).padStart(2,'0')} · {artwork.title}</span></button>)}</div>{selected && <div className="placement"><label>Title<input type="text" value={selected.title} maxLength={80} onChange={(event) => updateArtwork({ title: event.target.value })}/></label><label>Year<input type="text" value={selected.year ?? ''} maxLength={12} placeholder="2026" onChange={(event) => updateArtwork({ year: event.target.value })}/></label><label className="placement-note">Artwork note<textarea value={selected.description ?? ''} maxLength={240} placeholder="A short note visitors can read…" onChange={(event) => updateArtwork({ description: event.target.value })}/></label><label>Wall<select value={selected.wall} onChange={(event) => changeArtworkWall(event.target.value as WallId)}><option value="north">Back wall</option><option value="south">Entrance wall · Behind you</option><option value="west">Left wall</option><option value="east">Right wall</option>{draft.templateId === 'pavilion' && <><option value="divider-front">Center wall · Front</option><option value="divider-back">Center wall · Back</option></>}</select></label>{selected.wall === 'south' && <p className="wall-preview-note">Rotate the room to preview this wall from inside.</p>}<Range label="Horizontal" min={-artworkLimit} max={artworkLimit} step={.1} value={selected.x} onChange={(x) => updateArtwork({ x })}/><Range label="Height" min={1} max={selected.wall.startsWith('divider') ? 3 : 3.6} step={.1} value={selected.y} onChange={(y) => updateArtwork({ y })}/><Range label="Size" min={.45} max={1.65} step={.05} value={selected.scale} onChange={(scale) => updateArtwork({ scale })}/><button className="remove" onClick={() => { update('artworks', draft.artworks.filter((item) => item.id !== selectedId)); setSelectedId(undefined); }}>Remove artwork</button></div>}</section>
       <Accordion title="02 · Walls"><p className="object-help">Five architectural finishes, tuned to remain calm behind the artwork.</p><Swatches options={[['chalk','linear-gradient(135deg,#f1eee6,#cfcac0)','plaster'],['warm','linear-gradient(135deg,#c7b6a0,#978977)','limewash'],['travertine','repeating-linear-gradient(0deg,#cfc4af 0 2px,#e1d7c4 3px 7px)'],['linen','repeating-linear-gradient(90deg,#bbb2a4 0 1px,#d4ccbf 1px 3px)'],['charcoal','linear-gradient(135deg,#3a3c39,#202220)']]} value={draft.wall} onChange={(value) => update('wall', value as GalleryDraft['wall'])}/></Accordion>
-      <Accordion title="03 · Floor"><Swatches options={[['concrete','#777672'],['oak','#49382b'],['terrazzo','#a7a299'],['marble','#d8d4cb']]} value={draft.floor} onChange={(value) => update('floor', value as GalleryDraft['floor'])}/></Accordion>
-      <Accordion title="04 · Roof / ceiling"><p className="object-help">Choose a clearly visible ceiling finish independently from the walls.</p><Swatches options={[['gallery','linear-gradient(135deg,#f4f1e9,#d8d5cd)','gallery white'],['warm','linear-gradient(135deg,#b9a78d,#82725f)','warm plaster'],['dark','linear-gradient(135deg,#343633,#151715)','dark acoustic']]} value={draft.ceiling ?? 'gallery'} onChange={(value) => update('ceiling', value as NonNullable<GalleryDraft['ceiling']>)}/></Accordion>
+      <Accordion title="03 · Floor"><p className="object-help">Five gallery-grade surfaces with calibrated grain and natural reflections.</p><Swatches options={[['concrete','linear-gradient(135deg,#777672,#a7a39a)','mineral concrete'],['marble','linear-gradient(135deg,#ece9e1 35%,#8c8f8c 37%,#e2ded4 40%)','white marble'],['black-marble','linear-gradient(135deg,#111 35%,#b8b8b3 37%,#191919 40%)','black marble'],['walnut','repeating-linear-gradient(0deg,#392116 0 8px,#6b4028 9px 16px)','walnut'],['dark-oak','repeating-linear-gradient(90deg,#171411 0 7px,#332b25 8px 15px)','dark oak']]} value={draft.floor} onChange={(value) => update('floor', value as GalleryDraft['floor'])}/></Accordion>
+      <Accordion title="04 · Ceiling design"><p className="object-help">The roof follows the wall finish automatically. Choose one considered interior ceiling system.</p><Swatches options={[['gallery','linear-gradient(135deg,#f3f1ea,#d8d5cd)','modern'],['warm','linear-gradient(135deg,#d5c2a5,#8b7456)','luxury coffers'],['dark','linear-gradient(135deg,#20231f 38%,#e3c183 42%,#1a1c19 47%)','LED light strips']]} value={draft.ceiling ?? 'gallery'} onChange={(value) => update('ceiling', value as NonNullable<GalleryDraft['ceiling']>)}/></Accordion>
       <Accordion title="05 · Lighting"><p className="object-help">Ceiling ambience is installed automatically. Every spotlight follows an artwork when you reposition it.</p><Choice options={['daylight','museum','evening']} value={draft.lighting} onChange={(value) => update('lighting', value as GalleryDraft['lighting'])}/></Accordion>
       <Accordion title="06 · Objects"><p className="object-help">Add an object, then drag it directly in the room or click an empty floor position. Sliders remain available for fine tuning.</p><div className="object-grid">{(['olive','monstera','arc-lamp','pedestal'] as DecorId[]).map((item) => <button key={item} onClick={() => addDecor(item)}>＋ {item.replace('-', ' ')}</button>)}</div><div className="decor-list">{draft.decor.map((item, index) => <button key={item.id} className={selectedDecorId === item.id ? 'active' : ''} onClick={() => selectDecor(item.id)}>{String(index + 1).padStart(2,'0')} · {item.type.replace('-', ' ')}</button>)}</div>{selectedDecor && <div className="placement"><p className="direct-place-note"><span>Direct placement active</span>Drag the selected object in the room or click the floor.</p><Range label="Left / right" min={-decorLimitX} max={decorLimitX} step={.1} value={selectedDecor.x} onChange={(x) => updateDecor({ x })}/><Range label="Forward / back" min={-decorLimitZ} max={decorLimitZ} step={.1} value={selectedDecor.z} onChange={(z) => updateDecor({ z })}/><Range label="Rotation" min={0} max={Math.PI * 2} step={.1} value={selectedDecor.rotation} onChange={(rotation) => updateDecor({ rotation })}/><Range label="Size" min={.5} max={1.8} step={.05} value={selectedDecor.scale} onChange={(scale) => updateDecor({ scale })}/><button className="remove" onClick={() => { update('decor', draft.decor.filter((item) => item.id !== selectedDecorId)); setSelectedDecorId(undefined); }}>Remove object</button></div>}</Accordion>
-    </aside><section className="canvas-wrap"><GalleryScene draft={draft} selectedId={selectedId} selectedDecorId={selectedDecorId} onSelect={selectArtwork} onSelectDecor={selectDecor} onMoveDecor={placeDecor}/><div className="canvas-badge"><span>Editing</span>{TEMPLATES.find((item) => item.id === draft.templateId)?.name}</div></section></div>
+    </aside><section className="canvas-wrap"><GalleryScene draft={draft} selectedId={selectedId} selectedDecorId={selectedDecorId} onSelect={selectArtwork} onSelectDecor={selectDecor} onMoveDecor={placeDecor} onMoveArtwork={placeArtwork} onViewPlacementChange={rememberDecorInsertion}/><div className="canvas-badge"><span>Editing</span>{TEMPLATES.find((item) => item.id === draft.templateId)?.name}</div></section></div>
   </main>;
 }
 

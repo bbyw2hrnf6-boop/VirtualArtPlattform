@@ -15,7 +15,7 @@ service cloud.firestore {
         && request.resource.data.artist.size() <= 100
         && request.resource.data.templateId in ['white-cube', 'nocturne', 'pavilion']
         && request.resource.data.wall in ['chalk', 'warm', 'travertine', 'linen', 'charcoal']
-        && request.resource.data.floor in ['concrete', 'oak', 'terrazzo', 'marble']
+        && request.resource.data.floor in ['concrete', 'oak', 'terrazzo', 'marble', 'black-marble', 'walnut', 'dark-oak']
         && request.resource.data.ceiling in ['gallery', 'warm', 'dark']
         && request.resource.data.lighting in ['daylight', 'museum', 'evening']
         && request.resource.data.artworks is list
