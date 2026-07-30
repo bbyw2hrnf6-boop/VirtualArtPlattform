@@ -17,7 +17,7 @@ const WALLS: Record<WallId, { position: (x: number, y: number, w: number, d: num
   'divider-front': { position: (x, y) => [x, y, -.395], rotation: [0, 0, 0] },
   'divider-back': { position: (x, y) => [x, y, -.605], rotation: [0, Math.PI, 0] }
 };
-const PAVILION_DIVIDER_WIDTH = 6.2;
+const PAVILION_DIVIDER_WIDTH = 8.4;
 const wallColors = { chalk: '#dfdcd4', warm: '#ae9f8c', travertine: '#d7cbb6', linen: '#c8c0b3', charcoal: '#292b29' };
 const floorColors = { concrete: '#777672', oak: '#49382b', terrazzo: '#a7a299', marble: '#d8d4cb', 'black-marble': '#101111', walnut: '#4b2c1d', 'dark-oak': '#26211d' };
 type SurfaceKind = GalleryDraft['wall'] | GalleryDraft['floor'];
@@ -135,8 +135,8 @@ function createDecor(item: DecorPlacement, selected: boolean) {
   return group;
 }
 
-function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: string) {
-  const [w, d] = getTemplate(draft.templateId).dimensions;
+function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: string, dollhouse = false) {
+  const template = getTemplate(draft.templateId); const [w, d] = template.dimensions; const h = template.height; const dividerWidth = template.dividerWidth ?? PAVILION_DIVIDER_WIDTH;
   const ceilingFinish = draft.ceiling ?? 'gallery';
   const ceilingProfiles = {
     gallery: { surface: 'chalk' as const, color: '#ece9e1', roughness: .82, bump: .005, emissive: '#fffdf8', glow: .16 },
@@ -164,47 +164,65 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
     envMapIntensity: isMarble ? 1.05 : isWood ? .62 : .38
   });
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floor); floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; floorMesh.userData.surface = 'floor'; scene.add(floorMesh);
-  const wallSurfaces: THREE.Mesh[] = [];
+  const wallSurfaces: THREE.Mesh[] = []; const exteriorWalls: THREE.Mesh[] = [];
   const addWall = (wallId: WallId, geometry: THREE.BufferGeometry, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]) => {
-    const mesh = new THREE.Mesh(geometry, wall); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; mesh.userData.wallId = wallId; scene.add(mesh); wallSurfaces.push(mesh); return mesh;
+    const material = dollhouse ? wall.clone() : wall; material.transparent = dollhouse; material.opacity = 1; if (dollhouse) { material.depthWrite = false; material.side = THREE.DoubleSide; } const mesh = new THREE.Mesh(geometry, material); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; mesh.userData.wallId = wallId; scene.add(mesh); wallSurfaces.push(mesh); exteriorWalls.push(mesh); return mesh;
   };
-  addWall('north', new THREE.PlaneGeometry(w, 4.8), [0, 2.4, -d / 2]);
-  addWall('west', new THREE.PlaneGeometry(d, 4.8), [-w / 2, 2.4, 0], [0, Math.PI / 2, 0]);
-  addWall('east', new THREE.PlaneGeometry(d, 4.8), [w / 2, 2.4, 0], [0, -Math.PI / 2, 0]);
-  addWall('south', new THREE.PlaneGeometry(w, 4.8), [0, 2.4, d / 2], [0, Math.PI, 0]);
+  addWall('north', new THREE.PlaneGeometry(w, h), [0, h / 2, -d / 2]);
+  addWall('west', new THREE.PlaneGeometry(d, h), [-w / 2, h / 2, 0], [0, Math.PI / 2, 0]);
+  addWall('east', new THREE.PlaneGeometry(d, h), [w / 2, h / 2, 0], [0, -Math.PI / 2, 0]);
+  addWall('south', new THREE.PlaneGeometry(w, h), [0, h / 2, d / 2], [0, Math.PI, 0]);
   // The exterior roof is part of the architecture and always follows the walls.
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(w + .12, .16, d + .12), wall); roof.position.set(0, 4.88, 0); roof.receiveShadow = true; roof.name = 'room-roof-wall-finish'; scene.add(roof);
-  const ceilingPlane = new THREE.Mesh(new THREE.PlaneGeometry(w - .08, d - .08), ceiling); ceilingPlane.rotation.x = Math.PI / 2; ceilingPlane.position.y = 4.785; ceilingPlane.receiveShadow = true; ceilingPlane.name = `ceiling-design-${ceilingFinish}`; scene.add(ceilingPlane);
+  const roofMaterial = wall.clone(); roofMaterial.transparent = dollhouse; const roof = new THREE.Mesh(new THREE.BoxGeometry(w + .12, .16, d + .12), roofMaterial); roof.position.set(0, h + .08, 0); roof.receiveShadow = true; roof.name = 'room-roof-wall-finish'; roof.visible = !dollhouse; scene.add(roof);
+  const ceilingPlane = new THREE.Mesh(new THREE.PlaneGeometry(w - .08, d - .08), ceiling); ceilingPlane.rotation.x = Math.PI / 2; ceilingPlane.position.y = h - .015; ceilingPlane.receiveShadow = true; ceilingPlane.name = `ceiling-design-${ceilingFinish}`; ceilingPlane.visible = !dollhouse; scene.add(ceilingPlane);
   const ceilingDetails = new THREE.Group(); ceilingDetails.name = `room-ceiling-${ceilingFinish}`;
   const trimMaterial = new THREE.MeshPhysicalMaterial({ color: ceilingFinish === 'warm' ? '#8d7452' : '#252824', metalness: ceilingFinish === 'warm' ? .45 : .72, roughness: .3, clearcoat: .25 });
   if (ceilingFinish === 'gallery') {
-    [-w * .2, w * .2].forEach((x) => { const track = new THREE.Mesh(new RoundedBoxGeometry(.055, .055, d * .64, 3, .012), trimMaterial); track.position.set(x, 4.73, 0); ceilingDetails.add(track); });
+    [-w * .2, w * .2].forEach((x) => { const track = new THREE.Mesh(new RoundedBoxGeometry(.055, .055, d * .64, 3, .012), trimMaterial); track.position.set(x, h - .07, 0); ceilingDetails.add(track); });
   }
   if (ceilingFinish === 'warm') {
     const bars: Array<[number, number, number, number]> = [[0, -d * .36, w * .72, .08], [0, d * .36, w * .72, .08], [-w * .36, 0, .08, d * .72], [w * .36, 0, .08, d * .72]];
-    bars.forEach(([x, z, width, depth]) => { const bar = new THREE.Mesh(new RoundedBoxGeometry(width, .105, depth, 3, .018), trimMaterial); bar.position.set(x, 4.71, z); ceilingDetails.add(bar); });
-    const glow = new THREE.PointLight('#ffd8a4', 3.2, Math.max(w, d) * .62, 1.8); glow.position.set(0, 4.46, 0); ceilingDetails.add(glow);
+    bars.forEach(([x, z, width, depth]) => { const bar = new THREE.Mesh(new RoundedBoxGeometry(width, .105, depth, 3, .018), trimMaterial); bar.position.set(x, h - .09, z); ceilingDetails.add(bar); });
+    const glow = new THREE.PointLight('#ffd8a4', 3.2, Math.max(w, d) * .62, 1.8); glow.position.set(0, h - .34, 0); ceilingDetails.add(glow);
   }
   if (ceilingFinish === 'dark') {
     const ledMaterial = new THREE.MeshStandardMaterial({ color: '#fff4d7', emissive: '#ffd69b', emissiveIntensity: 5.2, roughness: .2 });
-    [-w * .24, 0, w * .24].forEach((x) => { const strip = new THREE.Mesh(new RoundedBoxGeometry(.045, .035, d * .72, 3, .01), ledMaterial); strip.position.set(x, 4.72, 0); ceilingDetails.add(strip); });
-    [-w * .24, 0, w * .24].forEach((x) => { const glow = new THREE.PointLight('#ffd9a3', 2.2, Math.min(w, d) * .6, 1.65); glow.position.set(x, 4.45, 0); ceilingDetails.add(glow); });
+    [-w * .24, 0, w * .24].forEach((x) => { const strip = new THREE.Mesh(new RoundedBoxGeometry(.045, .035, d * .72, 3, .01), ledMaterial); strip.position.set(x, h - .08, 0); ceilingDetails.add(strip); });
+    [-w * .24, 0, w * .24].forEach((x) => { const glow = new THREE.PointLight('#ffd9a3', 2.2, Math.min(w, d) * .6, 1.65); glow.position.set(x, h - .35, 0); ceilingDetails.add(glow); });
   }
+  ceilingDetails.visible = !dollhouse;
   scene.add(ceilingDetails);
-  if (draft.templateId === 'pavilion') {
-    const divider = new THREE.Mesh(new THREE.BoxGeometry(PAVILION_DIVIDER_WIDTH, 4.1, .18), wall); divider.position.set(0, 2.05, -.5); divider.receiveShadow = true; scene.add(divider);
-    const raycastMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
-    const addDividerSurface = (wallId: WallId, z: number, rotationY: number) => { const surface = new THREE.Mesh(new THREE.PlaneGeometry(PAVILION_DIVIDER_WIDTH, 4.1), raycastMaterial); surface.position.set(0, 2.05, z); surface.rotation.y = rotationY; surface.userData.wallId = wallId; scene.add(surface); wallSurfaces.push(surface); };
-    addDividerSurface('divider-front', -.395, 0); addDividerSurface('divider-back', -.605, Math.PI);
-    const bench = new THREE.Mesh(new RoundedBoxGeometry(2.8, .42, .72, 5, .08), new THREE.MeshStandardMaterial({ color: '#26231f', roughness: .55 })); bench.position.set(0, .34, 3.15); bench.castShadow = true; scene.add(bench);
+  const architecture = new THREE.Group(); architecture.name = `architecture-${draft.templateId}`; scene.add(architecture);
+  if (draft.templateId === 'white-cube') {
+    const revealMaterial = wall.clone(); const glowMaterial = new THREE.MeshStandardMaterial({ color: '#f4f2e9', emissive: '#fff9df', emissiveIntensity: 1.8, roughness: .55 });
+    [-1, 1].forEach((side) => {
+      const wingDepth = d * .2; const wing = new THREE.Mesh(new RoundedBoxGeometry(.16, h * .72, wingDepth, 3, .02), revealMaterial); wing.position.set(side * w * .31, h * .36, -d / 2 + wingDepth / 2 + .18); architecture.add(wing);
+      const reveal = new THREE.Mesh(new RoundedBoxGeometry(.035, h * .54, .05, 3, .012), glowMaterial); reveal.position.set(side * (w * .31 - .1), h * .39, -d / 2 + wingDepth + .17); architecture.add(reveal);
+    });
   }
-  if (draft.templateId === 'nocturne') { const plinth = new THREE.Mesh(new THREE.CylinderGeometry(.75, .75, .7, 32), new THREE.MeshStandardMaterial({ color: '#151615', roughness: .75 })); plinth.position.set(0, .35, 1); scene.add(plinth); }
+  if (draft.templateId === 'nocturne') {
+    const mineral = new THREE.MeshPhysicalMaterial({ color: '#1a1b19', roughness: .64, metalness: .08, clearcoat: .12, envMapIntensity: .62 });
+    const bronze = new THREE.MeshPhysicalMaterial({ color: '#8a6940', roughness: .3, metalness: .72, clearcoat: .25 });
+    [-1, 1].forEach((side) => { const wing = new THREE.Mesh(new RoundedBoxGeometry(.18, h * .7, d * .31, 4, .035), mineral); wing.position.set(side * w * .34, h * .35, -d * .17); wing.rotation.y = side * -.34; architecture.add(wing); });
+    const stage = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.65, .18, 64), mineral); stage.position.set(0, .09, .65); architecture.add(stage);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.85, .035, 10, 72), bronze); ring.rotation.x = Math.PI / 2; ring.position.set(0, h - .32, .35); architecture.add(ring);
+  }
+  if (draft.templateId === 'pavilion') {
+    const dividerHeight = h - .75; const divider = new THREE.Mesh(new THREE.BoxGeometry(dividerWidth, dividerHeight, .22), wall); divider.position.set(0, dividerHeight / 2, -.65); divider.receiveShadow = true; scene.add(divider);
+    const raycastMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
+    const addDividerSurface = (wallId: WallId, z: number, rotationY: number) => { const surface = new THREE.Mesh(new THREE.PlaneGeometry(dividerWidth, dividerHeight), raycastMaterial); surface.position.set(0, dividerHeight / 2, z); surface.rotation.y = rotationY; surface.userData.wallId = wallId; scene.add(surface); wallSurfaces.push(surface); };
+    addDividerSurface('divider-front', -.525, 0); addDividerSurface('divider-back', -.775, Math.PI);
+    const pavilionMetal = new THREE.MeshPhysicalMaterial({ color: '#71634e', roughness: .28, metalness: .76, clearcoat: .32 });
+    [-1, 1].forEach((xSide) => [-1, 1].forEach((zSide) => { const column = new THREE.Mesh(new THREE.CylinderGeometry(.13, .17, h - .25, 20), pavilionMetal); column.position.set(xSide * w * .34, (h - .25) / 2, zSide * d * .31); architecture.add(column); }));
+    [-1, 1].forEach((side) => { const bench = new THREE.Mesh(new RoundedBoxGeometry(3.3, .42, .78, 5, .08), new THREE.MeshStandardMaterial({ color: '#26231f', roughness: .48 })); bench.position.set(side * 2.15, .34, d * .29); bench.castShadow = true; architecture.add(bench); });
+  }
+  if (draft.templateId === 'nocturne') { const plinth = new THREE.Mesh(new THREE.CylinderGeometry(.82, .82, .82, 48), new THREE.MeshStandardMaterial({ color: '#111210', roughness: .62 })); plinth.position.set(0, .5, .65); scene.add(plinth); }
   const decorObjects = draft.decor.map((item) => createDecor(item, selectedDecorId === item.id));
   decorObjects.forEach((item) => { item.position.x = THREE.MathUtils.clamp(item.position.x, -w / 2 + .45, w / 2 - .45); item.position.z = THREE.MathUtils.clamp(item.position.z, -d / 2 + .45, d / 2 - .45); scene.add(item); });
-  return { w, d, decorObjects, floorMesh, wallSurfaces };
+  return { w, d, h, decorObjects, floorMesh, wallSurfaces, exteriorWalls, roof, ceilingPlane, ceilingDetails };
 }
 
-function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: number) {
+function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: number, h: number) {
   const settings = {
     daylight: { hemi: 1.1, ambient: .5, key: 2.25, spot: 38, color: '#fff8e9' },
     museum: { hemi: .48, ambient: .44, key: 2.1, spot: 58, color: '#ffe6bd' },
@@ -218,7 +236,7 @@ function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: numb
 
   const artworkTargets = draft.artworks.slice(0, 8).map((artwork) => {
     const [x, y, z] = WALLS[artwork.wall].position(artwork.x, artwork.y, w, d); const target = new THREE.Vector3(x, y, z);
-    const source = target.clone(); source.y = 4.45;
+    const source = target.clone(); source.y = h - .35;
     if (artwork.wall === 'north') source.z += 2.25;
     if (artwork.wall === 'south') source.z -= 2.25;
     if (artwork.wall === 'west') source.x += 2.25;
@@ -228,15 +246,15 @@ function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: numb
     source.x = THREE.MathUtils.clamp(source.x, -w / 2 + .5, w / 2 - .5); source.z = THREE.MathUtils.clamp(source.z, -d / 2 + .5, d / 2 - .5);
     return { source, target };
   });
-  const lightTargets = artworkTargets.length ? artworkTargets : [-.27, 0, .27].map((ratio) => ({ source: new THREE.Vector3(w * ratio, 4.45, -d * .08), target: new THREE.Vector3(w * ratio, 0, -d * .08) }));
+  const lightTargets = artworkTargets.length ? artworkTargets : [-.27, 0, .27].map((ratio) => ({ source: new THREE.Vector3(w * ratio, h - .35, -d * .08), target: new THREE.Vector3(w * ratio, 0, -d * .08) }));
   const fixtureMaterial = new THREE.MeshStandardMaterial({ color: draft.lighting === 'daylight' ? '#deddd8' : '#171816', metalness: .72, roughness: .24 });
   const bulbMaterial = new THREE.MeshStandardMaterial({ color: '#fff7df', emissive: settings.color, emissiveIntensity: 3.2, roughness: .18 });
   const down = new THREE.Vector3(0, -1, 0);
   lightTargets.forEach(({ source, target }) => {
     const direction = target.clone().sub(source).normalize();
-    const mount = new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .07, 24), fixtureMaterial); mount.position.set(source.x, 4.75, source.z);
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.026, .026, .15, 14), fixtureMaterial); stem.position.set(source.x, 4.64, source.z);
-    const joint = new THREE.Mesh(new THREE.SphereGeometry(.075, 18, 12), fixtureMaterial); joint.position.set(source.x, 4.56, source.z);
+    const mount = new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .07, 24), fixtureMaterial); mount.position.set(source.x, h - .05, source.z);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.026, .026, .15, 14), fixtureMaterial); stem.position.set(source.x, h - .16, source.z);
+    const joint = new THREE.Mesh(new THREE.SphereGeometry(.075, 18, 12), fixtureMaterial); joint.position.set(source.x, h - .24, source.z);
     const head = new THREE.Mesh(new THREE.CylinderGeometry(.09, .14, .3, 24), fixtureMaterial); head.position.copy(source); head.quaternion.setFromUnitVectors(down, direction);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(.075, 16, 10), bulbMaterial); bulb.position.copy(source).addScaledVector(direction, .16);
     const spot = new THREE.SpotLight(settings.color, settings.spot, 12, .33, .72, 1.55); spot.position.copy(bulb.position); spot.target.position.copy(target); spot.castShadow = false;
@@ -334,18 +352,25 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
   const cameraState = useRef<{ templateId: GalleryDraft['templateId']; position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
   const roomTurn = useRef<((direction: -1 | 1) => void) | null>(null);
   useEffect(() => {
-    if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); const template = getTemplate(draft.templateId);
-    const walk = visitor && viewMode === 'walk'; const camera = new THREE.PerspectiveCamera(walk ? 62 : 48, 1, .1, 70); camera.position.set(...template.camera);
+    if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); const template = getTemplate(draft.templateId); const [templateW, templateD] = template.dimensions;
+    const walk = visitor && viewMode === 'walk'; const overview = visitor && viewMode === 'overview'; const camera = new THREE.PerspectiveCamera(walk ? 62 : overview ? 46 : 48, 1, .1, 90); camera.position.set(...template.camera);
+    if (overview) camera.position.set(templateW * .68, template.height + Math.max(5.2, templateW * .27), templateD * .78);
     let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.03; element.appendChild(renderer.domElement);
     const roomEnvironment = new RoomEnvironment(); const pmremGenerator = new THREE.PMREMGenerator(renderer); const environment = pmremGenerator.fromScene(roomEnvironment, .04).texture; roomEnvironment.dispose(); pmremGenerator.dispose(); scene.environment = environment;
     const controls = walk ? null : new OrbitControls(camera, renderer.domElement); if (controls) {
-      controls.enableDamping = true; controls.dampingFactor = .075; controls.target.set(0, 1.6, -1.5); controls.maxPolarAngle = Math.PI / 2 - .03; controls.minDistance = 1.45; controls.maxDistance = visitor ? 18 : 17; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = .7; controls.zoomToCursor = true; controls.touches.ONE = THREE.TOUCH.ROTATE; controls.touches.TWO = visitor ? THREE.TOUCH.DOLLY_ROTATE : THREE.TOUCH.ROTATE; controls.autoRotate = visitor; controls.autoRotateSpeed = .38;
+      controls.enableDamping = true; controls.dampingFactor = .075; controls.target.set(0, overview ? template.height * .36 : 1.6, overview ? 0 : -1.5); controls.maxPolarAngle = Math.PI / 2 - .03; controls.minDistance = overview ? Math.max(templateW, templateD) * .52 : 1.45; controls.maxDistance = overview ? Math.max(templateW, templateD) * 1.75 : visitor ? 18 : 20; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = .7; controls.zoomToCursor = true; controls.touches.ONE = THREE.TOUCH.ROTATE; controls.touches.TWO = visitor ? THREE.TOUCH.DOLLY_ROTATE : THREE.TOUCH.ROTATE; controls.autoRotate = visitor; controls.autoRotateSpeed = overview ? .22 : .38;
       if (!visitor && cameraState.current?.templateId === draft.templateId) { camera.position.copy(cameraState.current.position); controls.target.copy(cameraState.current.target); }
     }
-    const { w, d, decorObjects, floorMesh, wallSurfaces } = buildRoom(scene, draft, selectedDecorId); const installedLights = addLighting(scene, draft, w, d); element.dataset.roof = 'wall-finish'; element.dataset.ceiling = draft.ceiling ?? 'gallery'; element.dataset.artLights = String(installedLights); element.dataset.lightScope = 'room'; element.dataset.wall = draft.wall; element.dataset.floor = draft.floor;
+    const { w, d, h, decorObjects, floorMesh, wallSurfaces, exteriorWalls } = buildRoom(scene, draft, selectedDecorId, overview); const installedLights = addLighting(scene, draft, w, d, h); element.dataset.roof = 'wall-finish'; element.dataset.ceiling = draft.ceiling ?? 'gallery'; element.dataset.artLights = String(installedLights); element.dataset.lightScope = 'room'; element.dataset.wall = draft.wall; element.dataset.floor = draft.floor; element.dataset.dollhouse = overview ? 'active' : 'inactive'; element.dataset.roomDimensions = `${w} × ${d} × ${h}`;
     const roomBounds = { minX: -w / 2 + .45, maxX: w / 2 - .45, minZ: -d / 2 + .45, maxZ: d / 2 - .45 };
+    const overviewCenter = new THREE.Vector3(0, h * .34, 0); const overviewDirection = new THREE.Vector3();
+    const wallNormals: Record<string, THREE.Vector3> = { north: new THREE.Vector3(0, 0, -1), south: new THREE.Vector3(0, 0, 1), west: new THREE.Vector3(-1, 0, 0), east: new THREE.Vector3(1, 0, 0) };
+    const updateDollhouse = () => {
+      if (!overview) return; overviewDirection.subVectors(camera.position, overviewCenter).setY(0).normalize();
+      exteriorWalls.forEach((mesh) => { const material = mesh.material as THREE.MeshPhysicalMaterial; const facing = wallNormals[String(mesh.userData.wallId)]?.dot(overviewDirection) ?? -1; const targetOpacity = facing > .42 ? .045 : facing > -.16 ? .3 : .9; material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, .16); });
+    };
     if (walk) camera.position.set(0, 1.68, d / 2 - 1);
-    const dividerCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => { if (Math.abs(next.x) > PAVILION_DIVIDER_WIDTH / 2 + .35 || Math.abs(next.z + .5) > .4) return; next.z = previous.z > -.5 ? -.09 : -.91; } : undefined;
+    const dividerCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => { if (Math.abs(next.x) > PAVILION_DIVIDER_WIDTH / 2 + .35 || Math.abs(next.z + .65) > .43) return; next.z = previous.z > -.65 ? -.18 : -1.12; } : undefined;
     const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => roomBounds, dividerCollision) : null; const finalLook = new THREE.Vector3(0, 1.68, -1); if (navigation) navigation.lookAt(finalLook);
     const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({ color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide })); walkMarker.rotation.x = -Math.PI / 2; walkMarker.position.y = .018; walkMarker.visible = false; if (walk) scene.add(walkMarker);
     let intro = navigation && playIntro && !introPlayed.current ? createCinematicIntro(camera, galleryIntroTour(draft, w, d), navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }, 'Private view', draft.title) : null;
@@ -398,7 +423,7 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
         const wallHit = raycaster.intersectObjects(wallSurfaces, false)[0]; if (!wallHit) return;
         const wallId = wallHit.object.userData.wallId as WallId; const artwork = artworkById.get(draggedArtworkPlacement.id); if (!artwork) return;
         const height = 1.5 * artwork.scale; const width = height * artwork.aspect; const availableWidth = wallId.startsWith('divider') ? PAVILION_DIVIDER_WIDTH : wallId === 'north' || wallId === 'south' ? w : d;
-        const horizontal = wallId === 'west' || wallId === 'east' ? wallHit.point.z : wallHit.point.x; const maxX = Math.max(.15, availableWidth / 2 - width / 2 - .12); const wallHeight = wallId.startsWith('divider') ? 4.1 : 4.8;
+        const horizontal = wallId === 'west' || wallId === 'east' ? wallHit.point.z : wallHit.point.x; const maxX = Math.max(.15, availableWidth / 2 - width / 2 - .12); const wallHeight = wallId.startsWith('divider') ? h - .75 : h;
         const x = THREE.MathUtils.clamp(horizontal, -maxX, maxX); const y = THREE.MathUtils.clamp(wallHit.point.y, height / 2 + .14, wallHeight - height / 2 - .12); const config = WALLS[wallId]; const [px, py, pz] = config.position(x, y, w, d);
         draggedArtwork.position.set(px, py, pz); draggedArtwork.rotation.set(...config.rotation); draggedArtwork.userData.wall = wallId; draggedArtworkPlacement = { id: artwork.id, wall: wallId, x, y }; suppressSceneClick = true;
       }
@@ -425,7 +450,7 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
     let frame = 0; const resize = () => { const width = element.clientWidth; const height = element.clientHeight; renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); }; const observer = new ResizeObserver(resize); observer.observe(element); resize();
     const cameraDirection = new THREE.Vector3(); const artworkDirection = new THREE.Vector3(); const artworkPosition = new THREE.Vector3(); const insertionDirection = new THREE.Vector3(); const insertionPoint = new THREE.Vector3(); let placementFrame = 0;
     const animate = () => {
-      intro?.update(); navigation?.update();
+      intro?.update(); navigation?.update(); updateDollhouse();
       if (orbitAnimation && controls) {
         const raw = Math.min(1, (performance.now() - orbitAnimation.start) / 520); const eased = raw * raw * (3 - 2 * raw); const angle = THREE.MathUtils.lerp(orbitAnimation.from, orbitAnimation.to, eased);
         camera.position.set(controls.target.x + Math.sin(angle) * orbitAnimation.radius, orbitAnimation.y, controls.target.z + Math.cos(angle) * orbitAnimation.radius); camera.lookAt(controls.target);
@@ -451,7 +476,7 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
     }; animate();
     return () => { cancelAnimationFrame(frame); roomTurn.current = null; observer.disconnect(); renderer.domElement.removeEventListener('pointerdown', editorPointerDown); renderer.domElement.removeEventListener('pointermove', editorPointerMove); renderer.domElement.removeEventListener('pointerup', editorPointerUp); renderer.domElement.removeEventListener('pointercancel', editorPointerUp); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); intro = null; navigation?.dispose(); controls?.dispose(); environment.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); if (material.bumpMap && material.bumpMap !== material.map) material.bumpMap.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.domElement.remove(); };
   }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, onMoveArtwork, onViewPlacementChange, visitor, viewMode, playIntro, onIntroComplete, onArtworkFocus]);
-  return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'} ${selectedDecorId ? 'gallery-scene--placing' : ''} ${selectedId ? 'gallery-scene--placing-art' : ''}`} ref={host}>{!visitor && <><button className="room-turn room-turn--left" type="button" onClick={() => roomTurn.current?.(-1)} aria-label="Rotate room 45 degrees left">←</button><button className="room-turn room-turn--right" type="button" onClick={() => roomTurn.current?.(1)} aria-label="Rotate room 45 degrees right">→</button></>}<div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD / arrows to walk · Drag to look · Pinch or scroll to zoom' : 'Overview · Drag to orbit · Scroll or pinch to zoom' : selectedDecorId ? 'Drag object · Click floor to place · Camera stays here' : selectedId ? 'Drag artwork directly onto any visible wall' : 'Drag to look · Scroll or pinch to zoom · Use arrows to turn'}</div></div>;
+  return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'} ${selectedDecorId ? 'gallery-scene--placing' : ''} ${selectedId ? 'gallery-scene--placing-art' : ''}`} ref={host}>{!visitor && <><button className="room-turn room-turn--left" type="button" onClick={() => roomTurn.current?.(-1)} aria-label="Rotate room 45 degrees left">←</button><button className="room-turn room-turn--right" type="button" onClick={() => roomTurn.current?.(1)} aria-label="Rotate room 45 degrees right">→</button></>}<div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD / arrows to walk · Drag to look · Pinch or scroll to zoom' : 'Dollhouse overview · Walls fade as you orbit · Scroll or pinch to zoom' : selectedDecorId ? 'Drag object · Click floor to place · Camera stays here' : selectedId ? 'Drag artwork directly onto any visible wall' : 'Drag to look · Scroll or pinch to zoom · Use arrows to turn'}</div></div>;
 }
 
 export const GalleryScene = memo(GallerySceneRenderer, (previous, next) =>
@@ -466,12 +491,12 @@ export const GalleryScene = memo(GallerySceneRenderer, (previous, next) =>
 export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroComplete, onArtworkFocus }: { viewMode?: GalleryViewMode; playIntro?: boolean; onIntroComplete?: () => void; onArtworkFocus?: (artwork: ArtworkFocusInfo | null) => void }) {
   const host = useRef<HTMLDivElement>(null); const introPlayed = useRef(false);
   useEffect(() => {
-    if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); scene.background = new THREE.Color('#080908');
-    const camera = new THREE.PerspectiveCamera(62, 1, .04, 120); camera.position.set(0, 1.68, 4.8);
+    if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); scene.background = new THREE.Color('#080908'); const walk = viewMode === 'walk';
+    const camera = new THREE.PerspectiveCamera(walk ? 62 : 46, 1, .04, 120); camera.position.set(0, 1.68, 4.8); if (!walk) camera.position.set(16.5, 14.5, 24);
     let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.4)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .48; element.appendChild(renderer.domElement);
-    const walk = viewMode === 'walk'; const controls = walk ? null : new OrbitControls(camera, renderer.domElement); if (controls) { controls.enableDamping = true; controls.dampingFactor = .075; controls.target.set(0, 2.4, -2.8); controls.maxPolarAngle = Math.PI / 2; controls.minDistance = 1.8; controls.maxDistance = 22; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = .7; controls.zoomToCursor = true; controls.touches.ONE = THREE.TOUCH.ROTATE; controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE; controls.autoRotate = true; controls.autoRotateSpeed = .32; }
+    const controls = walk ? null : new OrbitControls(camera, renderer.domElement); if (controls) { controls.enableDamping = true; controls.dampingFactor = .075; controls.target.set(0, 2.35, 3.5); controls.maxPolarAngle = Math.PI / 2 - .04; controls.minDistance = 12; controls.maxDistance = 44; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = .7; controls.zoomToCursor = true; controls.touches.ONE = THREE.TOUCH.ROTATE; controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE; controls.autoRotate = true; controls.autoRotateSpeed = .18; }
     scene.add(new THREE.AmbientLight('#fff4df', .08), new THREE.HemisphereLight('#ffe6ba', '#111310', .2));
-    let bounds: Bounds = { minX: -7, maxX: 7, minZ: -8, maxZ: 7 }; const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => bounds) : null; navigation?.setEnabled(!playIntro); let destroyed = false; let intro: ReturnType<typeof createCinematicIntro> | null = null; let modelErrorCleanup: (() => void) | null = null;
+    let bounds: Bounds = { minX: -7, maxX: 7, minZ: -8, maxZ: 7 }; const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => bounds) : null; navigation?.setEnabled(!playIntro); let destroyed = false; let intro: ReturnType<typeof createCinematicIntro> | null = null; let modelErrorCleanup: (() => void) | null = null; element.dataset.dollhouse = walk ? 'inactive' : 'active';
     const artworkObjects: THREE.Object3D[] = []; const floorObjects: THREE.Object3D[] = []; let artworkIndex = 0; let focusedArtwork: THREE.Object3D | null = null; const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
     const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({ color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide })); walkMarker.rotation.x = -Math.PI / 2; walkMarker.visible = false; if (walk) scene.add(walkMarker);
     const handlePointer = (event: PointerEvent) => { if (!walk || !navigation?.consumeClick()) return; const box = renderer.domElement.getBoundingClientRect(); pointer.set(((event.clientX - box.left) / box.width) * 2 - 1, -((event.clientY - box.top) / box.height) * 2 + 1); raycaster.setFromCamera(pointer, camera); const artHit = raycaster.intersectObjects(artworkObjects, true)[0]; const info = artHit?.object.userData.focusInfo as ArtworkFocusInfo | undefined; if (artHit && info) { focusedArtwork = artHit.object; onArtworkFocus?.(info); return; } const floorHit = raycaster.intersectObjects(floorObjects, true)[0]; if (floorHit) { focusedArtwork = null; onArtworkFocus?.(null); navigation.moveTo(floorHit.point); walkMarker.position.copy(floorHit.point); walkMarker.position.y += .02; walkMarker.visible = true; } };
@@ -482,12 +507,22 @@ export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroCo
         if ((object as THREE.Camera).isCamera || object.name.startsWith('COLLIDER_') || object.userData?.kind === 'aabb' || object.userData?.kind === 'view') object.visible = false;
         if ((object as THREE.Light).isLight) (object as THREE.Light).intensity *= .065;
         const mesh = object as THREE.Mesh; if (!mesh.isMesh) return; const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; let clickableArtwork = false; let isFloor = false;
-        materials.forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; const name = `${object.name} ${material.name}`.toLowerCase(); const metadataRole = String(object.userData?.theme_role || material.userData?.theme_role || '').toLowerCase(); const isArtwork = metadataRole === 'artwork' || /artwork|surface|wartrobe/.test(name) || Boolean(object.userData?.artwork_id); clickableArtwork ||= metadataRole === 'artwork' || /artwork|painting|canvas|picture|wartrobe/.test(name) || Boolean(object.userData?.artwork_id); isFloor ||= metadataRole === 'floor' || /floor|marble|ground/.test(name); if (material.emissive) { material.emissive.set('#000000'); material.emissiveIntensity = 0; } if (isArtwork) { material.color?.set('#ffffff'); material.roughness = .68; } else if (material.color) { const color = metadataRole === 'floor' || /floor|marble|stone/.test(name) ? '#101111' : metadataRole === 'wall' || /wall/.test(name) ? '#393631' : metadataRole === 'ceiling' || /ceiling/.test(name) ? '#1b1c1a' : metadataRole === 'bronze' || /bronze|frame|trim/.test(name) ? '#8e6c3e' : /leaf|stem|botanical/.test(name) ? '#29452a' : '#181916'; material.color.set(color); material.roughness = metadataRole === 'bronze' || /bronze|frame|trim/.test(name) ? .38 : .72; } material.needsUpdate = true; });
+        materials.forEach((raw) => {
+          const material = raw as THREE.MeshStandardMaterial; const name = `${object.name} ${material.name}`.toLowerCase(); const metadataRole = String(object.userData?.theme_role || material.userData?.theme_role || '').toLowerCase();
+          const isCeiling = metadataRole === 'ceiling' || /ceiling|roof/.test(name); const isWall = metadataRole === 'wall' || /wall/.test(name); const isArtwork = metadataRole === 'artwork' || /artwork|surface|wartrobe/.test(name) || Boolean(object.userData?.artwork_id);
+          clickableArtwork ||= metadataRole === 'artwork' || /artwork|painting|canvas|picture|wartrobe/.test(name) || Boolean(object.userData?.artwork_id); isFloor ||= metadataRole === 'floor' || /floor|marble|ground/.test(name);
+          if (!walk && isCeiling) object.visible = false;
+          if (!walk && isWall) { material.transparent = true; material.opacity = .12; material.depthWrite = false; material.side = THREE.DoubleSide; }
+          if (material.emissive) { material.emissive.set('#000000'); material.emissiveIntensity = 0; }
+          if (isArtwork) { material.color?.set('#ffffff'); material.roughness = .68; }
+          else if (material.color) { const color = metadataRole === 'floor' || /floor|marble|stone/.test(name) ? '#101111' : isWall ? '#393631' : isCeiling ? '#1b1c1a' : metadataRole === 'bronze' || /bronze|frame|trim/.test(name) ? '#8e6c3e' : /leaf|stem|botanical/.test(name) ? '#29452a' : '#181916'; material.color.set(color); material.roughness = metadataRole === 'bronze' || /bronze|frame|trim/.test(name) ? .38 : .72; }
+          material.needsUpdate = true;
+        });
         if (clickableArtwork) { artworkIndex += 1; const info: ArtworkFocusInfo = { id: String(object.userData?.artwork_id || object.uuid), title: String(object.userData?.artwork_title || `Threshold — Study ${String(artworkIndex).padStart(2, '0')}`), artist: 'Danny Hirsch', description: 'An original work presented in the Threshold virtual exhibition.', year: '2026' }; object.userData.focusInfo = info; object.traverse((child) => { child.userData.focusInfo = info; }); artworkObjects.push(object); }
         if (isFloor) floorObjects.push(object);
       });
       const start = gltf.scene.getObjectByName('Walk_Start'); const target = gltf.scene.getObjectByName('Walk_LookTarget'); const minimum = gltf.scene.getObjectByName('Walk_Bounds_Min'); const maximum = gltf.scene.getObjectByName('Walk_Bounds_Max');
-      if (start) camera.position.copy(start.getWorldPosition(new THREE.Vector3())); const finalPosition = camera.position.clone(); const lookTarget = target?.getWorldPosition(new THREE.Vector3()) ?? new THREE.Vector3(0, 2.4, -2.8); navigation?.lookAt(lookTarget); if (controls) controls.target.copy(lookTarget);
+      if (walk && start) camera.position.copy(start.getWorldPosition(new THREE.Vector3())); const finalPosition = camera.position.clone(); const lookTarget = target?.getWorldPosition(new THREE.Vector3()) ?? new THREE.Vector3(0, 2.4, -2.8); navigation?.lookAt(lookTarget); if (controls) { camera.position.set(16.5, 14.5, 24); controls.target.set(0, 2.35, 3.5); }
       if (minimum && maximum) { const a = minimum.getWorldPosition(new THREE.Vector3()); const b = maximum.getWorldPosition(new THREE.Vector3()); bounds = { minX: Math.min(a.x,b.x) + .35, maxX: Math.max(a.x,b.x) - .35, minZ: Math.min(a.z,b.z) + .35, maxZ: Math.max(a.z,b.z) - .35 }; }
       if (navigation && playIntro && !introPlayed.current) {
         const width = bounds.maxX - bounds.minX; const depth = bounds.maxZ - bounds.minZ; const centerX = lookTarget.x; const centerZ = (finalPosition.z + lookTarget.z) / 2; const radiusX = Math.min(width * .28, 4.6); const radiusZ = Math.min(Math.abs(finalPosition.z - lookTarget.z) * .46, depth * .24);
@@ -510,5 +545,5 @@ export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroCo
     const animate = () => { intro?.update(); navigation?.update(); controls?.update(); if (walkMarker.visible) { walkMarker.rotation.z += .008; const material = walkMarker.material as THREE.MeshBasicMaterial; material.opacity = .5 + Math.sin(performance.now() * .006) * .25; if (!navigation?.hasDestination()) walkMarker.visible = false; } if (focusedArtwork) { camera.getWorldDirection(cameraDirection); focusedArtwork.getWorldPosition(artworkPosition); artworkDirection.subVectors(artworkPosition, camera.position); if (cameraDirection.dot(artworkDirection.normalize()) < .48) { focusedArtwork = null; onArtworkFocus?.(null); } } element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
     return () => { destroyed = true; cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); modelErrorCleanup?.(); navigation?.dispose(); controls?.dispose(); renderer.dispose(); renderer.domElement.remove(); };
   }, [viewMode, playIntro, onIntroComplete, onArtworkFocus]);
-  return <div className={`gallery-scene gallery-scene--${viewMode}`} ref={host}><div className="scene-hint">{viewMode === 'walk' ? 'Danny Hirsch Arts · WASD / arrows · Drag to look' : 'Danny Hirsch Arts · Overview orbit'}</div></div>;
+  return <div className={`gallery-scene gallery-scene--${viewMode}`} ref={host}><div className="scene-hint">{viewMode === 'walk' ? 'Danny Hirsch Arts · WASD / arrows · Drag to look' : 'Danny Hirsch Arts · Open-roof dollhouse overview'}</div></div>;
 }
