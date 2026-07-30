@@ -9,15 +9,16 @@ import type { DecorPlacement, GalleryDraft, WallId } from './types';
 import { getTemplate } from './templates';
 
 type Bounds = { minX: number; maxX: number; minZ: number; maxZ: number };
+const PAVILION_DIVIDER_WIDTH = 18;
+const PAVILION_DIVIDER_Z = -.75;
 const WALLS: Record<WallId, { position: (x: number, y: number, w: number, d: number) => [number, number, number]; rotation: [number, number, number] }> = {
   north: { position: (x, y, _w, d) => [x, y, -d / 2 + .035], rotation: [0, 0, 0] },
   south: { position: (x, y, _w, d) => [x, y, d / 2 - .035], rotation: [0, Math.PI, 0] },
   west: { position: (x, y, w) => [-w / 2 + .035, y, x], rotation: [0, Math.PI / 2, 0] },
   east: { position: (x, y, w) => [w / 2 - .035, y, x], rotation: [0, -Math.PI / 2, 0] },
-  'divider-front': { position: (x, y) => [x, y, -.395], rotation: [0, 0, 0] },
-  'divider-back': { position: (x, y) => [x, y, -.605], rotation: [0, Math.PI, 0] }
+  'divider-front': { position: (x, y) => [x, y, PAVILION_DIVIDER_Z + .13], rotation: [0, 0, 0] },
+  'divider-back': { position: (x, y) => [x, y, PAVILION_DIVIDER_Z - .13], rotation: [0, Math.PI, 0] }
 };
-const PAVILION_DIVIDER_WIDTH = 8.4;
 const wallColors = { chalk: '#dfdcd4', warm: '#ae9f8c', travertine: '#d7cbb6', linen: '#c8c0b3', charcoal: '#292b29' };
 const floorColors = { concrete: '#777672', oak: '#49382b', terrazzo: '#a7a299', marble: '#d8d4cb', 'black-marble': '#101111', walnut: '#4b2c1d', 'dark-oak': '#26211d' };
 type SurfaceKind = GalleryDraft['wall'] | GalleryDraft['floor'];
@@ -84,27 +85,46 @@ function showSceneError(element: HTMLElement, message = 'This gallery needs WebG
   return () => notice.remove();
 }
 
+function createLeafGeometry(broad: boolean) {
+  const shape = new THREE.Shape();
+  if (broad) {
+    const points: Array<[number, number]> = [[0,-.43],[-.13,-.3],[-.31,-.25],[-.21,-.11],[-.4,-.02],[-.23,.09],[-.42,.2],[-.2,.27],[-.29,.41],[-.1,.39],[0,.55],[.1,.39],[.29,.41],[.2,.27],[.42,.2],[.23,.09],[.4,-.02],[.21,-.11],[.31,-.25],[.13,-.3]];
+    shape.moveTo(...points[0]); shape.splineThru(points.slice(1).map(([x, y]) => new THREE.Vector2(x, y))); shape.lineTo(...points[0]); shape.closePath();
+    [[-.11,.12],[.12,.2],[-.08,.31]].forEach(([x, y], index) => { const hole = new THREE.Path(); hole.absellipse(x, y, .026 + index * .004, .062, 0, Math.PI * 2, false, index * .15); shape.holes.push(hole); });
+  } else {
+    shape.moveTo(0, -.32); shape.bezierCurveTo(-.14, -.2, -.14, .18, 0, .34); shape.bezierCurveTo(.14, .18, .14, -.2, 0, -.32); shape.closePath();
+  }
+  const geometry = new THREE.ShapeGeometry(shape, 3); geometry.computeVertexNormals(); return geometry;
+}
+
+function createPotTexture(light: boolean) {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 192; const context = canvas.getContext('2d');
+  if (!context) return null; context.fillStyle = light ? '#b9aa91' : '#29251f'; context.fillRect(0, 0, 192, 192);
+  let seed = light ? 37 : 71; const random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let index = 0; index < 950; index++) { const value = light ? (random() > .5 ? 255 : 62) : (random() > .5 ? 152 : 8); context.fillStyle = `rgba(${value},${value},${value},${.018 + random() * .055})`; const size = .35 + random() * 1.4; context.fillRect(random() * 192, random() * 192, size, size); }
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(2, 1.5); return texture;
+}
+
 function createPlant(broad = false) {
-  const group = new THREE.Group();
-  const ceramic = new THREE.MeshStandardMaterial({ color: broad ? '#c7bda9' : '#3b342c', roughness: .42, metalness: .04 });
-  const pot = new THREE.Mesh(new THREE.CylinderGeometry(.36, .27, .58, 32), ceramic); pot.position.y = .3;
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(.345, .045, 10, 32), ceramic); rim.rotation.x = Math.PI / 2; rim.position.y = .59;
-  const soil = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .035, 28), new THREE.MeshStandardMaterial({ color: '#17120e', roughness: 1 })); soil.position.y = .585;
-  group.add(pot, rim, soil);
-  const stemMaterial = new THREE.MeshStandardMaterial({ color: broad ? '#395235' : '#51472f', roughness: .82 });
-  const leafMaterials = [
-    new THREE.MeshStandardMaterial({ color: broad ? '#2e5637' : '#506640', roughness: .68 }),
-    new THREE.MeshStandardMaterial({ color: broad ? '#3e6946' : '#68764b', roughness: .74 })
-  ];
-  const count = broad ? 8 : 13;
+  const group = new THREE.Group(); const potTexture = createPotTexture(broad);
+  const ceramic = new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: potTexture, bumpMap: potTexture, bumpScale: .012, roughness: broad ? .34 : .28, metalness: .03, clearcoat: broad ? .18 : .34, clearcoatRoughness: .45 });
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(.37, .26, .61, 48, 4), ceramic); pot.position.y = .32;
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.35, .047, 12, 48), ceramic); rim.rotation.x = Math.PI / 2; rim.position.y = .61;
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(.27, .28, .055, 40), ceramic); foot.position.y = .028;
+  const soil = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, .04, 36), new THREE.MeshStandardMaterial({ color: '#17120e', roughness: 1 })); soil.position.y = .607;
+  group.add(pot, rim, foot, soil);
+  const stemMaterial = new THREE.MeshStandardMaterial({ color: broad ? '#315035' : '#534a31', roughness: .88 });
+  const leafMaterials = ['#315e3c','#3f7048','#284d32'].map((color) => new THREE.MeshPhysicalMaterial({ color, roughness: .62, clearcoat: .08, clearcoatRoughness: .68, sheen: .28, sheenColor: new THREE.Color('#b8d5a5'), side: THREE.DoubleSide }));
+  const veinMaterial = new THREE.LineBasicMaterial({ color: broad ? '#84a77a' : '#a9b176', transparent: true, opacity: .52 });
+  const leafGeometry = createLeafGeometry(broad); const count = broad ? 10 : 24;
   for (let index = 0; index < count; index++) {
-    const angle = index * 2.35 + (broad ? .25 : 0); const reach = broad ? .46 : .32; const height = .82 + (index % 5) * (broad ? .18 : .2);
+    const angle = index * (broad ? 2.19 : 2.41) + .28; const ring = broad ? index % 5 : index % 8; const reach = broad ? .37 + ring * .055 : .24 + ring * .027; const height = broad ? .92 + (index % 6) * .18 : .82 + (index % 9) * .145;
     const end = new THREE.Vector3(Math.sin(angle) * reach, height, Math.cos(angle) * reach);
-    const stemCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, .59, 0), new THREE.Vector3(end.x * .3, height * .8, end.z * .3), end);
-    const stem = new THREE.Mesh(new THREE.TubeGeometry(stemCurve, 8, broad ? .018 : .012, 6, false), stemMaterial); group.add(stem);
-    const leaf = new THREE.Mesh(new THREE.SphereGeometry(broad ? .3 : .145, 16, 10), leafMaterials[index % 2]);
-    leaf.scale.set(broad ? .72 : .5, broad ? 1.55 : 2.15, broad ? .14 : .18); leaf.position.copy(end);
-    leaf.rotation.set(Math.cos(angle) * .28, -angle, (index % 2 ? 1 : -1) * (broad ? .65 : .45)); group.add(leaf);
+    const stemCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, .6, 0), new THREE.Vector3(end.x * .48, .66 + (height - .6) * .58, end.z * .48), end);
+    const stem = new THREE.Mesh(new THREE.TubeGeometry(stemCurve, 12, broad ? .014 : .008, 7, false), stemMaterial); group.add(stem);
+    const leafGroup = new THREE.Group(); const leaf = new THREE.Mesh(leafGeometry, leafMaterials[index % leafMaterials.length]); leafGroup.add(leaf);
+    const veinLength = broad ? .77 : .52; const vein = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, broad ? -.34 : -.25, .006), new THREE.Vector3(0, broad ? .43 : .27, .006)]), veinMaterial); vein.scale.y = veinLength / (broad ? .77 : .52); leafGroup.add(vein);
+    leafGroup.position.copy(end); leafGroup.rotation.set(-.18 + (index % 3) * .12, -angle + Math.PI, (index % 2 ? 1 : -1) * (broad ? .62 : .44)); leafGroup.scale.setScalar(broad ? .72 + (index % 3) * .045 : .62 + (index % 4) * .035); group.add(leafGroup);
   }
   group.traverse((child) => { const mesh = child as THREE.Mesh; if (mesh.isMesh) { mesh.castShadow = true; mesh.receiveShadow = true; } });
   return group;
@@ -114,18 +134,25 @@ function createDecor(item: DecorPlacement, selected: boolean) {
   const group = new THREE.Group(); group.userData.decorId = item.id;
   if (item.type === 'olive' || item.type === 'monstera') group.add(createPlant(item.type === 'monstera'));
   if (item.type === 'pedestal') {
-    const plaster = new THREE.MeshStandardMaterial({ color: '#d8d4cb', roughness: .68 });
-    const pedestal = new THREE.Mesh(new RoundedBoxGeometry(.84, 1.15, .84, 5, .035), plaster); pedestal.position.y = .575;
-    const top = new THREE.Mesh(new RoundedBoxGeometry(.91, .075, .91, 4, .025), new THREE.MeshStandardMaterial({ color: '#e5e1d8', roughness: .58 })); top.position.y = 1.16; group.add(pedestal, top);
+    const marbleTexture = createSurfaceTexture('marble', floorColors.marble); const marble = new THREE.MeshPhysicalMaterial({ color: '#f5f2ea', map: marbleTexture, bumpMap: marbleTexture, bumpScale: .0025, roughness: .3, clearcoat: .34, clearcoatRoughness: .32, envMapIntensity: .88 });
+    const shadow = new THREE.Mesh(new RoundedBoxGeometry(.75, .055, .75, 4, .018), new THREE.MeshStandardMaterial({ color: '#151513', roughness: .54 })); shadow.position.y = .028;
+    const pedestal = new THREE.Mesh(new RoundedBoxGeometry(.84, 1.16, .84, 7, .045), marble); pedestal.position.y = .625;
+    const top = new THREE.Mesh(new RoundedBoxGeometry(.94, .075, .94, 6, .025), marble); top.position.y = 1.235;
+    const plaque = new THREE.Mesh(new RoundedBoxGeometry(.28, .12, .018, 3, .008), new THREE.MeshPhysicalMaterial({ color: '#9b8059', roughness: .28, metalness: .72, clearcoat: .26 })); plaque.position.set(0, .72, .432); group.add(shadow, pedestal, top, plaque);
   }
   if (item.type === 'arc-lamp') {
-    const metal = new THREE.MeshStandardMaterial({ color: '#171816', metalness: .82, roughness: .22 });
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(.37, .43, .085, 32), metal); base.position.y = .045; group.add(base);
+    const metal = new THREE.MeshPhysicalMaterial({ color: '#141512', metalness: .9, roughness: .19, clearcoat: .34, clearcoatRoughness: .22, envMapIntensity: 1.1 });
+    const brass = new THREE.MeshPhysicalMaterial({ color: '#b08a53', metalness: .82, roughness: .24, clearcoat: .3 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.37, .43, .085, 48), metal); base.position.y = .045;
+    const baseRing = new THREE.Mesh(new THREE.TorusGeometry(.35, .018, 8, 48), brass); baseRing.rotation.x = Math.PI / 2; baseRing.position.y = .09; group.add(base, baseRing);
     const arc = new THREE.CatmullRomCurve3([new THREE.Vector3(0, .08, 0), new THREE.Vector3(0, 1.65, 0), new THREE.Vector3(.32, 2.55, 0), new THREE.Vector3(1.05, 2.75, 0)]);
-    const stem = new THREE.Mesh(new THREE.TubeGeometry(arc, 28, .028, 9, false), metal); group.add(stem);
-    const shade = new THREE.Mesh(new THREE.CylinderGeometry(.2, .38, .4, 32, 1, true), metal); shade.position.set(1.05, 2.56, 0); group.add(shade);
+    const stem = new THREE.Mesh(new THREE.TubeGeometry(arc, 52, .027, 12, false), metal); group.add(stem);
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(.18, .39, .4, 48, 1, true), metal); shade.position.set(1.05, 2.56, 0);
+    const shadeInner = new THREE.Mesh(new THREE.CylinderGeometry(.175, .375, .39, 48, 1, true), new THREE.MeshPhysicalMaterial({ color: '#d3ad70', metalness: .65, roughness: .3, side: THREE.BackSide })); shadeInner.position.copy(shade.position);
+    const shadeRim = new THREE.Mesh(new THREE.TorusGeometry(.385, .018, 8, 48), brass); shadeRim.rotation.x = Math.PI / 2; shadeRim.position.set(1.05, 2.36, 0); group.add(shade, shadeInner, shadeRim);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(.11, 18, 12), new THREE.MeshStandardMaterial({ color: '#fff2d3', emissive: '#ffbf72', emissiveIntensity: 2.4, roughness: .25 })); bulb.position.set(1.05, 2.39, 0); group.add(bulb);
-    const glow = new THREE.PointLight('#ffd39a', 5.5, 5.5, 1.7); glow.position.copy(bulb.position); group.add(glow);
+    const cordCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(1.05, 2.47, 0), new THREE.Vector3(1.07, 2.28, .008), new THREE.Vector3(1.06, 2.12, .012)]); const cordMaterial = new THREE.MeshStandardMaterial({ color: '#26241f', roughness: .8 }); group.add(new THREE.Mesh(new THREE.TubeGeometry(cordCurve, 14, .007, 6, false), cordMaterial)); const pull = new THREE.Mesh(new THREE.SphereGeometry(.018, 10, 8), brass); pull.position.set(1.06, 2.1, .012); group.add(pull);
+    const glow = new THREE.PointLight('#ffd39a', 4.6, 5.2, 1.8); glow.position.copy(bulb.position); group.add(glow);
   }
   if (selected) {
     const marker = new THREE.Mesh(new THREE.RingGeometry(.46, .53, 32), new THREE.MeshBasicMaterial({ color: '#d9ff43', side: THREE.DoubleSide })); marker.rotation.x = -Math.PI / 2; marker.position.y = .015; group.add(marker);
@@ -208,13 +235,39 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
     const ring = new THREE.Mesh(new THREE.TorusGeometry(1.85, .035, 10, 72), bronze); ring.rotation.x = Math.PI / 2; ring.position.set(0, h - .32, .35); architecture.add(ring);
   }
   if (draft.templateId === 'pavilion') {
-    const dividerHeight = h - .75; const divider = new THREE.Mesh(new THREE.BoxGeometry(dividerWidth, dividerHeight, .22), wall); divider.position.set(0, dividerHeight / 2, -.65); divider.receiveShadow = true; scene.add(divider);
+    const dividerHeight = h - .65; const divider = new THREE.Mesh(new RoundedBoxGeometry(dividerWidth, dividerHeight, .26, 6, .035), wall); divider.position.set(0, dividerHeight / 2, PAVILION_DIVIDER_Z); divider.receiveShadow = true; scene.add(divider);
     const raycastMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
     const addDividerSurface = (wallId: WallId, z: number, rotationY: number) => { const surface = new THREE.Mesh(new THREE.PlaneGeometry(dividerWidth, dividerHeight), raycastMaterial); surface.position.set(0, dividerHeight / 2, z); surface.rotation.y = rotationY; surface.userData.wallId = wallId; scene.add(surface); wallSurfaces.push(surface); };
-    addDividerSurface('divider-front', -.525, 0); addDividerSurface('divider-back', -.775, Math.PI);
-    const pavilionMetal = new THREE.MeshPhysicalMaterial({ color: '#71634e', roughness: .28, metalness: .76, clearcoat: .32 });
-    [-1, 1].forEach((xSide) => [-1, 1].forEach((zSide) => { const column = new THREE.Mesh(new THREE.CylinderGeometry(.13, .17, h - .25, 20), pavilionMetal); column.position.set(xSide * w * .34, (h - .25) / 2, zSide * d * .31); architecture.add(column); }));
-    [-1, 1].forEach((side) => { const bench = new THREE.Mesh(new RoundedBoxGeometry(3.3, .42, .78, 5, .08), new THREE.MeshStandardMaterial({ color: '#26231f', roughness: .48 })); bench.position.set(side * 2.15, .34, d * .29); bench.castShadow = true; architecture.add(bench); });
+    addDividerSurface('divider-front', PAVILION_DIVIDER_Z + .135, 0); addDividerSurface('divider-back', PAVILION_DIVIDER_Z - .135, Math.PI);
+    const pavilionMetal = new THREE.MeshPhysicalMaterial({ color: '#806b4e', roughness: .25, metalness: .78, clearcoat: .38, clearcoatRoughness: .24, envMapIntensity: 1.08 });
+    const darkStone = new THREE.MeshPhysicalMaterial({ color: '#262522', roughness: .42, clearcoat: .13, clearcoatRoughness: .55 });
+    const glass = new THREE.MeshPhysicalMaterial({ color: '#dce6dd', roughness: .12, metalness: .05, transmission: .68, transparent: true, opacity: .48, thickness: .22, envMapIntensity: 1.2, side: THREE.DoubleSide });
+    const openingWidth = (w - dividerWidth) / 2;
+    [-1, 1].forEach((side) => {
+      const portalX = side * (dividerWidth / 2 + openingWidth / 2);
+      const innerJamb = new THREE.Mesh(new RoundedBoxGeometry(.18, h * .76, .38, 4, .025), pavilionMetal); innerJamb.position.set(side * (dividerWidth / 2 + .09), h * .38, PAVILION_DIVIDER_Z);
+      const outerJamb = new THREE.Mesh(new RoundedBoxGeometry(.18, h * .76, .38, 4, .025), pavilionMetal); outerJamb.position.set(side * (w / 2 - .18), h * .38, PAVILION_DIVIDER_Z);
+      const header = new THREE.Mesh(new RoundedBoxGeometry(openingWidth, .18, .38, 4, .025), pavilionMetal); header.position.set(portalX, h * .76, PAVILION_DIVIDER_Z);
+      const threshold = new THREE.Mesh(new RoundedBoxGeometry(openingWidth - .25, .025, .34, 3, .008), pavilionMetal); threshold.position.set(portalX, .014, PAVILION_DIVIDER_Z);
+      architecture.add(innerJamb, outerJamb, header, threshold);
+    });
+    [-1, 1].forEach((xSide) => [-1, 0, 1].forEach((zStep) => {
+      const column = new THREE.Mesh(new THREE.CylinderGeometry(.14, .19, h - .3, 32), pavilionMetal); column.position.set(xSide * w * .405, (h - .3) / 2, zStep * d * .31); architecture.add(column);
+      const collar = new THREE.Mesh(new THREE.TorusGeometry(.205, .028, 8, 32), pavilionMetal); collar.rotation.x = Math.PI / 2; collar.position.set(column.position.x, h - .46, column.position.z); architecture.add(collar);
+    }));
+    [-1, 1].forEach((zone) => {
+      const zoneZ = zone * d * .255;
+      const lightwell = new THREE.Mesh(new RoundedBoxGeometry(w * .5, .06, d * .22, 5, .03), glass); lightwell.position.set(0, h - .095, zoneZ); architecture.add(lightwell);
+      const frameWidth = w * .53; const frameDepth = d * .245;
+      [-1, 1].forEach((side) => { const rail = new THREE.Mesh(new RoundedBoxGeometry(frameWidth, .06, .055, 3, .012), pavilionMetal); rail.position.set(0, h - .14, zoneZ + side * frameDepth / 2); architecture.add(rail); });
+      [-1, 1].forEach((side) => { const rail = new THREE.Mesh(new RoundedBoxGeometry(.055, .06, frameDepth, 3, .012), pavilionMetal); rail.position.set(side * frameWidth / 2, h - .14, zoneZ); architecture.add(rail); });
+      const aperture = new THREE.Mesh(new RoundedBoxGeometry(w * .485, .055, d * .205, 4, .018), new THREE.MeshStandardMaterial({ color: '#fff8df', emissive: '#ffe1ac', emissiveIntensity: 1.25, transparent: true, opacity: .34 })); aperture.position.set(0, h - .17, zoneZ); architecture.add(aperture);
+      const roomGlow = new THREE.PointLight(zone > 0 ? '#ffe0ae' : '#e5ecdf', 3.1, Math.min(w, d) * .58, 1.85); roomGlow.position.set(0, h - .55, zoneZ); architecture.add(roomGlow);
+    });
+    const oculus = new THREE.Mesh(new THREE.TorusGeometry(2.35, .055, 12, 96), pavilionMetal); oculus.rotation.x = Math.PI / 2; oculus.position.set(0, h - .28, -d * .27); architecture.add(oculus);
+    const rearDais = new THREE.Mesh(new THREE.CylinderGeometry(2.05, 2.18, .13, 72), darkStone); rearDais.position.set(0, .065, -d * .27); architecture.add(rearDais);
+    const water = new THREE.Mesh(new THREE.CylinderGeometry(1.62, 1.62, .025, 72), new THREE.MeshPhysicalMaterial({ color: '#65736e', roughness: .08, metalness: .12, transmission: .32, transparent: true, opacity: .72, clearcoat: 1, clearcoatRoughness: .05 })); water.position.set(0, .14, -d * .27); architecture.add(water);
+    [-1, 1].forEach((side) => { const bench = new THREE.Mesh(new RoundedBoxGeometry(3.8, .44, .82, 7, .09), darkStone); bench.position.set(side * 2.45, .34, d * .31); bench.castShadow = true; architecture.add(bench); });
   }
   if (draft.templateId === 'nocturne') { const plinth = new THREE.Mesh(new THREE.CylinderGeometry(.82, .82, .82, 48), new THREE.MeshStandardMaterial({ color: '#111210', roughness: .62 })); plinth.position.set(0, .5, .65); scene.add(plinth); }
   const decorObjects = draft.decor.map((item) => createDecor(item, selectedDecorId === item.id));
@@ -285,11 +338,13 @@ function createFirstPersonWalk(camera: THREE.PerspectiveCamera, canvas: HTMLCanv
   canvas.addEventListener('pointerdown', pointerDown); canvas.addEventListener('pointermove', pointerMove); canvas.addEventListener('pointerup', pointerUp); canvas.addEventListener('pointercancel', pointerUp); canvas.addEventListener('wheel', wheel, { passive: false }); canvas.addEventListener('contextmenu', contextMenu);
   let previousTime = performance.now(); const forward = new THREE.Vector3(); const right = new THREE.Vector3(); const desired = new THREE.Vector3(); const velocity = new THREE.Vector3(); const previous = new THREE.Vector3();
   const update = () => {
-    const now = performance.now(); const delta = Math.min((now - previousTime) / 1000, .05); previousTime = now; camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 1 - Math.exp(-11 * delta)); camera.updateProjectionMatrix(); if (!enabled) return; camera.getWorldDirection(forward); forward.y = 0; if (forward.lengthSq() < .001) forward.set(0, 0, -1); forward.normalize(); right.crossVectors(forward, camera.up).normalize(); desired.set(0, 0, 0);
+    const now = performance.now(); const delta = Math.min((now - previousTime) / 1000, .05); previousTime = now; camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 1 - Math.exp(-11 * delta)); camera.updateProjectionMatrix(); if (!enabled) return;
+    const turnDirection = (keys.has('ArrowLeft') ? 1 : 0) - (keys.has('ArrowRight') ? 1 : 0); if (turnDirection) { yaw += turnDirection * 1.72 * delta; camera.rotation.set(pitch, yaw, 0, 'YXZ'); }
+    camera.getWorldDirection(forward); forward.y = 0; if (forward.lengthSq() < .001) forward.set(0, 0, -1); forward.normalize(); right.crossVectors(forward, camera.up).normalize(); desired.set(0, 0, 0);
     if (keys.has('KeyW') || keys.has('ArrowUp')) desired.add(forward);
     if (keys.has('KeyS') || keys.has('ArrowDown')) desired.sub(forward);
-    if (keys.has('KeyD') || keys.has('ArrowRight')) desired.add(right);
-    if (keys.has('KeyA') || keys.has('ArrowLeft')) desired.sub(right);
+    if (keys.has('KeyD')) desired.add(right);
+    if (keys.has('KeyA')) desired.sub(right);
     if (desired.lengthSq()) desired.normalize().multiplyScalar(2.75);
     else if (destination) { desired.subVectors(destination, camera.position); desired.y = 0; const distance = desired.length(); if (distance < .14) { destination = null; desired.set(0, 0, 0); } else desired.normalize().multiplyScalar(Math.min(2.6, Math.max(.7, distance * 1.5))); }
     velocity.lerp(desired, 1 - Math.exp(-9 * delta)); previous.copy(camera.position); camera.position.addScaledVector(velocity, delta);
@@ -306,7 +361,7 @@ type WalkController = ReturnType<typeof createFirstPersonWalk>;
 type CinematicTour = { positions: THREE.Vector3[]; looks: THREE.Vector3[]; finalLook: THREE.Vector3 };
 
 function createCinematicIntro(camera: THREE.PerspectiveCamera, tour: CinematicTour, navigation: WalkController, element: HTMLElement, onComplete?: () => void, labelText = 'Private view', titleText = 'Entering exhibition') {
-  const curve = new THREE.CatmullRomCurve3(tour.positions, false, 'centripetal', .38); const lookCurve = new THREE.CatmullRomCurve3(tour.looks, false, 'centripetal', .38); const desktopDuration = THREE.MathUtils.clamp(curve.getLength() * 410, 6200, 8400); const duration = innerWidth < 620 ? Math.min(desktopDuration, 6400) : desktopDuration; const startedAt = performance.now(); const baseFov = camera.fov; let complete = false; let phaseIndex = -1;
+  const curve = new THREE.CatmullRomCurve3(tour.positions, false, 'centripetal', .38); const lookCurve = new THREE.CatmullRomCurve3(tour.looks, false, 'centripetal', .38); const desktopDuration = THREE.MathUtils.clamp(curve.getLength() * 410, 6400, 9800); const duration = innerWidth < 620 ? Math.min(desktopDuration, 7000) : desktopDuration; const startedAt = performance.now(); const baseFov = camera.fov; let complete = false; let phaseIndex = -1;
   const position = new THREE.Vector3(); const cinematicLook = new THREE.Vector3(); const phases = ['Arrival', 'The architecture', 'The collection', 'Your visit'];
   const overlay = document.createElement('div'); overlay.className = 'cinematic-intro'; overlay.setAttribute('aria-label', 'Cinematic gallery introduction'); const copy = document.createElement('div'); copy.className = 'cinematic-copy'; const label = document.createElement('span'); const title = document.createElement('strong'); const phase = document.createElement('small'); phase.setAttribute('aria-live', 'polite'); const line = document.createElement('i'); const skip = document.createElement('button'); skip.type = 'button'; skip.setAttribute('aria-label', 'Skip the gallery introduction and enter now'); label.textContent = labelText; title.textContent = titleText; phase.textContent = phases[0]; skip.textContent = 'Enter now'; copy.append(label, title, phase, line); overlay.append(copy, skip); element.appendChild(overlay); navigation.setEnabled(false);
   const finish = () => { if (complete) return; complete = true; camera.fov = baseFov; camera.updateProjectionMatrix(); camera.position.copy(tour.positions[tour.positions.length - 1]); navigation.lookAt(tour.finalLook); navigation.setEnabled(true); overlay.classList.add('is-finished'); window.setTimeout(() => overlay.remove(), 650); onComplete?.(); };
@@ -320,8 +375,8 @@ function galleryIntroTour(draft: GalleryDraft, w: number, d: number): CinematicT
   const artworkLooks = draft.artworks.slice(0, 5).map((artwork) => { const [x, y, z] = WALLS[artwork.wall].position(artwork.x, artwork.y, w, d); return new THREE.Vector3(x, y, z); });
   const focus = (index: number, fallback: THREE.Vector3) => artworkLooks.length ? artworkLooks[index % artworkLooks.length] : fallback;
   if (draft.templateId === 'pavilion') {
-    const positions = [new THREE.Vector3(0, 3.5, d / 2 - .8), new THREE.Vector3(-w * .31, 2.75, d * .2), new THREE.Vector3(-w * .32, 2.35, -d * .3), new THREE.Vector3(0, 2.25, -d * .36), new THREE.Vector3(w * .32, 2.3, -d * .26), new THREE.Vector3(w * .31, 2, d * .24), finish];
-    const looks = [new THREE.Vector3(0, 1.8, -.5), focus(0, new THREE.Vector3(-w * .18, 1.9, -d / 2)), focus(1, new THREE.Vector3(0, 1.9, -.5)), focus(2, new THREE.Vector3(w * .2, 1.9, -d / 2)), focus(3, new THREE.Vector3(w / 2, 1.8, 0)), focus(4, new THREE.Vector3(0, 1.75, -.5)), finalLook]; return { positions, looks, finalLook };
+    const positions = [new THREE.Vector3(0, 4.4, d / 2 - .8), new THREE.Vector3(-w * .27, 3.05, d * .27), new THREE.Vector3(w * .29, 2.7, d * .18), new THREE.Vector3(w * .4, 2.45, PAVILION_DIVIDER_Z), new THREE.Vector3(w * .3, 2.65, -d * .29), new THREE.Vector3(0, 3.75, -d * .35), new THREE.Vector3(-w * .4, 2.45, PAVILION_DIVIDER_Z), new THREE.Vector3(-w * .27, 2.2, d * .24), finish];
+    const looks = [new THREE.Vector3(0, 1.9, PAVILION_DIVIDER_Z), focus(0, new THREE.Vector3(-w * .18, 2.05, PAVILION_DIVIDER_Z)), focus(1, new THREE.Vector3(w * .18, 2, PAVILION_DIVIDER_Z)), new THREE.Vector3(0, 2.1, -d * .3), focus(2, new THREE.Vector3(w * .18, 2, -d / 2)), focus(3, new THREE.Vector3(0, .7, -d * .27)), focus(4, new THREE.Vector3(-w * .18, 2, -d / 2)), new THREE.Vector3(0, 2, PAVILION_DIVIDER_Z), finalLook]; return { positions, looks, finalLook };
   }
   const height = draft.templateId === 'nocturne' ? 3.15 : 3.35;
   const positions = [new THREE.Vector3(0, height, d / 2 - .8), new THREE.Vector3(-w * .29, 2.55, d * .14), new THREE.Vector3(-w * .27, 2.2, -d * .31), new THREE.Vector3(0, 2.05, -d * .38), new THREE.Vector3(w * .27, 2.1, -d * .29), new THREE.Vector3(w * .28, 1.9, d * .2), finish];
@@ -352,7 +407,7 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
   const cameraState = useRef<{ templateId: GalleryDraft['templateId']; position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
   const roomTurn = useRef<((direction: -1 | 1) => void) | null>(null);
   useEffect(() => {
-    if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); const template = getTemplate(draft.templateId); const [templateW, templateD] = template.dimensions;
+    if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); const template = getTemplate(draft.templateId); const [templateW, templateD] = template.dimensions; const dividerWidth = template.dividerWidth ?? PAVILION_DIVIDER_WIDTH;
     const walk = visitor && viewMode === 'walk'; const overview = visitor && viewMode === 'overview'; const camera = new THREE.PerspectiveCamera(walk ? 62 : overview ? 46 : 48, 1, .1, 90); camera.position.set(...template.camera);
     if (overview) camera.position.set(templateW * .68, template.height + Math.max(5.2, templateW * .27), templateD * .78);
     let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.03; element.appendChild(renderer.domElement);
@@ -370,8 +425,11 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       exteriorWalls.forEach((mesh) => { const material = mesh.material as THREE.MeshPhysicalMaterial; const facing = wallNormals[String(mesh.userData.wallId)]?.dot(overviewDirection) ?? -1; const targetOpacity = facing > .42 ? .045 : facing > -.16 ? .3 : .9; material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, .16); });
     };
     if (walk) camera.position.set(0, 1.68, d / 2 - 1);
-    const dividerCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => { if (Math.abs(next.x) > PAVILION_DIVIDER_WIDTH / 2 + .35 || Math.abs(next.z + .65) > .43) return; next.z = previous.z > -.65 ? -.18 : -1.12; } : undefined;
-    const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => roomBounds, dividerCollision) : null; const finalLook = new THREE.Vector3(0, 1.68, -1); if (navigation) navigation.lookAt(finalLook);
+    const pavilionCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => {
+      if (Math.abs(next.x) <= dividerWidth / 2 + .35 && Math.abs(next.z - PAVILION_DIVIDER_Z) <= .45) next.z = previous.z > PAVILION_DIVIDER_Z ? PAVILION_DIVIDER_Z + .47 : PAVILION_DIVIDER_Z - .47;
+      const waterCenterZ = -d * .27; let waterOffsetX = next.x; let waterOffsetZ = next.z - waterCenterZ; let waterDistance = Math.hypot(waterOffsetX, waterOffsetZ); if (waterDistance < 1.76) { if (waterDistance < .001) { waterOffsetX = previous.x || 1; waterOffsetZ = previous.z - waterCenterZ; waterDistance = Math.max(Math.hypot(waterOffsetX, waterOffsetZ), .001); } next.x = waterOffsetX / waterDistance * 1.76; next.z = waterCenterZ + waterOffsetZ / waterDistance * 1.76; }
+    } : undefined;
+    const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => roomBounds, pavilionCollision) : null; const finalLook = new THREE.Vector3(0, 1.68, -1); if (navigation) navigation.lookAt(finalLook);
     const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({ color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide })); walkMarker.rotation.x = -Math.PI / 2; walkMarker.position.y = .018; walkMarker.visible = false; if (walk) scene.add(walkMarker);
     let intro = navigation && playIntro && !introPlayed.current ? createCinematicIntro(camera, galleryIntroTour(draft, w, d), navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }, 'Private view', draft.title) : null;
     let orbitAnimation: { start: number; from: number; to: number; radius: number; y: number } | null = null;
@@ -422,7 +480,7 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       if (draggedArtwork && draggedArtworkPlacement) {
         const wallHit = raycaster.intersectObjects(wallSurfaces, false)[0]; if (!wallHit) return;
         const wallId = wallHit.object.userData.wallId as WallId; const artwork = artworkById.get(draggedArtworkPlacement.id); if (!artwork) return;
-        const height = 1.5 * artwork.scale; const width = height * artwork.aspect; const availableWidth = wallId.startsWith('divider') ? PAVILION_DIVIDER_WIDTH : wallId === 'north' || wallId === 'south' ? w : d;
+        const height = 1.5 * artwork.scale; const width = height * artwork.aspect; const availableWidth = wallId.startsWith('divider') ? dividerWidth : wallId === 'north' || wallId === 'south' ? w : d;
         const horizontal = wallId === 'west' || wallId === 'east' ? wallHit.point.z : wallHit.point.x; const maxX = Math.max(.15, availableWidth / 2 - width / 2 - .12); const wallHeight = wallId.startsWith('divider') ? h - .75 : h;
         const x = THREE.MathUtils.clamp(horizontal, -maxX, maxX); const y = THREE.MathUtils.clamp(wallHit.point.y, height / 2 + .14, wallHeight - height / 2 - .12); const config = WALLS[wallId]; const [px, py, pz] = config.position(x, y, w, d);
         draggedArtwork.position.set(px, py, pz); draggedArtwork.rotation.set(...config.rotation); draggedArtwork.userData.wall = wallId; draggedArtworkPlacement = { id: artwork.id, wall: wallId, x, y }; suppressSceneClick = true;
@@ -472,11 +530,11 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       if (!visitor) artworkObjects.forEach((object) => { if (object.userData.wall === 'south') object.visible = camera.position.z < d / 2 - .12; });
       if (walkMarker.visible) { walkMarker.rotation.z += .008; const material = walkMarker.material as THREE.MeshBasicMaterial; material.opacity = .5 + Math.sin(performance.now() * .006) * .25; if (!navigation?.hasDestination()) walkMarker.visible = false; }
       if (focusedArtwork && focusedArtworkId) { camera.getWorldDirection(cameraDirection); focusedArtwork.getWorldPosition(artworkPosition); artworkDirection.subVectors(artworkPosition, camera.position); const distance = artworkDirection.length(); const facing = cameraDirection.dot(artworkDirection.normalize()); if (facing < .48 || distance > 8) { focusedArtwork = null; focusedArtworkId = null; onArtworkFocus?.(null); } }
-      element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate);
+      element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.cameraYaw = camera.rotation.y.toFixed(3); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate);
     }; animate();
     return () => { cancelAnimationFrame(frame); roomTurn.current = null; observer.disconnect(); renderer.domElement.removeEventListener('pointerdown', editorPointerDown); renderer.domElement.removeEventListener('pointermove', editorPointerMove); renderer.domElement.removeEventListener('pointerup', editorPointerUp); renderer.domElement.removeEventListener('pointercancel', editorPointerUp); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); intro = null; navigation?.dispose(); controls?.dispose(); environment.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); if (material.bumpMap && material.bumpMap !== material.map) material.bumpMap.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.domElement.remove(); };
   }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, onMoveArtwork, onViewPlacementChange, visitor, viewMode, playIntro, onIntroComplete, onArtworkFocus]);
-  return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'} ${selectedDecorId ? 'gallery-scene--placing' : ''} ${selectedId ? 'gallery-scene--placing-art' : ''}`} ref={host}>{!visitor && <><button className="room-turn room-turn--left" type="button" onClick={() => roomTurn.current?.(-1)} aria-label="Rotate room 45 degrees left">←</button><button className="room-turn room-turn--right" type="button" onClick={() => roomTurn.current?.(1)} aria-label="Rotate room 45 degrees right">→</button></>}<div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD / arrows to walk · Drag to look · Pinch or scroll to zoom' : 'Dollhouse overview · Walls fade as you orbit · Scroll or pinch to zoom' : selectedDecorId ? 'Drag object · Click floor to place · Camera stays here' : selectedId ? 'Drag artwork directly onto any visible wall' : 'Drag to look · Scroll or pinch to zoom · Use arrows to turn'}</div></div>;
+  return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'} ${selectedDecorId ? 'gallery-scene--placing' : ''} ${selectedId ? 'gallery-scene--placing-art' : ''}`} ref={host}>{!visitor && <><button className="room-turn room-turn--left" type="button" onClick={() => roomTurn.current?.(-1)} aria-label="Rotate room 45 degrees left">←</button><button className="room-turn room-turn--right" type="button" onClick={() => roomTurn.current?.(1)} aria-label="Rotate room 45 degrees right">→</button></>}<div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD to walk · ↑↓ move · ←→ turn · Drag to look' : 'Dollhouse overview · Walls fade as you orbit · Scroll or pinch to zoom' : selectedDecorId ? 'Drag object · Click floor to place · Camera stays here' : selectedId ? 'Drag artwork directly onto any visible wall' : 'Drag to look · Scroll or pinch to zoom · Use arrows to turn'}</div></div>;
 }
 
 export const GalleryScene = memo(GallerySceneRenderer, (previous, next) =>
@@ -542,8 +600,8 @@ export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroCo
     }, undefined, () => { element.dataset.error = 'true'; modelErrorCleanup = showSceneError(element, 'The exhibition model could not be loaded. Please check your connection and try again.'); });
     let frame = 0; const resize = () => { const width = element.clientWidth; const height = element.clientHeight; renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); }; const observer = new ResizeObserver(resize); observer.observe(element); resize();
     const cameraDirection = new THREE.Vector3(); const artworkDirection = new THREE.Vector3(); const artworkPosition = new THREE.Vector3();
-    const animate = () => { intro?.update(); navigation?.update(); controls?.update(); if (walkMarker.visible) { walkMarker.rotation.z += .008; const material = walkMarker.material as THREE.MeshBasicMaterial; material.opacity = .5 + Math.sin(performance.now() * .006) * .25; if (!navigation?.hasDestination()) walkMarker.visible = false; } if (focusedArtwork) { camera.getWorldDirection(cameraDirection); focusedArtwork.getWorldPosition(artworkPosition); artworkDirection.subVectors(artworkPosition, camera.position); if (cameraDirection.dot(artworkDirection.normalize()) < .48) { focusedArtwork = null; onArtworkFocus?.(null); } } element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
+    const animate = () => { intro?.update(); navigation?.update(); controls?.update(); if (walkMarker.visible) { walkMarker.rotation.z += .008; const material = walkMarker.material as THREE.MeshBasicMaterial; material.opacity = .5 + Math.sin(performance.now() * .006) * .25; if (!navigation?.hasDestination()) walkMarker.visible = false; } if (focusedArtwork) { camera.getWorldDirection(cameraDirection); focusedArtwork.getWorldPosition(artworkPosition); artworkDirection.subVectors(artworkPosition, camera.position); if (cameraDirection.dot(artworkDirection.normalize()) < .48) { focusedArtwork = null; onArtworkFocus?.(null); } } element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.cameraYaw = camera.rotation.y.toFixed(3); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
     return () => { destroyed = true; cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); modelErrorCleanup?.(); navigation?.dispose(); controls?.dispose(); renderer.dispose(); renderer.domElement.remove(); };
   }, [viewMode, playIntro, onIntroComplete, onArtworkFocus]);
-  return <div className={`gallery-scene gallery-scene--${viewMode}`} ref={host}><div className="scene-hint">{viewMode === 'walk' ? 'Danny Hirsch Arts · WASD / arrows · Drag to look' : 'Danny Hirsch Arts · Open-roof dollhouse overview'}</div></div>;
+  return <div className={`gallery-scene gallery-scene--${viewMode}`} ref={host}><div className="scene-hint">{viewMode === 'walk' ? 'Danny Hirsch Arts · WASD to walk · ↑↓ move · ←→ turn' : 'Danny Hirsch Arts · Open-roof dollhouse overview'}</div></div>;
 }

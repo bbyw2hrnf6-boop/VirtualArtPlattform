@@ -106,8 +106,8 @@ async function imageFromFile(file: File): Promise<Pick<Artwork, 'src' | 'aspect'
 function initialArtworkPlacement(templateId: TemplateId, slot: number): Pick<Artwork, 'wall' | 'x' | 'y' | 'scale'> {
   if (templateId === 'pavilion') {
     const placements: Array<[WallId, number]> = [
-      ['divider-front', -1.65], ['divider-front', 0], ['divider-front', 1.65],
-      ['north', -4.6], ['north', 4.6], ['west', -2.1], ['east', 2.1], ['divider-back', 0]
+      ['divider-front', -3.5], ['divider-front', 0], ['divider-front', 3.5],
+      ['north', -7], ['north', 7], ['west', -3.4], ['east', 3.4], ['divider-back', 0]
     ];
     const [wall, x] = placements[slot % placements.length]; return { wall, x, y: 2.2, scale: .9 };
   }
@@ -215,7 +215,7 @@ function Demo() {
   const [viewMode, setViewMode] = useState<ViewMode>('walk');
   const [artworkFocus, setArtworkFocus] = useState<ArtworkFocus | null>(null);
   const changeView = (value: ViewMode) => { setArtworkFocus(null); setViewMode(value); };
-  return <main className="viewer"><header className="viewer-header"><Logo/><div><p>Danny Hirsch Arts</p><span>Threshold · 2026</span></div><button onClick={() => navigate('/create')}>Create your own ↗</button></header><DannyDemoScene viewMode={viewMode} playIntro onArtworkFocus={setArtworkFocus}/><ViewSwitch value={viewMode} onChange={changeView}/>{artworkFocus && <ArtworkInfoCard artwork={artworkFocus} onClose={() => setArtworkFocus(null)}/>}<div className="viewer-caption"><p className="eyebrow">Public demo gallery</p><h1>Threshold</h1><p>Material, movement, and atmosphere by Danny Hirsch.</p></div><div className="movement-hint">{viewMode === 'walk' ? 'WASD / Arrow keys · Drag to look · Click floor to move' : 'Drag to orbit · Scroll to zoom'}</div></main>;
+  return <main className="viewer"><header className="viewer-header"><Logo/><div><p>Danny Hirsch Arts</p><span>Threshold · 2026</span></div><button onClick={() => navigate('/create')}>Create your own ↗</button></header><DannyDemoScene viewMode={viewMode} playIntro onArtworkFocus={setArtworkFocus}/><ViewSwitch value={viewMode} onChange={changeView}/>{artworkFocus && <ArtworkInfoCard artwork={artworkFocus} onClose={() => setArtworkFocus(null)}/>}<div className="viewer-caption"><p className="eyebrow">Public demo gallery</p><h1>Threshold</h1><p>Material, movement, and atmosphere by Danny Hirsch.</p></div><div className="movement-hint">{viewMode === 'walk' ? 'WASD to walk · ↑↓ move · ←→ turn · Click floor to move' : 'Drag to orbit · Scroll to zoom'}</div></main>;
 }
 
 function PublishedGallery({ id }: { id: string }) {
@@ -226,7 +226,7 @@ function PublishedGallery({ id }: { id: string }) {
   if (gallery === undefined) return <div className="loading">Loading space…</div>;
   if (!gallery) return <main className="not-found"><Logo/><h1>This gallery isn't available.</h1><p>The exhibition may have reached the end of its ten-day run.</p><button className="button button--light" onClick={() => navigate('/create')}>Create a gallery</button></main>;
   const changeView = (value: ViewMode) => { setArtworkFocus(null); setViewMode(value); };
-  return <main className="viewer"><header className="viewer-header"><Logo/><div><p>{gallery.title}</p><span>{gallery.artist}</span></div><button onClick={() => navigate('/create')}>Create your own ↗</button></header><GalleryScene draft={gallery} visitor viewMode={viewMode} playIntro onArtworkFocus={setArtworkFocus}/><ViewSwitch value={viewMode} onChange={changeView}/>{artworkFocus && <ArtworkInfoCard artwork={artworkFocus} onClose={() => setArtworkFocus(null)}/>}<div className="viewer-caption"><p className="eyebrow">Virtual exhibition</p><h1>{gallery.title}</h1><p>by {gallery.artist}</p></div><div className="movement-hint">{viewMode === 'walk' ? 'WASD / Arrow keys · Drag to look · Click floor to move' : 'Drag to orbit · Scroll to zoom'}</div></main>;
+  return <main className="viewer"><header className="viewer-header"><Logo/><div><p>{gallery.title}</p><span>{gallery.artist}</span></div><button onClick={() => navigate('/create')}>Create your own ↗</button></header><GalleryScene draft={gallery} visitor viewMode={viewMode} playIntro onArtworkFocus={setArtworkFocus}/><ViewSwitch value={viewMode} onChange={changeView}/>{artworkFocus && <ArtworkInfoCard artwork={artworkFocus} onClose={() => setArtworkFocus(null)}/>}<div className="viewer-caption"><p className="eyebrow">Virtual exhibition</p><h1>{gallery.title}</h1><p>by {gallery.artist}</p></div><div className="movement-hint">{viewMode === 'walk' ? 'WASD to walk · ↑↓ move · ←→ turn · Click floor to move' : 'Drag to orbit · Scroll to zoom'}</div></main>;
 }
 
 export default function App() {
