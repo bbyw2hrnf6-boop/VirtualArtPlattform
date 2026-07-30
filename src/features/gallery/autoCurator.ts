@@ -124,7 +124,7 @@ function curatedDecor(template: GalleryTemplate, artworkCount: number, current: 
   };
   let types = shuffled(pools[template.id], random).slice(0, count); const currentTypes = current.map((item) => item.type).sort().join('|'); if (types.slice().sort().join('|') === currentTypes) types = [...types.slice(1), pools[template.id].find((item) => !types.includes(item)) ?? types[0]];
   const points: Array<[number, number]> = template.id === 'pavilion' ? [
-    [-.42,.38],[.42,.37],[-.42,-.38],[.42,-.37],[-.27,.31],[.27,.3],[-.3,-.4],[.3,-.4]
+    [-.37,.34],[.37,.34],[-.37,-.34],[.37,-.34],[-.37,0],[.37,0],[-.12,.36],[.12,-.36]
   ] : [[-.4,.35],[.4,.34],[-.38,-.35],[.38,-.34],[-.16,.28],[.18,-.28]];
   return shuffled(points, random).slice(0, count).map(([xRatio, zRatio], index) => {
     const type = types[index]; const x = xRatio * width + (random() - .5) * width * .035; const z = zRatio * depth + (random() - .5) * depth * .035; const scaleBase = type === 'floor-vase' ? .9 : type === 'gallery-bench' ? 1.04 : type === 'stone-sculpture' ? .95 : 1;

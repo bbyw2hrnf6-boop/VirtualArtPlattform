@@ -9,8 +9,9 @@ import type { DecorPlacement, GalleryDraft, WallId } from './types';
 import { getTemplate } from './templates';
 
 type Bounds = { minX: number; maxX: number; minZ: number; maxZ: number };
-const PAVILION_DIVIDER_WIDTH = 24;
-const PAVILION_DIVIDER_Z = -.75;
+const PAVILION_DIVIDER_WIDTH = 14;
+const PAVILION_DIVIDER_Z = 0;
+const VISITOR_EYE_HEIGHT = 1.75;
 const WALLS: Record<WallId, { position: (x: number, y: number, w: number, d: number) => [number, number, number]; rotation: [number, number, number] }> = {
   north: { position: (x, y, _w, d) => [x, y, -d / 2 + .035], rotation: [0, 0, 0] },
   south: { position: (x, y, _w, d) => [x, y, d / 2 - .035], rotation: [0, Math.PI, 0] },
@@ -223,15 +224,15 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
   const ceilingPlane = new THREE.Mesh(new THREE.PlaneGeometry(w - .08, d - .08), ceiling); ceilingPlane.rotation.x = Math.PI / 2; ceilingPlane.position.y = h - .015; ceilingPlane.receiveShadow = true; ceilingPlane.name = `ceiling-design-${ceilingFinish}`; ceilingPlane.visible = !dollhouse; scene.add(ceilingPlane);
   const ceilingDetails = new THREE.Group(); ceilingDetails.name = `room-ceiling-${ceilingFinish}`;
   const trimMaterial = new THREE.MeshPhysicalMaterial({ color: ceilingFinish === 'warm' ? '#8d7452' : '#252824', metalness: ceilingFinish === 'warm' ? .45 : .72, roughness: .3, clearcoat: .25 });
-  if (ceilingFinish === 'gallery') {
+  if (ceilingFinish === 'gallery' && draft.templateId !== 'pavilion') {
     [-w * .2, w * .2].forEach((x) => { const track = new THREE.Mesh(new RoundedBoxGeometry(.055, .055, d * .64, 3, .012), trimMaterial); track.position.set(x, h - .07, 0); ceilingDetails.add(track); });
   }
-  if (ceilingFinish === 'warm') {
+  if (ceilingFinish === 'warm' && draft.templateId !== 'pavilion') {
     const bars: Array<[number, number, number, number]> = [[0, -d * .36, w * .72, .08], [0, d * .36, w * .72, .08], [-w * .36, 0, .08, d * .72], [w * .36, 0, .08, d * .72]];
     bars.forEach(([x, z, width, depth]) => { const bar = new THREE.Mesh(new RoundedBoxGeometry(width, .105, depth, 3, .018), trimMaterial); bar.position.set(x, h - .09, z); ceilingDetails.add(bar); });
     const glow = new THREE.PointLight('#ffd8a4', 3.2, Math.max(w, d) * .62, 1.8); glow.position.set(0, h - .34, 0); ceilingDetails.add(glow);
   }
-  if (ceilingFinish === 'dark') {
+  if (ceilingFinish === 'dark' && draft.templateId !== 'pavilion') {
     const ledMaterial = new THREE.MeshStandardMaterial({ color: '#fff4d7', emissive: '#ffd69b', emissiveIntensity: 5.2, roughness: .2 });
     [-w * .24, 0, w * .24].forEach((x) => { const strip = new THREE.Mesh(new RoundedBoxGeometry(.045, .035, d * .72, 3, .01), ledMaterial); strip.position.set(x, h - .08, 0); ceilingDetails.add(strip); });
     [-w * .24, 0, w * .24].forEach((x) => { const glow = new THREE.PointLight('#ffd9a3', 2.2, Math.min(w, d) * .6, 1.65); glow.position.set(x, h - .35, 0); ceilingDetails.add(glow); });
@@ -254,42 +255,53 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
     const ring = new THREE.Mesh(new THREE.TorusGeometry(1.85, .035, 10, 72), bronze); ring.rotation.x = Math.PI / 2; ring.position.set(0, h - .32, .35); architecture.add(ring);
   }
   if (draft.templateId === 'pavilion') {
-    const dividerHeight = h - .65; const divider = new THREE.Mesh(new RoundedBoxGeometry(dividerWidth, dividerHeight, .26, 6, .035), wall); divider.position.set(0, dividerHeight / 2, PAVILION_DIVIDER_Z); divider.receiveShadow = true; scene.add(divider);
+    // A rational museum plan inspired by the supplied reference: a long central
+    // gallery, four enclosed corner rooms, a broad cross-gallery, and one clean
+    // freestanding exhibition wall. Every opening is centered and structural
+    // elements terminate at wall junctions rather than crossing circulation.
+    const partitionMaterial = wall.clone(); partitionMaterial.side = THREE.DoubleSide; partitionMaterial.emissiveIntensity = .08;
+    if (dollhouse) { partitionMaterial.transparent = true; partitionMaterial.opacity = .34; partitionMaterial.depthWrite = false; }
+    const partitionHeight = h - .08; const partitionThickness = .34;
+    const sideBoundaryX = w * .25; const crossGalleryZ = d * .2; const sideRoomDepth = d / 2 - crossGalleryZ;
+    const sideRoomCenterZ = crossGalleryZ + sideRoomDepth / 2; const doorwayWidth = 5.6; const doorwayHeight = 3.55;
+    const doorwaySideLength = (sideRoomDepth - doorwayWidth) / 2;
+    const addPartition = (width: number, depth: number, x: number, z: number, y = partitionHeight / 2, height = partitionHeight) => {
+      const partition = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), partitionMaterial); partition.position.set(x, y, z); partition.castShadow = true; partition.receiveShadow = true; architecture.add(partition); return partition;
+    };
+    [-1, 1].forEach((xSide) => [-1, 1].forEach((zSide) => {
+      const roomCenterZ = zSide * sideRoomCenterZ;
+      [-1, 1].forEach((doorSide) => {
+        const segmentZ = roomCenterZ + doorSide * (doorwayWidth / 2 + doorwaySideLength / 2);
+        addPartition(partitionThickness, doorwaySideLength, xSide * sideBoundaryX, segmentZ);
+      });
+      const headerHeight = partitionHeight - doorwayHeight;
+      addPartition(partitionThickness, doorwayWidth, xSide * sideBoundaryX, roomCenterZ, doorwayHeight + headerHeight / 2, headerHeight);
+      const roomWidth = w / 2 - sideBoundaryX;
+      addPartition(roomWidth, partitionThickness, xSide * (sideBoundaryX + roomWidth / 2), zSide * crossGalleryZ);
+    }));
+    // Square plaster piers reinforce the four wall junctions and stay fully out
+    // of the centered 5.6 m door openings.
+    [-1, 1].forEach((xSide) => [-1, 1].forEach((zSide) => {
+      const pier = new THREE.Mesh(new RoundedBoxGeometry(.72, partitionHeight, .72, 4, .035), partitionMaterial); pier.position.set(xSide * sideBoundaryX, partitionHeight / 2, zSide * crossGalleryZ); pier.castShadow = true; pier.receiveShadow = true; architecture.add(pier);
+    }));
+    const dividerHeight = Math.min(4.55, h - .75); const dividerMaterial = partitionMaterial.clone();
+    const divider = new THREE.Mesh(new RoundedBoxGeometry(dividerWidth, dividerHeight, .34, 6, .045), dividerMaterial); divider.position.set(0, dividerHeight / 2, PAVILION_DIVIDER_Z); divider.castShadow = true; divider.receiveShadow = true; scene.add(divider);
     const raycastMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
     const addDividerSurface = (wallId: WallId, z: number, rotationY: number) => { const surface = new THREE.Mesh(new THREE.PlaneGeometry(dividerWidth, dividerHeight), raycastMaterial); surface.position.set(0, dividerHeight / 2, z); surface.rotation.y = rotationY; surface.userData.wallId = wallId; scene.add(surface); wallSurfaces.push(surface); };
-    addDividerSurface('divider-front', PAVILION_DIVIDER_Z + .135, 0); addDividerSurface('divider-back', PAVILION_DIVIDER_Z - .135, Math.PI);
-    const pavilionMetal = new THREE.MeshPhysicalMaterial({ color: '#806b4e', roughness: .25, metalness: .78, clearcoat: .38, clearcoatRoughness: .24, envMapIntensity: 1.08 });
-    const darkStone = new THREE.MeshPhysicalMaterial({ color: '#262522', roughness: .42, clearcoat: .13, clearcoatRoughness: .55 });
-    const glass = new THREE.MeshPhysicalMaterial({ color: '#dce6dd', roughness: .12, metalness: .05, transmission: .68, transparent: true, opacity: .48, thickness: .22, envMapIntensity: 1.2, side: THREE.DoubleSide });
-    const openingWidth = (w - dividerWidth) / 2;
-    [-1, 1].forEach((side) => {
-      const portalX = side * (dividerWidth / 2 + openingWidth / 2);
-      const innerJamb = new THREE.Mesh(new RoundedBoxGeometry(.18, h * .76, .38, 4, .025), pavilionMetal); innerJamb.position.set(side * (dividerWidth / 2 + .09), h * .38, PAVILION_DIVIDER_Z);
-      const outerJamb = new THREE.Mesh(new RoundedBoxGeometry(.18, h * .76, .38, 4, .025), pavilionMetal); outerJamb.position.set(side * (w / 2 - .18), h * .38, PAVILION_DIVIDER_Z);
-      const header = new THREE.Mesh(new RoundedBoxGeometry(openingWidth, .18, .38, 4, .025), pavilionMetal); header.position.set(portalX, h * .76, PAVILION_DIVIDER_Z);
-      const threshold = new THREE.Mesh(new RoundedBoxGeometry(openingWidth - .25, .025, .34, 3, .008), pavilionMetal); threshold.position.set(portalX, .014, PAVILION_DIVIDER_Z);
-      architecture.add(innerJamb, outerJamb, header, threshold);
-    });
-    [-1, 1].forEach((xSide) => [-1, 0, 1].forEach((zStep) => {
-      const column = new THREE.Mesh(new THREE.CylinderGeometry(.2, .27, h - .3, 36), pavilionMetal); column.position.set(xSide * w * .425, (h - .3) / 2, zStep * d * .32); architecture.add(column);
-      const collar = new THREE.Mesh(new THREE.TorusGeometry(.285, .034, 8, 36), pavilionMetal); collar.rotation.x = Math.PI / 2; collar.position.set(column.position.x, h - .46, column.position.z); architecture.add(collar);
-    }));
+    addDividerSurface('divider-front', PAVILION_DIVIDER_Z + .175, 0); addDividerSurface('divider-back', PAVILION_DIVIDER_Z - .175, Math.PI);
+    const skylightWidth = 10.5; const skylightDepth = 6.5;
+    const skyGlass = new THREE.MeshPhysicalMaterial({ color: '#e9f3f6', emissive: '#d8edff', emissiveIntensity: 1.65, roughness: .14, transmission: .28, transparent: true, opacity: .9, side: THREE.DoubleSide });
     [-1, 1].forEach((zone) => {
       const zoneZ = zone * d * .255;
-      const lightwell = new THREE.Mesh(new RoundedBoxGeometry(w * .5, .06, d * .22, 5, .03), glass); lightwell.position.set(0, h - .095, zoneZ); architecture.add(lightwell);
-      const frameWidth = w * .53; const frameDepth = d * .245;
-      [-1, 1].forEach((side) => { const rail = new THREE.Mesh(new RoundedBoxGeometry(frameWidth, .06, .055, 3, .012), pavilionMetal); rail.position.set(0, h - .14, zoneZ + side * frameDepth / 2); architecture.add(rail); });
-      [-1, 1].forEach((side) => { const rail = new THREE.Mesh(new RoundedBoxGeometry(.055, .06, frameDepth, 3, .012), pavilionMetal); rail.position.set(side * frameWidth / 2, h - .14, zoneZ); architecture.add(rail); });
-      const aperture = new THREE.Mesh(new RoundedBoxGeometry(w * .485, .055, d * .205, 4, .018), new THREE.MeshStandardMaterial({ color: '#fff8df', emissive: '#ffe1ac', emissiveIntensity: 1.25, transparent: true, opacity: .34 })); aperture.position.set(0, h - .17, zoneZ); architecture.add(aperture);
-      const roomGlow = new THREE.PointLight(zone > 0 ? '#ffe0ae' : '#e5ecdf', 3.1, Math.min(w, d) * .58, 1.85); roomGlow.position.set(0, h - .55, zoneZ); architecture.add(roomGlow);
+      const panel = new THREE.Mesh(new RoundedBoxGeometry(skylightWidth, .055, skylightDepth, 5, .025), skyGlass); panel.position.set(0, h - .12, zoneZ); panel.visible = !dollhouse; architecture.add(panel);
+      const revealHeight = .48; const revealY = h - revealHeight / 2 - .14;
+      [-1, 1].forEach((side) => { addPartition(skylightWidth + .7, .28, 0, zoneZ + side * (skylightDepth / 2 + .14), revealY, revealHeight).visible = !dollhouse; addPartition(.28, skylightDepth, side * (skylightWidth / 2 + .14), zoneZ, revealY, revealHeight).visible = !dollhouse; });
+      const daylight = new THREE.RectAreaLight(zone > 0 ? '#fff3da' : '#e4efff', 4.2, skylightWidth * .8, skylightDepth * .8); daylight.position.set(0, h - .42, zoneZ); daylight.rotation.x = -Math.PI / 2; daylight.visible = !dollhouse; architecture.add(daylight);
     });
-    const haloRadius = Math.min(w, d) * .095; const rearCenterZ = -d * .27;
-    const rotundaMaterial = wall.clone(); rotundaMaterial.side = THREE.DoubleSide; [-1, 1].forEach((side) => { const curvedWall = new THREE.Mesh(new THREE.CylinderGeometry(haloRadius * 2.35, haloRadius * 2.35, h * .46, 72, 1, true, side > 0 ? -.7 : Math.PI - .7, .72), rotundaMaterial); curvedWall.position.set(0, h * .23, rearCenterZ); architecture.add(curvedWall); });
-    [-1, 1].forEach((side) => { const haloPylon = new THREE.Mesh(new RoundedBoxGeometry(.15, h * .48, .34, 4, .025), pavilionMetal); haloPylon.position.set(side * haloRadius * 2.05, h * .24, rearCenterZ); architecture.add(haloPylon); });
-    const oculus = new THREE.Mesh(new THREE.TorusGeometry(haloRadius + .7, .075, 14, 128), pavilionMetal); oculus.rotation.x = Math.PI / 2; oculus.position.set(0, h - .32, rearCenterZ); architecture.add(oculus);
-    const rearDais = new THREE.Mesh(new THREE.CylinderGeometry(haloRadius, haloRadius + .16, .13, 96), darkStone); rearDais.position.set(0, .065, rearCenterZ); architecture.add(rearDais);
-    const water = new THREE.Mesh(new THREE.CylinderGeometry(haloRadius * .78, haloRadius * .78, .025, 96), new THREE.MeshPhysicalMaterial({ color: '#65736e', roughness: .08, metalness: .12, transmission: .32, transparent: true, opacity: .72, clearcoat: 1, clearcoatRoughness: .05 })); water.position.set(0, .14, rearCenterZ); architecture.add(water);
-    [-1, 1].forEach((side) => { const bench = new THREE.Mesh(new RoundedBoxGeometry(4.7, .46, .86, 8, .095), darkStone); bench.position.set(side * 3.05, .35, d * .32); bench.castShadow = true; architecture.add(bench); });
+    // A restrained central lighting spine follows the circulation axis without
+    // crossing doors or pretending to be structural beams.
+    const spineMaterial = new THREE.MeshStandardMaterial({ color: '#f8f4ea', emissive: ceilingFinish === 'dark' ? '#ffd59b' : '#fff4dc', emissiveIntensity: ceilingFinish === 'dark' ? 4.4 : 2.1, roughness: .3 });
+    [-1, 1].forEach((side) => { const spine = new THREE.Mesh(new RoundedBoxGeometry(.045, .035, d * .78, 3, .01), spineMaterial); spine.position.set(side * 7.2, h - .1, 0); spine.visible = !dollhouse; architecture.add(spine); });
   }
   if (draft.templateId === 'nocturne') { const plinth = new THREE.Mesh(new THREE.CylinderGeometry(.82, .82, .82, 48), new THREE.MeshStandardMaterial({ color: '#111210', roughness: .62 })); plinth.position.set(0, .5, .65); scene.add(plinth); }
   const decorObjects = draft.decor.map((item) => createDecor(item, selectedDecorId === item.id));
@@ -297,7 +309,7 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
   return { w, d, h, decorObjects, floorMesh, wallSurfaces, exteriorWalls, roof, ceilingPlane, ceilingDetails };
 }
 
-function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: number, h: number) {
+function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: number, h: number, dollhouse = false) {
   const settings = {
     daylight: { hemi: 1.1, ambient: .5, key: 2.25, spot: 38, color: '#fff8e9' },
     museum: { hemi: .48, ambient: .44, key: 2.1, spot: 58, color: '#ffe6bd' },
@@ -332,6 +344,7 @@ function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: numb
     const joint = new THREE.Mesh(new THREE.SphereGeometry(.075, 18, 12), fixtureMaterial); joint.position.set(source.x, h - .24, source.z);
     const head = new THREE.Mesh(new THREE.CylinderGeometry(.09, .14, .3, 24), fixtureMaterial); head.position.copy(source); head.quaternion.setFromUnitVectors(down, direction);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(.075, 16, 10), bulbMaterial); bulb.position.copy(source).addScaledVector(direction, .16);
+    mount.visible = stem.visible = joint.visible = head.visible = bulb.visible = !dollhouse;
     const spot = new THREE.SpotLight(settings.color, settings.spot, Math.max(12, h * 1.8), .33, .72, 1.55); spot.position.copy(bulb.position); spot.target.position.copy(target); spot.castShadow = false;
     rig.add(mount, stem, joint, head, bulb, spot, spot.target);
   });
@@ -393,12 +406,25 @@ function createCinematicIntro(camera: THREE.PerspectiveCamera, tour: CinematicTo
 }
 
 function galleryIntroTour(draft: GalleryDraft, w: number, d: number): CinematicTour {
-  const finish = new THREE.Vector3(0, 1.68, d / 2 - 1); const finalLook = new THREE.Vector3(0, 1.68, -1);
+  const finish = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, d / 2 - 1); const finalLook = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, -1);
   const artworkLooks = draft.artworks.slice(0, 8).map((artwork) => { const [x, y, z] = WALLS[artwork.wall].position(artwork.x, artwork.y, w, d); return new THREE.Vector3(x, y, z); });
   const focus = (index: number, fallback: THREE.Vector3) => artworkLooks.length ? artworkLooks[index % artworkLooks.length] : fallback;
   if (draft.templateId === 'pavilion') {
-    const positions = [new THREE.Vector3(0, 5.7, d / 2 - .8), new THREE.Vector3(-w * .27, 3.65, d * .27), new THREE.Vector3(w * .29, 3.2, d * .18), new THREE.Vector3(w * .43, 2.8, PAVILION_DIVIDER_Z), new THREE.Vector3(w * .31, 3.15, -d * .29), new THREE.Vector3(0, 4.8, -d * .35), new THREE.Vector3(-w * .43, 2.8, PAVILION_DIVIDER_Z), new THREE.Vector3(-w * .27, 2.65, d * .24), finish];
-    const looks = [new THREE.Vector3(0, 1.9, PAVILION_DIVIDER_Z), focus(0, new THREE.Vector3(-w * .18, 2.05, PAVILION_DIVIDER_Z)), focus(1, new THREE.Vector3(w * .18, 2, PAVILION_DIVIDER_Z)), new THREE.Vector3(0, 2.1, -d * .3), focus(2, new THREE.Vector3(w * .18, 2, -d / 2)), focus(3, new THREE.Vector3(0, .7, -d * .27)), focus(4, new THREE.Vector3(-w * .18, 2, -d / 2)), new THREE.Vector3(0, 2, PAVILION_DIVIDER_Z), finalLook]; return { positions, looks, finalLook };
+    const southRoomZ = d * .35; const northRoomZ = -southRoomZ;
+    const positions = [
+      new THREE.Vector3(0, 4.15, d / 2 - 1), new THREE.Vector3(0, 3.2, southRoomZ),
+      new THREE.Vector3(w * .36, 2.75, southRoomZ), new THREE.Vector3(0, 3.15, southRoomZ),
+      new THREE.Vector3(w * .38, 2.8, 0), new THREE.Vector3(0, 3.25, northRoomZ),
+      new THREE.Vector3(-w * .36, 2.7, northRoomZ), new THREE.Vector3(0, 3.25, northRoomZ),
+      new THREE.Vector3(-w * .38, 2.75, 0), finish
+    ];
+    const looks = [
+      new THREE.Vector3(0, 2.25, 0), focus(0, new THREE.Vector3(w / 2, 2.4, southRoomZ)),
+      focus(1, new THREE.Vector3(w / 2, 2.45, southRoomZ)), new THREE.Vector3(0, 2.4, PAVILION_DIVIDER_Z),
+      focus(2, new THREE.Vector3(w / 2, 2.4, 0)), focus(3, new THREE.Vector3(w / 2, 2.4, northRoomZ)),
+      focus(4, new THREE.Vector3(-w / 2, 2.4, northRoomZ)), new THREE.Vector3(0, 2.4, PAVILION_DIVIDER_Z),
+      focus(5, new THREE.Vector3(-w / 2, 2.4, 0)), finalLook
+    ]; return { positions, looks, finalLook };
   }
   const height = draft.templateId === 'nocturne' ? 3.15 : 3.35;
   const positions = [new THREE.Vector3(0, height, d / 2 - .8), new THREE.Vector3(-w * .29, 2.55, d * .14), new THREE.Vector3(-w * .27, 2.2, -d * .31), new THREE.Vector3(0, 2.05, -d * .38), new THREE.Vector3(w * .27, 2.1, -d * .29), new THREE.Vector3(w * .28, 1.9, d * .2), finish];
@@ -438,7 +464,7 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       const largestDimension = Math.max(templateW, templateD); controls.enableDamping = true; controls.dampingFactor = .075; controls.target.set(0, overview ? template.height * .36 : 1.6, overview ? 0 : -1.5); controls.maxPolarAngle = Math.PI / 2 - .03; controls.minDistance = overview ? largestDimension * .52 : 1.45; controls.maxDistance = overview ? largestDimension * 1.75 : visitor ? Math.max(18, largestDimension * .68) : Math.max(20, largestDimension * 1.12); controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = .7; controls.zoomToCursor = true; controls.touches.ONE = THREE.TOUCH.ROTATE; controls.touches.TWO = visitor ? THREE.TOUCH.DOLLY_ROTATE : THREE.TOUCH.ROTATE; controls.autoRotate = visitor; controls.autoRotateSpeed = overview ? .22 : .38;
       if (!visitor && cameraState.current?.templateId === draft.templateId) { camera.position.copy(cameraState.current.position); controls.target.copy(cameraState.current.target); }
     }
-    const { w, d, h, decorObjects, floorMesh, wallSurfaces, exteriorWalls } = buildRoom(scene, draft, selectedDecorId, overview); const installedLights = addLighting(scene, draft, w, d, h); element.dataset.roof = 'wall-finish'; element.dataset.ceiling = draft.ceiling ?? 'gallery'; element.dataset.artLights = String(installedLights); element.dataset.lightScope = 'room'; element.dataset.wall = draft.wall; element.dataset.floor = draft.floor; element.dataset.dollhouse = overview ? 'active' : 'inactive'; element.dataset.roomDimensions = `${w} × ${d} × ${h}`; element.dataset.artworkLayout = draft.artworks.map((artwork) => [artwork.wall, artwork.x.toFixed(3), artwork.y.toFixed(3), artwork.scale.toFixed(3), artwork.aspect.toFixed(3)].join(':')).join('|'); element.dataset.decorLayout = draft.decor.map((item) => [item.type, item.x.toFixed(3), item.z.toFixed(3), item.rotation.toFixed(3), item.scale.toFixed(3)].join(':')).join('|');
+    const { w, d, h, decorObjects, floorMesh, wallSurfaces, exteriorWalls } = buildRoom(scene, draft, selectedDecorId, overview); const installedLights = addLighting(scene, draft, w, d, h, overview); element.dataset.roof = 'wall-finish'; element.dataset.ceiling = draft.ceiling ?? 'gallery'; element.dataset.artLights = String(installedLights); element.dataset.lightScope = 'room'; element.dataset.wall = draft.wall; element.dataset.floor = draft.floor; element.dataset.dollhouse = overview ? 'active' : 'inactive'; element.dataset.roomDimensions = `${w} × ${d} × ${h}`; element.dataset.visitorEyeHeight = String(VISITOR_EYE_HEIGHT); element.dataset.architecture = draft.templateId === 'pavilion' ? 'central-axis-four-side-galleries' : draft.templateId; element.dataset.artworkLayout = draft.artworks.map((artwork) => [artwork.wall, artwork.x.toFixed(3), artwork.y.toFixed(3), artwork.scale.toFixed(3), artwork.aspect.toFixed(3)].join(':')).join('|'); element.dataset.decorLayout = draft.decor.map((item) => [item.type, item.x.toFixed(3), item.z.toFixed(3), item.rotation.toFixed(3), item.scale.toFixed(3)].join(':')).join('|');
     const roomBounds = { minX: -w / 2 + .45, maxX: w / 2 - .45, minZ: -d / 2 + .45, maxZ: d / 2 - .45 };
     const overviewCenter = new THREE.Vector3(0, h * .34, 0); const overviewDirection = new THREE.Vector3();
     const wallNormals: Record<string, THREE.Vector3> = { north: new THREE.Vector3(0, 0, -1), south: new THREE.Vector3(0, 0, 1), west: new THREE.Vector3(-1, 0, 0), east: new THREE.Vector3(1, 0, 0) };
@@ -446,17 +472,26 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       if (!overview) return; overviewDirection.subVectors(camera.position, overviewCenter).setY(0).normalize();
       exteriorWalls.forEach((mesh) => { const material = mesh.material as THREE.MeshPhysicalMaterial; const facing = wallNormals[String(mesh.userData.wallId)]?.dot(overviewDirection) ?? -1; const targetOpacity = facing > .42 ? .045 : facing > -.16 ? .3 : .9; material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, .16); });
     };
-    if (walk) camera.position.set(0, 1.68, d / 2 - 1);
+    if (walk) camera.position.set(0, VISITOR_EYE_HEIGHT, d / 2 - 1);
     const pavilionCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => {
-      if (Math.abs(next.x) <= dividerWidth / 2 + .35 && Math.abs(next.z - PAVILION_DIVIDER_Z) <= .45) next.z = previous.z > PAVILION_DIVIDER_Z ? PAVILION_DIVIDER_Z + .47 : PAVILION_DIVIDER_Z - .47;
-      const waterCenterZ = -d * .27; const waterSafeRadius = Math.min(w, d) * .079; let waterOffsetX = next.x; let waterOffsetZ = next.z - waterCenterZ; let waterDistance = Math.hypot(waterOffsetX, waterOffsetZ); if (waterDistance < waterSafeRadius) { if (waterDistance < .001) { waterOffsetX = previous.x || 1; waterOffsetZ = previous.z - waterCenterZ; waterDistance = Math.max(Math.hypot(waterOffsetX, waterOffsetZ), .001); } next.x = waterOffsetX / waterDistance * waterSafeRadius; next.z = waterCenterZ + waterOffsetZ / waterDistance * waterSafeRadius; }
+      const wallClearance = .48; const sideBoundaryX = w * .25; const crossGalleryZ = d * .2; const sideRoomCenterZ = crossGalleryZ + (d / 2 - crossGalleryZ) / 2; const doorwayHalfWidth = 2.8;
+      if (Math.abs(next.x) <= dividerWidth / 2 + wallClearance && Math.abs(next.z - PAVILION_DIVIDER_Z) <= wallClearance) next.z = previous.z;
+      const atSideBoundary = Math.abs(Math.abs(next.x) - sideBoundaryX) <= wallClearance; const insideSideRoomDepth = Math.abs(next.z) >= crossGalleryZ - wallClearance;
+      const insideDoorOpening = Math.abs(Math.abs(next.z) - sideRoomCenterZ) < doorwayHalfWidth - .18;
+      if (atSideBoundary && insideSideRoomDepth && !insideDoorOpening) next.x = previous.x;
+      const atCrossPartition = Math.abs(Math.abs(next.z) - crossGalleryZ) <= wallClearance;
+      if (atCrossPartition && Math.abs(next.x) >= sideBoundaryX - wallClearance) next.z = previous.z;
     } : undefined;
-    const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => roomBounds, pavilionCollision) : null; const finalLook = new THREE.Vector3(0, 1.68, -1); if (navigation) navigation.lookAt(finalLook);
+    const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => roomBounds, pavilionCollision) : null; const finalLook = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, -1); if (navigation) navigation.lookAt(finalLook);
     const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({ color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide })); walkMarker.rotation.x = -Math.PI / 2; walkMarker.position.y = .018; walkMarker.visible = false; if (walk) scene.add(walkMarker);
     let intro = navigation && playIntro && !introPlayed.current ? createCinematicIntro(camera, galleryIntroTour(draft, w, d), navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }, 'Private view', draft.title) : null;
-    let orbitAnimation: { start: number; from: number; to: number; radius: number; y: number } | null = null;
+    let orbitAnimation: { start: number; from: number; to: number; radius: number; y: number; rotateInPlace?: boolean } | null = null;
     roomTurn.current = (direction) => {
       if (!controls || orbitAnimation) return;
+      if (draft.templateId === 'pavilion') {
+        const view = controls.target.clone().sub(camera.position); const from = Math.atan2(view.x, view.z);
+        orbitAnimation = { start: performance.now(), from, to: from + direction * Math.PI / 4, radius: Math.max(8, view.length()), y: camera.position.y, rotateInPlace: true }; controls.enabled = false; return;
+      }
       const offset = camera.position.clone().sub(controls.target); const from = Math.atan2(offset.x, offset.z);
       orbitAnimation = { start: performance.now(), from, to: from + direction * Math.PI / 4, radius: Math.hypot(offset.x, offset.z), y: camera.position.y };
       controls.enabled = false;
@@ -533,7 +568,9 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       intro?.update(); navigation?.update(); updateDollhouse();
       if (orbitAnimation && controls) {
         const raw = Math.min(1, (performance.now() - orbitAnimation.start) / 520); const eased = raw * raw * (3 - 2 * raw); const angle = THREE.MathUtils.lerp(orbitAnimation.from, orbitAnimation.to, eased);
-        camera.position.set(controls.target.x + Math.sin(angle) * orbitAnimation.radius, orbitAnimation.y, controls.target.z + Math.cos(angle) * orbitAnimation.radius); camera.lookAt(controls.target);
+        if (orbitAnimation.rotateInPlace) controls.target.set(camera.position.x + Math.sin(angle) * orbitAnimation.radius, VISITOR_EYE_HEIGHT, camera.position.z + Math.cos(angle) * orbitAnimation.radius);
+        else camera.position.set(controls.target.x + Math.sin(angle) * orbitAnimation.radius, orbitAnimation.y, controls.target.z + Math.cos(angle) * orbitAnimation.radius);
+        camera.lookAt(controls.target);
         if (raw >= 1) { orbitAnimation = null; controls.enabled = true; }
       }
       if (editorZoomDistance !== null && controls) {
@@ -572,8 +609,8 @@ export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroCo
   const host = useRef<HTMLDivElement>(null); const introPlayed = useRef(false);
   useEffect(() => {
     if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); scene.background = new THREE.Color('#080908'); const walk = viewMode === 'walk';
-    const camera = new THREE.PerspectiveCamera(walk ? 62 : 46, 1, .04, 120); camera.position.set(0, 1.68, 4.8); if (!walk) camera.position.set(16.5, 14.5, 24);
-    let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.4)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .48; element.appendChild(renderer.domElement);
+    const camera = new THREE.PerspectiveCamera(walk ? 62 : 46, 1, .04, 120); camera.position.set(0, VISITOR_EYE_HEIGHT, 4.8); if (!walk) camera.position.set(16.5, 14.5, 24);
+    let renderer: THREE.WebGLRenderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); } catch { return showSceneError(element); } renderer.setPixelRatio(Math.min(devicePixelRatio, 1.4)); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .48; element.dataset.visitorEyeHeight = String(VISITOR_EYE_HEIGHT); element.appendChild(renderer.domElement);
     const controls = walk ? null : new OrbitControls(camera, renderer.domElement); if (controls) { controls.enableDamping = true; controls.dampingFactor = .075; controls.target.set(0, 2.35, 3.5); controls.maxPolarAngle = Math.PI / 2 - .04; controls.minDistance = 12; controls.maxDistance = 44; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = .7; controls.zoomToCursor = true; controls.touches.ONE = THREE.TOUCH.ROTATE; controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE; controls.autoRotate = true; controls.autoRotateSpeed = .18; }
     scene.add(new THREE.AmbientLight('#fff4df', .08), new THREE.HemisphereLight('#ffe6ba', '#111310', .2));
     let bounds: Bounds = { minX: -7, maxX: 7, minZ: -8, maxZ: 7 }; const navigation = walk ? createFirstPersonWalk(camera, renderer.domElement, () => bounds) : null; navigation?.setEnabled(!playIntro); let destroyed = false; let intro: ReturnType<typeof createCinematicIntro> | null = null; let modelErrorCleanup: (() => void) | null = null; element.dataset.dollhouse = walk ? 'inactive' : 'active';
@@ -602,7 +639,7 @@ export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroCo
         if (isFloor) floorObjects.push(object);
       });
       const start = gltf.scene.getObjectByName('Walk_Start'); const target = gltf.scene.getObjectByName('Walk_LookTarget'); const minimum = gltf.scene.getObjectByName('Walk_Bounds_Min'); const maximum = gltf.scene.getObjectByName('Walk_Bounds_Max');
-      if (walk && start) camera.position.copy(start.getWorldPosition(new THREE.Vector3())); const finalPosition = camera.position.clone(); const lookTarget = target?.getWorldPosition(new THREE.Vector3()) ?? new THREE.Vector3(0, 2.4, -2.8); navigation?.lookAt(lookTarget); if (controls) { camera.position.set(16.5, 14.5, 24); controls.target.set(0, 2.35, 3.5); }
+      if (walk && start) { camera.position.copy(start.getWorldPosition(new THREE.Vector3())); camera.position.y = VISITOR_EYE_HEIGHT; } const finalPosition = camera.position.clone(); const lookTarget = target?.getWorldPosition(new THREE.Vector3()) ?? new THREE.Vector3(0, 2.4, -2.8); navigation?.lookAt(lookTarget); if (controls) { camera.position.set(16.5, 14.5, 24); controls.target.set(0, 2.35, 3.5); }
       if (minimum && maximum) { const a = minimum.getWorldPosition(new THREE.Vector3()); const b = maximum.getWorldPosition(new THREE.Vector3()); bounds = { minX: Math.min(a.x,b.x) + .35, maxX: Math.max(a.x,b.x) - .35, minZ: Math.min(a.z,b.z) + .35, maxZ: Math.max(a.z,b.z) - .35 }; }
       if (navigation && playIntro && !introPlayed.current) {
         const width = bounds.maxX - bounds.minX; const depth = bounds.maxZ - bounds.minZ; const centerX = lookTarget.x; const centerZ = (finalPosition.z + lookTarget.z) / 2; const radiusX = Math.min(width * .28, 4.6); const radiusZ = Math.min(Math.abs(finalPosition.z - lookTarget.z) * .46, depth * .24);
