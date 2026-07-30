@@ -4,7 +4,7 @@ export type WallFinish = 'chalk' | 'warm' | 'travertine' | 'linen' | 'charcoal';
 export type FloorFinish = 'concrete' | 'oak' | 'terrazzo' | 'marble' | 'black-marble' | 'walnut' | 'dark-oak';
 export type CeilingFinish = 'gallery' | 'warm' | 'dark';
 export type LightingPreset = 'daylight' | 'museum' | 'evening';
-export type DecorId = 'olive' | 'monstera' | 'arc-lamp' | 'pedestal';
+export type DecorId = 'olive' | 'monstera' | 'arc-lamp' | 'pedestal' | 'gallery-bench' | 'stone-sculpture' | 'floor-vase';
 
 export interface DecorPlacement {
   id: string;

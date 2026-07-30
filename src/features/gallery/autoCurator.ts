@@ -20,6 +20,7 @@ type CuratedAtmosphere = {
 };
 
 const pause = (duration: number) => new Promise<void>((resolve) => window.setTimeout(resolve, duration));
+const clamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value));
 
 async function imagePalette(source: string): Promise<PaletteAnalysis | null> {
   const image = new Image(); image.decoding = 'async'; image.src = source;
@@ -44,29 +45,44 @@ async function analyzeCollection(artworks: Artwork[]): Promise<PaletteAnalysis> 
   return readings.reduce((total, item) => ({ luminance: total.luminance + item.luminance / readings.length, saturation: total.saturation + item.saturation / readings.length, warmth: total.warmth + item.warmth / readings.length }), { luminance: 0, saturation: 0, warmth: 0 });
 }
 
-function chooseAtmosphere(analysis: PaletteAnalysis, templateId: GalleryDraft['templateId']): CuratedAtmosphere {
-  if (templateId === 'nocturne') {
-    if (analysis.warmth > .045) return { wall: 'charcoal', floor: 'walnut', ceiling: 'warm', lighting: 'evening', mood: 'Warm nocturne', palette: 'Charcoal · walnut · amber light' };
-    return { wall: 'charcoal', floor: 'black-marble', ceiling: 'dark', lighting: 'museum', mood: 'Cinematic contrast', palette: 'Charcoal · black marble · focused light' };
-  }
-  if (templateId === 'pavilion') {
-    if (analysis.saturation > .31) return { wall: 'travertine', floor: 'dark-oak', ceiling: 'warm', lighting: 'museum', mood: 'Sculptural warmth', palette: 'Travertine · dark oak · museum light' };
-    if (analysis.luminance < .46) return { wall: 'warm', floor: 'marble', ceiling: 'warm', lighting: 'evening', mood: 'Soft monumentality', palette: 'Limewash · white marble · evening light' };
-    return { wall: 'linen', floor: 'walnut', ceiling: 'gallery', lighting: 'daylight', mood: 'Natural pavilion', palette: 'Linen · walnut · daylight' };
-  }
-  if (analysis.saturation > .34 || analysis.luminance > .72) return { wall: 'charcoal', floor: 'black-marble', ceiling: 'dark', lighting: 'museum', mood: 'Graphic contrast', palette: 'Charcoal · black marble · museum light' };
-  if (analysis.warmth > .055) return { wall: 'warm', floor: 'walnut', ceiling: 'warm', lighting: 'evening', mood: 'Warm minimalism', palette: 'Limewash · walnut · evening light' };
-  if (analysis.luminance < .42) return { wall: 'chalk', floor: 'marble', ceiling: 'gallery', lighting: 'daylight', mood: 'Luminous contrast', palette: 'Plaster · white marble · daylight' };
-  return { wall: 'linen', floor: 'concrete', ceiling: 'gallery', lighting: 'museum', mood: 'Quiet modernism', palette: 'Linen · mineral concrete · museum light' };
+type Random = () => number;
+type ScoredAtmosphere = CuratedAtmosphere & { score: (analysis: PaletteAnalysis) => number };
+
+function createRandom(): Random {
+  const values = new Uint32Array(1); crypto.getRandomValues(values); let seed = values[0] || Date.now();
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let value = Math.imul(seed ^ seed >>> 15, 1 | seed); value = value + Math.imul(value ^ value >>> 7, 61 | value) ^ value; return ((value ^ value >>> 14) >>> 0) / 4294967296; };
 }
 
-function wallOrder(templateId: GalleryDraft['templateId'], count: number): WallId[] {
-  const orders: Record<GalleryDraft['templateId'], WallId[]> = {
-    'white-cube': ['north', 'north', 'west', 'east', 'north', 'south', 'west', 'east'],
-    nocturne: ['north', 'west', 'east', 'north', 'south', 'west', 'east', 'south'],
-    pavilion: ['divider-front', 'divider-front', 'north', 'divider-back', 'west', 'east', 'north', 'divider-back']
+function shuffled<T>(items: T[], random: Random) {
+  const result = [...items]; for (let index = result.length - 1; index > 0; index--) { const target = Math.floor(random() * (index + 1)); [result[index], result[target]] = [result[target], result[index]]; } return result;
+}
+
+function chooseAtmosphere(analysis: PaletteAnalysis, templateId: GalleryDraft['templateId'], current: GalleryDraft, random: Random): CuratedAtmosphere {
+  const collections: Record<GalleryDraft['templateId'], ScoredAtmosphere[]> = {
+    'white-cube': [
+      { wall: 'chalk', floor: 'marble', ceiling: 'gallery', lighting: 'daylight', mood: 'Luminous restraint', palette: 'Plaster · white marble · daylight', score: (item) => 1.2 - item.luminance + (1 - item.saturation) * .25 },
+      { wall: 'linen', floor: 'concrete', ceiling: 'gallery', lighting: 'museum', mood: 'Quiet modernism', palette: 'Linen · mineral concrete · museum light', score: (item) => .6 + (1 - item.saturation) * .4 },
+      { wall: 'warm', floor: 'walnut', ceiling: 'warm', lighting: 'evening', mood: 'Warm minimalism', palette: 'Limewash · walnut · evening light', score: (item) => .55 + Math.max(0, item.warmth) * 3 },
+      { wall: 'charcoal', floor: 'black-marble', ceiling: 'dark', lighting: 'museum', mood: 'Graphic contrast', palette: 'Charcoal · black marble · museum light', score: (item) => .4 + item.saturation + item.luminance * .25 }
+    ],
+    nocturne: [
+      { wall: 'charcoal', floor: 'walnut', ceiling: 'warm', lighting: 'evening', mood: 'Warm nocturne', palette: 'Charcoal · walnut · amber light', score: (item) => .8 + Math.max(0, item.warmth) * 3 },
+      { wall: 'charcoal', floor: 'black-marble', ceiling: 'dark', lighting: 'museum', mood: 'Cinematic contrast', palette: 'Charcoal · black marble · focused light', score: (item) => .7 + item.saturation * .7 },
+      { wall: 'warm', floor: 'dark-oak', ceiling: 'dark', lighting: 'evening', mood: 'Bronze dusk', palette: 'Limewash · smoked oak · low light', score: (item) => .55 + Math.abs(item.warmth) },
+      { wall: 'linen', floor: 'black-marble', ceiling: 'gallery', lighting: 'museum', mood: 'Gallery chiaroscuro', palette: 'Linen · nero marble · museum light', score: (item) => .55 + (1 - item.luminance) * .35 }
+    ],
+    pavilion: [
+      { wall: 'travertine', floor: 'dark-oak', ceiling: 'warm', lighting: 'museum', mood: 'Sculptural warmth', palette: 'Travertine · dark oak · museum light', score: (item) => .7 + item.saturation * .65 },
+      { wall: 'warm', floor: 'marble', ceiling: 'warm', lighting: 'evening', mood: 'Soft monumentality', palette: 'Limewash · white marble · evening light', score: (item) => .65 + Math.max(0, item.warmth) * 2 },
+      { wall: 'linen', floor: 'walnut', ceiling: 'gallery', lighting: 'daylight', mood: 'Natural atrium', palette: 'Linen · walnut · daylight', score: (item) => .6 + item.luminance * .35 },
+      { wall: 'chalk', floor: 'black-marble', ceiling: 'dark', lighting: 'museum', mood: 'Monumental monochrome', palette: 'Plaster · nero marble · halo light', score: (item) => .5 + item.saturation * .5 },
+      { wall: 'travertine', floor: 'marble', ceiling: 'gallery', lighting: 'daylight', mood: 'Daylight forum', palette: 'Travertine · carrara · sky light', score: (item) => .5 + (1 - item.saturation) * .35 }
+    ]
   };
-  return orders[templateId].slice(0, count);
+  const currentSignature = [current.wall, current.floor, current.ceiling, current.lighting].join('|');
+  const candidates = collections[templateId].filter((item) => [item.wall, item.floor, item.ceiling, item.lighting].join('|') !== currentSignature).map((item) => ({ item, value: item.score(analysis) + random() * .42 })).sort((a, b) => b.value - a.value);
+  const chosen = candidates[Math.min(candidates.length - 1, Math.floor(random() * Math.min(2, candidates.length)))].item;
+  return { wall: chosen.wall, floor: chosen.floor, ceiling: chosen.ceiling, lighting: chosen.lighting, mood: chosen.mood, palette: chosen.palette };
 }
 
 function wallWidth(wall: WallId, template: GalleryTemplate) {
@@ -74,40 +90,54 @@ function wallWidth(wall: WallId, template: GalleryTemplate) {
   return wall === 'north' || wall === 'south' ? template.dimensions[0] : template.dimensions[1];
 }
 
-function curateArtworkPlacement(artworks: Artwork[], template: GalleryTemplate): Artwork[] {
-  const assignments = wallOrder(template.id, artworks.length); const groups = new Map<WallId, number[]>();
-  assignments.forEach((wall, index) => groups.set(wall, [...(groups.get(wall) ?? []), index]));
+function curateArtworkPlacement(artworks: Artwork[], template: GalleryTemplate, random: Random): Artwork[] {
+  const walls: WallId[] = template.id === 'pavilion' ? ['north', 'south', 'west', 'east', 'divider-front', 'divider-back'] : ['north', 'south', 'west', 'east'];
+  const groups = new Map<WallId, number[]>(walls.map((wall) => [wall, []])); const loads = new Map<WallId, number>(walls.map((wall) => [wall, 0])); const indices = shuffled(artworks.map((_, index) => index), random); const wallSeed = shuffled(walls, random);
+  indices.forEach((artworkIndex, position) => {
+    const artwork = artworks[artworkIndex]; const estimate = 1.35 * artworkWidthFactor(artwork.aspect); let wall: WallId;
+    if (position < wallSeed.length) wall = wallSeed[position];
+    else wall = walls.map((candidate) => ({ candidate, score: ((loads.get(candidate) ?? 0) + estimate) / Math.max(1, wallWidth(candidate, template) - 2.2) + random() * .075 })).sort((a, b) => a.score - b.score)[0].candidate;
+    groups.get(wall)!.push(artworkIndex); loads.set(wall, (loads.get(wall) ?? 0) + estimate);
+  });
   const placements = artworks.map((artwork) => ({ ...artwork }));
   groups.forEach((indices, wall) => {
-    const available = wallWidth(wall, template) - 1.4; const gap = indices.length > 1 ? Math.min(.75, available * .055) : 0;
-    const requested = indices.map((index, position) => {
-      const artwork = artworks[index]; const portraitBoost = artwork.aspect < .8 ? 1.08 : artwork.aspect > 1.65 ? .82 : 1;
-      return Math.min(1.38, Math.max(.68, portraitBoost * (position === 0 && index === 0 ? 1.16 : .96)));
-    });
-    const requestedWidth = requested.reduce((total, scale, position) => total + 1.5 * scale * artworks[indices[position]].aspect, 0) + gap * Math.max(0, indices.length - 1);
-    const fit = Math.min(1, available * .88 / Math.max(requestedWidth, .1));
-    const widths = requested.map((scale, position) => 1.5 * Math.max(.55, scale * fit) * artworks[indices[position]].aspect);
-    const compositionWidth = widths.reduce((total, width) => total + width, 0) + gap * Math.max(0, indices.length - 1); let cursor = -compositionWidth / 2;
-    indices.forEach((artworkIndex, position) => {
-      const scale = Math.max(.55, requested[position] * fit); const width = widths[position]; const artwork = placements[artworkIndex];
-      artwork.wall = wall; artwork.x = cursor + width / 2; artwork.y = Math.min(template.height - .85, artwork.aspect < .82 ? 2.55 : artwork.aspect > 1.65 ? 2.2 : 2.38); artwork.scale = scale; cursor += width + gap;
+    if (!indices.length) return; const ordered = shuffled(indices, random); const padding = template.id === 'pavilion' ? 2.2 : 1.25; const available = wallWidth(wall, template) - padding * 2; const gap = ordered.length > 1 ? .62 + random() * (template.id === 'pavilion' ? .68 : .32) : 0;
+    const requested = ordered.map((index) => { const aspect = artworks[index].aspect; const aspectFactor = aspect < .78 ? 1.08 : aspect > 1.7 ? .76 : 1; return clamp((.82 + random() * .42) * aspectFactor, .56, 1.42); });
+    const requestedWidth = requested.reduce((total, scale, position) => total + 1.5 * scale * artworks[ordered[position]].aspect, 0) + gap * Math.max(0, ordered.length - 1); const fit = Math.min(1, available / Math.max(requestedWidth, .1));
+    const scales = requested.map((scale) => Math.max(.45, scale * fit)); const widths = scales.map((scale, position) => 1.5 * scale * artworks[ordered[position]].aspect); const compositionWidth = widths.reduce((total, width) => total + width, 0) + gap * Math.max(0, ordered.length - 1); const spare = Math.max(0, available - compositionWidth); let cursor = -compositionWidth / 2 + (random() - .5) * spare * .72;
+    ordered.forEach((artworkIndex, position) => {
+      const scale = scales[position]; const width = widths[position]; const artwork = placements[artworkIndex]; const artHeight = 1.5 * scale; const wallHeight = wall.startsWith('divider') ? template.height - .65 : template.height; const baseY = template.id === 'pavilion' ? 3.05 + random() * .8 : 2.12 + random() * .46;
+      artwork.wall = wall; artwork.x = cursor + width / 2; artwork.y = clamp(baseY + (position % 2 ? .08 : -.08), artHeight / 2 + .35, wallHeight - artHeight / 2 - .4); artwork.scale = scale; cursor += width + gap;
     });
   });
   return placements;
 }
 
-function curatedDecor(template: GalleryTemplate, artworkCount: number): DecorPlacement[] {
-  const [width, depth] = template.dimensions; const make = (type: DecorId, x: number, z: number, rotation: number, scale = 1): DecorPlacement => ({ id: crypto.randomUUID(), type, x, z, rotation, scale });
-  if (template.id === 'nocturne') return [make('olive', -width * .39, depth * .31, .45, 1.05), make('arc-lamp', width * .35, depth * .27, -.75, .95), ...(artworkCount > 5 ? [make('pedestal', width * .31, -depth * .3, .25, .9)] : [])];
-  if (template.id === 'pavilion') return [make('monstera', -width * .41, depth * .34, .3, 1.12), make('olive', width * .41, -depth * .33, -.35, 1.06), ...(artworkCount > 4 ? [make('pedestal', 0, depth * .18, 0, .92)] : [])];
-  return [make('monstera', -width * .4, depth * .34, .35, 1.08), make('arc-lamp', width * .38, depth * .25, -.7, .94), ...(artworkCount > 5 ? [make('pedestal', width * .34, -depth * .31, 0, .9)] : [])];
+function artworkWidthFactor(aspect: number) { return Math.min(2.4, Math.max(.72, aspect)); }
+
+function curatedDecor(template: GalleryTemplate, artworkCount: number, current: DecorPlacement[], random: Random): DecorPlacement[] {
+  const [width, depth] = template.dimensions; const count = template.id === 'pavilion' ? (artworkCount > 10 ? 6 : 5) : artworkCount > 5 ? 4 : 3;
+  const pools: Record<GalleryDraft['templateId'], DecorId[]> = {
+    'white-cube': ['monstera', 'olive', 'gallery-bench', 'arc-lamp', 'pedestal', 'floor-vase', 'stone-sculpture'],
+    nocturne: ['olive', 'floor-vase', 'arc-lamp', 'stone-sculpture', 'gallery-bench', 'pedestal', 'monstera'],
+    pavilion: ['monstera', 'olive', 'gallery-bench', 'stone-sculpture', 'floor-vase', 'arc-lamp', 'pedestal']
+  };
+  let types = shuffled(pools[template.id], random).slice(0, count); const currentTypes = current.map((item) => item.type).sort().join('|'); if (types.slice().sort().join('|') === currentTypes) types = [...types.slice(1), pools[template.id].find((item) => !types.includes(item)) ?? types[0]];
+  const points: Array<[number, number]> = template.id === 'pavilion' ? [
+    [-.42,.38],[.42,.37],[-.42,-.38],[.42,-.37],[-.27,.31],[.27,.3],[-.3,-.4],[.3,-.4]
+  ] : [[-.4,.35],[.4,.34],[-.38,-.35],[.38,-.34],[-.16,.28],[.18,-.28]];
+  return shuffled(points, random).slice(0, count).map(([xRatio, zRatio], index) => {
+    const type = types[index]; const x = xRatio * width + (random() - .5) * width * .035; const z = zRatio * depth + (random() - .5) * depth * .035; const scaleBase = type === 'floor-vase' ? .9 : type === 'gallery-bench' ? 1.04 : type === 'stone-sculpture' ? .95 : 1;
+    return { id: crypto.randomUUID(), type, x, z, rotation: Math.atan2(-x, -z) + (random() - .5) * .5, scale: scaleBase * (.9 + random() * .22) };
+  });
 }
 
 export async function autoCurateGallery(draft: GalleryDraft, template: GalleryTemplate, onPhase?: (phase: CurationPhase) => void): Promise<{ draft: GalleryDraft; report: CurationReport }> {
   if (!draft.artworks.length) throw new Error('Upload at least one artwork before using AI Curator.');
+  const random = createRandom();
   onPhase?.('palette'); const analysis = await analyzeCollection(draft.artworks); await pause(280);
-  onPhase?.('composition'); const artworks = curateArtworkPlacement(draft.artworks, template); await pause(320);
-  onPhase?.('atmosphere'); const atmosphere = chooseAtmosphere(analysis, template.id); const decor = curatedDecor(template, artworks.length); await pause(320);
+  onPhase?.('composition'); const artworks = curateArtworkPlacement(draft.artworks, template, random); await pause(320);
+  onPhase?.('atmosphere'); const atmosphere = chooseAtmosphere(analysis, template.id, draft, random); const decor = curatedDecor(template, artworks.length, draft.decor, random); await pause(320);
   return {
     draft: { ...draft, artworks, decor, wall: atmosphere.wall, floor: atmosphere.floor, ceiling: atmosphere.ceiling, lighting: atmosphere.lighting },
     report: { mood: atmosphere.mood, palette: atmosphere.palette, placementCount: artworks.length, decorCount: decor.length }
