@@ -5,9 +5,13 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: cleanup-expired-galleries
+  cancel-in-progress: false
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

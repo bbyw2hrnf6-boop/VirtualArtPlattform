@@ -37,16 +37,36 @@ const deleteDocument = async (name) => {
 };
 
 const expirationFilter = { fieldFilter: { field: { fieldPath: 'expiresAt' }, op: 'LESS_THAN_OR_EQUAL', value: { timestampValue: new Date().toISOString() } } };
-const expiredAssets = await runQuery({
-  from: [{ collectionId: 'galleryArtworks' }],
-  where: expirationFilter,
-  limit: 500
-});
-for (const asset of expiredAssets) await deleteDocument(asset.name);
-const expired = await runQuery({
-  from: [{ collectionId: 'galleries' }],
-  where: expirationFilter,
-  limit: 100
-});
-for (const gallery of expired) await deleteDocument(gallery.name);
-console.log(`Deleted ${expired.length} expired galleries and ${expiredAssets.length} artwork documents.`);
+const DELETE_CONCURRENCY = 12;
+
+async function deleteWithConcurrency(documents) {
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < documents.length) {
+      const document = documents[cursor++];
+      await deleteDocument(document.name);
+    }
+  };
+  const workerCount = Math.min(DELETE_CONCURRENCY, documents.length);
+  await Promise.all(Array.from({ length: workerCount }, worker));
+}
+
+async function deleteExpiredCollection(collectionId, pageSize) {
+  let deleted = 0;
+  while (true) {
+    const documents = await runQuery({
+      from: [{ collectionId }],
+      where: expirationFilter,
+      limit: pageSize
+    });
+    if (!documents.length) return deleted;
+    await deleteWithConcurrency(documents);
+    deleted += documents.length;
+  }
+}
+
+// Assets are removed first so no large payload remains after its gallery manifest
+// has gone. Each query is repeated until the fixed expiration cutoff is empty.
+const deletedAssets = await deleteExpiredCollection('galleryArtworks', 500);
+const deletedGalleries = await deleteExpiredCollection('galleries', 100);
+console.log(`Deleted ${deletedGalleries} expired galleries and ${deletedAssets} artwork documents.`);

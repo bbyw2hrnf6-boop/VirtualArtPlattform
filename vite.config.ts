@@ -8,7 +8,9 @@ export default defineConfig(({ command }) => ({
   base: command === 'build' ? './' : '/',
   build: {
     target: 'es2020',
-    sourcemap: true,
+    // Public source maps add several megabytes to every Pages deployment and
+    // expose implementation details without helping the production visitor.
+    sourcemap: false,
     chunkSizeWarningLimit: 750,
     rolldownOptions: { output: { manualChunks: (id) => id.includes('/firebase/') || id.includes('/@firebase/') ? 'firebase' : undefined } }
   }

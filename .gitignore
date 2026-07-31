@@ -3,4 +3,10 @@ dist/
 artifacts/
 *.tsbuildinfo
 .env
+.env.*
+.firebase/
 .DS_Store
+firebase-debug.log*
+service-account*.json
+*-service-account.json
+*firebase-adminsdk*.json
