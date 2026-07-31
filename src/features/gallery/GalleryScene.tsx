@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
@@ -181,8 +181,9 @@ function createDecor(item: DecorPlacement, selected: boolean) {
   return group;
 }
 
-function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: string, dollhouse = false) {
+function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: string, dollhouse = false, editorCutaway = false) {
   const template = getTemplate(draft.templateId); const [w, d] = template.dimensions; const h = template.height; const dividerWidth = template.dividerWidth ?? PAVILION_DIVIDER_WIDTH;
+  const cutaway = dollhouse || editorCutaway;
   const ceilingFinish = draft.ceiling ?? 'gallery';
   const ceilingProfiles = {
     gallery: { surface: 'chalk' as const, color: '#ece9e1', roughness: .82, bump: .005, emissive: '#fffdf8', glow: .16 },
@@ -213,15 +214,15 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
   const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), floor); floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; floorMesh.userData.surface = 'floor'; scene.add(floorMesh);
   const wallSurfaces: THREE.Mesh[] = []; const exteriorWalls: THREE.Mesh[] = [];
   const addWall = (wallId: WallId, geometry: THREE.BufferGeometry, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]) => {
-    const material = dollhouse ? wall.clone() : wall; material.transparent = dollhouse; material.opacity = 1; if (dollhouse) { material.depthWrite = false; material.side = THREE.DoubleSide; } const mesh = new THREE.Mesh(geometry, material); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; mesh.userData.wallId = wallId; scene.add(mesh); wallSurfaces.push(mesh); exteriorWalls.push(mesh); return mesh;
+    const material = cutaway ? wall.clone() : wall; material.transparent = cutaway; material.opacity = 1; if (cutaway) { material.depthWrite = false; material.side = THREE.DoubleSide; } const mesh = new THREE.Mesh(geometry, material); mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.receiveShadow = true; mesh.userData.wallId = wallId; scene.add(mesh); wallSurfaces.push(mesh); exteriorWalls.push(mesh); return mesh;
   };
   addWall('north', new THREE.PlaneGeometry(w, h), [0, h / 2, -d / 2]);
   addWall('west', new THREE.PlaneGeometry(d, h), [-w / 2, h / 2, 0], [0, Math.PI / 2, 0]);
   addWall('east', new THREE.PlaneGeometry(d, h), [w / 2, h / 2, 0], [0, -Math.PI / 2, 0]);
   addWall('south', new THREE.PlaneGeometry(w, h), [0, h / 2, d / 2], [0, Math.PI, 0]);
   // The exterior roof is part of the architecture and always follows the walls.
-  const roofMaterial = wall.clone(); roofMaterial.transparent = dollhouse; const roof = new THREE.Mesh(new THREE.BoxGeometry(w + .12, .16, d + .12), roofMaterial); roof.position.set(0, h + .08, 0); roof.receiveShadow = true; roof.name = 'room-roof-wall-finish'; roof.visible = !dollhouse; scene.add(roof);
-  const ceilingPlane = new THREE.Mesh(new THREE.PlaneGeometry(w - .08, d - .08), ceiling); ceilingPlane.rotation.x = Math.PI / 2; ceilingPlane.position.y = h - .015; ceilingPlane.receiveShadow = true; ceilingPlane.name = `ceiling-design-${ceilingFinish}`; ceilingPlane.visible = !dollhouse; scene.add(ceilingPlane);
+  const roofMaterial = wall.clone(); roofMaterial.transparent = cutaway; const roof = new THREE.Mesh(new THREE.BoxGeometry(w + .12, .16, d + .12), roofMaterial); roof.position.set(0, h + .08, 0); roof.receiveShadow = true; roof.name = 'room-roof-wall-finish'; roof.visible = !cutaway; scene.add(roof);
+  const ceilingPlane = new THREE.Mesh(new THREE.PlaneGeometry(w - .08, d - .08), ceiling); ceilingPlane.rotation.x = Math.PI / 2; ceilingPlane.position.y = h - .015; ceilingPlane.receiveShadow = true; ceilingPlane.name = `ceiling-design-${ceilingFinish}`; ceilingPlane.visible = !cutaway; scene.add(ceilingPlane);
   const ceilingDetails = new THREE.Group(); ceilingDetails.name = `room-ceiling-${ceilingFinish}`;
   const trimMaterial = new THREE.MeshPhysicalMaterial({ color: ceilingFinish === 'warm' ? '#8d7452' : '#252824', metalness: ceilingFinish === 'warm' ? .45 : .72, roughness: .3, clearcoat: .25 });
   if (ceilingFinish === 'gallery' && draft.templateId !== 'pavilion') {
@@ -237,7 +238,7 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
     [-w * .24, 0, w * .24].forEach((x) => { const strip = new THREE.Mesh(new RoundedBoxGeometry(.045, .035, d * .72, 3, .01), ledMaterial); strip.position.set(x, h - .08, 0); ceilingDetails.add(strip); });
     [-w * .24, 0, w * .24].forEach((x) => { const glow = new THREE.PointLight('#ffd9a3', 2.2, Math.min(w, d) * .6, 1.65); glow.position.set(x, h - .35, 0); ceilingDetails.add(glow); });
   }
-  ceilingDetails.visible = !dollhouse;
+  ceilingDetails.visible = !cutaway;
   scene.add(ceilingDetails);
   const architecture = new THREE.Group(); architecture.name = `architecture-${draft.templateId}`; scene.add(architecture);
   if (draft.templateId === 'white-cube') {
@@ -285,7 +286,7 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
       const pier = new THREE.Mesh(new RoundedBoxGeometry(.72, partitionHeight, .72, 4, .035), partitionMaterial); pier.position.set(xSide * sideBoundaryX, partitionHeight / 2, zSide * crossGalleryZ); pier.castShadow = true; pier.receiveShadow = true; architecture.add(pier);
     }));
     const dividerHeight = Math.min(4.55, h - .75); const dividerMaterial = partitionMaterial.clone();
-    const divider = new THREE.Mesh(new RoundedBoxGeometry(dividerWidth, dividerHeight, .34, 6, .045), dividerMaterial); divider.position.set(0, dividerHeight / 2, PAVILION_DIVIDER_Z); divider.castShadow = true; divider.receiveShadow = true; scene.add(divider);
+    const divider = new THREE.Mesh(new RoundedBoxGeometry(dividerWidth, dividerHeight, .34, 6, .045), dividerMaterial); divider.position.set(0, dividerHeight / 2, PAVILION_DIVIDER_Z); divider.castShadow = true; divider.receiveShadow = true; architecture.add(divider);
     const raycastMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false });
     const addDividerSurface = (wallId: WallId, z: number, rotationY: number) => { const surface = new THREE.Mesh(new THREE.PlaneGeometry(dividerWidth, dividerHeight), raycastMaterial); surface.position.set(0, dividerHeight / 2, z); surface.rotation.y = rotationY; surface.userData.wallId = wallId; scene.add(surface); wallSurfaces.push(surface); };
     addDividerSurface('divider-front', PAVILION_DIVIDER_Z + .175, 0); addDividerSurface('divider-back', PAVILION_DIVIDER_Z - .175, Math.PI);
@@ -293,20 +294,20 @@ function buildRoom(scene: THREE.Scene, draft: GalleryDraft, selectedDecorId?: st
     const skyGlass = new THREE.MeshPhysicalMaterial({ color: '#e9f3f6', emissive: '#d8edff', emissiveIntensity: 1.65, roughness: .14, transmission: .28, transparent: true, opacity: .9, side: THREE.DoubleSide });
     [-1, 1].forEach((zone) => {
       const zoneZ = zone * d * .255;
-      const panel = new THREE.Mesh(new RoundedBoxGeometry(skylightWidth, .055, skylightDepth, 5, .025), skyGlass); panel.position.set(0, h - .12, zoneZ); panel.visible = !dollhouse; architecture.add(panel);
+      const panel = new THREE.Mesh(new RoundedBoxGeometry(skylightWidth, .055, skylightDepth, 5, .025), skyGlass); panel.position.set(0, h - .12, zoneZ); panel.visible = !cutaway; architecture.add(panel);
       const revealHeight = .48; const revealY = h - revealHeight / 2 - .14;
-      [-1, 1].forEach((side) => { addPartition(skylightWidth + .7, .28, 0, zoneZ + side * (skylightDepth / 2 + .14), revealY, revealHeight).visible = !dollhouse; addPartition(.28, skylightDepth, side * (skylightWidth / 2 + .14), zoneZ, revealY, revealHeight).visible = !dollhouse; });
-      const daylight = new THREE.RectAreaLight(zone > 0 ? '#fff3da' : '#e4efff', 4.2, skylightWidth * .8, skylightDepth * .8); daylight.position.set(0, h - .42, zoneZ); daylight.rotation.x = -Math.PI / 2; daylight.visible = !dollhouse; architecture.add(daylight);
+      [-1, 1].forEach((side) => { addPartition(skylightWidth + .7, .28, 0, zoneZ + side * (skylightDepth / 2 + .14), revealY, revealHeight).visible = !cutaway; addPartition(.28, skylightDepth, side * (skylightWidth / 2 + .14), zoneZ, revealY, revealHeight).visible = !cutaway; });
+      const daylight = new THREE.RectAreaLight(zone > 0 ? '#fff3da' : '#e4efff', 4.2, skylightWidth * .8, skylightDepth * .8); daylight.position.set(0, h - .42, zoneZ); daylight.rotation.x = -Math.PI / 2; daylight.visible = !cutaway; architecture.add(daylight);
     });
     // A restrained central lighting spine follows the circulation axis without
     // crossing doors or pretending to be structural beams.
     const spineMaterial = new THREE.MeshStandardMaterial({ color: '#f8f4ea', emissive: ceilingFinish === 'dark' ? '#ffd59b' : '#fff4dc', emissiveIntensity: ceilingFinish === 'dark' ? 4.4 : 2.1, roughness: .3 });
-    [-1, 1].forEach((side) => { const spine = new THREE.Mesh(new RoundedBoxGeometry(.045, .035, d * .78, 3, .01), spineMaterial); spine.position.set(side * 7.2, h - .1, 0); spine.visible = !dollhouse; architecture.add(spine); });
+    [-1, 1].forEach((side) => { const spine = new THREE.Mesh(new RoundedBoxGeometry(.045, .035, d * .78, 3, .01), spineMaterial); spine.position.set(side * 7.2, h - .1, 0); spine.visible = !cutaway; architecture.add(spine); });
   }
   if (draft.templateId === 'nocturne') { const plinth = new THREE.Mesh(new THREE.CylinderGeometry(.82, .82, .82, 48), new THREE.MeshStandardMaterial({ color: '#111210', roughness: .62 })); plinth.position.set(0, .5, .65); scene.add(plinth); }
   const decorObjects = draft.decor.map((item) => createDecor(item, selectedDecorId === item.id));
   decorObjects.forEach((item) => { item.position.x = THREE.MathUtils.clamp(item.position.x, -w / 2 + .45, w / 2 - .45); item.position.z = THREE.MathUtils.clamp(item.position.z, -d / 2 + .45, d / 2 - .45); scene.add(item); });
-  return { w, d, h, decorObjects, floorMesh, wallSurfaces, exteriorWalls, roof, ceilingPlane, ceilingDetails };
+  return { w, d, h, decorObjects, floorMesh, wallSurfaces, exteriorWalls, architecture, roof, ceilingPlane, ceilingDetails };
 }
 
 function addLighting(scene: THREE.Scene, draft: GalleryDraft, w: number, d: number, h: number, dollhouse = false) {
@@ -438,6 +439,7 @@ export type GalleryViewMode = 'walk' | 'overview';
 
 interface GallerySceneProps {
   draft: GalleryDraft; selectedId?: string; selectedDecorId?: string;
+  focusWall?: { wall: WallId; token: number };
   onSelect?: (id: string) => void; onSelectDecor?: (id: string) => void; onMoveDecor?: (id: string, x: number, z: number) => void;
   onMoveArtwork?: (id: string, wall: WallId, x: number, y: number) => void; onViewPlacementChange?: (x: number, z: number) => void;
   visitor?: boolean; viewMode?: GalleryViewMode;
@@ -450,10 +452,12 @@ function sceneDraftKey(draft: GalleryDraft, visitor: boolean) {
   return [visitor ? 'visitor' : 'editor', visitor ? draft.title : '', visitor ? draft.artist : '', draft.templateId, draft.wall, draft.floor, draft.ceiling ?? 'gallery', draft.lighting, artworks, decor].join('||');
 }
 
-function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, onMoveArtwork, onViewPlacementChange, visitor = false, viewMode = 'walk', playIntro = false, onIntroComplete, onArtworkFocus }: GallerySceneProps) {
+function GallerySceneRenderer({ draft, selectedId, selectedDecorId, focusWall, onSelect, onSelectDecor, onMoveDecor, onMoveArtwork, onViewPlacementChange, visitor = false, viewMode = 'walk', playIntro = false, onIntroComplete, onArtworkFocus }: GallerySceneProps) {
   const host = useRef<HTMLDivElement>(null); const introPlayed = useRef(false);
   const cameraState = useRef<{ templateId: GalleryDraft['templateId']; position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
   const roomTurn = useRef<((direction: -1 | 1) => void) | null>(null);
+  const focusWallView = useRef<((wall: WallId) => void) | null>(null);
+  const [editorCutaway, setEditorCutaway] = useState(true);
   useEffect(() => {
     if (!host.current) return; const element = host.current; const scene = new THREE.Scene(); const template = getTemplate(draft.templateId); const [templateW, templateD] = template.dimensions; const dividerWidth = template.dividerWidth ?? PAVILION_DIVIDER_WIDTH;
     const walk = visitor && viewMode === 'walk'; const overview = visitor && viewMode === 'overview'; const camera = new THREE.PerspectiveCamera(walk ? 62 : overview ? 46 : 48, 1, .1, 160); camera.position.set(...template.camera);
@@ -464,13 +468,14 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       const largestDimension = Math.max(templateW, templateD); controls.enableDamping = true; controls.dampingFactor = .075; controls.target.set(0, overview ? template.height * .36 : 1.6, overview ? 0 : -1.5); controls.maxPolarAngle = Math.PI / 2 - .03; controls.minDistance = overview ? largestDimension * .52 : 1.45; controls.maxDistance = overview ? largestDimension * 1.75 : visitor ? Math.max(18, largestDimension * .68) : Math.max(20, largestDimension * 1.12); controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = .7; controls.zoomToCursor = true; controls.touches.ONE = THREE.TOUCH.ROTATE; controls.touches.TWO = visitor ? THREE.TOUCH.DOLLY_ROTATE : THREE.TOUCH.ROTATE; controls.autoRotate = visitor; controls.autoRotateSpeed = overview ? .22 : .38;
       if (!visitor && cameraState.current?.templateId === draft.templateId) { camera.position.copy(cameraState.current.position); controls.target.copy(cameraState.current.target); }
     }
-    const { w, d, h, decorObjects, floorMesh, wallSurfaces, exteriorWalls } = buildRoom(scene, draft, selectedDecorId, overview); const installedLights = addLighting(scene, draft, w, d, h, overview); element.dataset.roof = 'wall-finish'; element.dataset.ceiling = draft.ceiling ?? 'gallery'; element.dataset.artLights = String(installedLights); element.dataset.lightScope = 'room'; element.dataset.wall = draft.wall; element.dataset.floor = draft.floor; element.dataset.dollhouse = overview ? 'active' : 'inactive'; element.dataset.roomDimensions = `${w} × ${d} × ${h}`; element.dataset.visitorEyeHeight = String(VISITOR_EYE_HEIGHT); element.dataset.architecture = draft.templateId === 'pavilion' ? 'central-axis-four-side-galleries' : draft.templateId; element.dataset.artworkLayout = draft.artworks.map((artwork) => [artwork.wall, artwork.x.toFixed(3), artwork.y.toFixed(3), artwork.scale.toFixed(3), artwork.aspect.toFixed(3)].join(':')).join('|'); element.dataset.decorLayout = draft.decor.map((item) => [item.type, item.x.toFixed(3), item.z.toFixed(3), item.rotation.toFixed(3), item.scale.toFixed(3)].join(':')).join('|');
+    const editorOpenTop = !visitor && editorCutaway; const cutaway = overview || editorOpenTop;
+    const { w, d, h, decorObjects, floorMesh, wallSurfaces, exteriorWalls, architecture } = buildRoom(scene, draft, selectedDecorId, overview, editorOpenTop); const installedLights = addLighting(scene, draft, w, d, h, cutaway); element.dataset.roof = editorOpenTop ? 'open' : 'wall-finish'; element.dataset.ceiling = draft.ceiling ?? 'gallery'; element.dataset.artLights = String(installedLights); element.dataset.lightScope = 'room'; element.dataset.wall = draft.wall; element.dataset.floor = draft.floor; element.dataset.dollhouse = overview ? 'active' : 'inactive'; element.dataset.cutaway = cutaway ? 'active' : 'inactive'; element.dataset.roomDimensions = `${w} × ${d} × ${h}`; element.dataset.visitorEyeHeight = String(VISITOR_EYE_HEIGHT); element.dataset.architecture = draft.templateId === 'pavilion' ? 'central-axis-four-side-galleries' : draft.templateId; element.dataset.artworkLayout = draft.artworks.map((artwork) => [artwork.wall, artwork.x.toFixed(3), artwork.y.toFixed(3), artwork.scale.toFixed(3), artwork.aspect.toFixed(3)].join(':')).join('|'); element.dataset.decorLayout = draft.decor.map((item) => [item.type, item.x.toFixed(3), item.z.toFixed(3), item.rotation.toFixed(3), item.scale.toFixed(3)].join(':')).join('|');
     const roomBounds = { minX: -w / 2 + .45, maxX: w / 2 - .45, minZ: -d / 2 + .45, maxZ: d / 2 - .45 };
     const overviewCenter = new THREE.Vector3(0, h * .34, 0); const overviewDirection = new THREE.Vector3();
     const wallNormals: Record<string, THREE.Vector3> = { north: new THREE.Vector3(0, 0, -1), south: new THREE.Vector3(0, 0, 1), west: new THREE.Vector3(-1, 0, 0), east: new THREE.Vector3(1, 0, 0) };
-    const updateDollhouse = () => {
-      if (!overview) return; overviewDirection.subVectors(camera.position, overviewCenter).setY(0).normalize();
-      exteriorWalls.forEach((mesh) => { const material = mesh.material as THREE.MeshPhysicalMaterial; const facing = wallNormals[String(mesh.userData.wallId)]?.dot(overviewDirection) ?? -1; const targetOpacity = facing > .42 ? .045 : facing > -.16 ? .3 : .9; material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, .16); });
+    const updateCutaway = () => {
+      if (!cutaway) return; overviewDirection.subVectors(camera.position, overviewCenter).setY(0).normalize();
+      exteriorWalls.forEach((mesh) => { const material = mesh.material as THREE.MeshPhysicalMaterial; const facing = wallNormals[String(mesh.userData.wallId)]?.dot(overviewDirection) ?? -1; const targetOpacity = facing > .42 ? .045 : facing > -.16 ? .28 : overview ? .9 : .78; material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, .16); });
     };
     if (walk) camera.position.set(0, VISITOR_EYE_HEIGHT, d / 2 - 1);
     const pavilionCollision: WalkCollision | undefined = draft.templateId === 'pavilion' ? (next, previous) => {
@@ -486,6 +491,7 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
     const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({ color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide })); walkMarker.rotation.x = -Math.PI / 2; walkMarker.position.y = .018; walkMarker.visible = false; if (walk) scene.add(walkMarker);
     let intro = navigation && playIntro && !introPlayed.current ? createCinematicIntro(camera, galleryIntroTour(draft, w, d), navigation, element, () => { introPlayed.current = true; onIntroComplete?.(); }, 'Private view', draft.title) : null;
     let orbitAnimation: { start: number; from: number; to: number; radius: number; y: number; rotateInPlace?: boolean } | null = null;
+    let wallCameraAnimation: { start: number; fromPosition: THREE.Vector3; fromTarget: THREE.Vector3; toPosition: THREE.Vector3; toTarget: THREE.Vector3 } | null = null;
     roomTurn.current = (direction) => {
       if (!controls || orbitAnimation) return;
       if (draft.templateId === 'pavilion') {
@@ -504,10 +510,27 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       const canvas = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshStandardMaterial({ map: texture, roughness: .72 })); canvas.position.z = .041; group.add(frame, canvas);
       const config = WALLS[artwork.wall]; const [px, py, pz] = config.position(artwork.x, artwork.y, w, d); group.position.set(px, py, pz); group.rotation.set(...config.rotation); group.traverse((item) => { item.userData.artworkId = artwork.id; }); scene.add(group); artworkObjects.push(group);
     });
+    const inwardNormals: Record<WallId, THREE.Vector3> = {
+      north: new THREE.Vector3(0, 0, 1), south: new THREE.Vector3(0, 0, -1), west: new THREE.Vector3(1, 0, 0), east: new THREE.Vector3(-1, 0, 0),
+      'divider-front': new THREE.Vector3(0, 0, 1), 'divider-back': new THREE.Vector3(0, 0, -1)
+    };
+    focusWallView.current = (wall) => {
+      if (!controls || visitor) return;
+      const artwork = draft.artworks.find((item) => item.id === selectedId && item.wall === wall) ?? draft.artworks.find((item) => item.wall === wall);
+      const x = artwork?.x ?? 0; const y = artwork?.y ?? Math.min(2.35, h * .48); const [px, py, pz] = WALLS[wall].position(x, y, w, d); const toTarget = new THREE.Vector3(px, py, pz);
+      const distance = draft.templateId === 'pavilion' ? 8.2 : 5.4; const toPosition = toTarget.clone().addScaledVector(inwardNormals[wall], distance); toPosition.y = THREE.MathUtils.clamp(py + .55, 2.05, h - .45); toPosition.x = THREE.MathUtils.clamp(toPosition.x, roomBounds.minX, roomBounds.maxX); toPosition.z = THREE.MathUtils.clamp(toPosition.z, roomBounds.minZ, roomBounds.maxZ);
+      wallCameraAnimation = { start: performance.now(), fromPosition: camera.position.clone(), fromTarget: controls.target.clone(), toPosition, toTarget }; orbitAnimation = null; controls.enabled = false;
+    };
     const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2(); let draggedDecor: THREE.Group | null = null; let draggedArtwork: THREE.Group | null = null; let draggedArtworkPlacement: { id: string; wall: WallId; x: number; y: number } | null = null; let dragPointerId = -1; let pointerStartX = 0; let pointerStartY = 0; let pointerTravel = 0; let suppressSceneClick = false; let editorPinching = false; let editorPinchDistance = 0; let editorZoomDistance: number | null = null;
     const editorTouches = new Map<number, { x: number; y: number }>();
     const currentEditorPinchDistance = () => { const points = [...editorTouches.values()]; return points.length < 2 ? 0 : Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y); };
     const setPointer = (event: PointerEvent) => { const box = renderer.domElement.getBoundingClientRect(); pointer.set(((event.clientX - box.left) / box.width) * 2 - 1, -((event.clientY - box.top) / box.height) * 2 + 1); raycaster.setFromCamera(pointer, camera); };
+    const closestVisibleWall = () => { const hit = raycaster.intersectObjects([...wallSurfaces, architecture], true)[0]; return hit?.object.userData.wallId ? hit : undefined; };
+    const placementFromWallHit = (wallHit: THREE.Intersection<THREE.Object3D>, artwork: GalleryDraft['artworks'][number]) => {
+      const wallId = wallHit.object.userData.wallId as WallId; const height = 1.5 * artwork.scale; const width = height * artwork.aspect; const availableWidth = wallId.startsWith('divider') ? dividerWidth : wallId === 'north' || wallId === 'south' ? w : d;
+      const horizontal = wallId === 'west' || wallId === 'east' ? wallHit.point.z : wallHit.point.x; const maxX = Math.max(.15, availableWidth / 2 - width / 2 - .12); const wallHeight = wallId.startsWith('divider') ? h - .75 : h;
+      return { wall: wallId, x: THREE.MathUtils.clamp(horizontal, -maxX, maxX), y: THREE.MathUtils.clamp(wallHit.point.y, height / 2 + .14, wallHeight - height / 2 - .12) };
+    };
     const editorPointerDown = (event: PointerEvent) => {
       if (visitor || event.button !== 0) return;
       if (event.pointerType === 'touch') {
@@ -535,12 +558,9 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       setPointer(event);
       if (draggedDecor) { const floorHit = raycaster.intersectObject(floorMesh, false)[0]; if (!floorHit) return; draggedDecor.position.x = THREE.MathUtils.clamp(floorHit.point.x, roomBounds.minX, roomBounds.maxX); draggedDecor.position.z = THREE.MathUtils.clamp(floorHit.point.z, roomBounds.minZ, roomBounds.maxZ); suppressSceneClick = true; return; }
       if (draggedArtwork && draggedArtworkPlacement) {
-        const wallHit = raycaster.intersectObjects(wallSurfaces, false)[0]; if (!wallHit) return;
-        const wallId = wallHit.object.userData.wallId as WallId; const artwork = artworkById.get(draggedArtworkPlacement.id); if (!artwork) return;
-        const height = 1.5 * artwork.scale; const width = height * artwork.aspect; const availableWidth = wallId.startsWith('divider') ? dividerWidth : wallId === 'north' || wallId === 'south' ? w : d;
-        const horizontal = wallId === 'west' || wallId === 'east' ? wallHit.point.z : wallHit.point.x; const maxX = Math.max(.15, availableWidth / 2 - width / 2 - .12); const wallHeight = wallId.startsWith('divider') ? h - .75 : h;
-        const x = THREE.MathUtils.clamp(horizontal, -maxX, maxX); const y = THREE.MathUtils.clamp(wallHit.point.y, height / 2 + .14, wallHeight - height / 2 - .12); const config = WALLS[wallId]; const [px, py, pz] = config.position(x, y, w, d);
-        draggedArtwork.position.set(px, py, pz); draggedArtwork.rotation.set(...config.rotation); draggedArtwork.userData.wall = wallId; draggedArtworkPlacement = { id: artwork.id, wall: wallId, x, y }; suppressSceneClick = true;
+        const wallHit = closestVisibleWall(); if (!wallHit) return; const artwork = artworkById.get(draggedArtworkPlacement.id); if (!artwork) return;
+        const placement = placementFromWallHit(wallHit, artwork); const config = WALLS[placement.wall]; const [px, py, pz] = config.position(placement.x, placement.y, w, d);
+        draggedArtwork.position.set(px, py, pz); draggedArtwork.rotation.set(...config.rotation); draggedArtwork.userData.wall = placement.wall; draggedArtworkPlacement = { id: artwork.id, ...placement }; suppressSceneClick = true;
       }
     };
     const editorPointerUp = (event: PointerEvent) => {
@@ -555,7 +575,7 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
     };
     const handlePointer = (event: PointerEvent) => {
       setPointer(event);
-      if (!visitor) { if (suppressSceneClick) { suppressSceneClick = false; return; } const hit = raycaster.intersectObjects([...artworkObjects, ...decorObjects], true)[0]; const artworkId = hit?.object.userData.artworkId as string | undefined; const decorId = hit?.object.userData.decorId as string | undefined; if (artworkId) onSelect?.(artworkId); else if (decorId) onSelectDecor?.(decorId); else if (selectedDecorId) { const floorHit = raycaster.intersectObject(floorMesh, false)[0]; if (floorHit) onMoveDecor?.(selectedDecorId, THREE.MathUtils.clamp(floorHit.point.x, roomBounds.minX, roomBounds.maxX), THREE.MathUtils.clamp(floorHit.point.z, roomBounds.minZ, roomBounds.maxZ)); } return; }
+      if (!visitor) { if (suppressSceneClick) { suppressSceneClick = false; return; } const hit = raycaster.intersectObjects([...artworkObjects, ...decorObjects], true)[0]; const artworkId = hit?.object.userData.artworkId as string | undefined; const decorId = hit?.object.userData.decorId as string | undefined; if (artworkId) onSelect?.(artworkId); else if (decorId) onSelectDecor?.(decorId); else if (selectedDecorId) { const floorHit = raycaster.intersectObject(floorMesh, false)[0]; if (floorHit) onMoveDecor?.(selectedDecorId, THREE.MathUtils.clamp(floorHit.point.x, roomBounds.minX, roomBounds.maxX), THREE.MathUtils.clamp(floorHit.point.z, roomBounds.minZ, roomBounds.maxZ)); } else if (selectedId) { const wallHit = closestVisibleWall(); const artwork = artworkById.get(selectedId); if (wallHit && artwork) { const placement = placementFromWallHit(wallHit, artwork); onMoveArtwork?.(selectedId, placement.wall, placement.x, placement.y); } } return; }
       if (!walk || !navigation?.consumeClick()) return;
       const artHit = raycaster.intersectObjects(artworkObjects, true)[0]; const artworkId = artHit?.object.userData.artworkId as string | undefined;
       if (artworkId) { const artwork = artworkById.get(artworkId); if (!artwork) return; focusedArtwork = artworkObjects.find((item) => item.userData.artworkId === artworkId) ?? artHit.object; focusedArtworkId = artworkId; onArtworkFocus?.({ id: artwork.id, title: artwork.title, artist: draft.artist, description: artwork.description, year: artwork.year, image: artwork.src }); return; }
@@ -565,7 +585,12 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
     let frame = 0; const resize = () => { const width = element.clientWidth; const height = element.clientHeight; renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); }; const observer = new ResizeObserver(resize); observer.observe(element); resize();
     const cameraDirection = new THREE.Vector3(); const artworkDirection = new THREE.Vector3(); const artworkPosition = new THREE.Vector3(); const insertionDirection = new THREE.Vector3(); const insertionPoint = new THREE.Vector3(); let placementFrame = 0;
     const animate = () => {
-      intro?.update(); navigation?.update(); updateDollhouse();
+      intro?.update(); navigation?.update(); updateCutaway();
+      if (wallCameraAnimation && controls) {
+        const raw = Math.min(1, (performance.now() - wallCameraAnimation.start) / 680); const eased = raw * raw * (3 - 2 * raw);
+        camera.position.lerpVectors(wallCameraAnimation.fromPosition, wallCameraAnimation.toPosition, eased); controls.target.lerpVectors(wallCameraAnimation.fromTarget, wallCameraAnimation.toTarget, eased); camera.lookAt(controls.target);
+        if (raw >= 1) { wallCameraAnimation = null; controls.enabled = true; }
+      }
       if (orbitAnimation && controls) {
         const raw = Math.min(1, (performance.now() - orbitAnimation.start) / 520); const eased = raw * raw * (3 - 2 * raw); const angle = THREE.MathUtils.lerp(orbitAnimation.from, orbitAnimation.to, eased);
         if (orbitAnimation.rotateInPlace) controls.target.set(camera.position.x + Math.sin(angle) * orbitAnimation.radius, VISITOR_EYE_HEIGHT, camera.position.z + Math.cos(angle) * orbitAnimation.radius);
@@ -591,14 +616,16 @@ function GallerySceneRenderer({ draft, selectedId, selectedDecorId, onSelect, on
       if (focusedArtwork && focusedArtworkId) { camera.getWorldDirection(cameraDirection); focusedArtwork.getWorldPosition(artworkPosition); artworkDirection.subVectors(artworkPosition, camera.position); const distance = artworkDirection.length(); const facing = cameraDirection.dot(artworkDirection.normalize()); if (facing < .48 || distance > 8) { focusedArtwork = null; focusedArtworkId = null; onArtworkFocus?.(null); } }
       element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.cameraYaw = camera.rotation.y.toFixed(3); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate);
     }; animate();
-    return () => { cancelAnimationFrame(frame); roomTurn.current = null; observer.disconnect(); renderer.domElement.removeEventListener('pointerdown', editorPointerDown); renderer.domElement.removeEventListener('pointermove', editorPointerMove); renderer.domElement.removeEventListener('pointerup', editorPointerUp); renderer.domElement.removeEventListener('pointercancel', editorPointerUp); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); intro = null; navigation?.dispose(); controls?.dispose(); environment.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); if (material.bumpMap && material.bumpMap !== material.map) material.bumpMap.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.domElement.remove(); };
-  }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, onMoveArtwork, onViewPlacementChange, visitor, viewMode, playIntro, onIntroComplete, onArtworkFocus]);
-  return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'} ${selectedDecorId ? 'gallery-scene--placing' : ''} ${selectedId ? 'gallery-scene--placing-art' : ''}`} ref={host}>{!visitor && <><button className="room-turn room-turn--left" type="button" onClick={() => roomTurn.current?.(-1)} aria-label="Rotate room 45 degrees left">←</button><button className="room-turn room-turn--right" type="button" onClick={() => roomTurn.current?.(1)} aria-label="Rotate room 45 degrees right">→</button></>}<div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD to walk · ↑↓ move · ←→ turn · Drag to look' : 'Dollhouse overview · Walls fade as you orbit · Scroll or pinch to zoom' : selectedDecorId ? 'Drag object · Click floor to place · Camera stays here' : selectedId ? 'Drag artwork directly onto any visible wall' : 'Drag to look · Scroll or pinch to zoom · Use arrows to turn'}</div></div>;
+    return () => { cancelAnimationFrame(frame); roomTurn.current = null; focusWallView.current = null; observer.disconnect(); renderer.domElement.removeEventListener('pointerdown', editorPointerDown); renderer.domElement.removeEventListener('pointermove', editorPointerMove); renderer.domElement.removeEventListener('pointerup', editorPointerUp); renderer.domElement.removeEventListener('pointercancel', editorPointerUp); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); intro = null; navigation?.dispose(); controls?.dispose(); environment.dispose(); scene.traverse((object) => { const mesh = object as THREE.Mesh; mesh.geometry?.dispose(); const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]; materials.filter(Boolean).forEach((raw) => { const material = raw as THREE.MeshStandardMaterial; material.map?.dispose(); if (material.bumpMap && material.bumpMap !== material.map) material.bumpMap.dispose(); material.dispose(); }); }); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); };
+  }, [draft, selectedId, selectedDecorId, onSelect, onSelectDecor, onMoveDecor, onMoveArtwork, onViewPlacementChange, visitor, viewMode, playIntro, onIntroComplete, onArtworkFocus, editorCutaway]);
+  useEffect(() => { if (!visitor && focusWall) focusWallView.current?.(focusWall.wall); }, [focusWall, visitor]);
+  return <div className={`gallery-scene gallery-scene--${visitor ? viewMode : 'edit'} ${selectedDecorId ? 'gallery-scene--placing' : ''} ${selectedId ? 'gallery-scene--placing-art' : ''}`} ref={host}>{!visitor && <><div className="builder-view-switch" role="group" aria-label="Editor roof view"><button type="button" className={editorCutaway ? 'active' : ''} aria-pressed={editorCutaway} onClick={() => setEditorCutaway(true)}>Open roof</button><button type="button" className={!editorCutaway ? 'active' : ''} aria-pressed={!editorCutaway} onClick={() => setEditorCutaway(false)}>Preview ceiling</button></div><button className="room-turn room-turn--left" type="button" onClick={() => roomTurn.current?.(-1)} aria-label="Rotate room 45 degrees left">←</button><button className="room-turn room-turn--right" type="button" onClick={() => roomTurn.current?.(1)} aria-label="Rotate room 45 degrees right">→</button></>}<div className="scene-hint">{visitor ? viewMode === 'walk' ? 'WASD to walk · ↑↓ move · ←→ turn · Drag to look' : 'Dollhouse overview · Walls fade as you orbit · Scroll or pinch to zoom' : selectedDecorId ? 'Drag object · Click floor to place · Camera stays here' : selectedId ? 'Choose wall → click to place → drag to refine' : 'Open-roof editor · Drag to look · Scroll or pinch to zoom'}</div></div>;
 }
 
 export const GalleryScene = memo(GallerySceneRenderer, (previous, next) =>
   sceneDraftKey(previous.draft, previous.visitor ?? false) === sceneDraftKey(next.draft, next.visitor ?? false)
   && previous.selectedId === next.selectedId && previous.selectedDecorId === next.selectedDecorId
+  && previous.focusWall?.token === next.focusWall?.token && previous.focusWall?.wall === next.focusWall?.wall
   && previous.onSelect === next.onSelect && previous.onSelectDecor === next.onSelectDecor && previous.onMoveDecor === next.onMoveDecor
   && previous.onMoveArtwork === next.onMoveArtwork && previous.onViewPlacementChange === next.onViewPlacementChange
   && previous.visitor === next.visitor && previous.viewMode === next.viewMode && previous.playIntro === next.playIntro
@@ -660,7 +687,7 @@ export function DannyDemoScene({ viewMode = 'walk', playIntro = false, onIntroCo
     let frame = 0; const resize = () => { const width = element.clientWidth; const height = element.clientHeight; renderer.setSize(width, height, false); camera.aspect = width / Math.max(height, 1); camera.updateProjectionMatrix(); }; const observer = new ResizeObserver(resize); observer.observe(element); resize();
     const cameraDirection = new THREE.Vector3(); const artworkDirection = new THREE.Vector3(); const artworkPosition = new THREE.Vector3();
     const animate = () => { intro?.update(); navigation?.update(); controls?.update(); if (walkMarker.visible) { walkMarker.rotation.z += .008; const material = walkMarker.material as THREE.MeshBasicMaterial; material.opacity = .5 + Math.sin(performance.now() * .006) * .25; if (!navigation?.hasDestination()) walkMarker.visible = false; } if (focusedArtwork) { camera.getWorldDirection(cameraDirection); focusedArtwork.getWorldPosition(artworkPosition); artworkDirection.subVectors(artworkPosition, camera.position); if (cameraDirection.dot(artworkDirection.normalize()) < .48) { focusedArtwork = null; onArtworkFocus?.(null); } } element.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(2)).join(','); element.dataset.cameraYaw = camera.rotation.y.toFixed(3); element.dataset.intro = intro && !intro.isComplete() ? 'active' : 'complete'; renderer.render(scene, camera); frame = requestAnimationFrame(animate); }; animate();
-    return () => { destroyed = true; cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); modelErrorCleanup?.(); navigation?.dispose(); controls?.dispose(); renderer.dispose(); renderer.domElement.remove(); };
+    return () => { destroyed = true; cancelAnimationFrame(frame); observer.disconnect(); renderer.domElement.removeEventListener('click', handlePointer); intro?.dispose(); modelErrorCleanup?.(); navigation?.dispose(); controls?.dispose(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); };
   }, [viewMode, playIntro, onIntroComplete, onArtworkFocus]);
   return <div className={`gallery-scene gallery-scene--${viewMode}`} ref={host}><div className="scene-hint">{viewMode === 'walk' ? 'Danny Hirsch Arts · WASD to walk · ↑↓ move · ←→ turn' : 'Danny Hirsch Arts · Open-roof dollhouse overview'}</div></div>;
 }
