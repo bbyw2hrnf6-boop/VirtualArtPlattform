@@ -7,8 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "validate:glb": "node scripts/validate-glb-contract.mjs",
+    "test": "vitest run",
     "lint": "eslint .",
-    "check": "npm run lint && npm run build"
+    "check": "npm run lint && npm test && npm run build"
   },
   "engines": {
     "node": ">=22.13.0"
@@ -28,9 +30,11 @@
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
+    "fake-indexeddb": "^6.2.5",
     "globals": "^17.8.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0",
-    "vite": "^8.1.5"
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   }
 }

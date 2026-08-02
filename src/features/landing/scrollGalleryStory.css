@@ -1,0 +1,875 @@
+.sgs {
+  --sgs-progress: 0;
+  position: relative;
+  height: 520svh;
+  min-height: 3200px;
+  overflow: clip;
+  background: #111411;
+  color: #f1efe8;
+}
+
+.sgs__sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  min-height: 620px;
+  overflow: hidden;
+  isolation: isolate;
+  background: #111411;
+}
+
+.sgs__visual,
+.sgs__visual canvas,
+.sgs__fallback,
+.sgs__vignette {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sgs__visual canvas {
+  display: block;
+}
+
+.sgs__fallback {
+  display: none;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 28%, #4d5447 0, transparent 30%),
+    linear-gradient(145deg, #161a16, #0d0f0d 72%);
+}
+
+.sgs[data-webgl='unavailable'] .sgs__visual canvas {
+  display: none;
+}
+
+.sgs[data-webgl='unavailable'] .sgs__fallback {
+  display: grid;
+}
+
+.sgs__fallback-room {
+  position: relative;
+  width: min(72vw, 880px);
+  aspect-ratio: 1.7;
+  overflow: hidden;
+  border: 1px solid #ffffff20;
+  background:
+    linear-gradient(112deg, transparent 0 14%, #ded8ca 14.2% 16%, transparent 16.2%),
+    linear-gradient(248deg, transparent 0 14%, #ded8ca 14.2% 16%, transparent 16.2%),
+    linear-gradient(165deg, #dcd6c8 0 59%, #796f61 59.3% 100%);
+  clip-path: polygon(8% 3%, 92% 3%, 100% 100%, 0 100%);
+  box-shadow: 0 50px 100px #000b;
+}
+
+.sgs__fallback-room::after {
+  content: '';
+  position: absolute;
+  inset: 60% 0 0;
+  border-top: 1px solid #332f2a66;
+  background: repeating-linear-gradient(92deg, transparent 0 80px, #332f2a22 81px 83px);
+}
+
+.sgs__fallback-room i {
+  position: absolute;
+  z-index: 1;
+  top: 30%;
+  width: 12%;
+  height: 34%;
+  border: 6px solid #1b1d1a;
+  background: linear-gradient(145deg, #d3ad70, #25433f 55%, #8b4f36);
+  box-shadow: 0 12px 30px #0007;
+}
+
+.sgs__fallback-room i:first-child { left: 24%; }
+.sgs__fallback-room i:nth-child(2) { left: 44%; width: 10%; background: linear-gradient(155deg, #b9c5ba, #315957 45%, #c37145); }
+.sgs__fallback-room i:nth-child(3) { right: 24%; background: linear-gradient(130deg, #c8b18d, #30332f 48%, #945646); }
+
+.sgs__vignette {
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, #0d100ff2 0, #0d100fbd 23%, transparent 53%),
+    linear-gradient(0deg, #090b0ae0 0, transparent 33%),
+    radial-gradient(circle at 57% 45%, transparent 42%, #07090780 100%);
+}
+
+.sgs__topline {
+  position: absolute;
+  z-index: 4;
+  top: 30px;
+  left: 4vw;
+  right: 4vw;
+  display: grid;
+  grid-template-columns: auto minmax(80px, 190px) auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: #c3c6bd;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.sgs__progress-track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 1px;
+  overflow: hidden;
+  background: #ffffff35;
+}
+
+.sgs__progress-track i {
+  position: absolute;
+  inset: 0;
+  background: var(--acid, #d9ff43);
+  transform: scaleX(var(--sgs-progress));
+  transform-origin: left;
+}
+
+.sgs__chapters {
+  position: absolute;
+  z-index: 3;
+  left: clamp(28px, 7vw, 112px);
+  bottom: clamp(64px, 11vh, 126px);
+  width: min(410px, 34vw);
+  min-height: 240px;
+  pointer-events: none;
+}
+
+.sgs__chapters article {
+  position: absolute;
+  inset: auto 0 0;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.sgs__chapters article:first-child {
+  opacity: 1;
+}
+
+.sgs__chapters p,
+.sgs__publish-ui > p,
+.aura-section-heading > p,
+.aura-pilot > div:first-child > p,
+.aura-trust > div:first-child > p {
+  margin: 0;
+  color: var(--acid, #d9ff43);
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.sgs__chapters h2 {
+  max-width: 390px;
+  margin: 18px 0 20px;
+  color: #f1efe8;
+  font: 400 clamp(48px, 5.2vw, 78px)/.92 Instrument, Georgia, serif;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+
+.sgs__chapters article > span {
+  display: block;
+  max-width: 360px;
+  color: #b2b5ad;
+  font-size: 13px;
+  line-height: 1.75;
+  text-wrap: pretty;
+}
+
+.sgs__arrange-ui {
+  position: absolute;
+  z-index: 5;
+  top: clamp(100px, 17vh, 170px);
+  right: 4vw;
+  width: 280px;
+  padding: 17px;
+  border: 1px solid #ffffff2e;
+  opacity: 0;
+  background: #171a17e8;
+  box-shadow: 0 28px 70px #0009;
+  color: #eeece5;
+  pointer-events: none;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  will-change: opacity, transform;
+}
+
+.sgs__arrange-head,
+.sgs__wall-row,
+.sgs__control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sgs__arrange-head {
+  padding-bottom: 13px;
+  border-bottom: 1px solid #ffffff1d;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.sgs__arrange-head i {
+  color: var(--acid, #d9ff43);
+  font-size: 8px;
+  font-style: normal;
+}
+
+.sgs__wall-row {
+  padding: 14px 0 9px;
+  color: #f0eee7;
+  font-size: 11px;
+}
+
+.sgs__wall-row span {
+  color: #858980;
+  font-size: 8px;
+  letter-spacing: .14em;
+}
+
+.sgs__control {
+  display: grid;
+  grid-template-columns: 62px 1fr 44px;
+  gap: 9px;
+  min-height: 30px;
+  color: #8f938a;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.sgs__control > i {
+  position: relative;
+  display: block;
+  height: 1px;
+  background: #5a5f56;
+}
+
+.sgs__control > i b {
+  position: absolute;
+  top: 50%;
+  left: 66%;
+  width: 7px;
+  height: 7px;
+  border: 1px solid #171a17;
+  border-radius: 50%;
+  background: var(--acid, #d9ff43);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px #d9ff4350;
+}
+
+.sgs__control em {
+  color: #c7cac1;
+  font-size: 8px;
+  font-style: normal;
+  text-align: right;
+}
+
+.sgs__arrange-ui > p {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 12px 0 0;
+  padding: 10px;
+  border-left: 2px solid var(--acid, #d9ff43);
+  background: #252a21;
+  color: #b6bab0;
+  font-size: 8px;
+  letter-spacing: .04em;
+}
+
+.sgs__arrange-ui > p b {
+  color: var(--acid, #d9ff43);
+  font-size: 14px;
+}
+
+.sgs__view-ui {
+  position: absolute;
+  z-index: 5;
+  top: 88px;
+  left: 50%;
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid #ffffff2c;
+  opacity: 0;
+  background: #111411d9;
+  box-shadow: 0 14px 40px #0008;
+  transform: translateX(-50%);
+  pointer-events: none;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  will-change: opacity, transform;
+}
+
+.sgs__view-ui span {
+  min-width: 104px;
+  padding: 11px 13px;
+  color: #9da198;
+  font-size: 8px;
+  letter-spacing: .14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.sgs__view-ui[data-mode='arrange'] span:first-child,
+.sgs__view-ui[data-mode='walk'] span:last-child {
+  background: #eeece5;
+  color: #171916;
+}
+
+.sgs__publish-ui {
+  position: absolute;
+  z-index: 6;
+  right: clamp(24px, 6vw, 96px);
+  bottom: clamp(40px, 8vh, 86px);
+  width: min(390px, 37vw);
+  padding: 25px;
+  border: 1px solid #ffffff26;
+  opacity: 0;
+  background: #111411ed;
+  box-shadow: 0 32px 90px #000c;
+  will-change: opacity, transform;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.sgs__publish-ui[aria-hidden='true'] {
+  pointer-events: none;
+}
+
+.sgs__publish-ui > p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sgs__publish-ui > p i {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid #d9ff4375;
+  border-radius: 50%;
+  font-size: 9px;
+  font-style: normal;
+}
+
+.sgs__publish-ui h3 {
+  margin: 18px 0 10px;
+  color: #f2f0e9;
+  font: 400 clamp(34px, 3.2vw, 50px)/.96 Instrument, Georgia, serif;
+  letter-spacing: -.035em;
+}
+
+.sgs__publish-ui > span {
+  display: block;
+  color: #9ca097;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sgs__publish-ui a,
+.aura-pilot a {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 21px;
+  padding: 0 16px;
+  background: var(--acid, #d9ff43);
+  color: #151713;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .13em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.sgs__publish-ui a:hover,
+.aura-pilot a:hover {
+  background: #ebff96;
+}
+
+.sgs__publish-ui a:focus-visible,
+.aura-pilot a:focus-visible {
+  outline: 2px solid #f5f3ea;
+  outline-offset: 3px;
+}
+
+/* Product proof and pilot sections */
+.aura-pitch {
+  background: #e9e8e3;
+  color: #191a18;
+}
+
+.aura-use-cases,
+.aura-pilot,
+.aura-trust,
+.aura-faq {
+  padding: clamp(88px, 13vh, 150px) clamp(24px, 8vw, 128px);
+}
+
+.aura-section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr);
+  align-items: end;
+  gap: 6vw;
+}
+
+.aura-section-heading > p {
+  grid-column: 1 / -1;
+  color: #62675b;
+}
+
+.aura-section-heading h2,
+.aura-pilot h2,
+.aura-trust h2 {
+  margin: 22px 0 0;
+  color: #1a1b18;
+  font: 400 clamp(52px, 7vw, 102px)/.87 Instrument, Georgia, serif;
+  letter-spacing: -.048em;
+}
+
+.aura-section-heading h2 em,
+.aura-pilot h2 em,
+.aura-trust h2 em {
+  color: #777870;
+  font-weight: 400;
+}
+
+.aura-section-heading > span {
+  display: block;
+  max-width: 430px;
+  padding-bottom: 8px;
+  color: #5f615b;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.aura-use-case-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: clamp(58px, 9vh, 96px);
+  border-top: 1px solid #b9bab4;
+  background: #b9bab4;
+}
+
+.aura-use-case-grid article {
+  min-height: 300px;
+  padding: 28px 24px 32px;
+  background: #e9e8e3;
+}
+
+.aura-use-case-grid article > span {
+  color: #7a7c74;
+  font: italic 28px Instrument, Georgia, serif;
+}
+
+.aura-use-case-grid h3,
+.aura-pilot-options h3 {
+  margin: 64px 0 17px;
+  font: 400 clamp(28px, 2.4vw, 38px)/1 Instrument, Georgia, serif;
+}
+
+.aura-use-case-grid p,
+.aura-pilot-options p {
+  margin: 0;
+  color: #656760;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.aura-pilot {
+  display: grid;
+  grid-template-columns: minmax(300px, .8fr) minmax(540px, 1.2fr);
+  gap: 8vw;
+  background: #171916;
+  color: #f0eee7;
+}
+
+.aura-pilot > div:first-child > p {
+  color: var(--acid, #d9ff43);
+}
+
+.aura-pilot h2 {
+  color: #f0eee7;
+  font-size: clamp(54px, 6.8vw, 98px);
+}
+
+.aura-pilot h2 em {
+  color: #999b94;
+}
+
+.aura-pilot-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: end;
+  gap: 1px;
+  border: 1px solid #41433d;
+  background: #41433d;
+}
+
+.aura-pilot-options article {
+  display: flex;
+  min-height: 380px;
+  flex-direction: column;
+  padding: 26px;
+  background: #1c1f1b;
+}
+
+.aura-pilot-options article > span {
+  color: #a3a69d;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.aura-pilot-options h3 {
+  color: #f1efe8;
+  margin-top: 62px;
+}
+
+.aura-pilot-options p {
+  color: #a6aaa1;
+}
+
+.aura-pilot-options a {
+  margin-top: auto;
+}
+
+.aura-pilot-options article:last-child a {
+  border: 1px solid #777b70;
+  background: transparent;
+  color: #eeece5;
+}
+
+.aura-pilot-options article:last-child a:hover {
+  border-color: #d9ff43;
+  color: #d9ff43;
+}
+
+.aura-trust {
+  display: grid;
+  grid-template-columns: minmax(300px, .8fr) minmax(460px, 1.2fr);
+  gap: 10vw;
+  background: #d8d5cc;
+}
+
+.aura-trust > div:first-child > p {
+  color: #61655a;
+}
+
+.aura-trust h2 {
+  font-size: clamp(52px, 6vw, 88px);
+}
+
+.aura-trust dl {
+  margin: 0;
+  border-top: 1px solid #a5a49d;
+}
+
+.aura-trust dl > div {
+  display: grid;
+  grid-template-columns: minmax(105px, .34fr) minmax(0, .66fr);
+  gap: 28px;
+  padding: 25px 0;
+  border-bottom: 1px solid #a5a49d;
+}
+
+.aura-trust dt {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.aura-trust dd {
+  margin: 0;
+  color: #5d5f59;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.aura-faq {
+  display: grid;
+  grid-template-columns: minmax(280px, .8fr) minmax(480px, 1.2fr);
+  gap: 10vw;
+  background: #efeee9;
+}
+
+.aura-faq .aura-section-heading {
+  display: block;
+  align-self: start;
+}
+
+.aura-faq .aura-section-heading > p {
+  color: #61655a;
+}
+
+.aura-faq .aura-section-heading h2 {
+  font-size: clamp(52px, 6vw, 88px);
+}
+
+.aura-faq-list {
+  border-top: 1px solid #aaa9a2;
+}
+
+.aura-faq details {
+  border: 0;
+  border-bottom: 1px solid #aaa9a2;
+}
+
+.aura-faq summary {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 4px;
+  color: #242522;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .02em;
+  list-style: none;
+  text-transform: none;
+}
+
+.aura-faq summary::-webkit-details-marker { display: none; }
+
+.aura-faq summary i {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border: 1px solid #a4a59e;
+  border-radius: 50%;
+  font: 20px Instrument, Georgia, serif;
+  transition: transform .2s ease, background .2s ease;
+}
+
+.aura-faq details[open] summary i {
+  background: #1a1b18;
+  color: #f1efe8;
+  transform: rotate(45deg);
+}
+
+.aura-faq details > p {
+  max-width: 630px;
+  margin: -2px 55px 26px 4px;
+  color: #60625c;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+@media (max-width: 1000px) {
+  .sgs__chapters { width: min(390px, 42vw); }
+  .sgs__arrange-ui { width: 245px; }
+  .sgs__publish-ui { width: min(360px, 42vw); }
+  .aura-use-case-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aura-pilot,
+  .aura-trust,
+  .aura-faq { grid-template-columns: 1fr; }
+  .aura-pilot-options { margin-top: 12px; }
+  .aura-trust dl,
+  .aura-faq-list { margin-top: 28px; }
+}
+
+@media (max-width: 720px) {
+  .sgs {
+    height: 470svh;
+    min-height: 2600px;
+  }
+
+  .sgs__sticky {
+    min-height: 560px;
+  }
+
+  .sgs__vignette {
+    background:
+      linear-gradient(0deg, #0a0c0bf5 0, #0a0c0bc4 28%, transparent 58%),
+      radial-gradient(circle at 50% 38%, transparent 33%, #07090775 100%);
+  }
+
+  .sgs__topline {
+    top: 22px;
+    left: 20px;
+    right: 20px;
+    grid-template-columns: auto minmax(60px, 1fr);
+    gap: 16px;
+    font-size: 8px;
+  }
+
+  .sgs__topline > span:last-child { display: none; }
+
+  .sgs__chapters {
+    left: 22px;
+    right: 22px;
+    bottom: 35px;
+    width: auto;
+    min-height: 206px;
+  }
+
+  .sgs__chapters h2 {
+    max-width: 330px;
+    margin: 13px 0 13px;
+    font-size: clamp(42px, 13.5vw, 64px);
+  }
+
+  .sgs__chapters article > span {
+    max-width: 330px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .sgs__arrange-ui {
+    top: 72px;
+    right: 14px;
+    width: 218px;
+    padding: 12px;
+  }
+
+  .sgs__arrange-ui .sgs__control:nth-of-type(3),
+  .sgs__arrange-ui .sgs__control:nth-of-type(4) { display: none; }
+
+  .sgs__view-ui {
+    top: 70px;
+  }
+
+  .sgs__view-ui span {
+    min-width: 102px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 8px 10px;
+  }
+
+  .sgs__publish-ui {
+    left: 18px;
+    right: 18px;
+    bottom: 24px;
+    width: auto;
+    padding: 19px;
+  }
+
+  .sgs__publish-ui h3 { font-size: 38px; }
+  .sgs__publish-ui a { min-height: 50px; }
+
+  .aura-use-cases,
+  .aura-pilot,
+  .aura-trust,
+  .aura-faq {
+    padding: 88px 22px;
+  }
+
+  .aura-section-heading { grid-template-columns: 1fr; gap: 25px; }
+  .aura-section-heading h2,
+  .aura-pilot h2,
+  .aura-trust h2,
+  .aura-faq .aura-section-heading h2 { font-size: clamp(49px, 15vw, 72px); }
+  .aura-section-heading > span { font-size: 12px; }
+  .aura-use-case-grid { grid-template-columns: 1fr; margin-top: 52px; }
+  .aura-use-case-grid article { min-height: 250px; }
+  .aura-use-case-grid h3 { margin-top: 48px; }
+  .aura-pilot-options { grid-template-columns: 1fr; }
+  .aura-pilot-options article { min-height: 330px; }
+  .aura-pilot-options a { min-height: 50px; }
+  .aura-trust dl > div { grid-template-columns: 1fr; gap: 9px; }
+  .aura-faq summary { min-height: 72px; }
+  .aura-faq details > p { margin-right: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sgs {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .sgs__sticky {
+    position: relative;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    background: #111411;
+  }
+
+  .sgs__visual {
+    position: relative;
+    height: min(78svh, 820px);
+    min-height: 520px;
+  }
+
+  .sgs__vignette {
+    background: linear-gradient(0deg, #0b0e0ddb 0, transparent 45%);
+  }
+
+  .sgs__topline { position: absolute; }
+  .sgs__topline > span:last-child { display: none; }
+
+  .sgs__chapters {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    display: grid;
+    width: auto;
+    min-height: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    padding: 1px;
+    background: #3d413b;
+  }
+
+  .sgs__chapters article {
+    position: relative;
+    inset: auto;
+    min-height: 250px;
+    padding: 28px;
+    opacity: 1 !important;
+    background: #151815;
+    transform: none !important;
+  }
+
+  .sgs__chapters h2 {
+    margin: 16px 0 14px;
+    font-size: clamp(35px, 5vw, 52px);
+  }
+
+  .sgs__arrange-ui,
+  .sgs__view-ui { display: none; }
+
+  .sgs__publish-ui {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: auto;
+    margin: 1px 0 0;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .sgs__publish-ui a { max-width: 390px; }
+
+  .aura-faq summary i { transition: none; }
+}
+
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+  .sgs__visual { height: 62svh; min-height: 430px; }
+  .sgs__chapters { grid-template-columns: 1fr; }
+  .sgs__chapters article { min-height: 220px; padding: 25px 22px; }
+  .sgs__publish-ui { margin: 0; }
+}
+

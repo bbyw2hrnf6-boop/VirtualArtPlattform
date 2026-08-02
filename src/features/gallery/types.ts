@@ -1,10 +1,31 @@
-export type TemplateId = 'white-cube' | 'nocturne' | 'pavilion';
-export type WallId = 'north' | 'south' | 'west' | 'east' | 'divider-front' | 'divider-back';
-export type WallFinish = 'chalk' | 'warm' | 'travertine' | 'linen' | 'charcoal';
-export type FloorFinish = 'concrete' | 'oak' | 'terrazzo' | 'marble' | 'black-marble' | 'walnut' | 'dark-oak';
-export type CeilingFinish = 'gallery' | 'warm' | 'dark';
-export type LightingPreset = 'daylight' | 'museum' | 'evening';
-export type DecorId = 'olive' | 'monstera' | 'arc-lamp' | 'pedestal' | 'gallery-bench' | 'stone-sculpture' | 'floor-vase';
+export type TemplateId = "white-cube" | "nocturne" | "pavilion";
+export type WallId =
+  | "north"
+  | "south"
+  | "west"
+  | "east"
+  | "divider-front"
+  | "divider-back";
+export type WallFinish = "chalk" | "warm" | "travertine" | "linen" | "charcoal";
+export type FloorFinish =
+  | "concrete"
+  | "oak"
+  | "terrazzo"
+  | "marble"
+  | "black-marble"
+  | "walnut"
+  | "dark-oak";
+export type CeilingFinish = "gallery" | "warm" | "dark";
+export type LightingPreset = "daylight" | "museum" | "evening";
+export type DecorId =
+  | "olive"
+  | "monstera"
+  | "arc-lamp"
+  | "pedestal"
+  | "gallery-bench"
+  | "stone-sculpture"
+  | "floor-vase";
+export type ArtworkFrame = "black" | "white" | "oak" | "none";
 
 export interface DecorPlacement {
   id: string;
@@ -27,6 +48,9 @@ export interface Artwork {
   x: number;
   y: number;
   scale: number;
+  frame?: ArtworkFrame;
+  locked?: boolean;
+  hidden?: boolean;
 }
 
 export interface GalleryDraft {
@@ -42,6 +66,13 @@ export interface GalleryDraft {
 }
 
 export const EMPTY_DRAFT: GalleryDraft = {
-  title: 'Untitled exhibition', artist: 'Your name', templateId: 'white-cube',
-  wall: 'chalk', floor: 'concrete', ceiling: 'gallery', lighting: 'museum', decor: [], artworks: []
+  title: "Untitled exhibition",
+  artist: "Your name",
+  templateId: "white-cube",
+  wall: "chalk",
+  floor: "concrete",
+  ceiling: "gallery",
+  lighting: "daylight",
+  decor: [],
+  artworks: [],
 };

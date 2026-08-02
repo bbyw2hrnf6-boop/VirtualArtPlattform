@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://bbyw2hrnf6-boop.github.io/VirtualArtPlattform/sitemap.xml

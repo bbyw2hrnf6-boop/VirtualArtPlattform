@@ -1,0 +1,15 @@
+# Danny Hirsch demo delivery files
+
+`danny-gallery.glb` is the full authored exhibition. `danny-gallery-mobile.glb` is its low-tier delivery derivative; the app selects it only when runtime quality detection returns `low`.
+
+The mobile derivative keeps all 191 nodes, 179 node metadata records, 84 meshes, 31 materials, 12 animations, 27 colliders, 16 view anchors, seven artwork hotspots, and eight route waypoints. Geometry was simplified to roughly half the triangles. Material textures are at most 512 px, artwork textures are at most 768 px, and embedded WebP images use quality 72. Meshopt compression remains enabled and decoding uses up to two Web Workers.
+
+Recreate it with glTF-Transform 4.4.2 by simplifying the full GLB to ratio `0.45` with error `0.003` and locked borders, resizing all textures to 768 px, resizing `black-marble-gallery`, `saddle-leather`, `dark-limestone`, and `smoked-walnut` to 512 px, recompressing WebP at quality 72 / effort 100, then applying medium-level Meshopt compression. Verify the metadata and node inventory before replacing the runtime file.
+
+SHA-256:
+
+- Full GLB: `2901b6c7de51612ee21e3c85e6d42bc81697c1978df707b1e9110b3b65fc7a1b`
+- Mobile GLB: `8421fb83e0e74737d5be24d6d096623126cfc9e7f4faf891aa9722b3e465a4cf`
+- Cover: `ed9d32cb2fcef6f3d5b39119ab3955f0222b3b3b37a02b68b2b16db8356b5c1d`
+
+The project-specific rights restrictions in [`ASSET_LICENSES.md`](../../../ASSET_LICENSES.md) apply to both GLBs.

@@ -1,0 +1,625 @@
+{
+  "runAt": "2026-08-02T14:03:15.530Z",
+  "target": "http://127.0.0.1:5174",
+  "checks": [
+    {
+      "name": "demo sandbox opens with three ready-to-edit works",
+      "pass": true,
+      "details": {
+        "hash": "#/create/white-cube/demo",
+        "title": "Field Studies",
+        "artist": "AURA sample collection",
+        "artworks": 3,
+        "layout": "north:-2.000:1.550:1.000:0.640:black:free:visible|north:0.000:1.550:1.000:0.640:black:free:visible|north:2.000:1.550:1.000:0.640:black:free:visible",
+        "recovery": false,
+        "canvas": 1
+      }
+    },
+    {
+      "name": "precision inspector exposes physical size, frame, state and alignment tools",
+      "pass": true,
+      "details": {
+        "dimensions": "96 × 150 cm",
+        "frameChoices": [
+          "black",
+          "white",
+          "oak",
+          "none"
+        ],
+        "shortcuts": [
+          "FOCUS SELECTED",
+          "ALIGN LEFT",
+          "CENTER ON WALL",
+          "ALIGN RIGHT",
+          "EYE LINE 1.55 M",
+          "SPACE THIS WALL",
+          "DUPLICATE"
+        ],
+        "stateActions": [
+          "Lock placement",
+          "Hide in gallery"
+        ]
+      }
+    },
+    {
+      "name": "locking is reflected in scene state and blocks placement controls",
+      "pass": true,
+      "details": {
+        "layout": "north:-2.000:1.550:1.000:0.640:black:locked:visible",
+        "disabledPlacementInputs": 7,
+        "disabledShortcuts": [
+          "ALIGN LEFT",
+          "CENTER ON WALL",
+          "ALIGN RIGHT",
+          "EYE LINE 1.55 M",
+          "SPACE THIS WALL"
+        ]
+      }
+    },
+    {
+      "name": "left, center and right alignment write valid exact positions",
+      "pass": true,
+      "details": {
+        "leftX": -7.3,
+        "centerX": 0,
+        "rightX": 7.3
+      }
+    },
+    {
+      "name": "oak frame and hide/show state synchronize with scoped art lighting",
+      "pass": true,
+      "details": {
+        "lightsBeforeHide": 3,
+        "hiddenState": {
+          "layout": "north:0.000:1.550:1.000:0.640:oak:free:hidden",
+          "lights": 2,
+          "listState": "02 · Forest Study\nHidden"
+        },
+        "visibleState": {
+          "layout": "north:0.000:1.550:1.000:0.640:oak:free:visible",
+          "lights": 3
+        }
+      }
+    },
+    {
+      "name": "wall distribution stays valid and evenly ordered",
+      "pass": true,
+      "details": {
+        "layout": "north:5.850:1.550:1.000:0.640:black:free:visible|north:-5.850:1.550:1.000:0.640:oak:free:visible|north:0.000:1.550:1.000:0.640:black:free:visible",
+        "alert": null,
+        "distributedX": [
+          5.85,
+          -5.85,
+          0
+        ],
+        "sortedDistributedX": [
+          -5.85,
+          0,
+          5.85
+        ]
+      }
+    },
+    {
+      "name": "walk preview and reset reuse the renderer in front of selected art",
+      "pass": true,
+      "details": {
+        "walkBeforeReset": {
+          "camera": "-5.850,1.750,-3.165",
+          "sameCanvas": true,
+          "status": "Walk preview ready. Editing is locked.",
+          "editing": "disabled"
+        },
+        "walkAfterReset": {
+          "camera": "-5.850,1.750,-3.165",
+          "sameCanvas": true,
+          "status": "View reset in front of the selected artwork.",
+          "editing": "disabled"
+        }
+      }
+    },
+    {
+      "name": "Grand Forum exposes five camera zones and a valid feature-wall demo",
+      "pass": true,
+      "details": {
+        "architecture": "central-axis-four-side-galleries",
+        "zone": "north-west",
+        "zones": [
+          "north-west",
+          "central-axis",
+          "north-east",
+          "south-west",
+          "south-east"
+        ],
+        "layout": "divider-front:-3.000:1.550:1.000:0.640:black:free:visible|divider-front:0.000:1.550:1.000:0.640:black:free:visible|divider-front:3.000:1.550:1.000:0.640:black:free:visible",
+        "canvas": 1,
+        "mapLabel": "GRAND FORUM MAP\nJUMP TO ZONE\nNW\nAXIS\nNE\nSW\nSE\n\nFIVE CAMERA ZONES · ONE EXHIBITION DRAFT"
+      }
+    },
+    {
+      "name": "mobile editor keeps header, view controls and precision actions usable",
+      "pass": true,
+      "details": {
+        "overflowX": 0,
+        "actions": [
+          {
+            "label": "Autosave ready",
+            "rect": {
+              "x": 78,
+              "y": 23,
+              "width": 52,
+              "height": 17,
+              "top": 23,
+              "right": 130,
+              "bottom": 40,
+              "left": 78
+            }
+          },
+          {
+            "label": "Draft history",
+            "rect": {
+              "x": 133,
+              "y": 9.5,
+              "width": 91,
+              "height": 44,
+              "top": 9.5,
+              "right": 224,
+              "bottom": 53.5,
+              "left": 133
+            }
+          },
+          {
+            "label": "✦AI CURATOR",
+            "rect": {
+              "x": 227,
+              "y": 19.5,
+              "width": 44,
+              "height": 24,
+              "top": 19.5,
+              "right": 271,
+              "bottom": 43.5,
+              "left": 227
+            }
+          },
+          {
+            "label": "REVIEW & PUBLISH ↗",
+            "rect": {
+              "x": 274,
+              "y": 8.5,
+              "width": 104,
+              "height": 46,
+              "top": 8.5,
+              "right": 378,
+              "bottom": 54.5,
+              "left": 274
+            }
+          }
+        ],
+        "overlap": false,
+        "controls": [
+          {
+            "text": "ARRANGE",
+            "rect": {
+              "x": 13,
+              "y": 77,
+              "width": 180.5,
+              "height": 44,
+              "top": 77,
+              "right": 193.5,
+              "bottom": 121,
+              "left": 13
+            }
+          },
+          {
+            "text": "WALK PREVIEW",
+            "rect": {
+              "x": 196.5,
+              "y": 77,
+              "width": 180.5,
+              "height": 44,
+              "top": 77,
+              "right": 377,
+              "bottom": 121,
+              "left": 196.5
+            }
+          },
+          {
+            "text": "OPEN ROOF",
+            "rect": {
+              "x": 13,
+              "y": 130,
+              "width": 132.5,
+              "height": 45,
+              "top": 130,
+              "right": 145.5,
+              "bottom": 175,
+              "left": 13
+            }
+          },
+          {
+            "text": "PREVIEW CEILING",
+            "rect": {
+              "x": 148.5,
+              "y": 130,
+              "width": 132.5,
+              "height": 45,
+              "top": 130,
+              "right": 281,
+              "bottom": 175,
+              "left": 148.5
+            }
+          },
+          {
+            "text": "RESET VIEW",
+            "rect": {
+              "x": 285,
+              "y": 125,
+              "width": 92,
+              "height": 50,
+              "top": 125,
+              "right": 377,
+              "bottom": 175,
+              "left": 285
+            }
+          }
+        ],
+        "state": [
+          {
+            "text": "Lock placement",
+            "rect": {
+              "x": 19,
+              "y": 1491.53125,
+              "width": 173.5,
+              "height": 44,
+              "top": 1491.53125,
+              "right": 192.5,
+              "bottom": 1535.53125,
+              "left": 19
+            }
+          },
+          {
+            "text": "Hide in gallery",
+            "rect": {
+              "x": 197.5,
+              "y": 1491.53125,
+              "width": 173.5,
+              "height": 44,
+              "top": 1491.53125,
+              "right": 371,
+              "bottom": 1535.53125,
+              "left": 197.5
+            }
+          }
+        ],
+        "canvas": 1
+      }
+    },
+    {
+      "name": "Danny demo exposes guided tour, smart views, routes and reset on one canvas",
+      "pass": true,
+      "details": {
+        "controls": 3,
+        "anchors": 16,
+        "smartViews": 14,
+        "routes": 8,
+        "duration": 45000,
+        "reset": "entrance",
+        "canvas": 1,
+        "tourActive": "Skip tour\nPlaying · skip anytime"
+      }
+    },
+    {
+      "name": "accessible Danny directory lists all seven real model works",
+      "pass": true,
+      "details": {
+        "items": 7,
+        "dialog": "dialog",
+        "modal": "true",
+        "focusedInside": true,
+        "canvas": 1,
+        "titles": [
+          "Yellow Field, Veined",
+          "Black Current",
+          "Soft Terrain",
+          "Oxide Drift",
+          "Blue Aperture",
+          "Nocturne Relic",
+          "wARTrobe · Front"
+        ]
+      }
+    },
+    {
+      "name": "directory closes with Escape and returns focus",
+      "pass": true,
+      "details": {
+        "closed": true,
+        "focusReturned": true
+      }
+    },
+    {
+      "name": "audit closure produced no console errors",
+      "pass": true,
+      "details": []
+    }
+  ],
+  "diagnostics": [],
+  "demoSandbox": {
+    "hash": "#/create/white-cube/demo",
+    "title": "Field Studies",
+    "artist": "AURA sample collection",
+    "artworks": 3,
+    "layout": "north:-2.000:1.550:1.000:0.640:black:free:visible|north:0.000:1.550:1.000:0.640:black:free:visible|north:2.000:1.550:1.000:0.640:black:free:visible",
+    "recovery": false,
+    "canvas": 1
+  },
+  "inspector": {
+    "dimensions": "96 × 150 cm",
+    "frameChoices": [
+      "black",
+      "white",
+      "oak",
+      "none"
+    ],
+    "shortcuts": [
+      "FOCUS SELECTED",
+      "ALIGN LEFT",
+      "CENTER ON WALL",
+      "ALIGN RIGHT",
+      "EYE LINE 1.55 M",
+      "SPACE THIS WALL",
+      "DUPLICATE"
+    ],
+    "stateActions": [
+      "Lock placement",
+      "Hide in gallery"
+    ]
+  },
+  "locked": {
+    "layout": "north:-2.000:1.550:1.000:0.640:black:locked:visible",
+    "disabledPlacementInputs": 7,
+    "disabledShortcuts": [
+      "ALIGN LEFT",
+      "CENTER ON WALL",
+      "ALIGN RIGHT",
+      "EYE LINE 1.55 M",
+      "SPACE THIS WALL"
+    ]
+  },
+  "alignments": {
+    "leftX": -7.3,
+    "centerX": 0,
+    "rightX": 7.3
+  },
+  "frameAndVisibility": {
+    "lightsBeforeHide": 3,
+    "hiddenState": {
+      "layout": "north:0.000:1.550:1.000:0.640:oak:free:hidden",
+      "lights": 2,
+      "listState": "02 · Forest Study\nHidden"
+    },
+    "visibleState": {
+      "layout": "north:0.000:1.550:1.000:0.640:oak:free:visible",
+      "lights": 3
+    }
+  },
+  "distribution": {
+    "layout": "north:5.850:1.550:1.000:0.640:black:free:visible|north:-5.850:1.550:1.000:0.640:oak:free:visible|north:0.000:1.550:1.000:0.640:black:free:visible",
+    "alert": null
+  },
+  "walkReset": {
+    "walkBeforeReset": {
+      "camera": "-5.850,1.750,-3.165",
+      "sameCanvas": true,
+      "status": "Walk preview ready. Editing is locked.",
+      "editing": "disabled"
+    },
+    "walkAfterReset": {
+      "camera": "-5.850,1.750,-3.165",
+      "sameCanvas": true,
+      "status": "View reset in front of the selected artwork.",
+      "editing": "disabled"
+    }
+  },
+  "forum": {
+    "architecture": "central-axis-four-side-galleries",
+    "zone": "north-west",
+    "zones": [
+      "north-west",
+      "central-axis",
+      "north-east",
+      "south-west",
+      "south-east"
+    ],
+    "layout": "divider-front:-3.000:1.550:1.000:0.640:black:free:visible|divider-front:0.000:1.550:1.000:0.640:black:free:visible|divider-front:3.000:1.550:1.000:0.640:black:free:visible",
+    "canvas": 1,
+    "mapLabel": "GRAND FORUM MAP\nJUMP TO ZONE\nNW\nAXIS\nNE\nSW\nSE\n\nFIVE CAMERA ZONES · ONE EXHIBITION DRAFT"
+  },
+  "mobileEditor": {
+    "overflowX": 0,
+    "actions": [
+      {
+        "label": "Autosave ready",
+        "rect": {
+          "x": 78,
+          "y": 23,
+          "width": 52,
+          "height": 17,
+          "top": 23,
+          "right": 130,
+          "bottom": 40,
+          "left": 78
+        }
+      },
+      {
+        "label": "Draft history",
+        "rect": {
+          "x": 133,
+          "y": 9.5,
+          "width": 91,
+          "height": 44,
+          "top": 9.5,
+          "right": 224,
+          "bottom": 53.5,
+          "left": 133
+        }
+      },
+      {
+        "label": "✦AI CURATOR",
+        "rect": {
+          "x": 227,
+          "y": 19.5,
+          "width": 44,
+          "height": 24,
+          "top": 19.5,
+          "right": 271,
+          "bottom": 43.5,
+          "left": 227
+        }
+      },
+      {
+        "label": "REVIEW & PUBLISH ↗",
+        "rect": {
+          "x": 274,
+          "y": 8.5,
+          "width": 104,
+          "height": 46,
+          "top": 8.5,
+          "right": 378,
+          "bottom": 54.5,
+          "left": 274
+        }
+      }
+    ],
+    "overlap": false,
+    "controls": [
+      {
+        "text": "ARRANGE",
+        "rect": {
+          "x": 13,
+          "y": 77,
+          "width": 180.5,
+          "height": 44,
+          "top": 77,
+          "right": 193.5,
+          "bottom": 121,
+          "left": 13
+        }
+      },
+      {
+        "text": "WALK PREVIEW",
+        "rect": {
+          "x": 196.5,
+          "y": 77,
+          "width": 180.5,
+          "height": 44,
+          "top": 77,
+          "right": 377,
+          "bottom": 121,
+          "left": 196.5
+        }
+      },
+      {
+        "text": "OPEN ROOF",
+        "rect": {
+          "x": 13,
+          "y": 130,
+          "width": 132.5,
+          "height": 45,
+          "top": 130,
+          "right": 145.5,
+          "bottom": 175,
+          "left": 13
+        }
+      },
+      {
+        "text": "PREVIEW CEILING",
+        "rect": {
+          "x": 148.5,
+          "y": 130,
+          "width": 132.5,
+          "height": 45,
+          "top": 130,
+          "right": 281,
+          "bottom": 175,
+          "left": 148.5
+        }
+      },
+      {
+        "text": "RESET VIEW",
+        "rect": {
+          "x": 285,
+          "y": 125,
+          "width": 92,
+          "height": 50,
+          "top": 125,
+          "right": 377,
+          "bottom": 175,
+          "left": 285
+        }
+      }
+    ],
+    "state": [
+      {
+        "text": "Lock placement",
+        "rect": {
+          "x": 19,
+          "y": 1491.53125,
+          "width": 173.5,
+          "height": 44,
+          "top": 1491.53125,
+          "right": 192.5,
+          "bottom": 1535.53125,
+          "left": 19
+        }
+      },
+      {
+        "text": "Hide in gallery",
+        "rect": {
+          "x": 197.5,
+          "y": 1491.53125,
+          "width": 173.5,
+          "height": 44,
+          "top": 1491.53125,
+          "right": 371,
+          "bottom": 1535.53125,
+          "left": 197.5
+        }
+      }
+    ],
+    "canvas": 1
+  },
+  "dannyControls": {
+    "controls": 3,
+    "anchors": 16,
+    "smartViews": 14,
+    "routes": 8,
+    "duration": 45000,
+    "reset": "entrance",
+    "canvas": 1
+  },
+  "directoryOpen": {
+    "items": 7,
+    "dialog": "dialog",
+    "modal": "true",
+    "focusedInside": true,
+    "canvas": 1,
+    "titles": [
+      "Yellow Field, Veined",
+      "Black Current",
+      "Soft Terrain",
+      "Oxide Drift",
+      "Blue Aperture",
+      "Nocturne Relic",
+      "wARTrobe · Front"
+    ]
+  },
+  "directoryClosed": {
+    "closed": true,
+    "focusReturned": true
+  },
+  "newConsoleErrors": [],
+  "summary": {
+    "passed": 13,
+    "failed": 0,
+    "diagnostics": 0
+  }
+}

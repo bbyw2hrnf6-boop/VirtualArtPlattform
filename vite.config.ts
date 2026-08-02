@@ -11,7 +11,6 @@ export default defineConfig(({ command }) => ({
     // Public source maps add several megabytes to every Pages deployment and
     // expose implementation details without helping the production visitor.
     sourcemap: false,
-    chunkSizeWarningLimit: 750,
-    rolldownOptions: { output: { manualChunks: (id) => id.includes('/firebase/') || id.includes('/@firebase/') ? 'firebase' : undefined } }
+    chunkSizeWarningLimit: 750
   }
 }));

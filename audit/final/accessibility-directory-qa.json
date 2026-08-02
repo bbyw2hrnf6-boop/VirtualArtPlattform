@@ -1,0 +1,93 @@
+{
+  "runAt": "2026-08-02T13:23:30.530Z",
+  "checks": [
+    {
+      "name": "directory toggle is visible, labelled, and clear of view controls",
+      "pass": true,
+      "details": {
+        "label": "Open artwork list, 7 works",
+        "height": 44,
+        "overlapsViewSwitch": false
+      }
+    },
+    {
+      "name": "directory exposes seven GLB-backed images and metadata",
+      "pass": true,
+      "details": {
+        "role": "dialog",
+        "modal": "true",
+        "count": 7,
+        "titles": [
+          "Yellow Field, Veined",
+          "Black Current",
+          "Soft Terrain",
+          "Oxide Drift",
+          "Blue Aperture",
+          "Nocturne Relic",
+          "wARTrobe · Front"
+        ],
+        "images": [
+          768,
+          768,
+          768,
+          576,
+          768,
+          576,
+          576
+        ],
+        "metadata": "01\n\nYellow Field, Veined\n\nDANNY HIRSCH\n\nYEAR / EDITION\n2026\nMEDIUM\nMixed Media on Canvas\nDIMENSIONS\n40 × 50 cm\nAVAILABILITY\nAvailable\n\nA charged botanical trace held inside a saturated field of light.",
+        "focusInside": true,
+        "overflowX": 0
+      }
+    },
+    {
+      "name": "Escape closes directory and returns focus",
+      "pass": true,
+      "details": {
+        "focusReturned": true
+      }
+    },
+    {
+      "name": "mobile directory fits viewport with a 44px close target",
+      "pass": true,
+      "details": {
+        "panel": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        },
+        "close": {
+          "x": 326,
+          "y": 24,
+          "width": 44,
+          "height": 44,
+          "top": 24,
+          "right": 370,
+          "bottom": 68,
+          "left": 326
+        },
+        "overflowX": 0,
+        "viewport": [
+          390,
+          844
+        ]
+      }
+    },
+    {
+      "name": "WebGL failure automatically opens the text-first exhibition",
+      "pass": true,
+      "details": {
+        "sceneError": "3D VIEW UNAVAILABLE\n\nThis gallery needs WebGL. Please enable hardware acceleration or open it in a current browser.",
+        "directoryOpen": true,
+        "fallbackLabel": "Open artwork list, 7 works. The 3D view is unavailable.",
+        "works": 7,
+        "status": "The 3D view could not start. Every available artwork and description remains below."
+      }
+    }
+  ]
+}

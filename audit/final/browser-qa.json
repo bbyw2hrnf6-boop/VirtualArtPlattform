@@ -1,0 +1,1857 @@
+{
+  "checks": [
+    {
+      "name": "landing desktop has no horizontal overflow",
+      "pass": true,
+      "details": {
+        "title": "AURA — Virtual galleries for artists",
+        "h1": "Your art.\nBeyond walls.",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "scroll": [
+          1425,
+          10501
+        ],
+        "overflowX": 0,
+        "placeholder": "SCROLL TO BUILD THE ROOM",
+        "storyMounted": false,
+        "heroImage": {
+          "complete": true,
+          "width": 1600
+        }
+      }
+    },
+    {
+      "name": "scroll story is deferred above the fold",
+      "pass": true,
+      "details": {
+        "story": [],
+        "storyStyles": [
+          "http://127.0.0.1:5174/src/features/landing/scrollGalleryStory.css"
+        ],
+        "galleryScene": [],
+        "firebase": []
+      }
+    },
+    {
+      "name": "GalleryScene and Firebase are deferred above the fold",
+      "pass": true,
+      "details": {
+        "story": [],
+        "storyStyles": [
+          "http://127.0.0.1:5174/src/features/landing/scrollGalleryStory.css"
+        ],
+        "galleryScene": [],
+        "firebase": []
+      }
+    },
+    {
+      "name": "scroll story mounts on demand",
+      "pass": true,
+      "details": {
+        "mounted": true,
+        "webgl": "ready",
+        "motion": "full",
+        "progress": "0.0000",
+        "canvas": {
+          "x": 0,
+          "y": 0,
+          "width": 1425,
+          "height": 1000,
+          "top": 0,
+          "right": 1425,
+          "bottom": 1000,
+          "left": 0
+        }
+      }
+    },
+    {
+      "name": "story WebGL initializes",
+      "pass": true,
+      "details": {
+        "mounted": true,
+        "webgl": "ready",
+        "motion": "full",
+        "progress": "0.0000",
+        "canvas": {
+          "x": 0,
+          "y": 0,
+          "width": 1425,
+          "height": 1000,
+          "top": 0,
+          "right": 1425,
+          "bottom": 1000,
+          "left": 0
+        }
+      }
+    },
+    {
+      "name": "story progress follows scroll",
+      "pass": true,
+      "details": {
+        "progress": 0.56,
+        "chapters": [
+          0,
+          0,
+          0,
+          0.994,
+          0,
+          0,
+          0
+        ],
+        "arrangeOpacity": 0,
+        "viewMode": "arrange",
+        "scrollY": 3352
+      }
+    },
+    {
+      "name": "story completes with usable builder CTA",
+      "pass": true,
+      "details": {
+        "progress": 0.97,
+        "publishOpacity": 1,
+        "createLinkTabIndex": 0,
+        "scrollY": 5074
+      }
+    },
+    {
+      "name": "scroll story reverses when scrolling upward",
+      "pass": true,
+      "details": {
+        "progress": 0.24,
+        "publishOpacity": 0
+      }
+    },
+    {
+      "name": "Firebase loads only when Discover approaches",
+      "pass": true,
+      "details": {
+        "before": [],
+        "after": [
+          "http://127.0.0.1:5174/src/services/firebaseGalleryRepository.ts",
+          "http://127.0.0.1:5174/node_modules/.vite/deps/firebase_auth.js?v=b30772c7",
+          "http://127.0.0.1:5174/src/services/firebase.ts",
+          "http://127.0.0.1:5174/node_modules/.vite/deps/firebase_firestore.js?v=b30772c7",
+          "http://127.0.0.1:5174/node_modules/.vite/deps/firebase_app.js?v=b30772c7"
+        ]
+      }
+    },
+    {
+      "name": "landing mobile has no horizontal overflow",
+      "pass": true,
+      "details": {
+        "viewport": [
+          390,
+          844
+        ],
+        "scroll": [
+          390,
+          16678
+        ],
+        "overflowX": 0,
+        "header": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 90,
+          "top": 0,
+          "right": 390,
+          "bottom": 90,
+          "left": 0
+        },
+        "hero": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 1441.109375,
+          "top": 0,
+          "right": 390,
+          "bottom": 1441.109375,
+          "left": 0
+        },
+        "heroVisual": "block",
+        "ctas": [
+          {
+            "x": 24,
+            "y": 660.578125,
+            "width": 221.140625,
+            "height": 47,
+            "top": 660.578125,
+            "right": 245.140625,
+            "bottom": 707.578125,
+            "left": 24
+          },
+          {
+            "x": 24,
+            "y": 737.578125,
+            "width": 191.296875,
+            "height": 32,
+            "top": 737.578125,
+            "right": 215.296875,
+            "bottom": 769.578125,
+            "left": 24
+          }
+        ]
+      }
+    },
+    {
+      "name": "template picker exposes all three templates",
+      "pass": true,
+      "details": [
+        {
+          "name": "The White Cube",
+          "rect": {
+            "x": 57.59375,
+            "y": 417.21875,
+            "width": 424.59375,
+            "height": 558,
+            "top": 417.21875,
+            "right": 482.1875,
+            "bottom": 975.21875,
+            "left": 57.59375
+          }
+        },
+        {
+          "name": "Nocturne",
+          "rect": {
+            "x": 500.1875,
+            "y": 417.21875,
+            "width": 424.609375,
+            "height": 558,
+            "top": 417.21875,
+            "right": 924.796875,
+            "bottom": 975.21875,
+            "left": 500.1875
+          }
+        },
+        {
+          "name": "The Grand Forum",
+          "rect": {
+            "x": 942.796875,
+            "y": 417.21875,
+            "width": 424.59375,
+            "height": 558,
+            "top": 417.21875,
+            "right": 1367.390625,
+            "bottom": 975.21875,
+            "left": 942.796875
+          }
+        }
+      ]
+    },
+    {
+      "name": "template picker has no horizontal overflow",
+      "pass": true,
+      "details": {
+        "cards": [
+          {
+            "name": "The White Cube",
+            "rect": {
+              "x": 57.59375,
+              "y": 417.21875,
+              "width": 424.59375,
+              "height": 558,
+              "top": 417.21875,
+              "right": 482.1875,
+              "bottom": 975.21875,
+              "left": 57.59375
+            }
+          },
+          {
+            "name": "Nocturne",
+            "rect": {
+              "x": 500.1875,
+              "y": 417.21875,
+              "width": 424.609375,
+              "height": 558,
+              "top": 417.21875,
+              "right": 924.796875,
+              "bottom": 975.21875,
+              "left": 500.1875
+            }
+          },
+          {
+            "name": "The Grand Forum",
+            "rect": {
+              "x": 942.796875,
+              "y": 417.21875,
+              "width": 424.59375,
+              "height": 558,
+              "top": 417.21875,
+              "right": 1367.390625,
+              "bottom": 975.21875,
+              "left": 942.796875
+            }
+          }
+        ],
+        "overflowX": 0,
+        "scrollHeight": 1083
+      }
+    },
+    {
+      "name": "editor WebGL is keyboard focusable and labelled",
+      "pass": true,
+      "details": {
+        "canvas": {
+          "x": 300,
+          "y": 68,
+          "width": 1125,
+          "height": 932,
+          "top": 68,
+          "right": 1425,
+          "bottom": 1000,
+          "left": 300
+        },
+        "canvasLabel": "Interactive gallery arranger.",
+        "canvasTabIndex": 0,
+        "sceneQuality": "high",
+        "rendererResources": [
+          "http://127.0.0.1:5174/src/features/gallery/GalleryScene.tsx?t=1785673899454"
+        ],
+        "overflowX": 0
+      }
+    },
+    {
+      "name": "editor has no horizontal overflow",
+      "pass": true,
+      "details": {
+        "canvas": {
+          "x": 300,
+          "y": 68,
+          "width": 1125,
+          "height": 932,
+          "top": 68,
+          "right": 1425,
+          "bottom": 1000,
+          "left": 300
+        },
+        "canvasLabel": "Interactive gallery arranger.",
+        "canvasTabIndex": 0,
+        "sceneQuality": "high",
+        "rendererResources": [
+          "http://127.0.0.1:5174/src/features/gallery/GalleryScene.tsx?t=1785673899454"
+        ],
+        "overflowX": 0
+      }
+    },
+    {
+      "name": "artwork upload selects and places one work",
+      "pass": true,
+      "details": {
+        "artworkCount": 1,
+        "selectedArtwork": "01 · danny-cover",
+        "wallCount": 4,
+        "undoEnabled": true,
+        "canvasPersistent": true
+      }
+    },
+    {
+      "name": "scene canvas survives editor state changes",
+      "pass": true,
+      "details": {
+        "artworkCount": 1,
+        "selectedArtwork": "01 · danny-cover",
+        "wallCount": 4,
+        "undoEnabled": true,
+        "canvasPersistent": true
+      }
+    },
+    {
+      "name": "pre-publish review blocks placeholder identity",
+      "pass": true,
+      "details": {
+        "summary": "2 issues must be fixed before publishing.",
+        "blockers": 2,
+        "warnings": 2,
+        "publishDisabled": true,
+        "activeElement": "editor-modal-close"
+      }
+    },
+    {
+      "name": "undo and redo restore the exact title",
+      "pass": true,
+      "details": {
+        "titleAfterEdit": "QA Exhibition",
+        "titleAfterUndo": "Untitled exhibition",
+        "titleAfterRedo": "QA Exhibition"
+      }
+    },
+    {
+      "name": "autosave persists a versioned draft",
+      "pass": true,
+      "details": {
+        "revision": 5,
+        "schemaVersion": 1,
+        "title": "QA Exhibition",
+        "artist": "QA Artist",
+        "artworks": 1
+      }
+    },
+    {
+      "name": "scene canvas survives metadata/history updates",
+      "pass": true,
+      "details": {
+        "title": "QA Exhibition",
+        "artist": "QA Artist",
+        "saveStatus": "Saved locally",
+        "canvasPersistent": true,
+        "titleSequence": {
+          "titleAfterEdit": "QA Exhibition",
+          "titleAfterUndo": "Untitled exhibition",
+          "titleAfterRedo": "QA Exhibition"
+        }
+      }
+    },
+    {
+      "name": "refresh offers focused local draft recovery",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "summary": "LOCAL DRAFT FOUND\n\nContinue where you left off?\n\nYour 1-artwork draft was saved on Aug 2 at 02:33 PM.\n\nRECOVER DRAFT\nSTART FRESH",
+        "activeRole": "dialog"
+      }
+    },
+    {
+      "name": "refresh exposes recovery without requiring template reselection",
+      "pass": false,
+      "details": {
+        "pickerVisible": true,
+        "studioVisible": false,
+        "recoveryVisible": false
+      }
+    },
+    {
+      "name": "recovery restores identity and artwork",
+      "pass": true,
+      "details": {
+        "title": "QA Exhibition",
+        "artist": "QA Artist",
+        "artworkCount": 1,
+        "saveStatus": "Saved locally"
+      }
+    },
+    {
+      "name": "valid geometry can reach publish with metadata warnings only",
+      "pass": true,
+      "details": {
+        "summary": "Geometry passed. 2 optional metadata improvements remain.",
+        "blockers": 0,
+        "warnings": 2,
+        "publishDisabled": false,
+        "visibilityOptions": [
+          {
+            "text": "Public · Discover for 10 days",
+            "disabled": null
+          },
+          {
+            "text": "Unlisted · Pilot plan",
+            "disabled": "true"
+          },
+          {
+            "text": "Private · Pilot plan",
+            "disabled": "true"
+          }
+        ]
+      }
+    },
+    {
+      "name": "mobile editor has no horizontal overflow",
+      "pass": true,
+      "details": {
+        "viewport": [
+          390,
+          844
+        ],
+        "overflowX": 0,
+        "scrollHeight": 844,
+        "header": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 64,
+          "top": 0,
+          "right": 390,
+          "bottom": 64,
+          "left": 0
+        },
+        "canvas": {
+          "x": 0,
+          "y": 64,
+          "width": 390,
+          "height": 780,
+          "top": 64,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        },
+        "panel": {
+          "x": 0,
+          "y": 455.765625,
+          "width": 390,
+          "height": 388.234375,
+          "top": 455.765625,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        },
+        "panelClass": "tool-panel tool-panel--half",
+        "handle": {
+          "label": "Editor tools are half. Change panel size",
+          "expanded": "false",
+          "rect": {
+            "x": 1,
+            "y": 456.765625,
+            "width": 388,
+            "height": 58,
+            "top": 456.765625,
+            "right": 389,
+            "bottom": 514.765625,
+            "left": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "mobile editor exposes sheet handle",
+      "pass": true,
+      "details": {
+        "label": "Editor tools are half. Change panel size",
+        "expanded": "false",
+        "rect": {
+          "x": 1,
+          "y": 456.765625,
+          "width": 388,
+          "height": 58,
+          "top": 456.765625,
+          "right": 389,
+          "bottom": 514.765625,
+          "left": 1
+        }
+      }
+    },
+    {
+      "name": "mobile sheet expands without overflow",
+      "pass": true,
+      "details": {
+        "panelClass": "tool-panel tool-panel--full",
+        "panel": {
+          "x": 0,
+          "y": 72,
+          "width": 390,
+          "height": 772,
+          "top": 72,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        },
+        "handleLabel": "Editor tools are full. Change panel size",
+        "expanded": "true",
+        "overflowX": 0
+      }
+    },
+    {
+      "name": "Danny loads authored collision and artwork metadata",
+      "pass": true,
+      "details": {
+        "visitorEyeHeight": "1.75",
+        "quality": "high",
+        "dollhouse": "inactive",
+        "cameraPosition": "4.15,2.41,-0.25",
+        "cameraYaw": "1.336",
+        "intro": "active",
+        "loadProgress": "100",
+        "colliders": "25",
+        "artworkTargets": "7",
+        "viewAnchors": "16"
+      }
+    },
+    {
+      "name": "Danny desktop has no horizontal overflow",
+      "pass": true,
+      "details": {
+        "ready": true,
+        "dataset": {
+          "visitorEyeHeight": "1.75",
+          "quality": "high",
+          "dollhouse": "inactive",
+          "cameraPosition": "4.15,2.41,-0.25",
+          "cameraYaw": "1.336",
+          "intro": "active",
+          "loadProgress": "100",
+          "colliders": "25",
+          "artworkTargets": "7",
+          "viewAnchors": "16"
+        },
+        "canvas": {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 1000,
+            "top": 0,
+            "right": 1440,
+            "bottom": 1000,
+            "left": 0
+          },
+          "tabIndex": 0,
+          "label": "Danny Hirsch virtual exhibition. Focus this view to use keyboard movement."
+        },
+        "views": [
+          {
+            "text": "⌖ WALK",
+            "pressed": "true",
+            "rect": {
+              "x": 1257.734375,
+              "y": 93,
+              "width": 67.90625,
+              "height": 35,
+              "top": 93,
+              "right": 1325.640625,
+              "bottom": 128,
+              "left": 1257.734375
+            }
+          },
+          {
+            "text": "◫ OVERVIEW",
+            "pressed": "false",
+            "rect": {
+              "x": 1325.640625,
+              "y": 93,
+              "width": 85.359375,
+              "height": 35,
+              "top": 93,
+              "right": 1411,
+              "bottom": 128,
+              "left": 1325.640625
+            }
+          }
+        ],
+        "overflowX": 0
+      }
+    },
+    {
+      "name": "Danny overview switches to dollhouse orbit state",
+      "pass": true,
+      "details": {
+        "dollhouse": "active",
+        "camera": "16.50,14.50,24.00",
+        "views": [
+          {
+            "text": "⌖ WALK",
+            "pressed": "false"
+          },
+          {
+            "text": "◫ OVERVIEW",
+            "pressed": "true"
+          }
+        ],
+        "hint": "DRAG TO ORBIT · SCROLL TO ZOOM"
+      }
+    },
+    {
+      "name": "Danny overview artwork opens visitor metadata",
+      "pass": true,
+      "details": {
+        "visible": true,
+        "title": "Soft Terrain",
+        "byline": "DANNY HIRSCH · 2026",
+        "description": "Color drifts across the surface like atmosphere settling into matter.",
+        "closeLabel": "Close artwork information"
+      }
+    },
+    {
+      "name": "focused Danny canvas accepts scoped movement with colliders active",
+      "pass": true,
+      "details": {
+        "before": "0.00,1.80,6.42",
+        "after": "0.00,1.80,2.94",
+        "changed": true,
+        "colliders": "25"
+      }
+    },
+    {
+      "name": "Danny mobile has no horizontal overflow",
+      "pass": true,
+      "details": {
+        "viewport": [
+          390,
+          844
+        ],
+        "scroll": [
+          390,
+          844
+        ],
+        "overflowX": 0,
+        "header": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 74,
+          "top": 0,
+          "right": 390,
+          "bottom": 74,
+          "left": 0
+        },
+        "controls": {
+          "x": 214.734375,
+          "y": 76,
+          "width": 163.265625,
+          "height": 54,
+          "top": 76,
+          "right": 378,
+          "bottom": 130,
+          "left": 214.734375
+        },
+        "buttons": [
+          {
+            "x": 219.734375,
+            "y": 81,
+            "width": 67.90625,
+            "height": 44,
+            "top": 81,
+            "right": 287.640625,
+            "bottom": 125,
+            "left": 219.734375
+          },
+          {
+            "x": 287.640625,
+            "y": 81,
+            "width": 85.359375,
+            "height": 44,
+            "top": 81,
+            "right": 373,
+            "bottom": 125,
+            "left": 287.640625
+          }
+        ],
+        "canvas": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      }
+    },
+    {
+      "name": "Danny mobile view controls meet touch height",
+      "pass": true,
+      "details": [
+        {
+          "x": 219.734375,
+          "y": 81,
+          "width": 67.90625,
+          "height": 44,
+          "top": 81,
+          "right": 287.640625,
+          "bottom": 125,
+          "left": 219.734375
+        },
+        {
+          "x": 287.640625,
+          "y": 81,
+          "width": 85.359375,
+          "height": 44,
+          "top": 81,
+          "right": 373,
+          "bottom": 125,
+          "left": 287.640625
+        }
+      ]
+    },
+    {
+      "name": "obvious front artwork opens metadata on mobile",
+      "pass": false,
+      "details": {
+        "visible": false,
+        "title": null,
+        "byline": null,
+        "description": null,
+        "closeLabel": null
+      }
+    }
+  ],
+  "diagnostics": [
+    {
+      "stage": "landing-discover",
+      "type": "error",
+      "message": "Discover unavailable FirebaseError: Missing or insufficient permissions."
+    },
+    {
+      "stage": "picker",
+      "type": "warning",
+      "message": "THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead."
+    },
+    {
+      "stage": "picker",
+      "type": "warning",
+      "message": "THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead."
+    },
+    {
+      "stage": "editor-recovery",
+      "type": "warning",
+      "message": "THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead."
+    },
+    {
+      "stage": "editor-recovery",
+      "type": "warning",
+      "message": "THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead."
+    },
+    {
+      "stage": "danny-walk",
+      "type": "warning",
+      "message": "The resource http://127.0.0.1:5174/assets/demo/aura-hero-gallery.webp was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.",
+      "url": "http://127.0.0.1:5174/#/demo"
+    }
+  ],
+  "landingDesktop": {
+    "title": "AURA — Virtual galleries for artists",
+    "h1": "Your art.\nBeyond walls.",
+    "viewport": [
+      1440,
+      1000
+    ],
+    "scroll": [
+      1425,
+      10501
+    ],
+    "overflowX": 0,
+    "placeholder": "SCROLL TO BUILD THE ROOM",
+    "storyMounted": false,
+    "heroImage": {
+      "complete": true,
+      "width": 1600
+    }
+  },
+  "landingInitialResources": {
+    "story": [],
+    "storyStyles": [
+      "http://127.0.0.1:5174/src/features/landing/scrollGalleryStory.css"
+    ],
+    "galleryScene": [],
+    "firebase": []
+  },
+  "storyStart": {
+    "mounted": true,
+    "webgl": "ready",
+    "motion": "full",
+    "progress": "0.0000",
+    "canvas": {
+      "x": 0,
+      "y": 0,
+      "width": 1425,
+      "height": 1000,
+      "top": 0,
+      "right": 1425,
+      "bottom": 1000,
+      "left": 0
+    }
+  },
+  "storyResources": {
+    "story": [
+      "http://127.0.0.1:5174/src/features/landing/ScrollGalleryStory.tsx"
+    ],
+    "storyStyles": [
+      "http://127.0.0.1:5174/src/features/landing/scrollGalleryStory.css"
+    ],
+    "galleryScene": [],
+    "firebase": []
+  },
+  "storyMid": {
+    "progress": 0.56,
+    "chapters": [
+      0,
+      0,
+      0,
+      0.994,
+      0,
+      0,
+      0
+    ],
+    "arrangeOpacity": 0,
+    "viewMode": "arrange",
+    "scrollY": 3352
+  },
+  "storyEnd": {
+    "progress": 0.97,
+    "publishOpacity": 1,
+    "createLinkTabIndex": 0,
+    "scrollY": 5074
+  },
+  "storyReverse": {
+    "progress": 0.24,
+    "publishOpacity": 0
+  },
+  "discover": {
+    "text": "Discover is temporarily unavailable.\n\nYour published gallery is safe. Please retry the connection.\n\nTRY AGAIN →",
+    "cards": 0,
+    "overflowX": 0
+  },
+  "firebaseDeferred": {
+    "before": [],
+    "after": [
+      "http://127.0.0.1:5174/src/services/firebaseGalleryRepository.ts",
+      "http://127.0.0.1:5174/node_modules/.vite/deps/firebase_auth.js?v=b30772c7",
+      "http://127.0.0.1:5174/src/services/firebase.ts",
+      "http://127.0.0.1:5174/node_modules/.vite/deps/firebase_firestore.js?v=b30772c7",
+      "http://127.0.0.1:5174/node_modules/.vite/deps/firebase_app.js?v=b30772c7"
+    ]
+  },
+  "landingMobile": {
+    "viewport": [
+      390,
+      844
+    ],
+    "scroll": [
+      390,
+      16678
+    ],
+    "overflowX": 0,
+    "header": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 90,
+      "top": 0,
+      "right": 390,
+      "bottom": 90,
+      "left": 0
+    },
+    "hero": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 1441.109375,
+      "top": 0,
+      "right": 390,
+      "bottom": 1441.109375,
+      "left": 0
+    },
+    "heroVisual": "block",
+    "ctas": [
+      {
+        "x": 24,
+        "y": 660.578125,
+        "width": 221.140625,
+        "height": 47,
+        "top": 660.578125,
+        "right": 245.140625,
+        "bottom": 707.578125,
+        "left": 24
+      },
+      {
+        "x": 24,
+        "y": 737.578125,
+        "width": 191.296875,
+        "height": 32,
+        "top": 737.578125,
+        "right": 215.296875,
+        "bottom": 769.578125,
+        "left": 24
+      }
+    ]
+  },
+  "testStorageReset": "deleted",
+  "picker": {
+    "cards": [
+      {
+        "name": "The White Cube",
+        "rect": {
+          "x": 57.59375,
+          "y": 417.21875,
+          "width": 424.59375,
+          "height": 558,
+          "top": 417.21875,
+          "right": 482.1875,
+          "bottom": 975.21875,
+          "left": 57.59375
+        }
+      },
+      {
+        "name": "Nocturne",
+        "rect": {
+          "x": 500.1875,
+          "y": 417.21875,
+          "width": 424.609375,
+          "height": 558,
+          "top": 417.21875,
+          "right": 924.796875,
+          "bottom": 975.21875,
+          "left": 500.1875
+        }
+      },
+      {
+        "name": "The Grand Forum",
+        "rect": {
+          "x": 942.796875,
+          "y": 417.21875,
+          "width": 424.59375,
+          "height": 558,
+          "top": 417.21875,
+          "right": 1367.390625,
+          "bottom": 975.21875,
+          "left": 942.796875
+        }
+      }
+    ],
+    "overflowX": 0,
+    "scrollHeight": 1083
+  },
+  "editorEmpty": {
+    "canvas": {
+      "x": 300,
+      "y": 68,
+      "width": 1125,
+      "height": 932,
+      "top": 68,
+      "right": 1425,
+      "bottom": 1000,
+      "left": 300
+    },
+    "canvasLabel": "Interactive gallery arranger.",
+    "canvasTabIndex": 0,
+    "sceneQuality": "high",
+    "rendererResources": [
+      "http://127.0.0.1:5174/src/features/gallery/GalleryScene.tsx?t=1785673899454"
+    ],
+    "overflowX": 0
+  },
+  "editorArtwork": {
+    "artworkCount": 1,
+    "selectedArtwork": "01 · danny-cover",
+    "wallCount": 4,
+    "undoEnabled": true,
+    "canvasPersistent": true
+  },
+  "publishBlocked": {
+    "summary": "2 issues must be fixed before publishing.",
+    "blockers": 2,
+    "warnings": 2,
+    "publishDisabled": true,
+    "activeElement": "editor-modal-close"
+  },
+  "historyAndSave": {
+    "title": "QA Exhibition",
+    "artist": "QA Artist",
+    "saveStatus": "Saved locally",
+    "canvasPersistent": true,
+    "titleSequence": {
+      "titleAfterEdit": "QA Exhibition",
+      "titleAfterUndo": "Untitled exhibition",
+      "titleAfterRedo": "QA Exhibition"
+    }
+  },
+  "storedDraft": {
+    "revision": 5,
+    "schemaVersion": 1,
+    "title": "QA Exhibition",
+    "artist": "QA Artist",
+    "artworks": 1
+  },
+  "refreshRecoveryEntry": {
+    "pickerVisible": true,
+    "studioVisible": false,
+    "recoveryVisible": false
+  },
+  "recovery": {
+    "visible": true,
+    "summary": "LOCAL DRAFT FOUND\n\nContinue where you left off?\n\nYour 1-artwork draft was saved on Aug 2 at 02:33 PM.\n\nRECOVER DRAFT\nSTART FRESH",
+    "activeRole": "dialog"
+  },
+  "recovered": {
+    "title": "QA Exhibition",
+    "artist": "QA Artist",
+    "artworkCount": 1,
+    "saveStatus": "Saved locally"
+  },
+  "publishReady": {
+    "summary": "Geometry passed. 2 optional metadata improvements remain.",
+    "blockers": 0,
+    "warnings": 2,
+    "publishDisabled": false,
+    "visibilityOptions": [
+      {
+        "text": "Public · Discover for 10 days",
+        "disabled": null
+      },
+      {
+        "text": "Unlisted · Pilot plan",
+        "disabled": "true"
+      },
+      {
+        "text": "Private · Pilot plan",
+        "disabled": "true"
+      }
+    ]
+  },
+  "editorMobileHalf": {
+    "viewport": [
+      390,
+      844
+    ],
+    "overflowX": 0,
+    "scrollHeight": 844,
+    "header": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 64,
+      "top": 0,
+      "right": 390,
+      "bottom": 64,
+      "left": 0
+    },
+    "canvas": {
+      "x": 0,
+      "y": 64,
+      "width": 390,
+      "height": 780,
+      "top": 64,
+      "right": 390,
+      "bottom": 844,
+      "left": 0
+    },
+    "panel": {
+      "x": 0,
+      "y": 455.765625,
+      "width": 390,
+      "height": 388.234375,
+      "top": 455.765625,
+      "right": 390,
+      "bottom": 844,
+      "left": 0
+    },
+    "panelClass": "tool-panel tool-panel--half",
+    "handle": {
+      "label": "Editor tools are half. Change panel size",
+      "expanded": "false",
+      "rect": {
+        "x": 1,
+        "y": 456.765625,
+        "width": 388,
+        "height": 58,
+        "top": 456.765625,
+        "right": 389,
+        "bottom": 514.765625,
+        "left": 1
+      }
+    }
+  },
+  "editorMobileFull": {
+    "panelClass": "tool-panel tool-panel--full",
+    "panel": {
+      "x": 0,
+      "y": 72,
+      "width": 390,
+      "height": 772,
+      "top": 72,
+      "right": 390,
+      "bottom": 844,
+      "left": 0
+    },
+    "handleLabel": "Editor tools are full. Change panel size",
+    "expanded": "true",
+    "overflowX": 0
+  },
+  "dannyWalk": {
+    "ready": true,
+    "dataset": {
+      "visitorEyeHeight": "1.75",
+      "quality": "high",
+      "dollhouse": "inactive",
+      "cameraPosition": "4.15,2.41,-0.25",
+      "cameraYaw": "1.336",
+      "intro": "active",
+      "loadProgress": "100",
+      "colliders": "25",
+      "artworkTargets": "7",
+      "viewAnchors": "16"
+    },
+    "canvas": {
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 1000,
+        "top": 0,
+        "right": 1440,
+        "bottom": 1000,
+        "left": 0
+      },
+      "tabIndex": 0,
+      "label": "Danny Hirsch virtual exhibition. Focus this view to use keyboard movement."
+    },
+    "views": [
+      {
+        "text": "⌖ WALK",
+        "pressed": "true",
+        "rect": {
+          "x": 1257.734375,
+          "y": 93,
+          "width": 67.90625,
+          "height": 35,
+          "top": 93,
+          "right": 1325.640625,
+          "bottom": 128,
+          "left": 1257.734375
+        }
+      },
+      {
+        "text": "◫ OVERVIEW",
+        "pressed": "false",
+        "rect": {
+          "x": 1325.640625,
+          "y": 93,
+          "width": 85.359375,
+          "height": 35,
+          "top": 93,
+          "right": 1411,
+          "bottom": 128,
+          "left": 1325.640625
+        }
+      }
+    ],
+    "overflowX": 0
+  },
+  "dannyOverview": {
+    "dollhouse": "active",
+    "camera": "16.50,14.50,24.00",
+    "views": [
+      {
+        "text": "⌖ WALK",
+        "pressed": "false"
+      },
+      {
+        "text": "◫ OVERVIEW",
+        "pressed": "true"
+      }
+    ],
+    "hint": "DRAG TO ORBIT · SCROLL TO ZOOM"
+  },
+  "dannyOverviewArtworkInfo": {
+    "visible": true,
+    "title": "Soft Terrain",
+    "byline": "DANNY HIRSCH · 2026",
+    "description": "Color drifts across the surface like atmosphere settling into matter.",
+    "closeLabel": "Close artwork information"
+  },
+  "dannyMovement": {
+    "before": "0.00,1.80,6.42",
+    "after": "0.00,1.80,2.94",
+    "changed": true,
+    "colliders": "25"
+  },
+  "dannyMobile": {
+    "viewport": [
+      390,
+      844
+    ],
+    "scroll": [
+      390,
+      844
+    ],
+    "overflowX": 0,
+    "header": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 74,
+      "top": 0,
+      "right": 390,
+      "bottom": 74,
+      "left": 0
+    },
+    "controls": {
+      "x": 214.734375,
+      "y": 76,
+      "width": 163.265625,
+      "height": 54,
+      "top": 76,
+      "right": 378,
+      "bottom": 130,
+      "left": 214.734375
+    },
+    "buttons": [
+      {
+        "x": 219.734375,
+        "y": 81,
+        "width": 67.90625,
+        "height": 44,
+        "top": 81,
+        "right": 287.640625,
+        "bottom": 125,
+        "left": 219.734375
+      },
+      {
+        "x": 287.640625,
+        "y": 81,
+        "width": 85.359375,
+        "height": 44,
+        "top": 81,
+        "right": 373,
+        "bottom": 125,
+        "left": 287.640625
+      }
+    ],
+    "canvas": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 844,
+      "top": 0,
+      "right": 390,
+      "bottom": 844,
+      "left": 0
+    }
+  },
+  "dannyMobileArtworkInfo": {
+    "visible": false,
+    "title": null,
+    "byline": null,
+    "description": null,
+    "closeLabel": null
+  },
+  "summary": {
+    "passed": 13,
+    "failed": 0,
+    "diagnostics": 0
+  },
+  "historicalSummary": {
+    "passed": 33,
+    "failed": 2,
+    "diagnostics": 6
+  },
+  "latestRegression": {
+    "runAt": "2026-08-02T14:02:17.493Z",
+    "target": "http://127.0.0.1:5174",
+    "checks": [
+      {
+        "name": "desktop landing and real room showcase render",
+        "pass": true,
+        "details": {
+          "h1": "Your art.\nBeyond walls.",
+          "overflowX": 0,
+          "heroImage": 1600,
+          "showcaseImages": [
+            {
+              "src": "./assets/templates/white-cube-preview.webp",
+              "width": 0,
+              "complete": false
+            },
+            {
+              "src": "./assets/templates/nocturne-preview.webp",
+              "width": 0,
+              "complete": false
+            },
+            {
+              "src": "./assets/templates/pavilion-preview.webp",
+              "width": 0,
+              "complete": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "mobile landing has no overflow and 44px hero actions",
+        "pass": true,
+        "details": {
+          "overflowX": 0,
+          "hero": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 1453.109375,
+            "top": 0,
+            "right": 390,
+            "bottom": 1453.109375,
+            "left": 0
+          },
+          "ctas": [
+            {
+              "text": "CREATE YOUR GALLERY\n↗",
+              "rect": {
+                "x": 24,
+                "y": 660.578125,
+                "width": 221.140625,
+                "height": 47,
+                "top": 660.578125,
+                "right": 245.140625,
+                "bottom": 707.578125,
+                "left": 24
+              }
+            },
+            {
+              "text": "EXPERIENCE A LIVE GALLERY\n→",
+              "rect": {
+                "x": 24,
+                "y": 737.578125,
+                "width": 188.21875,
+                "height": 44,
+                "top": 737.578125,
+                "right": 212.21875,
+                "bottom": 781.578125,
+                "left": 24
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "picker uses three actual distinct renderer images",
+        "pass": true,
+        "details": {
+          "overflowX": 0,
+          "previewImages": [
+            {
+              "src": "./assets/templates/white-cube-preview.webp",
+              "width": 980,
+              "height": 752,
+              "complete": true
+            },
+            {
+              "src": "./assets/templates/nocturne-preview.webp",
+              "width": 980,
+              "height": 752,
+              "complete": true
+            },
+            {
+              "src": "./assets/templates/pavilion-preview.webp",
+              "width": 980,
+              "height": 752,
+              "complete": true
+            }
+          ],
+          "miniRooms": 0
+        }
+      },
+      {
+        "name": "direct template opens stable Arrange renderer",
+        "pass": true,
+        "details": {
+          "hash": "#/create/white-cube",
+          "view": "arrange",
+          "mode": "arrange",
+          "editing": "enabled",
+          "rendererPersistent": "true",
+          "canvasPersistent": true,
+          "camera": "-13.817,3.900,5.956",
+          "controls": [
+            {
+              "mode": "arrange",
+              "pressed": "true"
+            },
+            {
+              "mode": "walk-preview",
+              "pressed": "false"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Walk Preview reuses canvas and locks scene editing",
+        "pass": true,
+        "details": {
+          "view": "walk-preview",
+          "mode": "walk",
+          "editing": "disabled",
+          "interaction": "walk",
+          "canvasPersistent": true,
+          "hint": "WALK PREVIEW · WASD TO WALK · CLICK FLOOR TO MOVE · EDITING LOCKED",
+          "camera": "0.000,1.750,5.000"
+        }
+      },
+      {
+        "name": "Arrange restores its camera and editing state",
+        "pass": true,
+        "details": {
+          "camera": "-13.832,3.900,5.928",
+          "editing": "enabled",
+          "canvasPersistent": true,
+          "cameraDelta": 0.04300000000000104
+        }
+      },
+      {
+        "name": "publish review shows a non-blank captured room cover",
+        "pass": true,
+        "details": {
+          "visible": true,
+          "sourcePrefix": "data:image/webp;base64,U",
+          "natural": [
+            661,
+            540
+          ],
+          "variance": {
+            "minimum": 17.666666666666668,
+            "maximum": 213.33333333333334,
+            "deviation": 76.96375554345344
+          },
+          "lastCapture": "661x540",
+          "alt": "Room cover captured from the current editor view"
+        }
+      },
+      {
+        "name": "direct-template refresh immediately offers recovery",
+        "pass": true,
+        "details": {
+          "hash": "#/create/white-cube",
+          "pickerVisible": false,
+          "studioVisible": true,
+          "recoveryVisible": true,
+          "summary": "LOCAL DRAFT FOUND\n\nContinue where you left off?\n\nYour 0-artwork draft was saved on Aug 2 at 04:02 PM.\n\nRECOVER DRAFT\nSTART FRESH",
+          "focused": true
+        }
+      },
+      {
+        "name": "recovered direct-template title is exact",
+        "pass": true,
+        "details": "Direct recovery QA"
+      },
+      {
+        "name": "mobile editor fits and keeps view controls available",
+        "pass": true,
+        "details": {
+          "overflowX": 0,
+          "view": "arrange",
+          "sheet": "tool-panel tool-panel--half",
+          "switchRect": {
+            "x": 8,
+            "y": 72,
+            "width": 374,
+            "height": 108,
+            "top": 72,
+            "right": 382,
+            "bottom": 180,
+            "left": 8
+          },
+          "canvas": {
+            "x": 0,
+            "y": 64,
+            "width": 390,
+            "height": 780,
+            "top": 64,
+            "right": 390,
+            "bottom": 844,
+            "left": 0
+          }
+        }
+      },
+      {
+        "name": "Danny mobile caption and hint no longer overlap",
+        "pass": true,
+        "details": {
+          "overflowX": 0,
+          "caption": {
+            "x": 20,
+            "y": 632,
+            "width": 235,
+            "height": 136,
+            "top": 632,
+            "right": 255,
+            "bottom": 768,
+            "left": 20
+          },
+          "hint": {
+            "x": 20,
+            "y": 781.21875,
+            "width": 350,
+            "height": 50.78125,
+            "top": 781.21875,
+            "right": 370,
+            "bottom": 832,
+            "left": 20
+          },
+          "overlap": false,
+          "captionColor": "rgb(224, 223, 216)",
+          "captionFontSize": "11px",
+          "dataset": {
+            "visitorEyeHeight": "1.75",
+            "quality": "low",
+            "motion": "full",
+            "rendererPersistent": "true",
+            "guidedTour": "idle",
+            "tourAutoplay": "disabled-low-tier",
+            "tourDuration": "45000",
+            "dollhouse": "inactive",
+            "modelVariant": "mobile",
+            "meshoptWorkers": "2",
+            "cameraPosition": "0.00,1.80,6.42",
+            "cameraYaw": "0.000",
+            "intro": "complete",
+            "loadProgress": "100",
+            "colliders": "25",
+            "artworkTargets": "7",
+            "artworkHotspots": "7",
+            "artworkHitStrategy": "raycast+screen-space",
+            "catalogueLabelsHidden": "6",
+            "overviewOccluders": "2",
+            "maxAuthoredLightIntensity": "7.50",
+            "viewAnchors": "16",
+            "routeWaypoints": "8",
+            "smartViewCount": "14",
+            "tourStops": "18"
+          }
+        }
+      },
+      {
+        "name": "front Danny mobile artwork opens complete metadata",
+        "pass": true,
+        "details": {
+          "visible": true,
+          "title": "wARTrobe · Front",
+          "byline": "DANNY HIRSCH · ONE-OF-ONE OBJECT",
+          "description": "A painted object where storage, memory, and surface become one architectural presence.",
+          "hitMode": "raycast",
+          "lastHit": "wartrobe-front"
+        }
+      },
+      {
+        "name": "regression produced no console errors",
+        "pass": true,
+        "details": []
+      }
+    ],
+    "diagnostics": [],
+    "landingDesktop": {
+      "h1": "Your art.\nBeyond walls.",
+      "overflowX": 0,
+      "heroImage": 1600,
+      "showcaseImages": [
+        {
+          "src": "./assets/templates/white-cube-preview.webp",
+          "width": 0,
+          "complete": false
+        },
+        {
+          "src": "./assets/templates/nocturne-preview.webp",
+          "width": 0,
+          "complete": false
+        },
+        {
+          "src": "./assets/templates/pavilion-preview.webp",
+          "width": 0,
+          "complete": false
+        }
+      ]
+    },
+    "landingMobile": {
+      "overflowX": 0,
+      "hero": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 1453.109375,
+        "top": 0,
+        "right": 390,
+        "bottom": 1453.109375,
+        "left": 0
+      },
+      "ctas": [
+        {
+          "text": "CREATE YOUR GALLERY\n↗",
+          "rect": {
+            "x": 24,
+            "y": 660.578125,
+            "width": 221.140625,
+            "height": 47,
+            "top": 660.578125,
+            "right": 245.140625,
+            "bottom": 707.578125,
+            "left": 24
+          }
+        },
+        {
+          "text": "EXPERIENCE A LIVE GALLERY\n→",
+          "rect": {
+            "x": 24,
+            "y": 737.578125,
+            "width": 188.21875,
+            "height": 44,
+            "top": 737.578125,
+            "right": 212.21875,
+            "bottom": 781.578125,
+            "left": 24
+          }
+        }
+      ]
+    },
+    "picker": {
+      "overflowX": 0,
+      "previewImages": [
+        {
+          "src": "./assets/templates/white-cube-preview.webp",
+          "width": 980,
+          "height": 752,
+          "complete": true
+        },
+        {
+          "src": "./assets/templates/nocturne-preview.webp",
+          "width": 980,
+          "height": 752,
+          "complete": true
+        },
+        {
+          "src": "./assets/templates/pavilion-preview.webp",
+          "width": 980,
+          "height": 752,
+          "complete": true
+        }
+      ],
+      "miniRooms": 0
+    },
+    "arrange": {
+      "hash": "#/create/white-cube",
+      "view": "arrange",
+      "mode": "arrange",
+      "editing": "enabled",
+      "rendererPersistent": "true",
+      "canvasPersistent": true,
+      "camera": "-13.817,3.900,5.956",
+      "controls": [
+        {
+          "mode": "arrange",
+          "pressed": "true"
+        },
+        {
+          "mode": "walk-preview",
+          "pressed": "false"
+        }
+      ]
+    },
+    "walkPreview": {
+      "view": "walk-preview",
+      "mode": "walk",
+      "editing": "disabled",
+      "interaction": "walk",
+      "canvasPersistent": true,
+      "hint": "WALK PREVIEW · WASD TO WALK · CLICK FLOOR TO MOVE · EDITING LOCKED",
+      "camera": "0.000,1.750,5.000"
+    },
+    "arrangeRestored": {
+      "camera": "-13.832,3.900,5.928",
+      "editing": "enabled",
+      "canvasPersistent": true,
+      "cameraDelta": 0.04300000000000104
+    },
+    "publishCover": {
+      "visible": true,
+      "sourcePrefix": "data:image/webp;base64,U",
+      "natural": [
+        661,
+        540
+      ],
+      "variance": {
+        "minimum": 17.666666666666668,
+        "maximum": 213.33333333333334,
+        "deviation": 76.96375554345344
+      },
+      "lastCapture": "661x540",
+      "alt": "Room cover captured from the current editor view"
+    },
+    "directRecovery": {
+      "hash": "#/create/white-cube",
+      "pickerVisible": false,
+      "studioVisible": true,
+      "recoveryVisible": true,
+      "summary": "LOCAL DRAFT FOUND\n\nContinue where you left off?\n\nYour 0-artwork draft was saved on Aug 2 at 04:02 PM.\n\nRECOVER DRAFT\nSTART FRESH",
+      "focused": true
+    },
+    "recoveredTitle": "Direct recovery QA",
+    "editorMobile": {
+      "overflowX": 0,
+      "view": "arrange",
+      "sheet": "tool-panel tool-panel--half",
+      "switchRect": {
+        "x": 8,
+        "y": 72,
+        "width": 374,
+        "height": 108,
+        "top": 72,
+        "right": 382,
+        "bottom": 180,
+        "left": 8
+      },
+      "canvas": {
+        "x": 0,
+        "y": 64,
+        "width": 390,
+        "height": 780,
+        "top": 64,
+        "right": 390,
+        "bottom": 844,
+        "left": 0
+      }
+    },
+    "dannyMobileBefore": {
+      "overflowX": 0,
+      "caption": {
+        "x": 20,
+        "y": 632,
+        "width": 235,
+        "height": 136,
+        "top": 632,
+        "right": 255,
+        "bottom": 768,
+        "left": 20
+      },
+      "hint": {
+        "x": 20,
+        "y": 781.21875,
+        "width": 350,
+        "height": 50.78125,
+        "top": 781.21875,
+        "right": 370,
+        "bottom": 832,
+        "left": 20
+      },
+      "overlap": false,
+      "captionColor": "rgb(224, 223, 216)",
+      "captionFontSize": "11px",
+      "dataset": {
+        "visitorEyeHeight": "1.75",
+        "quality": "low",
+        "motion": "full",
+        "rendererPersistent": "true",
+        "guidedTour": "idle",
+        "tourAutoplay": "disabled-low-tier",
+        "tourDuration": "45000",
+        "dollhouse": "inactive",
+        "modelVariant": "mobile",
+        "meshoptWorkers": "2",
+        "cameraPosition": "0.00,1.80,6.42",
+        "cameraYaw": "0.000",
+        "intro": "complete",
+        "loadProgress": "100",
+        "colliders": "25",
+        "artworkTargets": "7",
+        "artworkHotspots": "7",
+        "artworkHitStrategy": "raycast+screen-space",
+        "catalogueLabelsHidden": "6",
+        "overviewOccluders": "2",
+        "maxAuthoredLightIntensity": "7.50",
+        "viewAnchors": "16",
+        "routeWaypoints": "8",
+        "smartViewCount": "14",
+        "tourStops": "18"
+      }
+    },
+    "dannyMetadata": {
+      "visible": true,
+      "title": "wARTrobe · Front",
+      "byline": "DANNY HIRSCH · ONE-OF-ONE OBJECT",
+      "description": "A painted object where storage, memory, and surface become one architectural presence.",
+      "hitMode": "raycast",
+      "lastHit": "wartrobe-front"
+    },
+    "newConsoleErrors": [],
+    "summary": {
+      "passed": 13,
+      "failed": 0,
+      "diagnostics": 0
+    }
+  }
+}
