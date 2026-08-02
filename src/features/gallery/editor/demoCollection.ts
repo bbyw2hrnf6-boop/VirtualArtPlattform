@@ -1,5 +1,9 @@
 import type { Artwork, GalleryDraft, TemplateId } from "../types";
 import { createGalleryDraft } from "./draftDefaults";
+import {
+  DEFAULT_ARTWORK_EYE_LINE_METRES,
+  snapToPlacementGrid,
+} from "./placementValidation";
 
 const DEMO_ARTWORKS = [
   {
@@ -23,7 +27,7 @@ const DEMO_ARTWORKS = [
 ] as const;
 
 const DEMO_ASPECT = 518 / 810;
-const DEMO_X = [-2, 0, 2] as const;
+const DEMO_X = [-2.01, 0, 2.01] as const;
 const FORUM_DEMO_X = [-3, 0, 3] as const;
 
 export function createDemoCollectionDraft(
@@ -37,8 +41,10 @@ export function createDemoCollectionDraft(
     year: "2026",
     aspect: DEMO_ASPECT,
     wall: templateId === "pavilion" ? "divider-front" : "north",
-    x: templateId === "pavilion" ? FORUM_DEMO_X[index] : DEMO_X[index],
-    y: 1.55,
+    x: snapToPlacementGrid(
+      templateId === "pavilion" ? FORUM_DEMO_X[index] : DEMO_X[index],
+    ),
+    y: DEFAULT_ARTWORK_EYE_LINE_METRES,
     scale: 1,
   }));
   return {

@@ -15,15 +15,17 @@ import {
   writeBatch,
   type DocumentReference
 } from 'firebase/firestore';
-import { firebaseAuth, firebaseDb } from './firebase';
+import { firebaseAuth, firebaseDb, FIREBASE_PROJECT_ID } from './firebase';
 import type { GalleryRepository, GalleryRecord } from './galleryRepository';
 import {
   GalleryRepositoryDataError,
   parseArtworkAsset,
   parseGalleryDocument,
   validateGalleryCoverSource,
-  validateGalleryDraft
+  prepareGalleryDraftForPublication
 } from './galleryValidation';
+import { normalizeGalleryPublishingError } from './galleryPublishingError';
+import type { GalleryDraft } from '../features/gallery/types';
 
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 38);
 const fromFirestore = (id: string, data: unknown): GalleryRecord => ({ ...parseGalleryDocument(id, data), id });
@@ -50,8 +52,52 @@ async function createThumbnail(source?: string) {
   return candidate;
 }
 
+function blobAsDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      if (typeof reader.result === 'string') resolve(reader.result);
+      else reject(new Error('The sample artwork could not be embedded for publishing.'));
+    });
+    reader.addEventListener('error', () => reject(reader.error ?? new Error('The sample artwork could not be read.')));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function embedLocalArtworkSources(draft: GalleryDraft): Promise<GalleryDraft> {
+  const artworks = await Promise.all(draft.artworks.map(async (artwork) => {
+    if (artwork.hidden || /^data:image\//i.test(artwork.src)) return artwork;
+    const sourceUrl = new URL(artwork.src, document.baseURI);
+    if (sourceUrl.origin !== location.origin) {
+      throw new Error(`“${artwork.title}” must use an uploaded image or a same-origin sample asset.`);
+    }
+    const response = await fetch(sourceUrl);
+    if (!response.ok) throw new Error(`The sample image for “${artwork.title}” could not be loaded.`);
+    const blob = await response.blob();
+    if (!/^image\/(?:avif|jpeg|png|webp)$/i.test(blob.type)) {
+      throw new Error(`The sample image for “${artwork.title}” uses an unsupported format.`);
+    }
+    return { ...artwork, src: await blobAsDataUrl(blob) };
+  }));
+  return { ...draft, artworks };
+}
+
 class FirebaseGalleryRepository implements GalleryRepository {
-  private async userId() { return firebaseAuth.currentUser?.uid ?? (await signInAnonymously(firebaseAuth)).user.uid; }
+  private async userId() {
+    await firebaseAuth.authStateReady();
+    return firebaseAuth.currentUser?.uid ?? (await signInAnonymously(firebaseAuth)).user.uid;
+  }
+
+  private async assertPublicRulesAvailable() {
+    const safelyActiveAt = Timestamp.fromMillis(Date.now() + 60_000);
+    const permissionProbe = query(
+      collection(firebaseDb, 'galleries'),
+      where('expiresAt', '>', safelyActiveAt),
+      orderBy('expiresAt', 'desc'),
+      limit(1)
+    );
+    await getDocs(permissionProbe);
+  }
 
   async currentUserId() {
     await firebaseAuth.authStateReady();
@@ -59,31 +105,31 @@ class FirebaseGalleryRepository implements GalleryRepository {
   }
 
   async publish(draft: Parameters<GalleryRepository['publish']>[0], roomCoverSource?: string): Promise<GalleryRecord> {
-    const validatedDraft = validateGalleryDraft(draft, { recordId: 'publication draft', requireArtworkSources: true });
-    const ownerId = await this.userId(); const base = slugify(`${validatedDraft.artist}-${validatedDraft.title}`) || 'gallery'; const id = `${base}-${crypto.randomUUID().slice(0, 7)}`;
-    const now = new Date(); const expires = new Date(now.getTime() + 10 * 86400000); const coverSrc = validateGalleryCoverSource(await createThumbnail(roomCoverSource || validatedDraft.artworks[0]?.src));
-    const galleryRef = doc(firebaseDb, 'galleries', id);
-    const assetRefs = validatedDraft.artworks.map((_, index) => doc(firebaseDb, 'galleryArtworks', `${id}-${index + 1}`));
-    const artworks = validatedDraft.artworks.map((artwork, index) => ({ ...artwork, assetId: assetRefs[index].id, src: '' }));
-    const assetWrites = await Promise.allSettled(validatedDraft.artworks.map((artwork, index) => setDoc(assetRefs[index], {
-      galleryId: id, ownerId, index, src: artwork.src,
-      publishedAt: serverTimestamp(), expiresAt: Timestamp.fromDate(expires), schemaVersion: 1
-    })));
-    const failedAssetWrite = assetWrites.find((result): result is PromiseRejectedResult => result.status === 'rejected');
-    if (failedAssetWrite) {
-      await bestEffortDelete(assetRefs);
-      throw failedAssetWrite.reason;
-    }
+    let cleanupReferences: DocumentReference[] = [];
     try {
+      const validatedDraft = prepareGalleryDraftForPublication(await embedLocalArtworkSources(draft));
+      await this.assertPublicRulesAvailable();
+      const ownerId = await this.userId(); const base = slugify(`${validatedDraft.artist}-${validatedDraft.title}`) || 'gallery'; const id = `${base}-${crypto.randomUUID().slice(0, 7)}`;
+      const now = new Date(); const expires = new Date(now.getTime() + 10 * 86400000); const coverSrc = validateGalleryCoverSource(await createThumbnail(roomCoverSource || validatedDraft.artworks[0]?.src));
+      const galleryRef = doc(firebaseDb, 'galleries', id);
+      const assetRefs = validatedDraft.artworks.map((_, index) => doc(firebaseDb, 'galleryArtworks', `${id}-${index + 1}`));
+      cleanupReferences = [galleryRef, ...assetRefs];
+      const artworks = validatedDraft.artworks.map((artwork, index) => ({ ...artwork, assetId: assetRefs[index].id, src: '' }));
+      const assetWrites = await Promise.allSettled(validatedDraft.artworks.map((artwork, index) => setDoc(assetRefs[index], {
+        galleryId: id, ownerId, index, src: artwork.src,
+        publishedAt: serverTimestamp(), expiresAt: Timestamp.fromDate(expires), schemaVersion: 1
+      })));
+      const failedAssetWrite = assetWrites.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+      if (failedAssetWrite) throw failedAssetWrite.reason;
       await setDoc(galleryRef, {
         ...validatedDraft, artworks, coverSrc, ownerId,
         publishedAt: serverTimestamp(), expiresAt: Timestamp.fromDate(expires), schemaVersion: 1
       });
+      return { ...validatedDraft, coverSrc, id, ownerId, publishedAt: now.toISOString(), expiresAt: expires.toISOString() };
     } catch (error) {
-      await bestEffortDelete([galleryRef, ...assetRefs]);
-      throw error;
+      if (cleanupReferences.length) await bestEffortDelete(cleanupReferences);
+      throw normalizeGalleryPublishingError(error, FIREBASE_PROJECT_ID);
     }
-    return { ...validatedDraft, coverSrc, id, ownerId, publishedAt: now.toISOString(), expiresAt: expires.toISOString() };
   }
 
   async find(id: string): Promise<GalleryRecord | null> {

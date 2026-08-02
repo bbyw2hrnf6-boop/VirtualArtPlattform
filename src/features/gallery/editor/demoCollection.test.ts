@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { validateDraftPlacements } from "./placementValidation";
+import {
+  DEFAULT_ARTWORK_EYE_LINE_METRES,
+  PLACEMENT_GRID_STEP_METRES,
+  validateDraftPlacements,
+} from "./placementValidation";
 import { createDemoCollectionDraft } from "./demoCollection";
 
 describe("demo collection sandbox", () => {
@@ -15,6 +19,16 @@ describe("demo collection sandbox", () => {
       });
       expect(draft.artworks).toHaveLength(3);
       expect(new Set(draft.artworks.map((artwork) => artwork.id)).size).toBe(3);
+      expect(
+        draft.artworks.every(
+          (artwork) =>
+            artwork.y === DEFAULT_ARTWORK_EYE_LINE_METRES &&
+            Math.abs(
+              artwork.x / PLACEMENT_GRID_STEP_METRES -
+                Math.round(artwork.x / PLACEMENT_GRID_STEP_METRES),
+            ) < 1e-8,
+        ),
+      ).toBe(true);
       expect(
         draft.artworks.every((artwork) =>
           artwork.src.startsWith("./assets/artworks/"),

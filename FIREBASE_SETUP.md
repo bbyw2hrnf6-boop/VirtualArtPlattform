@@ -105,6 +105,7 @@ Do not exempt `expiresAt`: Discover and cleanup query that field.
 - White Cube and Nocturne accept up to eight artwork metadata entries.
 - Grand Forum accepts up to fourteen artwork metadata entries.
 - A published gallery accepts up to eight decorative object placements.
+- Public artwork metadata may include the frame choices `black`, `white`, `oak`, or `none`. Hidden works and editor lock state are never published.
 - `expiresAt` must be in the future and less than eleven days from the write, while the application sets it to ten days.
 - Artwork image data is limited to fewer than 780,000 data-URL characters.
 
@@ -211,10 +212,22 @@ Add the current hostname under **Authentication → Settings → Authorized doma
 
 ### `Missing or insufficient permissions`
 
+- First distinguish **local draft save** from **publication**: drafts save to IndexedDB without Firebase. This message comes from the public Firestore publication step; the editable room remains in the browser.
 - Confirm Anonymous Authentication is enabled.
 - Confirm `firestore.rules` was deployed to the same project used by `src/services/firebase.ts`.
+- Confirm the current rules include the optional artwork `frame` field. An older deployed rule set rejects framed exhibitions even if the web app is current.
 - Confirm the gallery payload remains within the 8/8/14 artwork and eight-object limits.
 - Confirm the artwork data URL is below 780,000 characters.
+
+The GitHub Pages workflow deploys the web bundle only. It does **not** deploy Firestore rules or indexes. After reviewing the target project, an authenticated project owner must run:
+
+```bash
+npx firebase-tools@latest login
+npx firebase-tools@latest projects:list
+npx firebase-tools@latest deploy --only firestore:rules,firestore:indexes --project virtualartplattform
+```
+
+Then publish a new one-artwork room and open its share link in a private window. Do not loosen the rules to `allow write: if true`; that would remove ownership and payload protection.
 
 ### Discover query fails or requests an index
 
@@ -251,6 +264,7 @@ AURA-specific limits:
 - Grand Forum: fourteen artworks
 - Eight decorative object placements per published gallery
 - Artwork resized to at most 1200 px on the longest side
+- Same-origin fast-sandbox artwork embedded before publication
 - Artwork data URL shorter than 780,000 characters
 - Ten-day public availability
 

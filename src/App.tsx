@@ -28,6 +28,8 @@ import { createGalleryDraft } from "./features/gallery/editor/draftDefaults";
 import { createDemoCollectionDraft } from "./features/gallery/editor/demoCollection";
 import type { GallerySceneCapture } from "./features/gallery/GalleryScene";
 import {
+  DEFAULT_ARTWORK_EYE_LINE_METRES,
+  PLACEMENT_GRID_STEP_METRES,
   artworkHorizontalBounds,
   artworkSize,
   distributeArtworksOnWall,
@@ -291,7 +293,7 @@ function DeferredScrollStory() {
         observer.disconnect();
         setReady(true);
       },
-      { rootMargin: "0px 0px -48px", threshold: 0.01 },
+      { rootMargin: "350px 0px", threshold: 0.01 },
     );
     observer.observe(target);
     return () => observer.disconnect();
@@ -561,8 +563,8 @@ function Landing() {
             <em>Beyond walls.</em>
           </h1>
           <p className="hero-intro">
-            Create a cinematic, shareable 3D exhibition in minutes. No code. No
-            downloads. No 3D software. Just your work, in a space it deserves.
+            Build, curate, and share a virtual exhibition in your browser. No
+            code, downloads, or 3D software.
           </p>
           <div className="hero-actions">
             <button
@@ -575,72 +577,11 @@ function Landing() {
               Experience a live gallery <span>→</span>
             </button>
           </div>
-          <div className="hero-note">
-            <span>01</span>
-            <p>
-              Premium spaces
-              <br />
-              Effortless creation
-            </p>
-          </div>
         </div>
         <HeroGalleryVisual />
         <p className="vertical-word">AURA / VIRTUAL EXHIBITIONS FOR ARTISTS</p>
       </section>
       <DeferredScrollStory />
-      <section className="manifesto">
-        <p className="eyebrow">Our mission</p>
-        <blockquote>
-          We are not building another place to upload images.
-          <br />
-          <em>We are building a place where art is experienced.</em>
-        </blockquote>
-        <div>
-          <p>
-            Social feeds move on. Static portfolios flatten the work. AURA gives
-            every exhibition atmosphere, presence, and a space of its own.
-          </p>
-          <span>Browser-based · No technical knowledge required</span>
-        </div>
-      </section>
-      <section className="promise">
-        <p className="eyebrow">Three real-time spaces</p>
-        <div>
-          <h2>
-            From studio to
-            <br />
-            <em>space</em> in minutes.
-          </h2>
-          <p>
-            Choose a browser-rendered room, add up to fourteen works, tune a
-            restrained material and lighting system, then inspect the result at
-            visitor eye level.
-          </p>
-        </div>
-        <div className="steps">
-          {[
-            "Choose a gallery",
-            "Upload artwork",
-            "Arrange & validate",
-            "Preview & publish",
-          ].map((step, i) => (
-            <article key={step}>
-              <span>0{i + 1}</span>
-              <h3>{step}</h3>
-              <p>
-                {
-                  [
-                    "Begin with one of three distinct, real-time architectures.",
-                    "Add your images; preparation happens locally in the browser.",
-                    "Place with snapping, collision checks, autosave, and undo.",
-                    "Walk through the room, review issues, then share one link.",
-                  ][i]
-                }
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
       <RoomShowcase />
       <section className="demo-tease">
         <div>
@@ -723,15 +664,15 @@ function RoomShowcase() {
   return (
     <section className="room-showcase" aria-labelledby="room-showcase-title">
       <div className="room-showcase-heading">
-        <p className="eyebrow">Rendered by the real builder</p>
+        <p className="eyebrow">Now build your own</p>
         <h2 id="room-showcase-title">
-          Choose the room.
+          Choose a room.
           <br />
-          <em>Change the atmosphere.</em>
+          <em>Make it yours.</em>
         </h2>
         <p>
-          These stills come from the same browser renderer used in the
-          editor—never from a separate concept render.
+          Start with sample art, then replace it with your own work. Every
+          preview below comes from the live builder.
         </p>
       </div>
       <div className="room-showcase-grid">
@@ -739,8 +680,8 @@ function RoomShowcase() {
           <article key={template.id}>
             <button
               type="button"
-              onClick={() => navigate(`/create/${template.id}`)}
-              aria-label={`Build in this space — choose ${template.name}`}
+              onClick={() => navigate(`/create/${template.id}/demo`)}
+              aria-label={`Try ${template.name} with sample artwork`}
             >
               <img
                 src={`./assets/templates/${template.id}-preview.webp`}
@@ -750,7 +691,7 @@ function RoomShowcase() {
                 decoding="async"
                 alt={`${template.name} rendered in the AURA room builder`}
               />
-              <span>Build in this space ↗</span>
+              <span>Try this room ↗</span>
             </button>
             <p>
               {template.index} · {template.label}
@@ -1009,36 +950,36 @@ function initialArtworkPlacement(
 ): Pick<Artwork, "wall" | "x" | "y" | "scale"> {
   if (templateId === "pavilion") {
     const placements: Array<[WallId, number, number]> = [
-      ["divider-front", -4, 1.65],
-      ["divider-front", 0, 1.65],
-      ["divider-front", 4, 1.65],
-      ["divider-back", -4, 1.65],
-      ["divider-back", 0, 1.65],
-      ["divider-back", 4, 1.65],
-      ["north", -13, 1.65],
-      ["north", 0, 1.65],
-      ["north", 13, 1.65],
-      ["south", -13, 1.65],
-      ["south", 0, 1.65],
-      ["south", 13, 1.65],
-      ["west", -18, 1.65],
-      ["east", 18, 1.65],
+      ["divider-front", -3.99, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["divider-front", 0, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["divider-front", 3.99, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["divider-back", -3.99, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["divider-back", 0, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["divider-back", 3.99, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["north", -12.99, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["north", 0, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["north", 12.99, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["south", -12.99, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["south", 0, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["south", 12.99, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["west", -18, DEFAULT_ARTWORK_EYE_LINE_METRES],
+      ["east", 18, DEFAULT_ARTWORK_EYE_LINE_METRES],
     ];
     const [wall, x, y] = placements[slot % placements.length];
     return { wall, x, y, scale: 0.9 };
   }
   const placements: Array<[WallId, number]> = [
-    ["north", -2.8],
+    ["north", -2.79],
     ["north", 0],
-    ["north", 2.8],
-    ["west", -2.2],
-    ["west", 2.2],
-    ["east", -2.2],
-    ["east", 2.2],
+    ["north", 2.79],
+    ["west", -2.19],
+    ["west", 2.19],
+    ["east", -2.19],
+    ["east", 2.19],
     ["south", 0],
   ];
   const [wall, x] = placements[slot % placements.length];
-  return { wall, x, y: 1.65, scale: 0.9 };
+  return { wall, x, y: DEFAULT_ARTWORK_EYE_LINE_METRES, scale: 0.9 };
 }
 
 type WallFocusRequest = { wall: WallId; token: number };
@@ -1545,7 +1486,7 @@ function Studio({
               artwork.id,
               wall,
               wall === artwork.wall ? artwork.x : 0,
-              1.65,
+              DEFAULT_ARTWORK_EYE_LINE_METRES,
             ),
           )
           .find(Boolean);
@@ -2106,7 +2047,7 @@ function Studio({
                   unit="m"
                   min={selectedBounds.min}
                   max={selectedBounds.max}
-                  step={0.05}
+                  step={PLACEMENT_GRID_STEP_METRES}
                   value={selected.x}
                   disabled={selected.locked}
                   onChange={(x) => updateArtwork({ x })}
@@ -2120,7 +2061,7 @@ function Studio({
                     roomTemplate.height -
                       (selected.wall.startsWith("divider") ? 1.25 : 0.75),
                   )}
-                  step={0.05}
+                  step={PLACEMENT_GRID_STEP_METRES}
                   value={selected.y}
                   disabled={selected.locked}
                   onChange={(y) => updateArtwork({ y })}
@@ -2128,9 +2069,9 @@ function Studio({
                 <Range
                   label="Artwork height"
                   unit="m"
-                  min={0.675}
-                  max={2.475}
-                  step={0.05}
+                  min={0.69}
+                  max={2.46}
+                  step={PLACEMENT_GRID_STEP_METRES}
                   value={selectedSize?.height ?? 1.5}
                   disabled={selected.locked}
                   onChange={(height) => updateArtwork({ scale: height / 1.5 })}
@@ -2181,10 +2122,15 @@ function Studio({
                     type="button"
                     disabled={selected.locked}
                     onClick={() =>
-                      placeArtwork(selected.id, selected.wall, selected.x, 1.55)
+                      placeArtwork(
+                        selected.id,
+                        selected.wall,
+                        selected.x,
+                        DEFAULT_ARTWORK_EYE_LINE_METRES,
+                      )
                     }
                   >
-                    Eye line 1.55 m
+                    Eye line 1.75 m
                   </button>
                   <button
                     type="button"
@@ -2380,7 +2326,7 @@ function Studio({
                   unit="m"
                   min={-decorLimitX}
                   max={decorLimitX}
-                  step={0.05}
+                  step={PLACEMENT_GRID_STEP_METRES}
                   value={selectedDecor.x}
                   onChange={(x) => updateDecor({ x })}
                 />
@@ -2389,7 +2335,7 @@ function Studio({
                   unit="m"
                   min={-decorLimitZ}
                   max={decorLimitZ}
-                  step={0.05}
+                  step={PLACEMENT_GRID_STEP_METRES}
                   value={selectedDecor.z}
                   onChange={(z) => updateDecor({ z })}
                 />

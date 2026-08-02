@@ -13,7 +13,8 @@ const ARTWORK_GAP_X = 0.3;
 const ARTWORK_GAP_Y = 0.22;
 const FLOOR_EDGE_CLEARANCE = 0.2;
 const DECOR_GAP = 0.18;
-const GRID_STEP = 0.05;
+export const PLACEMENT_GRID_STEP_METRES = 0.03;
+export const DEFAULT_ARTWORK_EYE_LINE_METRES = 1.75;
 
 export type PlacementTarget = "artwork" | "decor";
 
@@ -46,7 +47,48 @@ type OrientedRectangle = {
 };
 
 const finite = (...values: number[]) => values.every(Number.isFinite);
-const snap = (value: number) => Math.round(value / GRID_STEP) * GRID_STEP;
+export const snapToPlacementGrid = (value: number, origin = 0) =>
+  Number(
+    (
+      origin +
+      Math.round((value - origin) / PLACEMENT_GRID_STEP_METRES) *
+        PLACEMENT_GRID_STEP_METRES
+    ).toFixed(6),
+  );
+const snap = (value: number) => snapToPlacementGrid(value);
+// The vertical grid is anchored at the curatorial eye line so 1.75 m remains
+// an exact snap target while every adjustment around it still moves by 3 cm.
+const snapToEyeLineGrid = (value: number) =>
+  snapToPlacementGrid(value, DEFAULT_ARTWORK_EYE_LINE_METRES);
+const minimumGridValue = (minimum: number, origin = 0) =>
+  Number(
+    (
+      origin +
+      Math.ceil((minimum - origin) / PLACEMENT_GRID_STEP_METRES) *
+        PLACEMENT_GRID_STEP_METRES
+    ).toFixed(6),
+  );
+const maximumGridValue = (maximum: number, origin = 0) =>
+  Number(
+    (
+      origin +
+      Math.floor((maximum - origin) / PLACEMENT_GRID_STEP_METRES) *
+        PLACEMENT_GRID_STEP_METRES
+    ).toFixed(6),
+  );
+const snapWithinGridBounds = (
+  value: number,
+  minimum: number,
+  maximum: number,
+  origin = 0,
+) =>
+  Math.min(
+    maximumGridValue(maximum, origin),
+    Math.max(
+      minimumGridValue(minimum, origin),
+      snapToPlacementGrid(value, origin),
+    ),
+  );
 
 export function galleryWalls(templateId: GalleryDraft["templateId"]): WallId[] {
   return templateId === "pavilion"
@@ -76,8 +118,12 @@ export function artworkHorizontalBounds(draft: GalleryDraft, artwork: Artwork) {
   const surface = wallDimensions(getTemplate(draft.templateId), artwork.wall);
   const { width } = artworkSize(artwork);
   return {
-    min: -surface.width / 2 + width / 2 + ARTWORK_EDGE_CLEARANCE,
-    max: surface.width / 2 - width / 2 - ARTWORK_EDGE_CLEARANCE,
+    min: minimumGridValue(
+      -surface.width / 2 + width / 2 + ARTWORK_EDGE_CLEARANCE,
+    ),
+    max: maximumGridValue(
+      surface.width / 2 - width / 2 - ARTWORK_EDGE_CLEARANCE,
+    ),
   };
 }
 
@@ -118,9 +164,9 @@ export function distributeArtworksOnWall(
     const preferred = snap(lerp(-spread, spread, ratio));
     const offsets = [0];
     for (
-      let distance = GRID_STEP;
+      let distance = PLACEMENT_GRID_STEP_METRES;
       distance <= surface.width;
-      distance += GRID_STEP
+      distance += PLACEMENT_GRID_STEP_METRES
     )
       offsets.push(distance, -distance);
     const candidate = offsets
@@ -360,7 +406,16 @@ export function updateArtworkPlacement(
         message: "This artwork is no longer in the draft.",
       },
     };
-  const changesPlacement = Object.entries(change).some(
+  const normalizedChange = {
+    ...change,
+    ...(typeof change.x === "number" && Number.isFinite(change.x)
+      ? { x: snap(change.x) }
+      : {}),
+    ...(typeof change.y === "number" && Number.isFinite(change.y)
+      ? { y: snapToEyeLineGrid(change.y) }
+      : {}),
+  };
+  const changesPlacement = Object.entries(normalizedChange).some(
     ([key, value]) => artwork[key as keyof Artwork] !== value,
   );
   if (artwork.locked && changesPlacement)
@@ -374,7 +429,7 @@ export function updateArtworkPlacement(
         message: "Unlock this artwork before changing its placement.",
       },
     };
-  const candidate = { ...artwork, ...change };
+  const candidate = { ...artwork, ...normalizedChange };
   const issue = validateArtworkPlacement(draft, candidate);
   if (issue) return { ok: false, draft, issue };
   return {
@@ -393,7 +448,7 @@ export function findAvailableArtworkPlacement(
   artworkId: string,
   wall: WallId,
   preferredX = 0,
-  preferredY = 1.55,
+  preferredY = DEFAULT_ARTWORK_EYE_LINE_METRES,
 ): Pick<Artwork, "wall" | "x" | "y" | "scale"> | null {
   const artwork = draft.artworks.find((item) => item.id === artworkId);
   if (!artwork || !galleryWalls(draft.templateId).includes(wall)) return null;
@@ -409,16 +464,26 @@ export function findAvailableArtworkPlacement(
   const maxX = surface.width / 2 - size.width / 2 - ARTWORK_EDGE_CLEARANCE;
   const minY = size.height / 2 + ARTWORK_EDGE_CLEARANCE;
   const maxY = surface.height - size.height / 2 - ARTWORK_EDGE_CLEARANCE;
-  const targetX = snap(Math.min(maxX, Math.max(minX, preferredX)));
-  const targetY = snap(Math.min(maxY, Math.max(minY, preferredY)));
+  const targetX = snapWithinGridBounds(preferredX, minX, maxX);
+  const targetY = snapWithinGridBounds(
+    preferredY,
+    minY,
+    maxY,
+    DEFAULT_ARTWORK_EYE_LINE_METRES,
+  );
   const candidates: Array<{ x: number; y: number; distance: number }> = [
     { x: targetX, y: targetY, distance: -1 },
   ];
   for (let y = minY; y <= maxY + 0.001; y += 0.2) {
     for (let x = minX; x <= maxX + 0.001; x += 0.2) {
       candidates.push({
-        x: snap(x),
-        y: snap(y),
+        x: snapWithinGridBounds(x, minX, maxX),
+        y: snapWithinGridBounds(
+          y,
+          minY,
+          maxY,
+          DEFAULT_ARTWORK_EYE_LINE_METRES,
+        ),
         distance: (x - targetX) ** 2 + (y - targetY) ** 2 * 1.45,
       });
     }
@@ -674,7 +739,16 @@ export function updateDecorPlacement(
         message: "This object is no longer in the draft.",
       },
     };
-  const candidate = { ...decor, ...change };
+  const normalizedChange = {
+    ...change,
+    ...(typeof change.x === "number" && Number.isFinite(change.x)
+      ? { x: snap(change.x) }
+      : {}),
+    ...(typeof change.z === "number" && Number.isFinite(change.z)
+      ? { z: snap(change.z) }
+      : {}),
+  };
+  const candidate = { ...decor, ...normalizedChange };
   const issue = validateDecorPlacement(draft, candidate);
   if (issue) return { ok: false, draft, issue };
   return {

@@ -13,7 +13,7 @@ service cloud.firestore {
         ])
         && artwork.keys().hasOnly([
           'id', 'assetId', 'title', 'year', 'description', 'src', 'aspect',
-          'wall', 'x', 'y', 'scale'
+          'wall', 'x', 'y', 'scale', 'frame'
         ])
         && artwork.id is string
         && artwork.id.size() > 0
@@ -43,7 +43,9 @@ service cloud.firestore {
         && artwork.y <= 8
         && isNumber(artwork.scale)
         && artwork.scale >= 0.2
-        && artwork.scale <= 3;
+        && artwork.scale <= 3
+        && (!artwork.keys().hasAny(['frame'])
+          || artwork.frame in ['black', 'white', 'oak', 'none']);
     }
 
     function isValidArtworkList(artworks) {

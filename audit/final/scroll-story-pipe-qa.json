@@ -1,0 +1,236 @@
+{
+  "pageUrl": "file:///Users/uhorizon/Documents/VirtualArtPlattform/dist/index.html",
+  "desktop": [
+    {
+      "requestedProgress": 0.04,
+      "renderedProgress": 0.04,
+      "active": {
+        "title": "Your art deserves more than a page.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true,
+      "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-01-outline.png"
+    },
+    {
+      "requestedProgress": 0.13,
+      "renderedProgress": 0.13,
+      "active": {
+        "title": "Start without 3D knowledge.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true,
+      "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-02-blueprint.png"
+    },
+    {
+      "requestedProgress": 0.25,
+      "renderedProgress": 0.25,
+      "active": {
+        "title": "An idea becomes a real room.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true
+    },
+    {
+      "requestedProgress": 0.38,
+      "renderedProgress": 0.38,
+      "active": {
+        "title": "Curate atmosphere, not just walls.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true,
+      "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-04-atmosphere.png"
+    },
+    {
+      "requestedProgress": 0.51,
+      "renderedProgress": 0.51,
+      "active": {
+        "title": "Every work finds its place.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true
+    },
+    {
+      "requestedProgress": 0.63,
+      "renderedProgress": 0.63,
+      "active": {
+        "title": "Precise. Direct. Safe.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true,
+      "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-06-arrange.png"
+    },
+    {
+      "requestedProgress": 0.73,
+      "renderedProgress": 0.73,
+      "active": {
+        "title": "The room works for your art.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true,
+      "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-07-responsive-space.png"
+    },
+    {
+      "requestedProgress": 0.83,
+      "renderedProgress": 0.83,
+      "active": {
+        "title": "Experience it as a visitor.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true
+    },
+    {
+      "requestedProgress": 0.95,
+      "renderedProgress": 0.95,
+      "active": {
+        "title": "Enter the exhibition.",
+        "opacity": 1
+      },
+      "interactive": "true",
+      "webgl": "ready",
+      "canvasAriaHidden": "false",
+      "canvasTabIndex": 0,
+      "roomShowcaseFollows": true,
+      "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-09-live.png"
+    },
+    {
+      "requestedProgress": 0.25,
+      "renderedProgress": 0.25,
+      "active": {
+        "title": "An idea becomes a real room.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true
+    },
+    {
+      "requestedProgress": 0.95,
+      "renderedProgress": 0.95,
+      "active": {
+        "title": "Enter the exhibition.",
+        "opacity": 1
+      },
+      "interactive": "true",
+      "webgl": "ready",
+      "canvasAriaHidden": "false",
+      "canvasTabIndex": 0,
+      "roomShowcaseFollows": true
+    }
+  ],
+  "mobile": [
+    {
+      "requestedProgress": 0.63,
+      "renderedProgress": 0.6302,
+      "active": {
+        "title": "Precise. Direct. Safe.",
+        "opacity": 1
+      },
+      "interactive": "false",
+      "webgl": "ready",
+      "canvasAriaHidden": "true",
+      "canvasTabIndex": -1,
+      "roomShowcaseFollows": true,
+      "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-mobile-arrange.png"
+    },
+    {
+      "requestedProgress": 0.95,
+      "renderedProgress": 0.9501,
+      "active": {
+        "title": "Enter the exhibition.",
+        "opacity": 1
+      },
+      "interactive": "true",
+      "webgl": "ready",
+      "canvasAriaHidden": "false",
+      "canvasTabIndex": 0,
+      "roomShowcaseFollows": true,
+      "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-mobile-live.png"
+    }
+  ],
+  "danny": {
+    "ready": true,
+    "exposure": "0.90",
+    "environmentIntensity": "0.62",
+    "authoredLights": "29",
+    "activeAuthoredLights": "14",
+    "lightBudget": "14",
+    "lightingPreset": "pitch-neutral-v3",
+    "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/danny-brightness-final.png"
+  },
+  "pageErrors": [],
+  "artworkSelection": {
+    "open": true,
+    "title": "Forest Study",
+    "closeTarget": 44
+  },
+  "desktopInteraction": {
+    "focused": true,
+    "interactive": "true",
+    "controls": 4,
+    "artworkCards": 1
+  },
+  "reducedMotion": {
+    "motion": "reduced",
+    "progress": 1,
+    "interactive": "false",
+    "visibleActCards": 3,
+    "sectionHeight": 1283,
+    "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-reduced-motion.png"
+  },
+  "webglFallback": {
+    "webgl": "unavailable",
+    "items": 9,
+    "display": "grid",
+    "height": 454,
+    "sectionHeight": 1274,
+    "screenshot": "/Users/uhorizon/Documents/VirtualArtPlattform/audit/final/scroll-story-webgl-fallback.png"
+  },
+  "fallbackDiagnostics": [],
+  "assertions": {
+    "nineDistinctStages": true,
+    "reversible": true,
+    "liveCanvasAccessible": true,
+    "artworkSelectable": true,
+    "reducedMotionStatic": true,
+    "webglFallbackVisible": true,
+    "roomCardsImmediatelyFollow": true,
+    "desktopWebglReady": true,
+    "mobileWebglReady": true,
+    "dannyLightingReady": true,
+    "noPageErrors": true
+  }
+}

@@ -5,8 +5,11 @@ Target: `http://127.0.0.1:5174`
 Viewports: 1440 × 1000 and 390 × 844  
 Authoritative core result: **13 / 13 passed · 0 failed · 0 console diagnostics**  
 Audit-closure result: **13 / 13 passed · 0 failed · 0 console diagnostics**
+Scroll/Danny follow-up: **11 / 11 assertions passed · 0 unexpected page errors**
 
 The current machine-readable core result is `browser-qa.json → latestRegression`. The repeatable test is `latest-regression.mjs`. New audit action points are covered separately by `audit-closure-qa.json` and `audit-closure-qa.mjs`.
+
+The scroll-story and Danny-lighting follow-up is recorded in `scroll-story-pipe-qa.json` and can be repeated with `scroll-story-pipe-qa.mjs`. It samples all nine exact story phases in both scroll directions, captures representative desktop/mobile frames, verifies the final canvas controls and confirms the Danny lighting runtime metadata. This isolated run loads the built site and local GLBs directly; it does not touch Firebase or live data.
 
 ## Exact result
 

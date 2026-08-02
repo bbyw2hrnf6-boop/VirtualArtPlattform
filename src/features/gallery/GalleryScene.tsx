@@ -21,6 +21,10 @@ import {
   pavilionZoneCamera,
   type PavilionZoneId,
 } from "./scene/pavilionZones";
+import {
+  normalizeDannyLight,
+  selectDannyAuthoredLights,
+} from "./scene/dannyLighting";
 
 const PAVILION_DIVIDER_WIDTH = 14;
 const PAVILION_DIVIDER_Z = 0;
@@ -4339,7 +4343,8 @@ export function DannyDemoScene({
     renderer.setPixelRatio(quality.dpr);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.42;
+    renderer.toneMappingExposure =
+      quality.tier === "low" ? 1.02 : quality.tier === "high" ? 0.9 : 0.96;
     configureSceneCanvas(
       renderer.domElement,
       "Danny Hirsch virtual exhibition. Focus this view to use keyboard movement.",
@@ -4353,8 +4358,21 @@ export function DannyDemoScene({
     element.dataset.tourAutoplay =
       quality.tier === "low" ? "disabled-low-tier" : "disabled";
     element.dataset.tourDuration = String(DANNY_GUIDED_TOUR_DURATION_MS);
+    element.dataset.lightingPreset = "pitch-neutral-v3";
+    element.dataset.toneMappingExposure =
+      renderer.toneMappingExposure.toFixed(2);
     element.style.setProperty("--danny-tour-progress", "0");
     element.appendChild(renderer.domElement);
+
+    const roomEnvironment = new RoomEnvironment();
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const environment = pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
+    roomEnvironment.dispose();
+    pmremGenerator.dispose();
+    scene.environment = environment;
+    scene.environmentIntensity = quality.tier === "low" ? 0.54 : 0.62;
+    element.dataset.environmentIntensity =
+      scene.environmentIntensity.toFixed(2);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -4371,8 +4389,15 @@ export function DannyDemoScene({
     controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
     controls.autoRotate = false;
     scene.add(
-      new THREE.AmbientLight("#fff4df", 0.075),
-      new THREE.HemisphereLight("#ffe6ba", "#111310", 0.18),
+      new THREE.AmbientLight(
+        "#fffdf8",
+        quality.tier === "low" ? 0.46 : 0.38,
+      ),
+      new THREE.HemisphereLight(
+        "#f5f2ea",
+        "#242622",
+        quality.tier === "low" ? 0.64 : 0.55,
+      ),
     );
 
     let bounds: Bounds = { minX: -7, maxX: 7, minZ: -8, maxZ: 16 };
@@ -4398,6 +4423,8 @@ export function DannyDemoScene({
     let viewAnchors: DannyViewAnchor[] = [];
     let routeWaypoints: DannyRouteWaypoint[] = [];
     let tourPoses: DannyTourPose[] = [];
+    let effectiveQualityTier = quality.tier;
+    let authoredLights: THREE.Light[] = [];
     element.dataset.dollhouse = mode === "walk" ? "inactive" : "active";
 
     type MaterialSnapshot = {
@@ -4418,6 +4445,15 @@ export function DannyDemoScene({
     const colliderNodes: THREE.Object3D[] = [];
     const viewNodes: THREE.Object3D[] = [];
     const routeNodes: THREE.Object3D[] = [];
+    const applyAuthoredLightBudget = () => {
+      const selection = selectDannyAuthoredLights(
+        authoredLights,
+        effectiveQualityTier,
+      );
+      element.dataset.activeAuthoredLights = String(selection.active.length);
+      element.dataset.authoredLightBudget = String(selection.budget);
+      return selection.active.length;
+    };
     const ceilingObjects = new Set<THREE.Object3D>();
     const wallMaterials = new Map<THREE.Material, MaterialSnapshot>();
     const overviewOccluderMaterials = new Map<
@@ -4908,9 +4944,9 @@ export function DannyDemoScene({
         demoModel = gltf.scene;
         scene.add(demoModel);
         demoModel.updateMatrixWorld(true);
-        let activeLights = 0;
         let hiddenCatalogueLabels = 0;
         let maxAuthoredLightIntensity = 0;
+        authoredLights = [];
         const detectedArtworks: Array<{
           object: THREE.Object3D;
           info: ArtworkFocusInfo;
@@ -4946,9 +4982,9 @@ export function DannyDemoScene({
             colliderNodes.push(object);
           if ((object as THREE.Light).isLight) {
             const light = object as THREE.Light;
-            activeLights += 1;
-            light.visible = activeLights <= (quality.tier === "low" ? 8 : 12);
-            light.intensity = Math.min(light.intensity * 0.045, 7.5);
+            authoredLights.push(light);
+            light.visible = false;
+            normalizeDannyLight(light);
             maxAuthoredLightIntensity = Math.max(
               maxAuthoredLightIntensity,
               light.intensity,
@@ -5001,6 +5037,10 @@ export function DannyDemoScene({
             }
             if (isArtwork) {
               material.color?.set("#ffffff");
+              if (material.map) {
+                material.map.colorSpace = THREE.SRGBColorSpace;
+                material.map.needsUpdate = true;
+              }
               material.roughness = 0.72;
               material.toneMapped = false;
             } else if (material.color) {
@@ -5052,6 +5092,7 @@ export function DannyDemoScene({
           }
           if (isFloor) floorObjects.push(object);
         });
+        applyAuthoredLightBudget();
         detectedArtworks.forEach(({ object, info }) => {
           const box = new THREE.Box3().setFromObject(object, true);
           if (box.isEmpty()) {
@@ -5279,6 +5320,7 @@ export function DannyDemoScene({
         );
         element.dataset.maxAuthoredLightIntensity =
           maxAuthoredLightIntensity.toFixed(2);
+        element.dataset.authoredLights = String(authoredLights.length);
         element.dataset.viewAnchors = String(viewAnchors.length);
         element.dataset.routeWaypoints = String(routeWaypoints.length);
         element.dataset.smartViewCount = String(
@@ -5436,6 +5478,8 @@ export function DannyDemoScene({
     observer.observe(element);
     resize();
     const adaptiveDpr = createAdaptiveDpr(renderer, quality, () => {
+      effectiveQualityTier = "low";
+      applyAuthoredLightBudget();
       element.dataset.quality = "low";
       element.dataset.tourAutoplay = "disabled-low-tier";
       intro?.skip();
@@ -5551,6 +5595,7 @@ export function DannyDemoScene({
       });
       disposeObjectTree(walkMarker);
       disposeObjectTree(ground);
+      environment.dispose();
       renderer.dispose();
       renderer.forceContextLoss();
       renderer.domElement.remove();

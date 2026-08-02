@@ -86,7 +86,7 @@ The intended creation flow is:
 3. Select an artwork in the left panel.
 4. Choose a wall; the camera moves to it and AURA finds an available position.
 5. Click the wall for an exact location, drag the artwork directly, or use the fine-placement sliders.
-6. Use the translucent side arrows to rotate around the room, or use the numeric metre controls, exact centimetre readout, framing, lock/hide, alignment, eye-line, and **Space this wall** actions.
+6. Use the translucent side arrows to rotate around the room, or use the numeric metre controls, 3 cm placement grid, exact centimetre readout, framing, lock/hide, alignment, 1.75 m eye-line, and **Space this wall** actions.
 7. Use **Reset view** whenever orientation is lost. In the Grand Forum, use the five-zone floor-plan navigator to jump between the central axis and four side galleries.
 8. Keep **Arrange** and **Open roof** enabled while editing, then enter **Walk Preview** and **Preview ceiling** to inspect the visitor experience. The same canvas and camera session stay alive; a selected visible artwork becomes the Walk Preview start focus.
 9. Add and position objects by dragging them or clicking an empty floor location.
@@ -160,8 +160,10 @@ The repository boundary in `galleryRepository.ts` keeps persistence separate fro
 ## Publishing and data flow
 
 1. Artwork is decoded in the browser, resized to at most 1200 px on its longest side, converted to WebP, and compressed until its data URL is below the configured 780,000-character limit.
+   Same-origin artwork bundled with the fast sandbox is embedded before publication as well.
 2. Firebase signs the publisher in anonymously in the background.
 3. Artwork image data is stored in separate `galleryArtworks` Firestore documents. The gallery document stores metadata, positions, materials, object placements, and a smaller cover image.
+   Hidden works and editor-only lock state are omitted from the public record; visitor-facing frame choices are preserved.
 4. Both document types receive an `expiresAt` timestamp ten days after publication.
 5. Firestore rules allow public reads only while `expiresAt` is in the future. Discover applies the same active-gallery constraint.
 6. The scheduled cleanup Action physically deletes expired documents as a separate, best-effort maintenance step.
@@ -210,10 +212,12 @@ Run `npm ci` once, then keep `npm run dev` running in the terminal. Opening `ind
 
 ### Publishing reports `permission-denied`
 
+- The room itself is still autosaved locally. This error concerns Firestore publication, not the IndexedDB draft.
 - Enable Anonymous Authentication.
 - Add the current hostname to Firebase Authorized domains.
 - Publish the repository's `firestore.rules` and `firestore.indexes.json`.
 - Confirm the web configuration points to the same project in which the rules were deployed.
+- Remember that the GitHub Pages workflow deploys the site only; an authenticated project owner must deploy Firestore rules separately.
 
 ### Discover is empty or a shared gallery cannot be opened
 

@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 import { getTemplate } from '../features/gallery/templates';
 import type {
   Artwork,
+  ArtworkFrame,
   CeilingFinish,
   DecorId,
   DecorPlacement,
@@ -22,6 +23,7 @@ const FLOOR_FINISHES = ['concrete', 'oak', 'terrazzo', 'marble', 'black-marble',
 const CEILING_FINISHES = ['gallery', 'warm', 'dark'] as const satisfies readonly CeilingFinish[];
 const LIGHTING_PRESETS = ['daylight', 'museum', 'evening'] as const satisfies readonly LightingPreset[];
 const DECOR_IDS = ['olive', 'monstera', 'arc-lamp', 'pedestal', 'gallery-bench', 'stone-sculpture', 'floor-vase'] as const satisfies readonly DecorId[];
+const ARTWORK_FRAMES = ['black', 'white', 'oak', 'none'] as const satisfies readonly ArtworkFrame[];
 
 const MAX_ARTWORK_SOURCE_LENGTH = 779_999;
 const MAX_COVER_SOURCE_LENGTH = 399_999;
@@ -160,7 +162,10 @@ function parseArtwork(value: unknown, index: number, templateId: TemplateId, rec
     wall,
     x: numberValue(item.x, recordId, `${field}.x`, -wallWidth / 2, wallWidth / 2),
     y: numberValue(item.y, recordId, `${field}.y`, .2, template.height),
-    scale: numberValue(item.scale, recordId, `${field}.scale`, .2, 3)
+    scale: numberValue(item.scale, recordId, `${field}.scale`, .2, 3),
+    ...(item.frame !== undefined
+      ? { frame: enumValue(item.frame, ARTWORK_FRAMES, recordId, `${field}.frame`) }
+      : {})
   };
 }
 
@@ -206,6 +211,24 @@ export function validateGalleryDraft(value: unknown, options: DraftValidationOpt
     decor,
     artworks
   };
+}
+
+/**
+ * Creates the immutable visitor-facing payload. Hidden and locked are editor
+ * state, so hidden works are omitted and lock state never leaks into public
+ * Firestore records. Frame choice remains part of the exhibition design.
+ */
+export function prepareGalleryDraftForPublication(value: unknown): GalleryDraft {
+  const recordId = 'publication draft';
+  const data = recordValue(value, recordId, 'gallery');
+  if (!Array.isArray(data.artworks)) invalid(recordId, 'artworks', 'expected a list');
+  const visibleArtworks = data.artworks.filter(
+    (artwork) => !isRecord(artwork) || artwork.hidden !== true
+  );
+  return validateGalleryDraft(
+    { ...data, artworks: visibleArtworks },
+    { recordId, requireArtworkSources: true }
+  );
 }
 
 export function validateGalleryCoverSource(value: unknown, recordId = 'publication draft'): string {

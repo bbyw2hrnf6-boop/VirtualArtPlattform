@@ -10,7 +10,11 @@ import type {
   WallFinish,
   WallId,
 } from "./types";
-import { repairDraftPlacements } from "./editor/placementValidation";
+import {
+  DEFAULT_ARTWORK_EYE_LINE_METRES,
+  repairDraftPlacements,
+  snapToPlacementGrid,
+} from "./editor/placementValidation";
 
 export type CurationPhase = "palette" | "composition" | "atmosphere";
 
@@ -374,16 +378,15 @@ function curateArtworkPlacement(
       const wallHeight = wall.startsWith("divider")
         ? template.height - 0.65
         : template.height;
-      const baseY =
-        template.id === "pavilion"
-          ? 3.05 + random() * 0.8
-          : 2.12 + random() * 0.46;
       artwork.wall = wall;
-      artwork.x = cursor + width / 2;
-      artwork.y = clamp(
-        baseY + (position % 2 ? 0.08 : -0.08),
-        artHeight / 2 + 0.35,
-        wallHeight - artHeight / 2 - 0.4,
+      artwork.x = snapToPlacementGrid(cursor + width / 2);
+      artwork.y = snapToPlacementGrid(
+        clamp(
+          DEFAULT_ARTWORK_EYE_LINE_METRES,
+          artHeight / 2 + 0.35,
+          wallHeight - artHeight / 2 - 0.4,
+        ),
+        DEFAULT_ARTWORK_EYE_LINE_METRES,
       );
       artwork.scale = scale;
       cursor += width + gap;
@@ -487,8 +490,8 @@ function curatedDecor(
       return {
         id: crypto.randomUUID(),
         type,
-        x,
-        z,
+        x: snapToPlacementGrid(x),
+        z: snapToPlacementGrid(z),
         rotation: Math.atan2(-x, -z) + (random() - 0.5) * 0.5,
         scale: scaleBase * (0.9 + random() * 0.22),
       };

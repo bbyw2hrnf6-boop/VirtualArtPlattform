@@ -6,6 +6,8 @@ import type {
   TemplateId,
 } from "../types";
 import {
+  DEFAULT_ARTWORK_EYE_LINE_METRES,
+  PLACEMENT_GRID_STEP_METRES,
   findAvailableArtworkPlacement,
   findAvailableDecorPlacement,
   galleryWalls,
@@ -57,7 +59,7 @@ function artwork(id: string, overrides: Partial<Artwork> = {}): Artwork {
     aspect: 1,
     wall: "south",
     x: 0,
-    y: 1.55,
+    y: DEFAULT_ARTWORK_EYE_LINE_METRES,
     scale: 1,
     ...overrides,
   };
@@ -160,7 +162,7 @@ describe("artwork placement", () => {
     ).toBeNull();
   });
 
-  it("keeps rejected transforms transactional and accepts unsnapped free placement", () => {
+  it("keeps rejected transforms transactional and snaps accepted placement to the 3 cm grid", () => {
     const original = draft("white-cube", [
       artwork("first"),
       artwork("second", { x: 3 }),
@@ -176,7 +178,7 @@ describe("artwork placement", () => {
     });
     expect(accepted.ok).toBe(true);
     expect(accepted.draft).not.toBe(original);
-    expect(accepted.draft.artworks[1]).toMatchObject({ x: 2.137, y: 1.731 });
+    expect(accepted.draft.artworks[1]).toMatchObject({ x: 2.13, y: 1.72 });
     expect(original.artworks[1].x).toBe(3);
   });
 
@@ -201,16 +203,22 @@ describe("artwork placement", () => {
       moving.id,
       "south",
       0,
-      1.55,
+      DEFAULT_ARTWORK_EYE_LINE_METRES,
     );
     expect(placement).not.toBeNull();
     expect(placement?.x).not.toBe(0);
-    expect((placement?.x ?? 0) * 20).toBeCloseTo(
-      Math.round((placement?.x ?? 0) * 20),
+    expect((placement?.x ?? 0) / PLACEMENT_GRID_STEP_METRES).toBeCloseTo(
+      Math.round((placement?.x ?? 0) / PLACEMENT_GRID_STEP_METRES),
       8,
     );
-    expect((placement?.y ?? 0) * 20).toBeCloseTo(
-      Math.round((placement?.y ?? 0) * 20),
+    expect(
+      ((placement?.y ?? 0) - DEFAULT_ARTWORK_EYE_LINE_METRES) /
+        PLACEMENT_GRID_STEP_METRES,
+    ).toBeCloseTo(
+      Math.round(
+        ((placement?.y ?? 0) - DEFAULT_ARTWORK_EYE_LINE_METRES) /
+          PLACEMENT_GRID_STEP_METRES,
+      ),
       8,
     );
     expect(
@@ -316,8 +324,8 @@ describe("decor placement", () => {
     });
     expect(accepted.ok).toBe(true);
     expect(accepted.draft.decor[1]).toMatchObject({
-      x: 3.137,
-      z: 0.123,
+      x: 3.15,
+      z: 0.12,
       rotation: 0.37,
     });
   });
@@ -329,12 +337,12 @@ describe("decor placement", () => {
     const placement = findAvailableDecorPlacement(current, moving, 0, 0);
     expect(placement).not.toBeNull();
     expect(placement && (placement.x !== 0 || placement.z !== 0)).toBe(true);
-    expect((placement?.x ?? 0) * 20).toBeCloseTo(
-      Math.round((placement?.x ?? 0) * 20),
+    expect((placement?.x ?? 0) / PLACEMENT_GRID_STEP_METRES).toBeCloseTo(
+      Math.round((placement?.x ?? 0) / PLACEMENT_GRID_STEP_METRES),
       8,
     );
-    expect((placement?.z ?? 0) * 20).toBeCloseTo(
-      Math.round((placement?.z ?? 0) * 20),
+    expect((placement?.z ?? 0) / PLACEMENT_GRID_STEP_METRES).toBeCloseTo(
+      Math.round((placement?.z ?? 0) / PLACEMENT_GRID_STEP_METRES),
       8,
     );
     expect(
@@ -360,7 +368,10 @@ describe("draft validation and repair", () => {
     const repaired = repairDraftPlacements(broken);
     expect(repaired.unresolved).toEqual([]);
     expect(validateDraftPlacements(repaired.draft)).toEqual([]);
-    expect(repaired.draft.artworks[1]).not.toMatchObject({ x: 0, y: 1.55 });
+    expect(repaired.draft.artworks[1]).not.toMatchObject({
+      x: 0,
+      y: DEFAULT_ARTWORK_EYE_LINE_METRES,
+    });
     expect(repaired.draft.decor[1]).not.toMatchObject({ x: 0, z: 0 });
   });
 

@@ -317,8 +317,8 @@ Wall View und Floorplan sind Hilfsansichten innerhalb von Arrange. So bleibt das
 - Gemeinsame Validierung für Drag, Click, Slider, Auto Curator und Publish.
 - Artwork-Rechteck statt nur Mittelpunkt prüfen.
 - Mindestabstand zu Boden, Decke, Türen, Ecken und Nachbarwerken.
-- Standard-Augenlinie etwa 155 cm.
-- Snap-Raster 5 cm.
+- Standard-Augenlinie etwa 175 cm.
+- Snap-Raster 3 cm.
 - Align left/center/right, distribute horizontal/vertical.
 - Numerische Eingabe mit cm/m; Slider zeigt immer Wert und Einheit.
 - Duplicate, Lock und Hide.
