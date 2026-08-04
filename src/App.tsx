@@ -1467,13 +1467,13 @@ function Studio({
           captureError,
         );
       }
-      setPublished(
-        await galleryRepository.publish(
-          { ...draftRef.current, title, artist },
-          roomCoverSource,
-        ),
+      const publishedGallery = await galleryRepository.publish(
+        { ...draftRef.current, title, artist },
+        roomCoverSource,
       );
+      setPublished(publishedGallery);
       setPublishReviewOpen(false);
+      navigate(`/g/${publishedGallery.id}`);
     } catch (error) {
       console.error(error);
       setPublishError(
@@ -2086,18 +2086,18 @@ function Studio({
             <Swatches
               options={[
                 ["chalk", "linear-gradient(135deg,#f1eee6,#cfcac0)", "plaster"],
-                ["warm", "linear-gradient(135deg,#c7b6a0,#978977)", "limewash"],
+                ["warm", "linear-gradient(135deg,#c99478,#8f5545)", "clay limewash"],
                 ["light-concrete", "linear-gradient(135deg,#d6d6d4,#aeb0b0)", "light concrete"],
                 ["charcoal", "linear-gradient(135deg,#3a3c39,#202220)", "dark concrete"],
                 [
                   "microcement",
-                  "linear-gradient(135deg,#cbbda8,#aa9a83)",
-                  "beige microcement",
+                  "linear-gradient(135deg,#a9a398,#777970)",
+                  "greige microcement",
                 ],
                 [
                   "limestone",
-                  "linear-gradient(135deg,#ece2cf,#c8b99d)",
-                  "light limestone",
+                  "linear-gradient(135deg,#e4bb72,#b67832)",
+                  "gold sandstone",
                 ],
                 [
                   "oak-slats",
@@ -2106,7 +2106,7 @@ function Studio({
                 ],
                 ["black-slats", "repeating-linear-gradient(90deg,#272827 0 8px,#050606 9px 12px)", "black oak slats"],
                 ["marble-wall", "linear-gradient(135deg,#f0eee8 38%,#9b9d99 40%,#e3e0d8 43%)", "white marble"],
-                ["dark-stone", "linear-gradient(135deg,#171918,#404440 52%,#202220)", "dark stone"],
+                ["dark-stone", "linear-gradient(135deg,#15241f,#445148 52%,#202a25)", "green stone"],
               ]}
               value={draft.wall}
               onChange={(value) =>

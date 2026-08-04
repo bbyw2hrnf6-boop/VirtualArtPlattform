@@ -965,10 +965,13 @@
   .sgs {
     height: 1030svh;
     min-height: 6100px;
+    overscroll-behavior: contain;
   }
 
   .sgs__sticky {
     min-height: 560px;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .sgs[data-webgl='unavailable'] .sgs__accessible-sequence {

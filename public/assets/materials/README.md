@@ -4,6 +4,8 @@ The `aura-*-v2.webp` textures were generated specifically for this project on 2 
 
 The `aura-*-v3.webp` textures were generated specifically for this project on 4 August 2026 from the supplied GPT concept sheets. Each source was visually reviewed, resized to 1536 × 1536, and encoded as WebP at quality 86. They are also base-color/albedo assets only.
 
+The three `aura-*-v4.webp` textures were generated specifically for the final material-distinction pass on 4 August 2026. They use the built-in image-generation mode, were visually reviewed, cropped where needed, resized to 1536 × 1536, and encoded as WebP. They remain base-color/albedo assets only.
+
 Shared prompt frame:
 
 > Photorealistic, seamless square PBR base-color texture for a real-time 3D gallery; perfectly orthographic top-down flat surface; neutral cross-polarized diffuse capture; no shadows, hotspot, perspective, objects, text, logo, watermark, vignette, or lighting gradient.
@@ -24,6 +26,9 @@ Material-specific requests:
 - `aura-natural-oak-v3.webp`: pale honey European-oak floorboards with restrained knots and joints.
 - `aura-light-terrazzo-v3.webp`: warm-grey terrazzo with small muted mineral chips.
 - `aura-black-oak-slats-v3.webp`: charcoal-black stained-oak battens with deep acoustic gaps.
+- `aura-calacatta-marble-v4.webp`: white Calacatta marble with broad cool-grey and lightly taupe-edged veins that stay legible from the gallery camera, matching the visual confidence of the black marble without copying its pattern.
+- `aura-golden-sandstone-v4.webp`: honey-gold sandstone with ochre and pale-sand sediment bands, pores, and clearly natural variation, designed to remain distinct from plaster and greige microcement.
+- `aura-green-stone-v4.webp`: deep forest-green, olive, and charcoal natural stone with fine pale mineral seams, designed to remain distinct from concrete and black slats.
 
 SHA-256 checksums:
 
@@ -42,4 +47,7 @@ efd9e5d26f44c06e608bdc2d037d13b742b6e8a3bf6adbbb67fff3dc5d6df50a  aura-light-con
 aba6d64fac70a47dbe4a3b672cc502aafae46f7ee5f06c2313834560191056a6  aura-natural-oak-v3.webp
 f1b95526700675a1baab5f250215da97c43c8e7ced3a9de0d459da248f0e544b  aura-light-terrazzo-v3.webp
 16fb5295d4fa36931ab37c0df2eb0b3bbf93c03a06b7e1b2d52ea19a07611585  aura-black-oak-slats-v3.webp
+2cef1f9a634df683a43293f436e9ee9dfeeaf8d23a32dbb1f4b6062f317102c2  aura-calacatta-marble-v4.webp
+56626bacf476f751a836297d47576166326709699f29819696fb347b18a71a30  aura-golden-sandstone-v4.webp
+51c16ab7c1735b124a1280d30d357be1141d5c9c657cdc62845261afe8535d7c  aura-green-stone-v4.webp
 ```

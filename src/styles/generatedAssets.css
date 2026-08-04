@@ -97,11 +97,27 @@
   outline: none;
 }
 
+/* Keep the tour clear of the artwork directory and the builder camera controls. */
+.gallery-scene:not(.gallery-scene--edit) .gallery-guided-tour {
+  top: 144px;
+}
+
+.gallery-scene--editor-walk .gallery-guided-tour {
+  top: 122px;
+}
+
 @media (max-width: 620px) {
   .gallery-guided-tour {
-    top: 74px;
     left: 12px;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 12px;
+  }
+
+  .gallery-scene:not(.gallery-scene--edit) .gallery-guided-tour {
+    top: 128px;
+  }
+
+  .gallery-scene--editor-walk .gallery-guided-tour {
+    top: 158px;
   }
 }

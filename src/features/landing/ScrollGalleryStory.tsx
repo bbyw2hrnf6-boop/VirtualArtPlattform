@@ -878,7 +878,7 @@ export function ScrollGalleryStory() {
 
       // Leave one authored edge on screen before the first wheel/touch move so
       // the mobile opening never reads as an empty black video frame.
-      const edgeReveal = 0.08 + easeOut(between(progress, 0, 0.14)) * 0.92;
+      const edgeReveal = 0.14 + easeOut(between(progress, 0, 0.14)) * 0.86;
       const blueprintIn = smooth(between(progress, 0.1, 0.18));
       const blueprintOut = 1 - smooth(between(progress, 0.5, 0.64));
       const blueprintOpacity = blueprintIn * blueprintOut;
@@ -909,7 +909,7 @@ export function ScrollGalleryStory() {
       dannyBlueprint.visible = dannyModel !== null && edgeReveal * blueprintOut > 0.002;
       dannyBlueprintLines.forEach((lines, index) => {
         const stagger = Math.min(0.08, index * 0.00125);
-        const seed = index < 2 ? (2 - index) * 0.04 : 0;
+        const seed = index < 6 ? (6 - index) * 0.025 : 0;
         const reveal = seed + easeOut(between(progress, stagger, 0.14 + stagger)) * (1 - seed);
         const geometry = lines.geometry;
         const lineCount = geometry.getAttribute('position')?.count ?? 0;

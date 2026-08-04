@@ -101,17 +101,17 @@ const WALLS: Record<
 };
 const wallColors = {
   chalk: "#dfdcd4",
-  warm: "#ae9f8c",
+  warm: "#b86f58",
   travertine: "#d7cbb6",
   linen: "#c8c0b3",
   charcoal: "#292b29",
-  microcement: "#b9aa94",
-  limestone: "#e2d6c2",
+  microcement: "#8f8a80",
+  limestone: "#d2a257",
   "oak-slats": "#b89162",
   "light-concrete": "#c8c9c7",
   "black-slats": "#252625",
   "marble-wall": "#e8e6df",
-  "dark-stone": "#242725",
+  "dark-stone": "#24332d",
 };
 const floorColors = {
   concrete: "#777672",
@@ -128,7 +128,7 @@ const floorColors = {
 };
 type SurfaceKind = GalleryDraft["wall"] | GalleryDraft["floor"];
 const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
-  marble: "./assets/materials/aura-carrara-marble-v2.webp",
+  marble: "./assets/materials/aura-calacatta-marble-v4.webp",
   "black-marble": "./assets/materials/aura-nero-marquina-v2.webp",
   walnut: "./assets/materials/aura-american-walnut-v2.webp",
   "dark-oak": "./assets/materials/aura-smoked-oak-v2.webp",
@@ -137,15 +137,15 @@ const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
   concrete: "./assets/materials/aura-light-concrete-v3.webp",
   travertine: "./assets/materials/aura-roman-travertine-v2.webp",
   microcement: "./assets/materials/aura-microcement-beige-v3.webp",
-  limestone: "./assets/materials/aura-light-limestone-v3.webp",
+  limestone: "./assets/materials/aura-golden-sandstone-v4.webp",
   "oak-slats": "./assets/materials/aura-light-oak-slats-v3.webp",
   slate: "./assets/materials/aura-black-slate-v3.webp",
   "dark-concrete": "./assets/materials/aura-dark-concrete-v3.webp",
   "travertine-floor": "./assets/materials/aura-roman-travertine-v2.webp",
   "light-concrete": "./assets/materials/aura-light-concrete-v3.webp",
   "black-slats": "./assets/materials/aura-black-oak-slats-v3.webp",
-  "marble-wall": "./assets/materials/aura-carrara-marble-v2.webp",
-  "dark-stone": "./assets/materials/aura-black-slate-v3.webp",
+  "marble-wall": "./assets/materials/aura-calacatta-marble-v4.webp",
+  "dark-stone": "./assets/materials/aura-green-stone-v4.webp",
 };
 
 function createSurfaceTexture(kind: SurfaceKind, base: string) {
@@ -1298,21 +1298,21 @@ function buildRoom(
   wallTexture.repeat.multiplyScalar(Math.max(1, w / 25));
   ceilingTexture.repeat.multiplyScalar(Math.max(1, Math.max(w, d) / 24));
   const wallProfile = {
-    chalk: { bump: 0.009, roughness: 0.82, clearcoat: 0.025 },
-    warm: { bump: 0.015, roughness: 0.86, clearcoat: 0.015 },
-    travertine: { bump: 0.02, roughness: 0.7, clearcoat: 0.035 },
-    linen: { bump: 0.024, roughness: 0.92, clearcoat: 0 },
-    charcoal: { bump: 0.008, roughness: 0.72, clearcoat: 0.05 },
-    microcement: { bump: 0.012, roughness: 0.76, clearcoat: 0.018 },
-    limestone: { bump: 0.022, roughness: 0.81, clearcoat: 0.008 },
-    "oak-slats": { bump: 0.016, roughness: 0.68, clearcoat: 0.055 },
-    "light-concrete": { bump: 0.01, roughness: 0.8, clearcoat: 0.018 },
-    "black-slats": { bump: 0.016, roughness: 0.7, clearcoat: 0.04 },
-    "marble-wall": { bump: 0.006, roughness: 0.34, clearcoat: 0.26 },
-    "dark-stone": { bump: 0.02, roughness: 0.73, clearcoat: 0.025 },
+    chalk: { color: "#f0ede5", bump: 0.009, roughness: 0.82, clearcoat: 0.025 },
+    warm: { color: "#d38b73", bump: 0.015, roughness: 0.86, clearcoat: 0.015 },
+    travertine: { color: "#eee4d2", bump: 0.02, roughness: 0.7, clearcoat: 0.035 },
+    linen: { color: "#ddd6ca", bump: 0.024, roughness: 0.92, clearcoat: 0 },
+    charcoal: { color: "#4b4e4a", bump: 0.008, roughness: 0.72, clearcoat: 0.05 },
+    microcement: { color: "#b7b0a4", bump: 0.012, roughness: 0.76, clearcoat: 0.018 },
+    limestone: { color: "#f0c477", bump: 0.022, roughness: 0.81, clearcoat: 0.008 },
+    "oak-slats": { color: "#d7b98d", bump: 0.016, roughness: 0.68, clearcoat: 0.055 },
+    "light-concrete": { color: "#e0e0dc", bump: 0.01, roughness: 0.8, clearcoat: 0.018 },
+    "black-slats": { color: "#4a4b48", bump: 0.016, roughness: 0.7, clearcoat: 0.04 },
+    "marble-wall": { color: "#f5f3ee", bump: 0.006, roughness: 0.34, clearcoat: 0.26 },
+    "dark-stone": { color: "#5a6b61", bump: 0.02, roughness: 0.73, clearcoat: 0.025 },
   }[draft.wall];
   const wall = new THREE.MeshPhysicalMaterial({
-    color: draft.templateId === "pavilion" ? "#d5c8b3" : "#f4f1e8",
+    color: wallProfile.color,
     map: wallTexture,
     roughness: wallProfile.roughness,
     clearcoat: wallProfile.clearcoat,
@@ -1822,17 +1822,17 @@ function updateRoomSurface(
     replaceRoomSurfaceTexture(materials, texture);
     const profile = {
       chalk: { color: "#f0ede5", roughness: 0.84, clearcoat: 0.015 },
-      warm: { color: "#d8cbb8", roughness: 0.88, clearcoat: 0.01 },
+      warm: { color: "#d38b73", roughness: 0.88, clearcoat: 0.01 },
       travertine: { color: "#eee4d2", roughness: 0.72, clearcoat: 0.025 },
       linen: { color: "#ddd6ca", roughness: 0.93, clearcoat: 0 },
       charcoal: { color: "#343633", roughness: 0.76, clearcoat: 0.025 },
-      microcement: { color: "#ddd0bd", roughness: 0.78, clearcoat: 0.012 },
-      limestone: { color: "#f0e6d4", roughness: 0.82, clearcoat: 0.006 },
+      microcement: { color: "#b7b0a4", roughness: 0.78, clearcoat: 0.012 },
+      limestone: { color: "#f0c477", roughness: 0.82, clearcoat: 0.006 },
       "oak-slats": { color: "#d7b98d", roughness: 0.7, clearcoat: 0.045 },
       "light-concrete": { color: "#e0e0dc", roughness: 0.81, clearcoat: 0.012 },
       "black-slats": { color: "#4a4b48", roughness: 0.72, clearcoat: 0.035 },
       "marble-wall": { color: "#f0eee8", roughness: 0.36, clearcoat: 0.24 },
-      "dark-stone": { color: "#555956", roughness: 0.75, clearcoat: 0.02 },
+      "dark-stone": { color: "#5a6b61", roughness: 0.75, clearcoat: 0.02 },
     }[draft.wall];
     materials.forEach((material) => {
       material.color.set(profile.color);
