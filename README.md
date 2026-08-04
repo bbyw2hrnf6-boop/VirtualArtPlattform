@@ -184,7 +184,7 @@ To use another Firebase project, replace that web configuration and the default 
 4. Push a commit to `main`, or manually run **Actions → Deploy to GitHub Pages → Run workflow**.
 5. Confirm every step is green and open the URL shown by the deployment job.
 
-`.github/workflows/deploy.yml` first authenticates with the `FIREBASE_SERVICE_ACCOUNT` repository secret and deploys the matching Firestore rules/indexes. Only after that succeeds does it install the locked dependencies with `npm ci`, build `dist/`, upload the Pages artifact, and deploy it. Do not configure Pages to publish the repository root or the unbuilt `main` branch.
+`.github/workflows/deploy.yml` installs the locked dependencies with `npm ci`, builds `dist/`, uploads the Pages artifact, and deploys it. Firestore rules remain a separate manual Firebase Console step. Do not configure Pages to publish the repository root or the unbuilt `main` branch.
 
 Before presenting a deployment, verify:
 
@@ -217,7 +217,7 @@ Run `npm ci` once, then keep `npm run dev` running in the terminal. Opening `ind
 - Add the current hostname to Firebase Authorized domains.
 - Publish the repository's `firestore.rules` and `firestore.indexes.json`.
 - Confirm the web configuration points to the same project in which the rules were deployed.
-- Confirm the workflow's **Deploy Firestore rules and indexes** job is green. The Pages job now refuses to publish a client when that matching rules deployment fails.
+- Update Firestore rules manually in Firebase Console; the GitHub Pages workflow intentionally deploys only the website.
 
 ### Discover is empty or a shared gallery cannot be opened
 
