@@ -88,17 +88,6 @@ class FirebaseGalleryRepository implements GalleryRepository {
     return firebaseAuth.currentUser?.uid ?? (await signInAnonymously(firebaseAuth)).user.uid;
   }
 
-  private async assertPublicRulesAvailable() {
-    const safelyActiveAt = Timestamp.fromMillis(Date.now() + 60_000);
-    const permissionProbe = query(
-      collection(firebaseDb, 'galleries'),
-      where('expiresAt', '>', safelyActiveAt),
-      orderBy('expiresAt', 'desc'),
-      limit(1)
-    );
-    await getDocs(permissionProbe);
-  }
-
   async currentUserId() {
     await firebaseAuth.authStateReady();
     return firebaseAuth.currentUser?.uid ?? null;
@@ -108,7 +97,6 @@ class FirebaseGalleryRepository implements GalleryRepository {
     let cleanupReferences: DocumentReference[] = [];
     try {
       const validatedDraft = prepareGalleryDraftForPublication(await embedLocalArtworkSources(draft));
-      await this.assertPublicRulesAvailable();
       const ownerId = await this.userId(); const base = slugify(`${validatedDraft.artist}-${validatedDraft.title}`) || 'gallery'; const id = `${base}-${crypto.randomUUID().slice(0, 7)}`;
       const now = new Date(); const expires = new Date(now.getTime() + 10 * 86400000); const coverSrc = validateGalleryCoverSource(await createThumbnail(roomCoverSource || validatedDraft.artworks[0]?.src));
       const galleryRef = doc(firebaseDb, 'galleries', id);

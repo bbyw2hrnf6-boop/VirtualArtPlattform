@@ -152,8 +152,10 @@ service cloud.firestore {
     }
 
     match /galleries/{galleryId} {
-      allow read: if resource.data.expiresAt is timestamp
-        && resource.data.expiresAt > request.time;
+      // Create validation guarantees a timestamp. Keeping the read predicate
+      // to the same inequality used by the client lets Firestore prove that
+      // collection queries cannot return expired documents.
+      allow read: if resource.data.expiresAt > request.time;
       allow create: if isValidGalleryCreate();
       allow update: if false;
       allow delete: if request.auth != null
@@ -161,8 +163,7 @@ service cloud.firestore {
     }
 
     match /galleryArtworks/{assetId} {
-      allow read: if resource.data.expiresAt is timestamp
-        && resource.data.expiresAt > request.time;
+      allow read: if resource.data.expiresAt > request.time;
       allow create: if request.auth != null
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.keys().hasAll([
