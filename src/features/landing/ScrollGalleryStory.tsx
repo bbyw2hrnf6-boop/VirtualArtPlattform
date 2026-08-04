@@ -9,28 +9,28 @@ import './scrollGalleryStory.css';
 const CHAPTERS = [
   {
     eyebrow: 'Act I · First light',
-    title: 'Your art deserves more than a page.',
-    body: 'The authored Danny Hirsch Arts room begins as one precise line of light.'
+    title: 'An exhibition starts with purpose.',
+    body: 'Turn a body of work into a place visitors can understand, enter, and remember.'
   },
   {
     eyebrow: '01 · Blueprint',
-    title: 'Start without 3D knowledge.',
-    body: 'Its real dimensions, axes, and placement surfaces make the exhibition legible.'
+    title: 'Plan space before decoration.',
+    body: 'Scale, circulation, sightlines, and real placement surfaces make the room legible.'
   },
   {
     eyebrow: '02 · Architecture',
-    title: 'The real room takes shape.',
-    body: 'Danny Hirsch Arts floor, walls, thresholds, and ceiling grow from their authored plan.'
+    title: 'Build from the ground up.',
+    body: 'Floor, walls, thresholds, ceiling, and details arrive as separate, connected systems.'
   },
   {
-    eyebrow: '03 · Atmosphere',
-    title: 'Curate atmosphere, not just walls.',
-    body: 'Stone, bronze, shadow, and warm light resolve into the finished exhibition.'
+    eyebrow: '03 · Surface and light',
+    title: 'Give the room a point of view.',
+    body: 'Stone, bronze, shadow, and focused light guide attention without distorting the art.'
   },
   {
-    eyebrow: 'Act II · Artwork',
-    title: 'Every work finds its place.',
-    body: 'The genuine Danny Hirsch works settle into their authored positions and eye lines.'
+    eyebrow: 'Act II · Curation',
+    title: 'Every work earns its place.',
+    body: 'Real dimensions, eye line, spacing, and sequence turn images into an exhibition.'
   },
   {
     eyebrow: '04 · Arrange',
@@ -39,8 +39,8 @@ const CHAPTERS = [
   },
   {
     eyebrow: '05 · Responsive space',
-    title: 'The room works for your art.',
-    body: 'Spots find each work while sculpture, pedestal, and shadow settle together.'
+    title: 'Test the visitor experience.',
+    body: 'Lighting, collisions, routes, and sightlines prove the room works before it is shared.'
   },
   {
     eyebrow: 'Act III · Walk preview',
@@ -49,8 +49,8 @@ const CHAPTERS = [
   },
   {
     eyebrow: '06 · Live product',
-    title: 'Enter the exhibition.',
-    body: 'You are already inside the real Danny Hirsch Arts demo: look around, move, and select an artwork.'
+    title: 'Publish a place, not a page.',
+    body: 'The finished exhibition becomes one browser experience visitors can enter, explore, and share.'
   }
 ] as const;
 
@@ -121,6 +121,7 @@ export function ScrollGalleryStory() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chapterRefs = useRef<Array<HTMLElement | null>>([]);
   const blueprintUiRef = useRef<HTMLDivElement>(null);
+  const buildPhaseRef = useRef<HTMLParagraphElement>(null);
   const materialUiRef = useRef<HTMLDivElement>(null);
   const materialLabelRef = useRef<HTMLElement>(null);
   const arrangeUiRef = useRef<HTMLDivElement>(null);
@@ -879,8 +880,26 @@ export function ScrollGalleryStory() {
       // the mobile opening never reads as an empty black video frame.
       const edgeReveal = 0.08 + easeOut(between(progress, 0, 0.14)) * 0.92;
       const blueprintIn = smooth(between(progress, 0.1, 0.18));
-      const blueprintOut = 1 - smooth(between(progress, 0.38, 0.52));
+      const blueprintOut = 1 - smooth(between(progress, 0.5, 0.64));
       const blueprintOpacity = blueprintIn * blueprintOut;
+      const buildStage = progress < 0.2
+        ? 'plan'
+        : progress < 0.29
+          ? 'floor'
+          : progress < 0.38
+            ? 'walls'
+            : progress < 0.46 ? 'ceiling' : 'details';
+      const buildPhaseCopy = buildStage === 'plan'
+        ? '01 / 05 · Plan and circulation'
+        : buildStage === 'floor'
+          ? '02 / 05 · Floor plane'
+          : buildStage === 'walls'
+            ? '03 / 05 · Walls and thresholds'
+            : buildStage === 'ceiling'
+              ? '04 / 05 · Ceiling and services'
+              : '05 / 05 · Materials and details';
+      if (blueprintUiRef.current) blueprintUiRef.current.dataset.stage = buildStage;
+      if (buildPhaseRef.current) buildPhaseRef.current.textContent = buildPhaseCopy;
       const outlineCount = outlineGeometry.getAttribute('position').count;
       outlineGeometry.setDrawRange(0, Math.max(2, Math.floor((outlineCount * edgeReveal) / 2) * 2));
       blueprint.visible = edgeReveal * blueprintOut > 0.002;
@@ -929,9 +948,11 @@ export function ScrollGalleryStory() {
       hemisphere.intensity = palette.ambient;
       keyLight.intensity = palette.key;
       galleryLight.intensity = THREE.MathUtils.lerp(0.15, 2.7, Math.max(backBuild, materialProgress));
-      if (materialLabelRef.current) materialLabelRef.current.textContent = palette.label;
-      const materialUiIn = smooth(between(progress, 0.315, 0.345));
-      const materialUiOut = 1 - smooth(between(progress, 0.445, 0.49));
+      if (materialLabelRef.current) {
+        materialLabelRef.current.textContent = dannyModel ? 'Authored Danny Hirsch palette' : palette.label;
+      }
+      const materialUiIn = smooth(between(progress, 0.42, 0.48));
+      const materialUiOut = 1 - smooth(between(progress, 0.62, 0.7));
       setUiVisibility(materialUiRef.current, materialUiIn * materialUiOut, 14);
       const nocturneIn = smooth(between(materialProgress, 0.25, 0.43));
       const nocturneOut = 1 - smooth(between(materialProgress, 0.54, 0.69));
@@ -1084,19 +1105,44 @@ export function ScrollGalleryStory() {
     };
 
     let frame = 0;
-    const readProgress = () => {
+    let targetProgress = 0;
+    let renderedProgress = 0;
+    let hasRenderedProgress = false;
+    let previousFrameAt = 0;
+    const readProgress = (frameAt: number) => {
       frame = 0;
       resize();
       if (reducedMotion) {
+        targetProgress = 1;
+        renderedProgress = 1;
+        hasRenderedProgress = true;
         renderProgress(1);
         return;
       }
       const bounds = section.getBoundingClientRect();
       const travel = Math.max(1, bounds.height - window.innerHeight);
-      renderProgress(-bounds.top / travel);
+      targetProgress = clamp01(-bounds.top / travel);
+      if (!hasRenderedProgress) {
+        renderedProgress = targetProgress;
+        hasRenderedProgress = true;
+      } else {
+        const elapsed = previousFrameAt > 0 ? Math.min(64, frameAt - previousFrameAt) : 16.67;
+        const responseTime = compact ? 300 : 360;
+        const damping = 1 - Math.exp(-elapsed / responseTime);
+        renderedProgress += (targetProgress - renderedProgress) * damping;
+        if (Math.abs(targetProgress - renderedProgress) < 0.00035) renderedProgress = targetProgress;
+      }
+      previousFrameAt = frameAt;
+      renderProgress(renderedProgress);
+      if (Math.abs(targetProgress - renderedProgress) >= 0.00035) {
+        frame = window.requestAnimationFrame(readProgress);
+      }
     };
     const requestRender = () => {
-      if (!disposed && !frame) frame = window.requestAnimationFrame(readProgress);
+      if (!disposed && !frame) {
+        previousFrameAt = 0;
+        frame = window.requestAnimationFrame(readProgress);
+      }
     };
     requestStoryRender = requestRender;
 
@@ -1201,7 +1247,7 @@ export function ScrollGalleryStory() {
     canvas.addEventListener('pointercancel', handlePointerUp);
     visitorControls?.addEventListener('click', handleMoveControl);
     artworkClose?.addEventListener('click', handleCloseArtwork);
-    readProgress();
+    requestRender();
 
     return () => {
       disposed = true;
@@ -1272,9 +1318,9 @@ export function ScrollGalleryStory() {
 
         <div className="sgs__blueprint-ui" ref={blueprintUiRef} aria-hidden="true">
           <div><span>X</span><span>Y</span><span>Z</span></div>
-          <p>Danny Hirsch Arts · authored GLB</p>
+          <p ref={buildPhaseRef}>01 / 05 · Plan and circulation</p>
           <dl><div><dt>Width</dt><dd>12.40 m</dd></div><div><dt>Depth</dt><dd>21.90 m</dd></div></dl>
-          <ul><li>Architecture</li><li>Artwork anchors</li><li>Walk colliders</li></ul>
+          <ul><li>Plan</li><li>Floor</li><li>Walls</li><li>Ceiling</li><li>Details</li></ul>
         </div>
 
         <div className="sgs__material-ui" ref={materialUiRef} aria-hidden="true">

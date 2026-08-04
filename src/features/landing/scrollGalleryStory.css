@@ -1,8 +1,8 @@
 .sgs {
   --sgs-progress: 0;
   position: relative;
-  height: 1050svh;
-  min-height: 7200px;
+  height: 1180svh;
+  min-height: 7900px;
   overflow: clip;
   background: #111411;
   color: #f1efe8;
@@ -323,7 +323,7 @@
 
 .sgs__blueprint-ui ul {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   margin: 0;
   padding: 0;
@@ -337,6 +337,17 @@
   padding: 5px;
   border: 1px solid #ffffff20;
   text-align: center;
+  transition: border-color .2s, color .2s, background .2s;
+}
+
+.sgs__blueprint-ui[data-stage='plan'] li:nth-child(1),
+.sgs__blueprint-ui[data-stage='floor'] li:nth-child(2),
+.sgs__blueprint-ui[data-stage='walls'] li:nth-child(3),
+.sgs__blueprint-ui[data-stage='ceiling'] li:nth-child(4),
+.sgs__blueprint-ui[data-stage='details'] li:nth-child(5) {
+  border-color: var(--acid, #d9ff43);
+  background: #d9ff4315;
+  color: var(--acid, #d9ff43);
 }
 
 .sgs__material-ui > div {
@@ -952,8 +963,8 @@
 
 @media (max-width: 720px) {
   .sgs {
-    height: 920svh;
-    min-height: 5400px;
+    height: 1030svh;
+    min-height: 6100px;
   }
 
   .sgs__sticky {
