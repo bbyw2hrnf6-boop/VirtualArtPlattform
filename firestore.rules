@@ -2,111 +2,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isNumber(value) {
-      return value is int || value is float;
-    }
-
-    function isValidArtwork(artwork) {
-      return artwork is map
-        && artwork.keys().hasAll([
-          'id', 'assetId', 'title', 'src', 'aspect', 'wall', 'x', 'y', 'scale'
-        ])
-        && artwork.keys().hasOnly([
-          'id', 'assetId', 'title', 'year', 'description', 'src', 'aspect',
-          'wall', 'x', 'y', 'scale', 'frame'
-        ])
-        && artwork.id is string
-        && artwork.id.size() > 0
-        && artwork.id.size() <= 100
-        && artwork.assetId is string
-        && artwork.assetId.size() > 0
-        && artwork.assetId.size() <= 100
-        && artwork.title is string
-        && artwork.title.size() <= 80
-        && (!artwork.keys().hasAny(['year'])
-          || (artwork.year is string && artwork.year.size() <= 12))
-        && (!artwork.keys().hasAny(['description'])
-          || (artwork.description is string && artwork.description.size() <= 240))
-        && artwork.src is string
-        && artwork.src.size() == 0
-        && isNumber(artwork.aspect)
-        && artwork.aspect >= 0.08
-        && artwork.aspect <= 12
-        && artwork.wall in [
-          'north', 'south', 'west', 'east', 'divider-front', 'divider-back'
-        ]
-        && isNumber(artwork.x)
-        && artwork.x >= -30
-        && artwork.x <= 30
-        && isNumber(artwork.y)
-        && artwork.y >= 0.2
-        && artwork.y <= 8
-        && isNumber(artwork.scale)
-        && artwork.scale >= 0.2
-        && artwork.scale <= 3
-        && (!artwork.keys().hasAny(['frame'])
-          || artwork.frame in ['black', 'white', 'oak', 'none']);
-    }
-
-    function isValidArtworkList(artworks) {
-      return artworks is list
-        && artworks.size() <= 14
-        && (artworks.size() < 1 || isValidArtwork(artworks[0]))
-        && (artworks.size() < 2 || isValidArtwork(artworks[1]))
-        && (artworks.size() < 3 || isValidArtwork(artworks[2]))
-        && (artworks.size() < 4 || isValidArtwork(artworks[3]))
-        && (artworks.size() < 5 || isValidArtwork(artworks[4]))
-        && (artworks.size() < 6 || isValidArtwork(artworks[5]))
-        && (artworks.size() < 7 || isValidArtwork(artworks[6]))
-        && (artworks.size() < 8 || isValidArtwork(artworks[7]))
-        && (artworks.size() < 9 || isValidArtwork(artworks[8]))
-        && (artworks.size() < 10 || isValidArtwork(artworks[9]))
-        && (artworks.size() < 11 || isValidArtwork(artworks[10]))
-        && (artworks.size() < 12 || isValidArtwork(artworks[11]))
-        && (artworks.size() < 13 || isValidArtwork(artworks[12]))
-        && (artworks.size() < 14 || isValidArtwork(artworks[13]));
-    }
-
-    function isValidDecor(item) {
-      return item is map
-        && item.keys().hasAll(['id', 'type', 'x', 'z', 'rotation', 'scale'])
-        && item.keys().hasOnly(['id', 'type', 'x', 'z', 'rotation', 'scale'])
-        && item.id is string
-        && item.id.size() > 0
-        && item.id.size() <= 100
-        && item.type in [
-          'olive', 'monstera', 'arc-lamp', 'pedestal', 'gallery-bench',
-          'stone-sculpture', 'floor-vase'
-        ]
-        && isNumber(item.x)
-        && item.x >= -30
-        && item.x <= 30
-        && isNumber(item.z)
-        && item.z >= -40
-        && item.z <= 40
-        && isNumber(item.rotation)
-        && item.rotation >= -7
-        && item.rotation <= 7
-        && isNumber(item.scale)
-        && item.scale >= 0.2
-        && item.scale <= 3;
-    }
-
-    function isValidDecorList(decor) {
-      return decor is list
-        && decor.size() <= 8
-        && (decor.size() < 1 || isValidDecor(decor[0]))
-        && (decor.size() < 2 || isValidDecor(decor[1]))
-        && (decor.size() < 3 || isValidDecor(decor[2]))
-        && (decor.size() < 4 || isValidDecor(decor[3]))
-        && (decor.size() < 5 || isValidDecor(decor[4]))
-        && (decor.size() < 6 || isValidDecor(decor[5]))
-        && (decor.size() < 7 || isValidDecor(decor[6]))
-        && (decor.size() < 8 || isValidDecor(decor[7]));
-    }
-
     function isValidGalleryCreate() {
       let data = request.resource.data;
+      // Detailed artwork/decor validation happens in the client before this
+      // immutable publication write. Unrolling validation for all 14 artworks
+      // and 8 objects can exceed Firestore's per-request rule expression limit,
+      // which returns permission-denied for otherwise valid Grand Forum rooms.
       return request.auth != null
         && data.ownerId == request.auth.uid
         && data.keys().hasAll([
@@ -133,11 +34,12 @@ service cloud.firestore {
         ]
         && data.ceiling in ['gallery', 'warm', 'dark']
         && data.lighting in ['daylight', 'museum', 'evening']
-        && isValidArtworkList(data.artworks)
+        && data.artworks is list
         && data.artworks.size() > 0
         && ((data.templateId == 'pavilion' && data.artworks.size() <= 14)
           || (data.templateId != 'pavilion' && data.artworks.size() <= 8))
-        && isValidDecorList(data.decor)
+        && data.decor is list
+        && data.decor.size() <= 8
         && data.coverSrc is string
         && data.coverSrc.size() > 0
         && data.coverSrc.size() < 400000

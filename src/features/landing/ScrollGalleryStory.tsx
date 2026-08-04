@@ -54,7 +54,7 @@ const CHAPTERS = [
   }
 ] as const;
 
-const CHAPTER_CENTERS = [0.04, 0.13, 0.25, 0.38, 0.51, 0.63, 0.73, 0.83, 0.965] as const;
+const CHAPTER_CENTERS = [0.05, 0.16, 0.31, 0.49, 0.62, 0.72, 0.8, 0.88, 0.97] as const;
 const STORY_ARTWORKS = [
   {
     src: './assets/artworks/aura-cliffs-study.webp',
@@ -454,6 +454,7 @@ export function ScrollGalleryStory() {
     let dannyModel: THREE.Group | null = null;
     const dannyMaterialSnapshots = new Map<THREE.Material, MaterialSnapshot>();
     const dannyArtworkMaterials = new Set<THREE.Material>();
+    const dannyBuildStages = new Map<THREE.Material, 0 | 1 | 2 | 3>();
     const dannyArtworkObjects: THREE.Object3D[] = [];
     const dannyColliderBoxes: THREE.Box3[] = [];
     const dannyActiveLights = new Map<THREE.Light, number>();
@@ -553,6 +554,10 @@ export function ScrollGalleryStory() {
               const wallLike = themeRole === 'wall' || /(^|_)wall/.test(materialName);
               const ceilingLike = themeRole === 'ceiling' || /ceiling|roof/.test(materialName);
               const bronzeLike = themeRole === 'bronze' || /bronze|frame|trim/.test(materialName);
+              dannyBuildStages.set(
+                material,
+                floorLike ? 0 : wallLike ? 1 : ceilingLike ? 2 : 3
+              );
               themed.color.set(
                 floorLike ? '#20211f'
                   : wallLike ? '#514c45'
@@ -733,16 +738,16 @@ export function ScrollGalleryStory() {
     const cameraTarget = new THREE.Vector3();
     const cameraKeyframes: CameraKeyframe[] = [
       { at: 0, position: new THREE.Vector3(9.8, 10.5, 14.8), target: new THREE.Vector3(0, 0.25, -0.8) },
-      { at: 0.08, position: new THREE.Vector3(9.2, 9.4, 14.2), target: new THREE.Vector3(0, 0.4, -0.8) },
-      { at: 0.18, position: new THREE.Vector3(0, 2.45, 10.8), target: new THREE.Vector3(0, 2.05, -1.5) },
-      { at: 0.32, position: new THREE.Vector3(0, 2.2, 6.15), target: new THREE.Vector3(0, 2.05, -4.2) },
-      { at: 0.44, position: new THREE.Vector3(-0.8, 2.2, 3.6), target: new THREE.Vector3(-6.7, 2.75, 0.6) },
-      { at: 0.51, position: new THREE.Vector3(0, 2.15, 1.5), target: new THREE.Vector3(-6.7, 2.75, 0.5) },
-      { at: 0.58, position: new THREE.Vector3(0, 2.15, 1.5), target: new THREE.Vector3(6.7, 2.75, 0.5) },
-      { at: 0.68, position: new THREE.Vector3(1, 2.2, 3.5), target: new THREE.Vector3(6.7, 2.75, -1) },
-      { at: 0.78, position: new THREE.Vector3(0, 2.1, 5.5), target: new THREE.Vector3(0, 2.05, -4.2) },
-      { at: 0.88, position: new THREE.Vector3(0.8, 1.9, 7.5), target: new THREE.Vector3(0, 2.3, -5.6) },
-      { at: 0.915, position: new THREE.Vector3(0, 1.75, 6.42), target: new THREE.Vector3(0, 2.68, -7.38) },
+      { at: 0.1, position: new THREE.Vector3(9.2, 9.4, 14.2), target: new THREE.Vector3(0, 0.4, -0.8) },
+      { at: 0.22, position: new THREE.Vector3(0, 2.45, 10.8), target: new THREE.Vector3(0, 2.05, -1.5) },
+      { at: 0.38, position: new THREE.Vector3(0, 2.2, 6.15), target: new THREE.Vector3(0, 2.05, -4.2) },
+      { at: 0.52, position: new THREE.Vector3(-0.8, 2.2, 3.6), target: new THREE.Vector3(-6.7, 2.75, 0.6) },
+      { at: 0.6, position: new THREE.Vector3(0, 2.15, 1.5), target: new THREE.Vector3(-6.7, 2.75, 0.5) },
+      { at: 0.68, position: new THREE.Vector3(0, 2.15, 1.5), target: new THREE.Vector3(6.7, 2.75, 0.5) },
+      { at: 0.76, position: new THREE.Vector3(1, 2.2, 3.5), target: new THREE.Vector3(6.7, 2.75, -1) },
+      { at: 0.84, position: new THREE.Vector3(0, 2.1, 5.5), target: new THREE.Vector3(0, 2.05, -4.2) },
+      { at: 0.92, position: new THREE.Vector3(0.8, 1.9, 7.5), target: new THREE.Vector3(0, 2.3, -5.6) },
+      { at: 0.94, position: new THREE.Vector3(0, 1.75, 6.42), target: new THREE.Vector3(0, 2.68, -7.38) },
       { at: 1, position: new THREE.Vector3(0, 1.75, 6.42), target: new THREE.Vector3(0, 2.68, -7.38) }
     ];
 
@@ -872,9 +877,9 @@ export function ScrollGalleryStory() {
 
       // Leave one authored edge on screen before the first wheel/touch move so
       // the mobile opening never reads as an empty black video frame.
-      const edgeReveal = 0.08 + easeOut(between(progress, 0, 0.08)) * 0.92;
-      const blueprintIn = smooth(between(progress, 0.08, 0.13));
-      const blueprintOut = 1 - smooth(between(progress, 0.26, 0.34));
+      const edgeReveal = 0.08 + easeOut(between(progress, 0, 0.14)) * 0.92;
+      const blueprintIn = smooth(between(progress, 0.1, 0.18));
+      const blueprintOut = 1 - smooth(between(progress, 0.38, 0.52));
       const blueprintOpacity = blueprintIn * blueprintOut;
       const outlineCount = outlineGeometry.getAttribute('position').count;
       outlineGeometry.setDrawRange(0, Math.max(2, Math.floor((outlineCount * edgeReveal) / 2) * 2));
@@ -884,9 +889,9 @@ export function ScrollGalleryStory() {
       setUiVisibility(blueprintUiRef.current, blueprintOpacity, 14);
       dannyBlueprint.visible = dannyModel !== null && edgeReveal * blueprintOut > 0.002;
       dannyBlueprintLines.forEach((lines, index) => {
-        const stagger = Math.min(0.045, index * 0.00075);
+        const stagger = Math.min(0.08, index * 0.00125);
         const seed = index < 2 ? (2 - index) * 0.04 : 0;
-        const reveal = seed + easeOut(between(progress, stagger, 0.075 + stagger)) * (1 - seed);
+        const reveal = seed + easeOut(between(progress, stagger, 0.14 + stagger)) * (1 - seed);
         const geometry = lines.geometry;
         const lineCount = geometry.getAttribute('position')?.count ?? 0;
         geometry.setDrawRange(0, Math.max(2, Math.floor((lineCount * reveal) / 2) * 2));
@@ -996,15 +1001,25 @@ export function ScrollGalleryStory() {
       });
       galleryLight.intensity *= 1 - lightFocus * 0.3;
 
-      const dannyShellReveal = dannyModel ? smooth(between(progress, 0.16, 0.39)) : 0;
-      const dannyArtworkReveal = dannyModel ? smooth(between(progress, 0.42, 0.58)) : 0;
+      const dannyBuildReveals = dannyModel
+        ? [
+            smooth(between(progress, 0.2, 0.34)),
+            smooth(between(progress, 0.29, 0.45)),
+            smooth(between(progress, 0.38, 0.52)),
+            smooth(between(progress, 0.46, 0.6))
+          ]
+        : [0, 0, 0, 0];
+      const dannyShellReveal = Math.max(...dannyBuildReveals);
+      const dannyArtworkReveal = dannyModel ? smooth(between(progress, 0.58, 0.7)) : 0;
       if (dannyModel) {
         const visible = dannyShellReveal > 0.002 || dannyArtworkReveal > 0.002;
         dannyModel.visible = visible;
         dannyModel.position.set(0, 0, 0);
         dannyModel.scale.setScalar(1);
         dannyMaterialSnapshots.forEach((snapshot, material) => {
-          const reveal = dannyArtworkMaterials.has(material) ? dannyArtworkReveal : dannyShellReveal;
+          const reveal = dannyArtworkMaterials.has(material)
+            ? dannyArtworkReveal
+            : dannyBuildReveals[dannyBuildStages.get(material) ?? 3];
           material.opacity = snapshot.opacity * reveal;
           const transparent = reveal < 0.999 || snapshot.transparent;
           const depthWrite = reveal > 0.88 && snapshot.depthWrite;
@@ -1014,7 +1029,7 @@ export function ScrollGalleryStory() {
             material.needsUpdate = true;
           }
         });
-        const lightReveal = smooth(between(progress, 0.66, 0.79));
+        const lightReveal = smooth(between(progress, 0.76, 0.86));
         dannyActiveLights.forEach((intensity, light) => {
           light.visible = visible && lightReveal > 0.02;
           light.intensity = intensity * lightReveal;
