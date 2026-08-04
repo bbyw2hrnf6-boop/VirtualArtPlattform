@@ -423,6 +423,11 @@ function curatedDecor(
       "pedestal",
       "floor-vase",
       "stone-sculpture",
+      "ficus",
+      "snake-plant",
+      "leather-bench",
+      "wood-stool",
+      "rope-barrier",
     ],
     nocturne: [
       "olive",
@@ -432,6 +437,11 @@ function curatedDecor(
       "gallery-bench",
       "pedestal",
       "monstera",
+      "ficus",
+      "leather-bench",
+      "rope-barrier",
+      "snake-plant",
+      "wood-stool",
     ],
     pavilion: [
       "monstera",
@@ -441,6 +451,11 @@ function curatedDecor(
       "floor-vase",
       "arc-lamp",
       "pedestal",
+      "ficus",
+      "snake-plant",
+      "leather-bench",
+      "wood-stool",
+      "rope-barrier",
     ],
   };
   let types = shuffled(pools[template.id], random).slice(0, count);
@@ -480,9 +495,9 @@ function curatedDecor(
       const x = xRatio * width + (random() - 0.5) * width * 0.035;
       const z = zRatio * depth + (random() - 0.5) * depth * 0.035;
       const scaleBase =
-        type === "floor-vase"
+        type === "floor-vase" || type === "snake-plant" || type === "wood-stool"
           ? 0.9
-          : type === "gallery-bench"
+          : type === "gallery-bench" || type === "leather-bench"
             ? 1.04
             : type === "stone-sculpture"
               ? 0.95

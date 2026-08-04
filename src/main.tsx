@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import './styles/global.css';
+import './styles/generatedAssets.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

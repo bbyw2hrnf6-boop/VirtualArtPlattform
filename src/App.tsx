@@ -117,6 +117,23 @@ const DECOR_CATALOG: Array<{ id: DecorId; name: string; size: string }> = [
     name: "Floor vase",
     size: "0.85 m high · 0.85 m footprint",
   },
+  { id: "ficus", name: "Ficus tree", size: "2.1 m high · 1.45 m footprint" },
+  {
+    id: "snake-plant",
+    name: "Snake plant",
+    size: "1.0 m high · 0.78 m footprint",
+  },
+  {
+    id: "leather-bench",
+    name: "Leather bench",
+    size: "2.45 × 0.92 m footprint",
+  },
+  { id: "wood-stool", name: "Wood stool", size: "0.72 m footprint" },
+  {
+    id: "rope-barrier",
+    name: "Rope barrier",
+    size: "2.25 × 0.58 m footprint",
+  },
 ];
 const decorName = (id: DecorId) =>
   DECOR_CATALOG.find((item) => item.id === id)?.name ?? id.replaceAll("-", " ");
@@ -2085,7 +2102,7 @@ function Studio({
           </section>
           <Accordion title="02 · Walls">
             <p className="object-help">
-              Five architectural finishes, tuned to remain calm behind the
+              Eight architectural finishes, tuned to remain calm behind the
               artwork.
             </p>
             <Swatches
@@ -2101,6 +2118,21 @@ function Studio({
                   "repeating-linear-gradient(90deg,#bbb2a4 0 1px,#d4ccbf 1px 3px)",
                 ],
                 ["charcoal", "linear-gradient(135deg,#3a3c39,#202220)"],
+                [
+                  "microcement",
+                  "linear-gradient(135deg,#cbbda8,#aa9a83)",
+                  "beige microcement",
+                ],
+                [
+                  "limestone",
+                  "linear-gradient(135deg,#ece2cf,#c8b99d)",
+                  "light limestone",
+                ],
+                [
+                  "oak-slats",
+                  "repeating-linear-gradient(90deg,#b58d5c 0 8px,#1f1b17 9px 12px)",
+                  "light oak slats",
+                ],
               ]}
               value={draft.wall}
               onChange={(value) =>
@@ -2110,7 +2142,7 @@ function Studio({
           </Accordion>
           <Accordion title="03 · Floor">
             <p className="object-help">
-              Five gallery-grade surfaces with calibrated grain and natural
+              Seven gallery-grade surfaces with calibrated grain and natural
               reflections.
             </p>
             <Swatches
@@ -2139,6 +2171,16 @@ function Studio({
                   "dark-oak",
                   "repeating-linear-gradient(90deg,#171411 0 7px,#332b25 8px 15px)",
                   "dark oak",
+                ],
+                [
+                  "microcement",
+                  "linear-gradient(135deg,#b8aa95,#8e8272)",
+                  "warm microcement",
+                ],
+                [
+                  "slate",
+                  "linear-gradient(135deg,#171918,#444845 48%,#222422)",
+                  "black slate",
                 ],
               ]}
               value={draft.floor}

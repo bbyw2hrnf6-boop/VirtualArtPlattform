@@ -505,6 +505,11 @@ const DECOR_FOOTPRINTS: Record<DecorId, [number, number]> = {
   "gallery-bench": [2.65, 0.9],
   "stone-sculpture": [1.2, 1.2],
   "floor-vase": [0.85, 0.85],
+  ficus: [1.45, 1.45],
+  "snake-plant": [0.78, 0.78],
+  "leather-bench": [2.45, 0.92],
+  "wood-stool": [0.72, 0.72],
+  "rope-barrier": [2.25, 0.58],
 };
 
 function decorRectangle(

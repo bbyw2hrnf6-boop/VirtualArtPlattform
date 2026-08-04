@@ -105,6 +105,9 @@ const wallColors = {
   travertine: "#d7cbb6",
   linen: "#c8c0b3",
   charcoal: "#292b29",
+  microcement: "#b9aa94",
+  limestone: "#e2d6c2",
+  "oak-slats": "#b89162",
 };
 const floorColors = {
   concrete: "#777672",
@@ -114,6 +117,8 @@ const floorColors = {
   "black-marble": "#101111",
   walnut: "#4b2c1d",
   "dark-oak": "#26211d",
+  microcement: "#afa18d",
+  slate: "#262927",
 };
 type SurfaceKind = GalleryDraft["wall"] | GalleryDraft["floor"];
 const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
@@ -123,6 +128,10 @@ const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
   "dark-oak": "./assets/materials/aura-smoked-oak-v2.webp",
   oak: "./assets/materials/aura-american-walnut-v2.webp",
   travertine: "./assets/materials/aura-roman-travertine-v2.webp",
+  microcement: "./assets/materials/aura-microcement-beige-v3.webp",
+  limestone: "./assets/materials/aura-light-limestone-v3.webp",
+  "oak-slats": "./assets/materials/aura-light-oak-slats-v3.webp",
+  slate: "./assets/materials/aura-black-slate-v3.webp",
 };
 
 function createSurfaceTexture(kind: SurfaceKind, base: string) {
@@ -135,6 +144,10 @@ function createSurfaceTexture(kind: SurfaceKind, base: string) {
     if (kind === "marble" || kind === "black-marble")
       texture.repeat.set(1.45, 1.45);
     else if (kind === "walnut" || kind === "oak") texture.repeat.set(1.75, 2.4);
+    else if (kind === "oak-slats") texture.repeat.set(2.2, 1.05);
+    else if (kind === "microcement" || kind === "limestone")
+      texture.repeat.set(1.6, 1.6);
+    else if (kind === "slate") texture.repeat.set(2.1, 2.1);
     else if (kind === "dark-oak") {
       texture.rotation = Math.PI / 2;
       texture.center.set(0.5, 0.5);
@@ -554,11 +567,163 @@ function createPlant(broad = false) {
   return group;
 }
 
+function createSnakePlant() {
+  const group = new THREE.Group();
+  const pot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.26, 0.2, 0.42, 40),
+    new THREE.MeshPhysicalMaterial({
+      color: "#b9ae9c",
+      roughness: 0.42,
+      clearcoat: 0.13,
+    }),
+  );
+  pot.position.y = 0.21;
+  group.add(pot);
+  const leafMaterial = new THREE.MeshPhysicalMaterial({
+    color: "#426244",
+    roughness: 0.62,
+    sheen: 0.2,
+    sheenColor: new THREE.Color("#a8bc80"),
+    side: THREE.DoubleSide,
+  });
+  for (let index = 0; index < 13; index++) {
+    const height = 0.56 + (index % 5) * 0.1;
+    const leaf = new THREE.Mesh(
+      new RoundedBoxGeometry(0.07, height, 0.018, 5, 0.018),
+      leafMaterial,
+    );
+    const angle = (index / 13) * Math.PI * 2;
+    leaf.position.set(
+      Math.cos(angle) * (0.05 + (index % 3) * 0.035),
+      0.4 + height / 2,
+      Math.sin(angle) * (0.05 + (index % 3) * 0.035),
+    );
+    leaf.rotation.set(Math.sin(angle) * 0.13, -angle, Math.cos(angle) * 0.13);
+    group.add(leaf);
+  }
+  return group;
+}
+
+function createLeatherBench() {
+  const group = new THREE.Group();
+  const leather = new THREE.MeshPhysicalMaterial({
+    color: "#72513c",
+    roughness: 0.36,
+    clearcoat: 0.18,
+    clearcoatRoughness: 0.5,
+    sheen: 0.35,
+    sheenColor: new THREE.Color("#bd8a64"),
+  });
+  const steel = new THREE.MeshPhysicalMaterial({
+    color: "#242422",
+    metalness: 0.78,
+    roughness: 0.26,
+    clearcoat: 0.22,
+  });
+  const seat = new THREE.Mesh(
+    new RoundedBoxGeometry(2.25, 0.26, 0.78, 8, 0.075),
+    leather,
+  );
+  seat.position.y = 0.58;
+  group.add(seat);
+  [-0.86, 0.86].forEach((x) => {
+    [-0.26, 0.26].forEach((z) => {
+      const leg = new THREE.Mesh(
+        new RoundedBoxGeometry(0.07, 0.5, 0.07, 4, 0.018),
+        steel,
+      );
+      leg.position.set(x, 0.27, z);
+      group.add(leg);
+    });
+  });
+  return group;
+}
+
+function createWoodStool() {
+  const group = new THREE.Group();
+  const woodTexture = createSurfaceTexture("walnut", floorColors.walnut);
+  const wood = new THREE.MeshPhysicalMaterial({
+    color: "#8a5b35",
+    map: woodTexture,
+    roughness: 0.48,
+    clearcoat: 0.15,
+  });
+  const seat = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.34, 0.36, 0.1, 48),
+    wood,
+  );
+  seat.position.y = 0.58;
+  group.add(seat);
+  [0, 1, 2].forEach((index) => {
+    const angle = (index / 3) * Math.PI * 2;
+    const leg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.055, 0.54, 16),
+      wood,
+    );
+    leg.position.set(Math.cos(angle) * 0.21, 0.29, Math.sin(angle) * 0.21);
+    leg.rotation.z = Math.cos(angle) * 0.12;
+    leg.rotation.x = Math.sin(angle) * 0.12;
+    group.add(leg);
+  });
+  return group;
+}
+
+function createRopeBarrier() {
+  const group = new THREE.Group();
+  const brass = new THREE.MeshPhysicalMaterial({
+    color: "#a7834f",
+    metalness: 0.84,
+    roughness: 0.24,
+    clearcoat: 0.3,
+  });
+  [-0.92, 0.92].forEach((x) => {
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 0.26, 0.07, 40),
+      brass,
+    );
+    base.position.set(x, 0.035, 0);
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.045, 0.92, 24),
+      brass,
+    );
+    post.position.set(x, 0.5, 0);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.085, 24, 16), brass);
+    cap.position.set(x, 0.98, 0);
+    group.add(base, post, cap);
+  });
+  const ropeCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.92, 0.94, 0),
+    new THREE.Vector3(0, 0.69, 0),
+    new THREE.Vector3(0.92, 0.94, 0),
+  ]);
+  group.add(
+    new THREE.Mesh(
+      new THREE.TubeGeometry(ropeCurve, 36, 0.045, 12, false),
+      new THREE.MeshPhysicalMaterial({
+        color: "#6c2825",
+        roughness: 0.72,
+        sheen: 0.25,
+        sheenColor: new THREE.Color("#bd6d5b"),
+      }),
+    ),
+  );
+  return group;
+}
+
 function createDecor(item: DecorPlacement, selected: boolean) {
   const group = new THREE.Group();
   group.userData.decorId = item.id;
   if (item.type === "olive" || item.type === "monstera")
     group.add(createPlant(item.type === "monstera"));
+  if (item.type === "ficus") {
+    const ficus = createPlant(true);
+    ficus.scale.set(1.08, 1.18, 1.08);
+    group.add(ficus);
+  }
+  if (item.type === "snake-plant") group.add(createSnakePlant());
+  if (item.type === "leather-bench") group.add(createLeatherBench());
+  if (item.type === "wood-stool") group.add(createWoodStool());
+  if (item.type === "rope-barrier") group.add(createRopeBarrier());
   if (item.type === "pedestal") {
     const marbleTexture = createSurfaceTexture("marble", floorColors.marble);
     const marble = new THREE.MeshPhysicalMaterial({
@@ -826,11 +991,13 @@ function createDecor(item: DecorPlacement, selected: boolean) {
     });
   }
   const markerRadius =
-    item.type === "gallery-bench"
+    item.type === "gallery-bench" || item.type === "leather-bench"
       ? 1.25
+      : item.type === "rope-barrier"
+        ? 1.08
       : item.type === "stone-sculpture"
         ? 0.68
-        : item.type === "floor-vase"
+        : item.type === "floor-vase" || item.type === "snake-plant"
           ? 0.52
           : 0.46;
   const marker = new THREE.Mesh(
@@ -915,6 +1082,9 @@ function buildRoom(
     travertine: { bump: 0.02, roughness: 0.7, clearcoat: 0.035 },
     linen: { bump: 0.024, roughness: 0.92, clearcoat: 0 },
     charcoal: { bump: 0.008, roughness: 0.72, clearcoat: 0.05 },
+    microcement: { bump: 0.012, roughness: 0.76, clearcoat: 0.018 },
+    limestone: { bump: 0.022, roughness: 0.81, clearcoat: 0.008 },
+    "oak-slats": { bump: 0.016, roughness: 0.68, clearcoat: 0.055 },
   }[draft.wall];
   const wall = new THREE.MeshPhysicalMaterial({
     color: draft.templateId === "pavilion" ? "#d5c8b3" : "#f4f1e8",
@@ -940,6 +1110,7 @@ function buildRoom(
     draft.floor === "oak" ||
     draft.floor === "walnut" ||
     draft.floor === "dark-oak";
+  const isSlate = draft.floor === "slate";
   const floor = new THREE.MeshPhysicalMaterial({
     color: draft.templateId === "pavilion" ? "#d0cbc1" : "#f2efe7",
     map: floorTexture,
@@ -949,7 +1120,9 @@ function buildRoom(
         : 0.27
       : isWood
         ? 0.48
-        : 0.78,
+        : isSlate
+          ? 0.7
+          : 0.78,
     metalness: isMarble ? 0.035 : 0.008,
     clearcoat: isMarble
       ? draft.templateId === "pavilion"
@@ -957,6 +1130,8 @@ function buildRoom(
         : 0.42
       : isWood
         ? 0.16
+      : isSlate
+        ? 0.045
         : 0.025,
     clearcoatRoughness: isMarble
       ? draft.templateId === "pavilion"
@@ -1480,6 +1655,9 @@ function updateRoomSurface(
       travertine: { color: "#eee4d2", roughness: 0.72, clearcoat: 0.025 },
       linen: { color: "#ddd6ca", roughness: 0.93, clearcoat: 0 },
       charcoal: { color: "#343633", roughness: 0.76, clearcoat: 0.025 },
+      microcement: { color: "#ddd0bd", roughness: 0.78, clearcoat: 0.012 },
+      limestone: { color: "#f0e6d4", roughness: 0.82, clearcoat: 0.006 },
+      "oak-slats": { color: "#d7b98d", roughness: 0.7, clearcoat: 0.045 },
     }[draft.wall];
     materials.forEach((material) => {
       material.color.set(profile.color);
@@ -1500,11 +1678,12 @@ function updateRoomSurface(
       draft.floor === "oak" ||
       draft.floor === "walnut" ||
       draft.floor === "dark-oak";
+    const slate = draft.floor === "slate";
     materials.forEach((material) => {
       material.color.set("#eeeae1");
-      material.roughness = marble ? 0.34 : wood ? 0.54 : 0.82;
+      material.roughness = marble ? 0.34 : wood ? 0.54 : slate ? 0.7 : 0.82;
       material.metalness = marble ? 0.02 : 0.005;
-      material.clearcoat = marble ? 0.28 : wood ? 0.1 : 0.01;
+      material.clearcoat = marble ? 0.28 : wood ? 0.1 : slate ? 0.035 : 0.01;
       material.clearcoatRoughness = marble ? 0.36 : 0.72;
       material.envMapIntensity = marble ? 0.68 : wood ? 0.42 : 0.22;
     });

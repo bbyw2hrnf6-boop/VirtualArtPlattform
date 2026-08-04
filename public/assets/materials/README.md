@@ -2,6 +2,8 @@
 
 The `aura-*-v2.webp` textures were generated specifically for this project on 2 August 2026 with the built-in OpenAI image-generation tool, then resized to 1024 × 1024 and encoded as WebP at quality 84. They are base-color/albedo assets only. Do not reuse them as normal, bump, roughness, or AO maps.
 
+The `aura-*-v3.webp` textures were generated specifically for this project on 4 August 2026 from the supplied GPT concept sheets. Each source was visually reviewed, resized to 1536 × 1536, and encoded as WebP at quality 86. They are also base-color/albedo assets only.
+
 Shared prompt frame:
 
 > Photorealistic, seamless square PBR base-color texture for a real-time 3D gallery; perfectly orthographic top-down flat surface; neutral cross-polarized diffuse capture; no shadows, hotspot, perspective, objects, text, logo, watermark, vignette, or lighting gradient.
@@ -13,6 +15,10 @@ Material-specific requests:
 - `aura-nero-marquina-v2.webp`: deep charcoal-black Nero Marquina with sparse crisp white calcite veins.
 - `aura-american-walnut-v2.webp`: American black walnut, straight-to-gently-wavy grain, medium chocolate brown, quarter-sawn architectural veneer.
 - `aura-smoked-oak-v2.webp`: smoked European oak, dark warm brown, long straight grain, occasional narrow rays, refined gallery finish.
+- `aura-microcement-beige-v3.webp`: warm neutral beige microcement, fine mineral mottling and restrained trowel variation.
+- `aura-black-slate-v3.webp`: charcoal-black natural cleft stone, subtle mineral layering and sparse fine fissures.
+- `aura-light-limestone-v3.webp`: pale warm limestone, quiet open pores and delicate stratification.
+- `aura-light-oak-slats-v3.webp`: narrow vertical pale-oak battens, dark acoustic gaps and restrained architectural grain.
 
 SHA-256 checksums:
 
@@ -22,4 +28,8 @@ bbc41dcb03a6439a66ade103cd32f7d9c62c68cf4ddd60b6e4426bfd03e4cc87  aura-carrara-m
 0c6618be5e7b961e01933b38a05204ff78bf3c5d145f2ac11abd4bf8f50adad8  aura-nero-marquina-v2.webp
 239a43c914af868b0eb2cfebbae6d04c769aa11acb65fa4346b2235b5380533c  aura-roman-travertine-v2.webp
 1e9fb7d26038b5d0bbc91d511ee283fc08ffefc8a3b06e8cda3b26b2e5c89ff2  aura-smoked-oak-v2.webp
+a3ea1507cc19f476ec4650a01a4ab4624e45a125d9ccfebfd61944e56fe0ea7f  aura-black-slate-v3.webp
+5d027e5053f10116318c41cdcc546f50466199292d59d3f38556296c49599e43  aura-light-limestone-v3.webp
+56bab7787a26f3301f98d1fd133c463dc346f4653e8bc04573adf8eb2eb48314  aura-light-oak-slats-v3.webp
+fcc6fd3f5becc420450028ad36233d01f98051a31a83bd059a02e38f85e16af0  aura-microcement-beige-v3.webp
 ```

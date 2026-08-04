@@ -6,7 +6,15 @@ export type WallId =
   | "east"
   | "divider-front"
   | "divider-back";
-export type WallFinish = "chalk" | "warm" | "travertine" | "linen" | "charcoal";
+export type WallFinish =
+  | "chalk"
+  | "warm"
+  | "travertine"
+  | "linen"
+  | "charcoal"
+  | "microcement"
+  | "limestone"
+  | "oak-slats";
 export type FloorFinish =
   | "concrete"
   | "oak"
@@ -14,7 +22,9 @@ export type FloorFinish =
   | "marble"
   | "black-marble"
   | "walnut"
-  | "dark-oak";
+  | "dark-oak"
+  | "microcement"
+  | "slate";
 export type CeilingFinish = "gallery" | "warm" | "dark";
 export type LightingPreset = "daylight" | "museum" | "evening";
 export type DecorId =
@@ -24,7 +34,12 @@ export type DecorId =
   | "pedestal"
   | "gallery-bench"
   | "stone-sculpture"
-  | "floor-vase";
+  | "floor-vase"
+  | "ficus"
+  | "snake-plant"
+  | "leather-bench"
+  | "wood-stool"
+  | "rope-barrier";
 export type ArtworkFrame = "black" | "white" | "oak" | "none";
 
 export interface DecorPlacement {
