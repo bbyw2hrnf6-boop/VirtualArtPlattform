@@ -2102,22 +2102,15 @@ function Studio({
           </section>
           <Accordion title="02 · Walls">
             <p className="object-help">
-              Eight architectural finishes, tuned to remain calm behind the
+              Ten distinct architectural finishes, tuned to remain calm behind the
               artwork.
             </p>
             <Swatches
               options={[
                 ["chalk", "linear-gradient(135deg,#f1eee6,#cfcac0)", "plaster"],
                 ["warm", "linear-gradient(135deg,#c7b6a0,#978977)", "limewash"],
-                [
-                  "travertine",
-                  "repeating-linear-gradient(0deg,#cfc4af 0 2px,#e1d7c4 3px 7px)",
-                ],
-                [
-                  "linen",
-                  "repeating-linear-gradient(90deg,#bbb2a4 0 1px,#d4ccbf 1px 3px)",
-                ],
-                ["charcoal", "linear-gradient(135deg,#3a3c39,#202220)"],
+                ["light-concrete", "linear-gradient(135deg,#d6d6d4,#aeb0b0)", "light concrete"],
+                ["charcoal", "linear-gradient(135deg,#3a3c39,#202220)", "dark concrete"],
                 [
                   "microcement",
                   "linear-gradient(135deg,#cbbda8,#aa9a83)",
@@ -2133,6 +2126,9 @@ function Studio({
                   "repeating-linear-gradient(90deg,#b58d5c 0 8px,#1f1b17 9px 12px)",
                   "light oak slats",
                 ],
+                ["black-slats", "repeating-linear-gradient(90deg,#272827 0 8px,#050606 9px 12px)", "black oak slats"],
+                ["marble-wall", "linear-gradient(135deg,#f0eee8 38%,#9b9d99 40%,#e3e0d8 43%)", "white marble"],
+                ["dark-stone", "linear-gradient(135deg,#171918,#404440 52%,#202220)", "dark stone"],
               ]}
               value={draft.wall}
               onChange={(value) =>
@@ -2142,7 +2138,7 @@ function Studio({
           </Accordion>
           <Accordion title="03 · Floor">
             <p className="object-help">
-              Seven gallery-grade surfaces with calibrated grain and natural
+              Ten distinct gallery-grade surfaces with calibrated grain and natural
               reflections.
             </p>
             <Swatches
@@ -2152,6 +2148,10 @@ function Studio({
                   "linear-gradient(135deg,#777672,#a7a39a)",
                   "mineral concrete",
                 ],
+                ["dark-concrete", "linear-gradient(135deg,#303231,#595b58)", "dark polished concrete"],
+                ["microcement", "linear-gradient(135deg,#b8aa95,#8e8272)", "warm microcement"],
+                ["slate", "linear-gradient(135deg,#171918,#444845 48%,#222422)", "black slate"],
+                ["travertine-floor", "repeating-linear-gradient(0deg,#d8c8aa 0 3px,#e9ddc8 4px 9px)", "beige travertine"],
                 [
                   "marble",
                   "linear-gradient(135deg,#ece9e1 35%,#8c8f8c 37%,#e2ded4 40%)",
@@ -2167,21 +2167,8 @@ function Studio({
                   "repeating-linear-gradient(0deg,#392116 0 8px,#6b4028 9px 16px)",
                   "walnut",
                 ],
-                [
-                  "dark-oak",
-                  "repeating-linear-gradient(90deg,#171411 0 7px,#332b25 8px 15px)",
-                  "dark oak",
-                ],
-                [
-                  "microcement",
-                  "linear-gradient(135deg,#b8aa95,#8e8272)",
-                  "warm microcement",
-                ],
-                [
-                  "slate",
-                  "linear-gradient(135deg,#171918,#444845 48%,#222422)",
-                  "black slate",
-                ],
+                ["oak", "repeating-linear-gradient(90deg,#c59a66 0 12px,#d6b17f 13px 25px)", "natural oak"],
+                ["terrazzo", "radial-gradient(circle at 20% 25%,#777 0 2px,transparent 3px),radial-gradient(circle at 65% 70%,#b78f76 0 2px,#d8d4ca 3px)", "light terrazzo"],
               ]}
               value={draft.floor}
               onChange={(value) =>
@@ -2210,6 +2197,11 @@ function Studio({
                   "dark",
                   "linear-gradient(135deg,#20231f 38%,#e3c183 42%,#1a1c19 47%)",
                   "LED light strips",
+                ],
+                [
+                  "skylight",
+                  "linear-gradient(135deg,#d8edf4 30%,#fff 34%,#b6d4df 72%)",
+                  "luminous skylight",
                 ],
               ]}
               value={draft.ceiling ?? "gallery"}

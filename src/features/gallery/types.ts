@@ -14,7 +14,11 @@ export type WallFinish =
   | "charcoal"
   | "microcement"
   | "limestone"
-  | "oak-slats";
+  | "oak-slats"
+  | "light-concrete"
+  | "black-slats"
+  | "marble-wall"
+  | "dark-stone";
 export type FloorFinish =
   | "concrete"
   | "oak"
@@ -24,8 +28,10 @@ export type FloorFinish =
   | "walnut"
   | "dark-oak"
   | "microcement"
-  | "slate";
-export type CeilingFinish = "gallery" | "warm" | "dark";
+  | "slate"
+  | "dark-concrete"
+  | "travertine-floor";
+export type CeilingFinish = "gallery" | "warm" | "dark" | "skylight";
 export type LightingPreset = "daylight" | "museum" | "evening";
 export type DecorId =
   | "olive"

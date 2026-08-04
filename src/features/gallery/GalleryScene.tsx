@@ -108,6 +108,10 @@ const wallColors = {
   microcement: "#b9aa94",
   limestone: "#e2d6c2",
   "oak-slats": "#b89162",
+  "light-concrete": "#c8c9c7",
+  "black-slats": "#252625",
+  "marble-wall": "#e8e6df",
+  "dark-stone": "#242725",
 };
 const floorColors = {
   concrete: "#777672",
@@ -119,6 +123,8 @@ const floorColors = {
   "dark-oak": "#26211d",
   microcement: "#afa18d",
   slate: "#262927",
+  "dark-concrete": "#444644",
+  "travertine-floor": "#d7c5a8",
 };
 type SurfaceKind = GalleryDraft["wall"] | GalleryDraft["floor"];
 const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
@@ -126,12 +132,20 @@ const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
   "black-marble": "./assets/materials/aura-nero-marquina-v2.webp",
   walnut: "./assets/materials/aura-american-walnut-v2.webp",
   "dark-oak": "./assets/materials/aura-smoked-oak-v2.webp",
-  oak: "./assets/materials/aura-american-walnut-v2.webp",
+  oak: "./assets/materials/aura-natural-oak-v3.webp",
+  terrazzo: "./assets/materials/aura-light-terrazzo-v3.webp",
+  concrete: "./assets/materials/aura-light-concrete-v3.webp",
   travertine: "./assets/materials/aura-roman-travertine-v2.webp",
   microcement: "./assets/materials/aura-microcement-beige-v3.webp",
   limestone: "./assets/materials/aura-light-limestone-v3.webp",
   "oak-slats": "./assets/materials/aura-light-oak-slats-v3.webp",
   slate: "./assets/materials/aura-black-slate-v3.webp",
+  "dark-concrete": "./assets/materials/aura-dark-concrete-v3.webp",
+  "travertine-floor": "./assets/materials/aura-roman-travertine-v2.webp",
+  "light-concrete": "./assets/materials/aura-light-concrete-v3.webp",
+  "black-slats": "./assets/materials/aura-black-oak-slats-v3.webp",
+  "marble-wall": "./assets/materials/aura-carrara-marble-v2.webp",
+  "dark-stone": "./assets/materials/aura-black-slate-v3.webp",
 };
 
 function createSurfaceTexture(kind: SurfaceKind, base: string) {
@@ -141,13 +155,20 @@ function createSurfaceTexture(kind: SurfaceKind, base: string) {
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.anisotropy = 8;
-    if (kind === "marble" || kind === "black-marble")
+    if (kind === "marble" || kind === "black-marble" || kind === "marble-wall")
       texture.repeat.set(1.45, 1.45);
     else if (kind === "walnut" || kind === "oak") texture.repeat.set(1.75, 2.4);
-    else if (kind === "oak-slats") texture.repeat.set(2.2, 1.05);
-    else if (kind === "microcement" || kind === "limestone")
+    else if (kind === "oak-slats" || kind === "black-slats")
+      texture.repeat.set(2.2, 1.05);
+    else if (
+      kind === "microcement" ||
+      kind === "limestone" ||
+      kind === "light-concrete" ||
+      kind === "dark-concrete"
+    )
       texture.repeat.set(1.6, 1.6);
-    else if (kind === "slate") texture.repeat.set(2.1, 2.1);
+    else if (kind === "slate" || kind === "dark-stone")
+      texture.repeat.set(2.1, 2.1);
     else if (kind === "dark-oak") {
       texture.rotation = Math.PI / 2;
       texture.center.set(0.5, 0.5);
@@ -1024,6 +1045,111 @@ function createDecor(item: DecorPlacement, selected: boolean) {
   return group;
 }
 
+function rebuildCeilingDetails(
+  group: THREE.Group,
+  finish: NonNullable<GalleryDraft["ceiling"]>,
+  templateId: GalleryDraft["templateId"],
+  w: number,
+  d: number,
+  h: number,
+) {
+  [...group.children].forEach((child) => {
+    group.remove(child);
+    disposeObjectTree(child);
+  });
+  group.name = `room-ceiling-${finish}`;
+  if (templateId === "pavilion") return;
+  const trimMaterial = new THREE.MeshPhysicalMaterial({
+    color: finish === "warm" ? "#8d7452" : "#252824",
+    metalness: finish === "warm" ? 0.45 : 0.72,
+    roughness: 0.3,
+    clearcoat: 0.25,
+  });
+  if (finish === "gallery") {
+    [-w * 0.2, w * 0.2].forEach((x) => {
+      const track = new THREE.Mesh(
+        new RoundedBoxGeometry(0.055, 0.055, d * 0.64, 3, 0.012),
+        trimMaterial,
+      );
+      track.position.set(x, h - 0.07, 0);
+      group.add(track);
+    });
+  }
+  if (finish === "warm") {
+    const bars: Array<[number, number, number, number]> = [
+      [0, -d * 0.36, w * 0.72, 0.08],
+      [0, d * 0.36, w * 0.72, 0.08],
+      [-w * 0.36, 0, 0.08, d * 0.72],
+      [w * 0.36, 0, 0.08, d * 0.72],
+    ];
+    bars.forEach(([x, z, width, depth]) => {
+      const bar = new THREE.Mesh(
+        new RoundedBoxGeometry(width, 0.105, depth, 3, 0.018),
+        trimMaterial,
+      );
+      bar.position.set(x, h - 0.09, z);
+      group.add(bar);
+    });
+    const glow = new THREE.PointLight("#ffd8a4", 3.2, Math.max(w, d) * 0.62, 1.8);
+    glow.position.set(0, h - 0.34, 0);
+    group.add(glow);
+  }
+  if (finish === "dark") {
+    const ledMaterial = new THREE.MeshStandardMaterial({
+      color: "#fff4d7",
+      emissive: "#ffd69b",
+      emissiveIntensity: 5.2,
+      roughness: 0.2,
+    });
+    [-w * 0.24, 0, w * 0.24].forEach((x) => {
+      const strip = new THREE.Mesh(
+        new RoundedBoxGeometry(0.045, 0.035, d * 0.72, 3, 0.01),
+        ledMaterial,
+      );
+      strip.position.set(x, h - 0.08, 0);
+      group.add(strip);
+      const glow = new THREE.PointLight("#ffd9a3", 2.2, Math.min(w, d) * 0.6, 1.65);
+      glow.position.set(x, h - 0.35, 0);
+      group.add(glow);
+    });
+  }
+  if (finish === "skylight") {
+    const glass = new THREE.Mesh(
+      new RoundedBoxGeometry(w * 0.58, 0.045, d * 0.46, 5, 0.02),
+      new THREE.MeshPhysicalMaterial({
+        color: "#e7f3f6",
+        emissive: "#d8edff",
+        emissiveIntensity: 1.35,
+        roughness: 0.12,
+        transmission: 0.3,
+        transparent: true,
+        opacity: 0.92,
+      }),
+    );
+    glass.position.set(0, h - 0.065, 0);
+    group.add(glass);
+    const frameWidth = w * 0.58;
+    const frameDepth = d * 0.46;
+    [
+      [0, -frameDepth / 2, frameWidth + 0.18, 0.08],
+      [0, frameDepth / 2, frameWidth + 0.18, 0.08],
+      [-frameWidth / 2, 0, 0.08, frameDepth],
+      [frameWidth / 2, 0, 0.08, frameDepth],
+    ].forEach(([x, z, width, depth]) => {
+      const frame = new THREE.Mesh(
+        new RoundedBoxGeometry(width, 0.09, depth, 3, 0.015),
+        trimMaterial,
+      );
+      frame.position.set(x, h - 0.09, z);
+      group.add(frame);
+    });
+    const daylight = new THREE.RectAreaLight("#e8f4ff", 3.4, frameWidth * 0.8, frameDepth * 0.8);
+    daylight.position.set(0, h - 0.22, 0);
+    daylight.rotation.x = -Math.PI / 2;
+    group.add(daylight);
+  }
+}
+
 function buildRoom(
   scene: THREE.Scene,
   draft: GalleryDraft,
@@ -1062,6 +1188,14 @@ function buildRoom(
       emissive: "#363a34",
       glow: 0.09,
     },
+    skylight: {
+      surface: "chalk" as const,
+      color: "#e7ecea",
+      roughness: 0.76,
+      bump: 0.004,
+      emissive: "#dceeff",
+      glow: 0.18,
+    },
   }[ceilingFinish];
   const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]);
   const floorTexture = createSurfaceTexture(
@@ -1085,6 +1219,10 @@ function buildRoom(
     microcement: { bump: 0.012, roughness: 0.76, clearcoat: 0.018 },
     limestone: { bump: 0.022, roughness: 0.81, clearcoat: 0.008 },
     "oak-slats": { bump: 0.016, roughness: 0.68, clearcoat: 0.055 },
+    "light-concrete": { bump: 0.01, roughness: 0.8, clearcoat: 0.018 },
+    "black-slats": { bump: 0.016, roughness: 0.7, clearcoat: 0.04 },
+    "marble-wall": { bump: 0.006, roughness: 0.34, clearcoat: 0.26 },
+    "dark-stone": { bump: 0.02, roughness: 0.73, clearcoat: 0.025 },
   }[draft.wall];
   const wall = new THREE.MeshPhysicalMaterial({
     color: draft.templateId === "pavilion" ? "#d5c8b3" : "#f4f1e8",
@@ -1111,6 +1249,7 @@ function buildRoom(
     draft.floor === "walnut" ||
     draft.floor === "dark-oak";
   const isSlate = draft.floor === "slate";
+  const isPolishedConcrete = draft.floor === "dark-concrete";
   const floor = new THREE.MeshPhysicalMaterial({
     color: draft.templateId === "pavilion" ? "#d0cbc1" : "#f2efe7",
     map: floorTexture,
@@ -1122,7 +1261,9 @@ function buildRoom(
         ? 0.48
         : isSlate
           ? 0.7
-          : 0.78,
+          : isPolishedConcrete
+            ? 0.52
+            : 0.78,
     metalness: isMarble ? 0.035 : 0.008,
     clearcoat: isMarble
       ? draft.templateId === "pavilion"
@@ -1132,7 +1273,9 @@ function buildRoom(
         ? 0.16
       : isSlate
         ? 0.045
-        : 0.025,
+        : isPolishedConcrete
+          ? 0.1
+          : 0.025,
     clearcoatRoughness: isMarble
       ? draft.templateId === "pavilion"
         ? 0.42
@@ -1221,73 +1364,14 @@ function buildRoom(
   ceilingPlane.visible = !cutaway;
   scene.add(ceilingPlane);
   const ceilingDetails = new THREE.Group();
-  ceilingDetails.name = `room-ceiling-${ceilingFinish}`;
-  const trimMaterial = new THREE.MeshPhysicalMaterial({
-    color: ceilingFinish === "warm" ? "#8d7452" : "#252824",
-    metalness: ceilingFinish === "warm" ? 0.45 : 0.72,
-    roughness: 0.3,
-    clearcoat: 0.25,
-  });
-  if (ceilingFinish === "gallery" && draft.templateId !== "pavilion") {
-    [-w * 0.2, w * 0.2].forEach((x) => {
-      const track = new THREE.Mesh(
-        new RoundedBoxGeometry(0.055, 0.055, d * 0.64, 3, 0.012),
-        trimMaterial,
-      );
-      track.position.set(x, h - 0.07, 0);
-      ceilingDetails.add(track);
-    });
-  }
-  if (ceilingFinish === "warm" && draft.templateId !== "pavilion") {
-    const bars: Array<[number, number, number, number]> = [
-      [0, -d * 0.36, w * 0.72, 0.08],
-      [0, d * 0.36, w * 0.72, 0.08],
-      [-w * 0.36, 0, 0.08, d * 0.72],
-      [w * 0.36, 0, 0.08, d * 0.72],
-    ];
-    bars.forEach(([x, z, width, depth]) => {
-      const bar = new THREE.Mesh(
-        new RoundedBoxGeometry(width, 0.105, depth, 3, 0.018),
-        trimMaterial,
-      );
-      bar.position.set(x, h - 0.09, z);
-      ceilingDetails.add(bar);
-    });
-    const glow = new THREE.PointLight(
-      "#ffd8a4",
-      3.2,
-      Math.max(w, d) * 0.62,
-      1.8,
-    );
-    glow.position.set(0, h - 0.34, 0);
-    ceilingDetails.add(glow);
-  }
-  if (ceilingFinish === "dark" && draft.templateId !== "pavilion") {
-    const ledMaterial = new THREE.MeshStandardMaterial({
-      color: "#fff4d7",
-      emissive: "#ffd69b",
-      emissiveIntensity: 5.2,
-      roughness: 0.2,
-    });
-    [-w * 0.24, 0, w * 0.24].forEach((x) => {
-      const strip = new THREE.Mesh(
-        new RoundedBoxGeometry(0.045, 0.035, d * 0.72, 3, 0.01),
-        ledMaterial,
-      );
-      strip.position.set(x, h - 0.08, 0);
-      ceilingDetails.add(strip);
-    });
-    [-w * 0.24, 0, w * 0.24].forEach((x) => {
-      const glow = new THREE.PointLight(
-        "#ffd9a3",
-        2.2,
-        Math.min(w, d) * 0.6,
-        1.65,
-      );
-      glow.position.set(x, h - 0.35, 0);
-      ceilingDetails.add(glow);
-    });
-  }
+  rebuildCeilingDetails(
+    ceilingDetails,
+    ceilingFinish,
+    draft.templateId,
+    w,
+    d,
+    h,
+  );
   ceilingDetails.visible = !cutaway;
   scene.add(ceilingDetails);
   const architecture = new THREE.Group();
@@ -1658,6 +1742,10 @@ function updateRoomSurface(
       microcement: { color: "#ddd0bd", roughness: 0.78, clearcoat: 0.012 },
       limestone: { color: "#f0e6d4", roughness: 0.82, clearcoat: 0.006 },
       "oak-slats": { color: "#d7b98d", roughness: 0.7, clearcoat: 0.045 },
+      "light-concrete": { color: "#e0e0dc", roughness: 0.81, clearcoat: 0.012 },
+      "black-slats": { color: "#4a4b48", roughness: 0.72, clearcoat: 0.035 },
+      "marble-wall": { color: "#f0eee8", roughness: 0.36, clearcoat: 0.24 },
+      "dark-stone": { color: "#555956", roughness: 0.75, clearcoat: 0.02 },
     }[draft.wall];
     materials.forEach((material) => {
       material.color.set(profile.color);
@@ -1679,11 +1767,28 @@ function updateRoomSurface(
       draft.floor === "walnut" ||
       draft.floor === "dark-oak";
     const slate = draft.floor === "slate";
+    const polishedConcrete = draft.floor === "dark-concrete";
     materials.forEach((material) => {
       material.color.set("#eeeae1");
-      material.roughness = marble ? 0.34 : wood ? 0.54 : slate ? 0.7 : 0.82;
+      material.roughness = marble
+        ? 0.34
+        : wood
+          ? 0.54
+          : slate
+            ? 0.7
+            : polishedConcrete
+              ? 0.52
+              : 0.82;
       material.metalness = marble ? 0.02 : 0.005;
-      material.clearcoat = marble ? 0.28 : wood ? 0.1 : slate ? 0.035 : 0.01;
+      material.clearcoat = marble
+        ? 0.28
+        : wood
+          ? 0.1
+          : slate
+            ? 0.035
+            : polishedConcrete
+              ? 0.1
+              : 0.01;
       material.clearcoatRoughness = marble ? 0.36 : 0.72;
       material.envMapIntensity = marble ? 0.68 : wood ? 0.42 : 0.22;
     });
@@ -1712,6 +1817,13 @@ function updateRoomSurface(
       emissive: "#363a34",
       glow: 0.025,
     },
+    skylight: {
+      surface: "chalk" as const,
+      color: "#e7ecea",
+      roughness: 0.76,
+      emissive: "#dceeff",
+      glow: 0.055,
+    },
   }[finish];
   const texture = createSurfaceTexture(profile.surface, profile.color);
   texture.repeat.multiplyScalar(Math.max(1, Math.max(w, d) / 24));
@@ -1723,6 +1835,25 @@ function updateRoomSurface(
     material.emissive.set(profile.emissive);
     material.emissiveIntensity = profile.glow;
   });
+  const ceilingPlane = scene.children.find((object) =>
+    object.name.startsWith("ceiling-design-"),
+  );
+  if (ceilingPlane) ceilingPlane.name = `ceiling-design-${finish}`;
+  const details = scene.children.find((object) =>
+    object.name.startsWith("room-ceiling-"),
+  );
+  if (details instanceof THREE.Group) {
+    const visible = details.visible;
+    rebuildCeilingDetails(
+      details,
+      finish,
+      draft.templateId,
+      w,
+      d,
+      getTemplate(draft.templateId).height,
+    );
+    details.visible = visible;
+  }
 }
 
 function addLighting(

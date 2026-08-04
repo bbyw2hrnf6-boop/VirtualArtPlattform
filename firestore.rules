@@ -29,13 +29,15 @@ service cloud.firestore {
         && data.templateId in ['white-cube', 'nocturne', 'pavilion']
         && data.wall in [
           'chalk', 'warm', 'travertine', 'linen', 'charcoal',
-          'microcement', 'limestone', 'oak-slats'
+          'microcement', 'limestone', 'oak-slats', 'light-concrete',
+          'black-slats', 'marble-wall', 'dark-stone'
         ]
         && data.floor in [
           'concrete', 'oak', 'terrazzo', 'marble', 'black-marble',
-          'walnut', 'dark-oak', 'microcement', 'slate'
+          'walnut', 'dark-oak', 'microcement', 'slate', 'dark-concrete',
+          'travertine-floor'
         ]
-        && data.ceiling in ['gallery', 'warm', 'dark']
+        && data.ceiling in ['gallery', 'warm', 'dark', 'skylight']
         && data.lighting in ['daylight', 'museum', 'evening']
         && data.artworks is list
         && data.artworks.size() > 0
