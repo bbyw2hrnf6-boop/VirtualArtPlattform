@@ -99,40 +99,18 @@ type GalleryLoadState =
 const MAX_DECOR_OBJECTS = 8;
 const DECOR_CATALOG: Array<{ id: DecorId; name: string; size: string }> = [
   { id: "olive", name: "Olive tree", size: "1.8 m high · 1.25 m footprint" },
-  { id: "monstera", name: "Monstera", size: "1.4 m high · 1.55 m footprint" },
-  { id: "arc-lamp", name: "Arc lamp", size: "2.0 m high · 2.05 × 0.9 m" },
-  { id: "pedestal", name: "Pedestal", size: "1.0 m high · 1.05 m square" },
-  {
-    id: "gallery-bench",
-    name: "Gallery bench",
-    size: "2.65 × 0.9 m footprint",
-  },
-  {
-    id: "stone-sculpture",
-    name: "Stone study",
-    size: "0.9 m high · 1.2 m footprint",
-  },
-  {
-    id: "floor-vase",
-    name: "Floor vase",
-    size: "0.85 m high · 0.85 m footprint",
-  },
-  { id: "ficus", name: "Ficus tree", size: "2.1 m high · 1.45 m footprint" },
   {
     id: "snake-plant",
     name: "Snake plant",
     size: "1.0 m high · 0.78 m footprint",
   },
+  { id: "arc-lamp", name: "Arc lamp", size: "2.0 m high · 2.05 × 0.9 m" },
+  { id: "pedestal", name: "Pedestal", size: "1.0 m high · 1.05 m square" },
+  { id: "leather-bench", name: "Leather bench", size: "2.45 × 0.92 m footprint" },
   {
-    id: "leather-bench",
-    name: "Leather bench",
-    size: "2.45 × 0.92 m footprint",
-  },
-  { id: "wood-stool", name: "Wood stool", size: "0.72 m footprint" },
-  {
-    id: "rope-barrier",
-    name: "Rope barrier",
-    size: "2.25 × 0.58 m footprint",
+    id: "stone-sculpture",
+    name: "Stone study",
+    size: "0.9 m high · 1.2 m footprint",
   },
 ];
 const decorName = (id: DecorId) =>
@@ -2202,6 +2180,11 @@ function Studio({
                   "skylight",
                   "linear-gradient(135deg,#d8edf4 30%,#fff 34%,#b6d4df 72%)",
                   "luminous skylight",
+                ],
+                [
+                  "vaulted",
+                  "radial-gradient(ellipse at 50% 100%,#eee8dc 0 45%,#b9aa91 48% 55%,#6d6559 58%)",
+                  "barrel vault",
                 ],
               ]}
               value={draft.ceiling ?? "gallery"}

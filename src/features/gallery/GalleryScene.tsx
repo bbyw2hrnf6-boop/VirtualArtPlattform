@@ -457,13 +457,13 @@ function createPotTexture(light: boolean) {
 
 function createPlant(broad = false) {
   const group = new THREE.Group();
-  const potTexture = createPotTexture(broad);
+  const potTexture = createPotTexture(true);
   const ceramic = new THREE.MeshPhysicalMaterial({
     color: "#ffffff",
     map: potTexture,
-    roughness: broad ? 0.34 : 0.28,
+    roughness: 0.36,
     metalness: 0.03,
-    clearcoat: broad ? 0.18 : 0.34,
+    clearcoat: 0.18,
     clearcoatRoughness: 0.45,
   });
   const pot = new THREE.Mesh(
@@ -590,12 +590,15 @@ function createPlant(broad = false) {
 
 function createSnakePlant() {
   const group = new THREE.Group();
+  const potTexture = createPotTexture(true);
   const pot = new THREE.Mesh(
     new THREE.CylinderGeometry(0.26, 0.2, 0.42, 40),
     new THREE.MeshPhysicalMaterial({
-      color: "#b9ae9c",
-      roughness: 0.42,
-      clearcoat: 0.13,
+      color: "#ffffff",
+      map: potTexture,
+      roughness: 0.36,
+      clearcoat: 0.18,
+      clearcoatRoughness: 0.45,
     }),
   );
   pot.position.y = 0.21;
@@ -1148,6 +1151,82 @@ function rebuildCeilingDetails(
     daylight.rotation.x = -Math.PI / 2;
     group.add(daylight);
   }
+  if (finish === "vaulted") {
+    const width = w * 0.96;
+    const depth = d * 0.94;
+    const springY = h - Math.min(1.35, h * 0.3);
+    const rise = h - 0.09 - springY;
+    const xSegments = 32;
+    const zSegments = 12;
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+    for (let zIndex = 0; zIndex <= zSegments; zIndex++) {
+      const zRatio = zIndex / zSegments;
+      for (let xIndex = 0; xIndex <= xSegments; xIndex++) {
+        const xRatio = xIndex / xSegments;
+        const x = (xRatio - 0.5) * width;
+        const y = springY + Math.sin(xRatio * Math.PI) * rise;
+        positions.push(x, y, (zRatio - 0.5) * depth);
+        uvs.push(xRatio * 3, zRatio * 3);
+      }
+    }
+    for (let zIndex = 0; zIndex < zSegments; zIndex++) {
+      for (let xIndex = 0; xIndex < xSegments; xIndex++) {
+        const a = zIndex * (xSegments + 1) + xIndex;
+        const b = a + 1;
+        const c = a + xSegments + 1;
+        const dIndex = c + 1;
+        indices.push(a, c, b, b, c, dIndex);
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    const vaultTexture = createSurfaceTexture("limestone", wallColors.limestone);
+    vaultTexture.repeat.set(2.6, 2.2);
+    const vault = new THREE.Mesh(
+      geometry,
+      new THREE.MeshPhysicalMaterial({
+        color: "#eee7d9",
+        map: vaultTexture,
+        roughness: 0.82,
+        clearcoat: 0.01,
+        side: THREE.DoubleSide,
+      }),
+    );
+    vault.receiveShadow = true;
+    group.add(vault);
+    const ribMaterial = new THREE.MeshPhysicalMaterial({
+      color: "#c7b79d",
+      roughness: 0.68,
+      clearcoat: 0.025,
+    });
+    [-0.34, 0, 0.34].forEach((zRatio) => {
+      const points = Array.from({ length: 17 }, (_, index) => {
+        const ratio = index / 16;
+        return new THREE.Vector3(
+          (ratio - 0.5) * width,
+          springY + Math.sin(ratio * Math.PI) * rise - 0.025,
+          zRatio * depth,
+        );
+      });
+      group.add(
+        new THREE.Mesh(
+          new THREE.TubeGeometry(
+            new THREE.CatmullRomCurve3(points),
+            48,
+            0.045,
+            10,
+            false,
+          ),
+          ribMaterial,
+        ),
+      );
+    });
+  }
 }
 
 function buildRoom(
@@ -1195,6 +1274,14 @@ function buildRoom(
       bump: 0.004,
       emissive: "#dceeff",
       glow: 0.18,
+    },
+    vaulted: {
+      surface: "limestone" as const,
+      color: "#ded3c1",
+      roughness: 0.83,
+      bump: 0.018,
+      emissive: "#ede6d9",
+      glow: 0.04,
     },
   }[ceilingFinish];
   const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]);
@@ -1823,6 +1910,13 @@ function updateRoomSurface(
       roughness: 0.76,
       emissive: "#dceeff",
       glow: 0.055,
+    },
+    vaulted: {
+      surface: "limestone" as const,
+      color: "#ded3c1",
+      roughness: 0.83,
+      emissive: "#ede6d9",
+      glow: 0.018,
     },
   }[finish];
   const texture = createSurfaceTexture(profile.surface, profile.color);
@@ -2789,6 +2883,7 @@ type GalleryRuntime = {
   resetView: () => void;
   focusWall: (wall: WallId) => void;
   focusPavilionZone: (zone: PavilionZoneId) => void;
+  startGuidedTour: () => void;
   capture: GallerySceneCapture;
 };
 
@@ -4083,6 +4178,31 @@ function GallerySceneRenderer({
       return { dataUrl, width, height, mimeType, mode };
     };
     element.dataset.captureReady = "true";
+    const startGuidedTour = () => {
+      if (disposed) return;
+      intro?.dispose();
+      intro = null;
+      if (mode !== "walk") {
+        setMode("walk");
+        window.setTimeout(startGuidedTour, 360);
+        return;
+      }
+      latest.current.onArtworkFocus?.(null);
+      element.dataset.guidedTour = "playing";
+      intro = createCinematicIntro(
+        camera,
+        galleryIntroTour(currentDraft, w, d),
+        navigation,
+        element,
+        () => {
+          introPlayed.current = true;
+          element.dataset.guidedTour = "idle";
+          latest.current.onIntroComplete?.();
+        },
+        "Guided tour",
+        currentDraft.title,
+      );
+    };
     runtime.current = {
       sync: syncDraft,
       setViewMode: (next) => {
@@ -4095,6 +4215,7 @@ function GallerySceneRenderer({
       resetView: resetSceneView,
       focusWall: focusWallView,
       focusPavilionZone: focusPavilionZoneView,
+      startGuidedTour,
       capture,
     };
     const overviewCenter = new THREE.Vector3(0, h * 0.34, 0);
@@ -4384,6 +4505,15 @@ function GallerySceneRenderer({
       }
       ref={host}
     >
+      {(visitor || editorMode === "walk") && (
+        <button
+          type="button"
+          className="gallery-guided-tour"
+          onClick={() => runtime.current?.startGuidedTour()}
+        >
+          <span>✦</span> Guided tour
+        </button>
+      )}
       {!visitor && (
         <>
           <div

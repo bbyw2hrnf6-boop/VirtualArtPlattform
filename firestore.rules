@@ -37,7 +37,7 @@ service cloud.firestore {
           'walnut', 'dark-oak', 'microcement', 'slate', 'dark-concrete',
           'travertine-floor'
         ]
-        && data.ceiling in ['gallery', 'warm', 'dark', 'skylight']
+        && data.ceiling in ['gallery', 'warm', 'dark', 'skylight', 'vaulted']
         && data.lighting in ['daylight', 'museum', 'evening']
         && data.artworks is list
         && data.artworks.size() > 0

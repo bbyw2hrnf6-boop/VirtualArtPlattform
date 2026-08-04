@@ -67,3 +67,41 @@
   border-bottom: 4px solid #6c2e28;
   border-radius: 0 0 50% 50%;
 }
+
+.gallery-guided-tour {
+  position: absolute;
+  z-index: 9;
+  top: 88px;
+  left: 24px;
+  min-height: 44px;
+  border: 1px solid #ffffff2b;
+  background: #0d0f0ce8;
+  color: #efeee8;
+  padding: 0 17px;
+  font: 600 11px/1 Manrope, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 34px #0007;
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+}
+
+.gallery-guided-tour span {
+  color: #d9ff43;
+  margin-right: 7px;
+}
+
+.gallery-guided-tour:hover,
+.gallery-guided-tour:focus-visible {
+  border-color: #d9ff43;
+  outline: none;
+}
+
+@media (max-width: 620px) {
+  .gallery-guided-tour {
+    top: 74px;
+    left: 12px;
+    min-height: 40px;
+    padding: 0 12px;
+  }
+}

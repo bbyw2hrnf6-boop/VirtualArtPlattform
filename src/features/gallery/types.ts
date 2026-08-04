@@ -31,7 +31,7 @@ export type FloorFinish =
   | "slate"
   | "dark-concrete"
   | "travertine-floor";
-export type CeilingFinish = "gallery" | "warm" | "dark" | "skylight";
+export type CeilingFinish = "gallery" | "warm" | "dark" | "skylight" | "vaulted";
 export type LightingPreset = "daylight" | "museum" | "evening";
 export type DecorId =
   | "olive"
