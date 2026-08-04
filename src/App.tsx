@@ -591,8 +591,9 @@ function RoomShowcase() {
           <em>Make it yours.</em>
         </h2>
         <p>
-          Start with sample art, then replace it with your own work. Every
-          preview below comes from the live builder.
+          Start with sample art, then replace it with your own work. These
+          concept images show each room's visual direction; every button opens
+          the working browser builder.
         </p>
       </div>
       <div className="room-showcase-grid">
@@ -609,7 +610,7 @@ function RoomShowcase() {
                 height="752"
                 loading="lazy"
                 decoding="async"
-                alt={`${template.name} rendered in the AURA room builder`}
+                alt={`${template.name} premium concept visualization`}
               />
               <span>Try this room ↗</span>
             </button>
@@ -793,7 +794,7 @@ function TemplatePicker({ onChoose }: { onChoose: (id: TemplateId) => void }) {
                 width="965"
                 height="752"
                 decoding="async"
-                alt={`${template.name} rendered in the AURA room builder`}
+                alt={`${template.name} premium concept visualization`}
               />
               {savedTemplates.has(template.id) && (
                 <b className="template-draft-badge">Local draft</b>
@@ -807,7 +808,7 @@ function TemplatePicker({ onChoose }: { onChoose: (id: TemplateId) => void }) {
         ))}
       </div>
       <p className="picker-footnote">
-        True browser renders · Optimized for desktop, tablet, and mobile.
+        Concept direction imagery · Every room opens in the live browser builder.
       </p>
     </main>
   );

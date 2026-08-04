@@ -1,17 +1,15 @@
-# AURA template previews
+# AURA template concept previews
 
-These three 980 × 752 WebP files are captures from the real AURA Three.js builder. Each room is loaded through its `/demo` editor route with the documented fictional studies from `public/assets/artworks/`; builder controls are hidden only for the capture. The files are product screenshots, not Blender renders or third-party stock images.
+These three 965 × 752 WebP files are photorealistic concept-direction images generated specifically for AURA with OpenAI ImageGen on 2026-08-04. They communicate the intended character of each configurable room and are explicitly described as concepts in the product UI; they are not screenshots of the current Three.js runtime and contain no third-party stock imagery.
 
-Regenerate them while the local Vite app and Chrome DevTools endpoint are running:
-
-```bash
-node scripts/capture-template-previews.mjs
-```
+- `white-cube-preview.webp`: luminous white museum room, warm daylight, restrained dark timber bench
+- `nocturne-preview.webp`: intimate charcoal room, warm spot lighting, jewel-toned works and sculpture
+- `pavilion-preview.webp`: monumental travertine forum, skylight, connected galleries and central sculpture
 
 SHA-256 checksums:
 
 ```text
-d83f5820a526ef533beef04cbd43bffc5bba89d3528c2398db07142488c43383  white-cube-preview.webp
-46703c61f7cc0aa1975f8e44e27bc685a6302b5b6bda2188adeb34307ee32aa0  nocturne-preview.webp
-0a6a27e6f6a9fb74a90cc485b7dcf5c1f3d2b9577e846e9296ae81c017f11e31  pavilion-preview.webp
+f139f9de85865a7e33fb442b876b8465de6ba511dd8da9c79c3768f36ea5218c  nocturne-preview.webp
+46a17f56e950cbd6a9196691db72a0996877c3d963e47d20009e3c66c80f684b  pavilion-preview.webp
+57a4adef941d308aef895ab141b76c916bd3a700274cdeb90e06f0e9716d749e  white-cube-preview.webp
 ```

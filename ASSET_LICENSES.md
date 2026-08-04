@@ -21,7 +21,7 @@ That permission is specific to their use within this AURA project. It does not a
 
 The three fictional studies in `public/assets/artworks/` were generated specifically for the product demo. Exact generation and processing details are recorded in [`public/assets/artworks/README.md`](./public/assets/artworks/README.md). They are not presented as works by a real artist.
 
-The three images in `public/assets/templates/` are captures of the actual AURA WebGL editor using those studies. Their capture method and checksums are recorded in [`public/assets/templates/README.md`](./public/assets/templates/README.md). They can be regenerated with `node scripts/capture-template-previews.mjs` while the local app and a Chrome DevTools endpoint are running.
+The three images in `public/assets/templates/` are AURA-specific concept-direction images generated with OpenAI ImageGen on 2026-08-04. Their role, prompts' visual intent, dimensions, and checksums are recorded in [`public/assets/templates/README.md`](./public/assets/templates/README.md). They are disclosed as concept imagery in the UI and are not presented as captures of the live builder.
 
 ## Material images
 

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { normalizeDannyLight, selectDannyAuthoredLights } from '../gallery/scene/dannyLighting';
 import './scrollGalleryStory.css';
 
@@ -9,27 +10,27 @@ const CHAPTERS = [
   {
     eyebrow: 'Act I · First light',
     title: 'Your art deserves more than a page.',
-    body: 'A room begins as one precise line of light.'
+    body: 'The authored Danny Hirsch Arts room begins as one precise line of light.'
   },
   {
     eyebrow: '01 · Blueprint',
     title: 'Start without 3D knowledge.',
-    body: 'Dimensions, axes, and real placement surfaces make the space legible.'
+    body: 'Its real dimensions, axes, and placement surfaces make the exhibition legible.'
   },
   {
     eyebrow: '02 · Architecture',
-    title: 'An idea becomes a real room.',
-    body: 'Floor, walls, opening, and ceiling grow from one connected plan.'
+    title: 'The real room takes shape.',
+    body: 'Danny Hirsch Arts floor, walls, thresholds, and ceiling grow from their authored plan.'
   },
   {
     eyebrow: '03 · Atmosphere',
     title: 'Curate atmosphere, not just walls.',
-    body: 'Three distinct material and light directions resolve into one exhibition.'
+    body: 'Stone, bronze, shadow, and warm light resolve into the finished exhibition.'
   },
   {
     eyebrow: 'Act II · Artwork',
     title: 'Every work finds its place.',
-    body: 'A floating collection settles to eye line with measured spacing and snap guides.'
+    body: 'The genuine Danny Hirsch works settle into their authored positions and eye lines.'
   },
   {
     eyebrow: '04 · Arrange',
@@ -53,7 +54,7 @@ const CHAPTERS = [
   }
 ] as const;
 
-const CHAPTER_CENTERS = [0.04, 0.13, 0.25, 0.38, 0.51, 0.63, 0.73, 0.83, 0.95] as const;
+const CHAPTER_CENTERS = [0.04, 0.13, 0.25, 0.38, 0.51, 0.63, 0.73, 0.83, 0.965] as const;
 const STORY_ARTWORKS = [
   {
     src: './assets/artworks/aura-cliffs-study.webp',
@@ -183,10 +184,17 @@ export function ScrollGalleryStory() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#111411');
     scene.fog = new THREE.Fog('#111411', 16, 31);
+    const environmentGenerator = new THREE.PMREMGenerator(renderer);
+    const environment = environmentGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = environment;
+    scene.environmentIntensity = compact ? 0.52 : 0.62;
 
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80);
     const room = new THREE.Group();
     room.name = 'LandingStoryRoom';
+    // The procedural room is a load-error fallback only. Showing it while the
+    // authored GLB loads makes the story appear to build an unrelated room.
+    room.visible = false;
     scene.add(room);
 
     const blueprint = new THREE.Group();
@@ -444,11 +452,16 @@ export function ScrollGalleryStory() {
     });
 
     let dannyModel: THREE.Group | null = null;
-    let dannyRevealAmount = 0;
     const dannyMaterialSnapshots = new Map<THREE.Material, MaterialSnapshot>();
+    const dannyArtworkMaterials = new Set<THREE.Material>();
     const dannyArtworkObjects: THREE.Object3D[] = [];
     const dannyColliderBoxes: THREE.Box3[] = [];
     const dannyActiveLights = new Map<THREE.Light, number>();
+    const dannyBlueprint = new THREE.Group();
+    const dannyBlueprintLines: THREE.LineSegments[] = [];
+    dannyBlueprint.name = 'DannyHirschArtsBlueprint';
+    dannyBlueprint.visible = false;
+    scene.add(dannyBlueprint);
     section.dataset.dannyRoom = 'loading';
 
     const loader = new GLTFLoader();
@@ -552,6 +565,38 @@ export function ScrollGalleryStory() {
             }
             material.needsUpdate = true;
           });
+
+          if (isArtwork) materials.forEach((material) => dannyArtworkMaterials.add(material));
+
+          const positionCount = mesh.geometry?.getAttribute('position')?.count ?? 0;
+          const blueprintLimit = compact ? 44 : 88;
+          if (
+            !isArtwork
+            && positionCount > 0
+            && positionCount < 75_000
+            && dannyBlueprintLines.length < blueprintLimit
+          ) {
+            const edges = new THREE.EdgesGeometry(mesh.geometry, 38);
+            const edgeCount = edges.getAttribute('position')?.count ?? 0;
+            if (edgeCount > 0) {
+              const edgeMaterial = new THREE.LineBasicMaterial({
+                color: '#d9ff43',
+                transparent: true,
+                opacity: 0,
+                depthWrite: false
+              });
+              const lines = new THREE.LineSegments(edges, edgeMaterial);
+              lines.matrixAutoUpdate = false;
+              lines.matrix.copy(mesh.matrixWorld);
+              lines.frustumCulled = false;
+              lines.renderOrder = 3;
+              lines.visible = false;
+              dannyBlueprintLines.push(lines);
+              dannyBlueprint.add(lines);
+            } else {
+              edges.dispose();
+            }
+          }
 
           if (!isArtwork) return;
           const info: StoryArtworkInfo = {
@@ -689,13 +734,15 @@ export function ScrollGalleryStory() {
     const cameraKeyframes: CameraKeyframe[] = [
       { at: 0, position: new THREE.Vector3(9.8, 10.5, 14.8), target: new THREE.Vector3(0, 0.25, -0.8) },
       { at: 0.08, position: new THREE.Vector3(9.2, 9.4, 14.2), target: new THREE.Vector3(0, 0.4, -0.8) },
-      { at: 0.18, position: new THREE.Vector3(8.8, 7.3, 13.8), target: new THREE.Vector3(0, 1.1, -1) },
-      { at: 0.32, position: new THREE.Vector3(7.5, 4.15, 12.3), target: new THREE.Vector3(0, 2.05, -1.3) },
-      { at: 0.44, position: new THREE.Vector3(6.7, 3.8, 11.1), target: new THREE.Vector3(0, 2.2, -2) },
-      { at: 0.58, position: new THREE.Vector3(5.9, 3.45, 9.9), target: new THREE.Vector3(0, 2.2, -2.55) },
-      { at: 0.68, position: new THREE.Vector3(8.8, 6.4, 15.5), target: new THREE.Vector3(0, 1.8, 0.4) },
-      { at: 0.78, position: new THREE.Vector3(7.1, 4.8, 13.2), target: new THREE.Vector3(0, 2.05, -0.8) },
-      { at: 0.88, position: new THREE.Vector3(2.6, 2.7, 10.2), target: new THREE.Vector3(0, 2.15, -2.4) },
+      { at: 0.18, position: new THREE.Vector3(0, 2.45, 10.8), target: new THREE.Vector3(0, 2.05, -1.5) },
+      { at: 0.32, position: new THREE.Vector3(0, 2.2, 6.15), target: new THREE.Vector3(0, 2.05, -4.2) },
+      { at: 0.44, position: new THREE.Vector3(-0.8, 2.2, 3.6), target: new THREE.Vector3(-6.7, 2.75, 0.6) },
+      { at: 0.51, position: new THREE.Vector3(0, 2.15, 1.5), target: new THREE.Vector3(-6.7, 2.75, 0.5) },
+      { at: 0.58, position: new THREE.Vector3(0, 2.15, 1.5), target: new THREE.Vector3(6.7, 2.75, 0.5) },
+      { at: 0.68, position: new THREE.Vector3(1, 2.2, 3.5), target: new THREE.Vector3(6.7, 2.75, -1) },
+      { at: 0.78, position: new THREE.Vector3(0, 2.1, 5.5), target: new THREE.Vector3(0, 2.05, -4.2) },
+      { at: 0.88, position: new THREE.Vector3(0.8, 1.9, 7.5), target: new THREE.Vector3(0, 2.3, -5.6) },
+      { at: 0.915, position: new THREE.Vector3(0, 1.75, 6.42), target: new THREE.Vector3(0, 2.68, -7.38) },
       { at: 1, position: new THREE.Vector3(0, 1.75, 6.42), target: new THREE.Vector3(0, 2.68, -7.38) }
     ];
 
@@ -768,7 +815,7 @@ export function ScrollGalleryStory() {
       if (direction === 'back') candidate.add(new THREE.Vector3(-forwardX * step, 0, -forwardZ * step));
       if (direction === 'left') candidate.add(new THREE.Vector3(-rightX * step, 0, -rightZ * step));
       if (direction === 'right') candidate.add(new THREE.Vector3(rightX * step, 0, rightZ * step));
-      const usingDannyRoom = dannyRevealAmount > 0.9 && dannyModel !== null;
+      const usingDannyRoom = dannyModel !== null;
       candidate.x = THREE.MathUtils.clamp(candidate.x, usingDannyRoom ? -6.2 : -6.35, usingDannyRoom ? 6.2 : 6.35);
       candidate.z = THREE.MathUtils.clamp(candidate.z, usingDannyRoom ? -6.62 : -4.35, usingDannyRoom ? 15.3 : 4.25);
       const hitsBench = candidate.x > -3.85 && candidate.x < -0.65 && candidate.z > 0.55 && candidate.z < 1.95;
@@ -800,13 +847,14 @@ export function ScrollGalleryStory() {
       chapterRefs.current.forEach((chapter, index) => {
         if (!chapter) return;
         const center = CHAPTER_CENTERS[index];
-        const radius = index === CHAPTER_CENTERS.length - 1 ? 0.085 : 0.075;
+        const radius = index === CHAPTER_CENTERS.length - 1 ? 0.07 : 0.06;
         let opacity = clamp01(1 - Math.abs(progress - center) / radius);
         opacity = smooth(opacity);
         if (index === 0 && progress < center) opacity = 1;
         if (index === CHAPTER_CENTERS.length - 1 && progress > center) opacity = 1;
         chapter.style.opacity = opacity.toFixed(3);
-        chapter.style.transform = `translate3d(0, ${(1 - opacity) * 18}px, 0)`;
+        const direction = progress < center ? 1 : -1;
+        chapter.style.transform = `translate3d(0, ${direction * (1 - opacity) * 18}px, 0)`;
       });
     };
 
@@ -822,7 +870,9 @@ export function ScrollGalleryStory() {
       section.style.setProperty('--sgs-progress', progress.toFixed(4));
       updateChapterCopy(progress);
 
-      const edgeReveal = easeOut(between(progress, 0, 0.08));
+      // Leave one authored edge on screen before the first wheel/touch move so
+      // the mobile opening never reads as an empty black video frame.
+      const edgeReveal = 0.08 + easeOut(between(progress, 0, 0.08)) * 0.92;
       const blueprintIn = smooth(between(progress, 0.08, 0.13));
       const blueprintOut = 1 - smooth(between(progress, 0.26, 0.34));
       const blueprintOpacity = blueprintIn * blueprintOut;
@@ -832,6 +882,17 @@ export function ScrollGalleryStory() {
       outlineMaterial.opacity = edgeReveal * blueprintOut * 0.86;
       gridMaterial.opacity = blueprintOpacity * 0.52;
       setUiVisibility(blueprintUiRef.current, blueprintOpacity, 14);
+      dannyBlueprint.visible = dannyModel !== null && edgeReveal * blueprintOut > 0.002;
+      dannyBlueprintLines.forEach((lines, index) => {
+        const stagger = Math.min(0.045, index * 0.00075);
+        const seed = index < 2 ? (2 - index) * 0.04 : 0;
+        const reveal = seed + easeOut(between(progress, stagger, 0.075 + stagger)) * (1 - seed);
+        const geometry = lines.geometry;
+        const lineCount = geometry.getAttribute('position')?.count ?? 0;
+        geometry.setDrawRange(0, Math.max(2, Math.floor((lineCount * reveal) / 2) * 2));
+        lines.visible = reveal * blueprintOut > 0.002;
+        (lines.material as THREE.LineBasicMaterial).opacity = reveal * blueprintOut * 0.88;
+      });
 
       const floorBuild = smooth(between(progress, 0.18, 0.235));
       const backBuild = smooth(between(progress, 0.205, 0.285));
@@ -935,33 +996,43 @@ export function ScrollGalleryStory() {
       });
       galleryLight.intensity *= 1 - lightFocus * 0.3;
 
-      dannyRevealAmount = dannyModel ? smooth(between(progress, 0.665, 0.79)) : 0;
+      const dannyShellReveal = dannyModel ? smooth(between(progress, 0.16, 0.39)) : 0;
+      const dannyArtworkReveal = dannyModel ? smooth(between(progress, 0.42, 0.58)) : 0;
       if (dannyModel) {
-        const visible = dannyRevealAmount > 0.002;
+        const visible = dannyShellReveal > 0.002 || dannyArtworkReveal > 0.002;
         dannyModel.visible = visible;
-        dannyModel.position.y = -(1 - dannyRevealAmount) * 0.24;
-        dannyModel.scale.setScalar(0.985 + dannyRevealAmount * 0.015);
+        dannyModel.position.set(0, 0, 0);
+        dannyModel.scale.setScalar(1);
         dannyMaterialSnapshots.forEach((snapshot, material) => {
-          material.opacity = snapshot.opacity * dannyRevealAmount;
-          const transparent = dannyRevealAmount < 0.999 || snapshot.transparent;
-          const depthWrite = dannyRevealAmount > 0.88 && snapshot.depthWrite;
+          const reveal = dannyArtworkMaterials.has(material) ? dannyArtworkReveal : dannyShellReveal;
+          material.opacity = snapshot.opacity * reveal;
+          const transparent = reveal < 0.999 || snapshot.transparent;
+          const depthWrite = reveal > 0.88 && snapshot.depthWrite;
           if (material.transparent !== transparent || material.depthWrite !== depthWrite) {
             material.transparent = transparent;
             material.depthWrite = depthWrite;
             material.needsUpdate = true;
           }
         });
-        const lightReveal = smooth(between(dannyRevealAmount, 0.32, 0.9));
+        const lightReveal = smooth(between(progress, 0.66, 0.79));
         dannyActiveLights.forEach((intensity, light) => {
           light.visible = visible && lightReveal > 0.02;
           light.intensity = intensity * lightReveal;
         });
       }
-      room.visible = !dannyModel || dannyRevealAmount < 0.985;
-      room.scale.setScalar(1 - dannyRevealAmount * 0.055);
-      section.dataset.roomSource = dannyRevealAmount > 0.985 ? 'danny-hirsch-arts' : 'procedural-build';
-      artLights.forEach((light) => { light.intensity *= 1 - dannyRevealAmount; });
-      galleryLight.intensity *= 1 - dannyRevealAmount * 0.35;
+      const proceduralFallback = dannyModel === null && section.dataset.dannyRoom === 'fallback';
+      room.visible = proceduralFallback;
+      room.scale.setScalar(1);
+      blueprint.visible = proceduralFallback && edgeReveal * blueprintOut > 0.002;
+      section.dataset.roomSource = dannyModel
+        ? 'danny-hirsch-arts'
+        : proceduralFallback ? 'procedural-fallback' : 'danny-loading';
+      if (dannyModel) {
+        artLights.forEach((light) => { light.intensity = 0; });
+        // A restrained fill keeps the authored room legible without washing
+        // out artwork colour; authored lights still take over in Act III.
+        galleryLight.intensity *= 0.42;
+      }
 
       const arrangeIn = smooth(between(progress, 0.565, 0.6));
       const arrangeOut = 1 - smooth(between(progress, 0.68, 0.73));
@@ -974,7 +1045,10 @@ export function ScrollGalleryStory() {
       setUiVisibility(visitorUiRef.current, visitorIn, 14);
 
       cameraPose(progress, cameraKeyframes, cameraPosition, cameraTarget);
-      const shouldInteract = progress >= 0.91 && !reducedMotion && section.dataset.webgl === 'ready';
+      const shouldInteract = progress >= 0.915
+        && !reducedMotion
+        && section.dataset.webgl === 'ready'
+        && dannyModel !== null;
       if (shouldInteract && !storyInteractive) {
         visitorPosition.copy(cameraPosition);
         visitorPosition.y = 1.75;
@@ -1049,7 +1123,7 @@ export function ScrollGalleryStory() {
         -((event.clientY - bounds.top) / bounds.height) * 2 + 1
       );
       raycaster.setFromCamera(pointerNdc, camera);
-      const targets = dannyRevealAmount > 0.9 && dannyArtworkObjects.length
+      const targets = dannyModel && dannyArtworkObjects.length
         ? dannyArtworkObjects
         : artworkObjects;
       const hit = raycaster.intersectObjects(targets, true)[0];
@@ -1137,6 +1211,8 @@ export function ScrollGalleryStory() {
         materials.forEach((material) => material.dispose());
       });
       artworkTextures.forEach((texture) => texture.dispose());
+      environment.dispose();
+      environmentGenerator.dispose();
       renderer.dispose();
       delete section.dataset.webgl;
       delete section.dataset.motion;
@@ -1181,9 +1257,9 @@ export function ScrollGalleryStory() {
 
         <div className="sgs__blueprint-ui" ref={blueprintUiRef} aria-hidden="true">
           <div><span>X</span><span>Y</span><span>Z</span></div>
-          <p>Room envelope</p>
-          <dl><div><dt>Width</dt><dd>14.00 m</dd></div><div><dt>Depth</dt><dd>10.00 m</dd></div></dl>
-          <ul><li>White Cube</li><li>Nocturne</li><li>Grand Forum</li></ul>
+          <p>Danny Hirsch Arts · authored GLB</p>
+          <dl><div><dt>Width</dt><dd>12.40 m</dd></div><div><dt>Depth</dt><dd>21.90 m</dd></div></dl>
+          <ul><li>Architecture</li><li>Artwork anchors</li><li>Walk colliders</li></ul>
         </div>
 
         <div className="sgs__material-ui" ref={materialUiRef} aria-hidden="true">

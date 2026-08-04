@@ -32,7 +32,7 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
   if (code === 'permission-denied' || code === 'firestore/permission-denied') {
     return new GalleryPublishingError(
       'configuration',
-      `Firestore rejected this publication. Deploy the repository's Firestore rules to “${projectId}”, confirm Anonymous Authentication is enabled, then retry. Your room is still saved locally.`,
+      `Firestore rejected the authenticated room write in “${projectId}”. Copy the current firestore.rules into the Firebase Rules editor, publish them there manually, then retry. Your room is still saved locally.`,
       error
     );
   }

@@ -1,4 +1,4 @@
-import { signInAnonymously } from 'firebase/auth';
+import { signInAnonymously, signOut, type User } from 'firebase/auth';
 import {
   collection,
   deleteDoc,
@@ -8,7 +8,6 @@ import {
   limit,
   orderBy,
   query,
-  serverTimestamp,
   setDoc,
   Timestamp,
   where,
@@ -29,6 +28,20 @@ import type { GalleryDraft } from '../features/gallery/types';
 
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 38);
 const fromFirestore = (id: string, data: unknown): GalleryRecord => ({ ...parseGalleryDocument(id, data), id });
+
+function firebaseErrorCode(error: unknown) {
+  return typeof error === 'object' && error && 'code' in error
+    ? String(error.code).toLowerCase()
+    : '';
+}
+
+const RECOVERABLE_ANONYMOUS_SESSION_ERRORS = new Set([
+  'auth/id-token-expired',
+  'auth/invalid-user-token',
+  'auth/user-disabled',
+  'auth/user-not-found',
+  'auth/user-token-expired'
+]);
 
 async function bestEffortDelete(references: DocumentReference[]) {
   return Promise.allSettled(references.map((reference) => deleteDoc(reference)));
@@ -83,9 +96,28 @@ async function embedLocalArtworkSources(draft: GalleryDraft): Promise<GalleryDra
 }
 
 class FirebaseGalleryRepository implements GalleryRepository {
-  private async userId() {
+  private async authenticatedUser(): Promise<User> {
     await firebaseAuth.authStateReady();
-    return firebaseAuth.currentUser?.uid ?? (await signInAnonymously(firebaseAuth)).user.uid;
+    const currentUser = firebaseAuth.currentUser;
+    if (currentUser) {
+      try {
+        // IndexedDB can retain an anonymous identity whose server-side record
+        // was removed. A forced refresh proves that Firestore will receive a
+        // current token before the first room write.
+        await currentUser.getIdToken(true);
+        return currentUser;
+      } catch (error) {
+        if (!RECOVERABLE_ANONYMOUS_SESSION_ERRORS.has(firebaseErrorCode(error))) throw error;
+        await signOut(firebaseAuth);
+      }
+    }
+    const credential = await signInAnonymously(firebaseAuth);
+    await credential.user.getIdToken(true);
+    return credential.user;
+  }
+
+  private async userId() {
+    return (await this.authenticatedUser()).uid;
   }
 
   async currentUserId() {
@@ -98,20 +130,20 @@ class FirebaseGalleryRepository implements GalleryRepository {
     try {
       const validatedDraft = prepareGalleryDraftForPublication(await embedLocalArtworkSources(draft));
       const ownerId = await this.userId(); const base = slugify(`${validatedDraft.artist}-${validatedDraft.title}`) || 'gallery'; const id = `${base}-${crypto.randomUUID().slice(0, 7)}`;
-      const now = new Date(); const expires = new Date(now.getTime() + 10 * 86400000); const coverSrc = validateGalleryCoverSource(await createThumbnail(roomCoverSource || validatedDraft.artworks[0]?.src));
+      const now = new Date(); const publishedAt = Timestamp.fromDate(now); const expires = new Date(now.getTime() + 10 * 86400000); const coverSrc = validateGalleryCoverSource(await createThumbnail(roomCoverSource || validatedDraft.artworks[0]?.src));
       const galleryRef = doc(firebaseDb, 'galleries', id);
       const assetRefs = validatedDraft.artworks.map((_, index) => doc(firebaseDb, 'galleryArtworks', `${id}-${index + 1}`));
       cleanupReferences = [galleryRef, ...assetRefs];
       const artworks = validatedDraft.artworks.map((artwork, index) => ({ ...artwork, assetId: assetRefs[index].id, src: '' }));
       const assetWrites = await Promise.allSettled(validatedDraft.artworks.map((artwork, index) => setDoc(assetRefs[index], {
         galleryId: id, ownerId, index, src: artwork.src,
-        publishedAt: serverTimestamp(), expiresAt: Timestamp.fromDate(expires), schemaVersion: 1
+        publishedAt, expiresAt: Timestamp.fromDate(expires), schemaVersion: 1
       })));
       const failedAssetWrite = assetWrites.find((result): result is PromiseRejectedResult => result.status === 'rejected');
       if (failedAssetWrite) throw failedAssetWrite.reason;
       await setDoc(galleryRef, {
         ...validatedDraft, artworks, coverSrc, ownerId,
-        publishedAt: serverTimestamp(), expiresAt: Timestamp.fromDate(expires), schemaVersion: 1
+        publishedAt, expiresAt: Timestamp.fromDate(expires), schemaVersion: 1
       });
       return { ...validatedDraft, coverSrc, id, ownerId, publishedAt: now.toISOString(), expiresAt: expires.toISOString() };
     } catch (error) {

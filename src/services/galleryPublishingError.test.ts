@@ -6,7 +6,7 @@ import {
 
 describe('gallery publishing errors', () => {
   it.each([
-    ['permission-denied', 'configuration', 'Deploy the repository'],
+    ['permission-denied', 'configuration', 'publish them there manually'],
     ['failed-precondition', 'configuration', 'Firestore indexes'],
     ['auth/operation-not-allowed', 'authentication-disabled', 'Enable Anonymous Authentication'],
     ['auth/configuration-not-found', 'authentication-disabled', 'Enable Anonymous Authentication'],
