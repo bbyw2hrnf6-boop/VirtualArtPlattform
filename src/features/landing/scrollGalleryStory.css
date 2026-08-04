@@ -1,8 +1,8 @@
 .sgs {
   --sgs-progress: 0;
   position: relative;
-  height: 620svh;
-  min-height: 3900px;
+  height: 860svh;
+  min-height: 5600px;
   overflow: clip;
   background: #111411;
   color: #f1efe8;
@@ -170,7 +170,7 @@
 .sgs__topline {
   position: absolute;
   z-index: 4;
-  top: 30px;
+  top: 100px;
   left: 4vw;
   right: 4vw;
   display: grid;
@@ -952,8 +952,8 @@
 
 @media (max-width: 720px) {
   .sgs {
-    height: 540svh;
-    min-height: 3100px;
+    height: 760svh;
+    min-height: 4300px;
   }
 
   .sgs__sticky {
@@ -971,7 +971,7 @@
   }
 
   .sgs__topline {
-    top: 22px;
+    top: 88px;
     left: 20px;
     right: 20px;
     grid-template-columns: auto minmax(60px, 1fr);

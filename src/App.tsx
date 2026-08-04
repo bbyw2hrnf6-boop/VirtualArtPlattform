@@ -253,74 +253,21 @@ function Header({ light = false }: { light?: boolean }) {
   );
 }
 
-function HeroGalleryVisual() {
-  return (
-    <button
-      className="hero-gallery-visual"
-      onClick={() => navigate("/demo")}
-      aria-label="Enter the exhibition — Danny Hirsch live gallery"
-    >
-      <img
-        src="./assets/demo/aura-hero-gallery.webp"
-        width="1600"
-        height="963"
-        fetchPriority="high"
-        decoding="async"
-        alt="Atmospheric AURA gallery with contemporary artworks"
-      />
-      <span className="hero-gallery-shade" />
-      <span className="hero-gallery-label">
-        <i>Live space · 01</i>
-        <strong>Enter the exhibition ↗</strong>
-      </span>
-    </button>
-  );
-}
-
 function DeferredScrollStory() {
-  const boundary = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    const target = boundary.current;
-    if (!target || ready) return undefined;
-    if (!("IntersectionObserver" in window)) {
-      const frame = requestAnimationFrame(() => setReady(true));
-      return () => cancelAnimationFrame(frame);
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        observer.disconnect();
-        setReady(true);
-      },
-      { rootMargin: "350px 0px", threshold: 0.01 },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [ready]);
   return (
-    <div ref={boundary} className="story-deferred">
-      {ready ? (
-        <Suspense
-          fallback={
-            <section
-              className="story-placeholder"
-              aria-label="Loading interactive gallery story"
-            >
-              <span>Preparing the room…</span>
-            </section>
-          }
-        >
-          <ScrollGalleryStory />
-        </Suspense>
-      ) : (
-        <section
-          className="story-placeholder"
-          aria-label="Interactive gallery story"
-        >
-          <span>Scroll to build the room</span>
-        </section>
-      )}
+    <div className="story-deferred">
+      <Suspense
+        fallback={
+          <section
+            className="story-placeholder"
+            aria-label="Loading interactive gallery story"
+          >
+            <span>Preparing Danny Hirsch Arts…</span>
+          </section>
+        }
+      >
+        <ScrollGalleryStory />
+      </Suspense>
     </div>
   );
 }
@@ -554,33 +501,6 @@ function Landing() {
   return (
     <main className="landing">
       <Header />
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Art should be experienced</p>
-          <h1>
-            Your art.
-            <br />
-            <em>Beyond walls.</em>
-          </h1>
-          <p className="hero-intro">
-            Build, curate, and share a virtual exhibition in your browser. No
-            code, downloads, or 3D software.
-          </p>
-          <div className="hero-actions">
-            <button
-              className="button button--light"
-              onClick={() => navigate("/create")}
-            >
-              Create your gallery <span>↗</span>
-            </button>
-            <button className="text-link" onClick={() => navigate("/demo")}>
-              Experience a live gallery <span>→</span>
-            </button>
-          </div>
-        </div>
-        <HeroGalleryVisual />
-        <p className="vertical-word">AURA / VIRTUAL EXHIBITIONS FOR ARTISTS</p>
-      </section>
       <DeferredScrollStory />
       <RoomShowcase />
       <section className="demo-tease">

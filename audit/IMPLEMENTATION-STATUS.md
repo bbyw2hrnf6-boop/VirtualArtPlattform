@@ -55,7 +55,7 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 | Punkt | Warum nicht lokal abschließbar | Nächster Schritt |
 |---|---|---|
-| Live Discover / Publish | Der lokale Client erhält `permission-denied`; Live-Daten wurden absichtlich nicht mutiert. | Anonymous Auth, Authorized Domains, Firestore Rules/Indexes und einen echten Publish→Incognito→Discover-Fluss im Zielprojekt deployen/testen. |
+| Live Discover / Publish | Ursache bestätigt: Der Web-Deploy veröffentlichte bisher keine passenden Firestore-Regeln. Der Workflow deployt Regeln und Indexes jetzt vor der Website und blockiert bei Drift. Ein Live-Deploy war lokal ohne Firebase-Anmeldung nicht möglich. | `FIREBASE_SERVICE_ACCOUNT` mit Rules-/Index-Rechten prüfen, Workflow starten und Publish→Private Window→Discover einmal live testen. |
 | Private, unlisted, permanent, Revisionen | Erfordert Zugriffsmodell, Accounts, Storage, Rate Limits, Moderation und Tarifentscheidung. | Pilot-Backend und Rollenmodell definieren; erst danach UI aktivieren. Die aktuelle UI behauptet diese Funktionen nicht. |
 | Vollständige Rechtstexte | Controller, Kontakt, Sitz, Rechtsgrundlage, Auftragsverarbeitung und Vertragsbedingungen fehlen als Eingaben. | Mit realen Betreiberangaben Privacy, Terms, Content Rights und Pilotvertrag juristisch erstellen. |
 | Dynamische Social Cards / eigener Slug / Custom Domain | Hash-Routing und GitHub Pages können Galerie-spezifische Server-Metadaten nicht erzeugen. | Hosting/Edge-Rendering und Domain auswählen; OG-Route serverseitig aus Gallery-Metadaten erzeugen. |

@@ -95,6 +95,12 @@ Check the project name shown before approving the deploy. The command publishes:
 
 Do not exempt `expiresAt`: Discover and cleanup query that field.
 
+### Automatic GitHub deployment
+
+`.github/workflows/deploy.yml` now deploys `firestore.rules` and `firestore.indexes.json` to `virtualartplattform` before it publishes the matching web build. The Pages job is blocked if the rules deployment or its credentials fail, so the client and its security contract cannot silently drift apart again.
+
+The `FIREBASE_SERVICE_ACCOUNT` repository secret is shared by the rules deployment and scheduled cleanup workflows. Its Google Cloud identity needs the narrow data-cleanup permissions documented below plus **Firebase Rules Admin** (`roles/firebaserules.admin`) and **Cloud Datastore Index Admin** (`roles/datastore.indexAdmin`).
+
 ### What the current rules enforce
 
 - Only authenticated Firebase users can create galleries or artwork documents; the app signs publishers in anonymously.
@@ -126,7 +132,7 @@ This separates **access expiry** from **physical cleanup**. The GitHub schedule 
 
 Do not configure a managed Firestore TTL policy for this Spark-plan setup. Firebase documents that TTL deletes require billing and do not use the free delete quota. If the project later moves to Blaze, managed TTL on `expiresAt` can replace the GitHub cleanup, but it must be configured separately for both the `galleries` and `galleryArtworks` collection groups.
 
-## 6. Configure free scheduled cleanup
+## 6. Configure deployment credentials and free scheduled cleanup
 
 `.github/workflows/cleanup.yml` runs at `03:23 UTC` each day and can also be started manually. It calls `scripts/cleanup-expired.mjs` through the Firestore REST API.
 
@@ -148,15 +154,16 @@ The script queries in batches of 500 artwork documents and 100 gallery documents
 
 8. Paste the complete JSON file contents as the value and save.
 9. Delete the downloaded local JSON after the secret has been stored safely.
-10. Open **Actions → Clean up expired galleries → Run workflow**.
-11. Confirm the log ends with a deletion count rather than an authentication or permission error.
+10. Open **Actions → Deploy to GitHub Pages → Run workflow** and confirm the Firestore deployment job is green.
+11. Open **Actions → Clean up expired galleries → Run workflow**.
+12. Confirm the cleanup log ends with a deletion count rather than an authentication or permission error.
 
 Never commit, screenshot, paste into chat, or email the service-account JSON. Firebase CLI logs can also contain authentication session data; keep `firebase-debug.log` files out of Git.
 
 ### Service-account safety
 
 - Never grant the cleanup identity an Owner role.
-- Reduce its IAM permissions to the minimum Firestore read/delete access needed by the cleanup after verifying the workflow.
+- Reduce its IAM permissions to the minimum Firestore read/delete access needed by cleanup plus `roles/firebaserules.admin` and `roles/datastore.indexAdmin` needed by deployment.
 - Rotate the key immediately if it may have been exposed, and remove unused keys in Google Cloud IAM.
 - For a longer-lived production deployment, replace the JSON key with [GitHub OpenID Connect and Google Workload Identity Federation](https://github.com/google-github-actions/auth#workload-identity-federation).
 - Confirm the secret belongs to the intended Firebase project before every migration or repository copy; the cleanup script uses the project ID inside that secret.
@@ -219,7 +226,7 @@ Add the current hostname under **Authentication → Settings → Authorized doma
 - Confirm the gallery payload remains within the 8/8/14 artwork and eight-object limits.
 - Confirm the artwork data URL is below 780,000 characters.
 
-The GitHub Pages workflow deploys the web bundle only. It does **not** deploy Firestore rules or indexes. After reviewing the target project, an authenticated project owner must run:
+The GitHub Pages workflow deploys the matching rules and indexes before the web bundle. Confirm its **Deploy Firestore rules and indexes** job is green. For a manual recovery deploy, an authenticated project owner can run:
 
 ```bash
 npx firebase-tools@latest login

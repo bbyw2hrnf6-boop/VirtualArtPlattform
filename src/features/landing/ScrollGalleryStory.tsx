@@ -1,5 +1,8 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { normalizeDannyLight, selectDannyAuthoredLights } from '../gallery/scene/dannyLighting';
 import './scrollGalleryStory.css';
 
 const CHAPTERS = [
@@ -41,12 +44,12 @@ const CHAPTERS = [
   {
     eyebrow: 'Act III · Walk preview',
     title: 'Experience it as a visitor.',
-    body: 'The tool recedes as the camera arrives at a true 1.75 metre eye level.'
+    body: 'The tool recedes as the camera enters Danny Hirsch Arts at a true 1.75 metre eye level.'
   },
   {
     eyebrow: '06 · Live product',
     title: 'Enter the exhibition.',
-    body: 'You are already inside: look around, move, and select an artwork.'
+    body: 'You are already inside the real Danny Hirsch Arts demo: look around, move, and select an artwork.'
   }
 ] as const;
 
@@ -71,6 +74,18 @@ const STORY_ARTWORKS = [
     note: 'A charged pigment cloud used to demonstrate scale, spacing, and focused light.'
   }
 ] as const;
+
+type StoryArtworkInfo = {
+  title: string;
+  medium: string;
+  note: string;
+};
+
+type MaterialSnapshot = {
+  opacity: number;
+  transparent: boolean;
+  depthWrite: boolean;
+};
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const smooth = (value: number) => {
   const t = clamp01(value);
@@ -316,6 +331,7 @@ export function ScrollGalleryStory() {
     const snapMaterials: THREE.MeshBasicMaterial[] = [];
     const artworkTextures: THREE.Texture[] = [];
     let requestStoryRender: () => void = () => undefined;
+    let disposed = false;
 
     artworkSpecs.forEach((spec, index) => {
       const artwork = new THREE.Group();
@@ -427,6 +443,177 @@ export function ScrollGalleryStory() {
       artLights.push(spot);
     });
 
+    let dannyModel: THREE.Group | null = null;
+    let dannyRevealAmount = 0;
+    const dannyMaterialSnapshots = new Map<THREE.Material, MaterialSnapshot>();
+    const dannyArtworkObjects: THREE.Object3D[] = [];
+    const dannyColliderBoxes: THREE.Box3[] = [];
+    const dannyActiveLights = new Map<THREE.Light, number>();
+    section.dataset.dannyRoom = 'loading';
+
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    loader.load(
+      compact ? './assets/demo/danny-gallery-mobile.glb' : './assets/demo/danny-gallery.glb',
+      (gltf) => {
+        if (disposed) {
+          gltf.scene.traverse((object) => {
+            const mesh = object as THREE.Mesh;
+            mesh.geometry?.dispose();
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            materials.filter(Boolean).forEach((material) => material.dispose());
+          });
+          return;
+        }
+
+        const detectedArtworks: Array<{ object: THREE.Object3D; info: StoryArtworkInfo }> = [];
+        const authoredLights: THREE.Light[] = [];
+        dannyModel = gltf.scene;
+        dannyModel.name = 'DannyHirschArtsScrollRoom';
+        scene.add(dannyModel);
+        dannyModel.updateMatrixWorld(true);
+
+        dannyModel.traverse((object) => {
+          const metadata = object.userData as Record<string, unknown>;
+          const navigationRole = String(metadata.navigation_role ?? '').toLowerCase();
+          const assetRole = String(metadata.asset_role ?? '').toLowerCase();
+          const isCollider = object.name.startsWith('COLLIDER_') || navigationRole === 'collider';
+          const isGuideNode = navigationRole === 'view_anchor'
+            || navigationRole === 'clear_route_waypoint'
+            || navigationRole === 'look_target'
+            || navigationRole === 'walk_start'
+            || navigationRole === 'bounds_min'
+            || navigationRole === 'bounds_max';
+          const isCatalogueLabel = /^catalogue_label_/i.test(object.name);
+
+          if (isCollider && metadata.demo_hidden !== true) {
+            const collider = new THREE.Box3().setFromObject(object, true);
+            if (!collider.isEmpty()) {
+              collider.expandByVector(new THREE.Vector3(0.32, 0, 0.32));
+              dannyColliderBoxes.push(collider);
+            }
+          }
+          if ((object as THREE.Camera).isCamera || isCollider || isGuideNode || isCatalogueLabel) {
+            object.visible = false;
+          }
+          if ((object as THREE.Light).isLight) {
+            const light = object as THREE.Light;
+            normalizeDannyLight(light);
+            light.castShadow = false;
+            light.visible = false;
+            authoredLights.push(light);
+          }
+
+          const mesh = object as THREE.Mesh;
+          if (!mesh.isMesh || isCatalogueLabel || isCollider) return;
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          let isArtwork = assetRole.includes('genuine_artwork')
+            || assetRole.includes('genuine_wartrobe')
+            || /^surface_detail_|^wartrobe_genuine/i.test(object.name);
+
+          materials.forEach((material) => {
+            const themed = material as THREE.MeshStandardMaterial;
+            const materialName = `${object.name} ${material.name}`.toLowerCase();
+            const themeRole = String(metadata.theme_role || material.userData?.theme_role || '').toLowerCase();
+            isArtwork ||= themeRole === 'artwork' || /surface_detail|wartrobe_genuine/.test(materialName);
+            if (!dannyMaterialSnapshots.has(material)) {
+              dannyMaterialSnapshots.set(material, {
+                opacity: material.opacity,
+                transparent: material.transparent,
+                depthWrite: material.depthWrite
+              });
+            }
+            if (themed.emissive) {
+              themed.emissive.set('#000000');
+              themed.emissiveIntensity = 0;
+            }
+            if (isArtwork) {
+              themed.color?.set('#ffffff');
+              if (themed.map) {
+                themed.map.colorSpace = THREE.SRGBColorSpace;
+                themed.map.needsUpdate = true;
+              }
+              themed.roughness = 0.72;
+              themed.toneMapped = false;
+            } else if (themed.color) {
+              const floorLike = themeRole === 'floor' || /floor|marble|stone/.test(materialName);
+              const wallLike = themeRole === 'wall' || /(^|_)wall/.test(materialName);
+              const ceilingLike = themeRole === 'ceiling' || /ceiling|roof/.test(materialName);
+              const bronzeLike = themeRole === 'bronze' || /bronze|frame|trim/.test(materialName);
+              themed.color.set(
+                floorLike ? '#20211f'
+                  : wallLike ? '#514c45'
+                    : ceilingLike ? '#2b2c28'
+                      : bronzeLike ? '#98764a'
+                        : /leaf|stem|botanical/.test(materialName) ? '#355b3b'
+                          : '#252622'
+              );
+              themed.roughness = floorLike ? 0.78 : bronzeLike ? 0.42 : 0.74;
+            }
+            material.needsUpdate = true;
+          });
+
+          if (!isArtwork) return;
+          const info: StoryArtworkInfo = {
+            title: String(metadata.title || metadata.display_label || object.name.replaceAll('_', ' ')),
+            medium: [metadata.medium, metadata.year].filter(Boolean).join(' · ') || 'Danny Hirsch artwork',
+            note: String(metadata.description || 'A genuine artwork inside the Danny Hirsch Arts exhibition.')
+          };
+          object.userData.storyArtworkInfo = info;
+          detectedArtworks.push({ object, info });
+        });
+
+        const selectedLights = selectDannyAuthoredLights(authoredLights, compact ? 'low' : 'balanced');
+        selectedLights.active.forEach((light) => {
+          dannyActiveLights.set(light, light.intensity);
+          light.visible = false;
+        });
+        authoredLights.filter((light) => !dannyActiveLights.has(light)).forEach((light) => { light.visible = false; });
+
+        detectedArtworks.forEach(({ object, info }) => {
+          const box = new THREE.Box3().setFromObject(object, true);
+          if (box.isEmpty()) {
+            dannyArtworkObjects.push(object);
+            return;
+          }
+          const size = box.getSize(new THREE.Vector3());
+          const hitTarget = new THREE.Mesh(
+            new THREE.BoxGeometry(
+              Math.max(0.54, size.x + 0.48),
+              Math.max(0.54, size.y + 0.48),
+              Math.max(0.28, size.z + 0.38)
+            ),
+            new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, colorWrite: false })
+          );
+          hitTarget.position.copy(box.getCenter(new THREE.Vector3()));
+          hitTarget.userData.storyArtworkInfo = info;
+          hitTarget.name = `DannyArtworkHit_${String(dannyArtworkObjects.length + 1).padStart(2, '0')}`;
+          scene.add(hitTarget);
+          dannyArtworkObjects.push(hitTarget);
+        });
+
+        dannyModel.visible = false;
+        section.dataset.dannyRoom = 'ready';
+        if (statusRef.current) {
+          statusRef.current.textContent = 'Danny Hirsch Arts room ready. Scroll to build, arrange, and enter it.';
+        }
+        requestStoryRender();
+      },
+      (event) => {
+        if (!event.total || !statusRef.current) return;
+        const percentage = Math.round((event.loaded / event.total) * 100);
+        statusRef.current.textContent = `Loading the Danny Hirsch Arts room: ${percentage}%.`;
+      },
+      (error) => {
+        console.error('Danny Hirsch Arts scroll room could not load.', error);
+        section.dataset.dannyRoom = 'fallback';
+        if (statusRef.current) {
+          statusRef.current.textContent = 'The Danny Hirsch Arts room could not load. The procedural room remains available.';
+        }
+        requestStoryRender();
+      }
+    );
+
     const stylePalettes = [
       {
         at: 0,
@@ -506,15 +693,15 @@ export function ScrollGalleryStory() {
       { at: 0.32, position: new THREE.Vector3(7.5, 4.15, 12.3), target: new THREE.Vector3(0, 2.05, -1.3) },
       { at: 0.44, position: new THREE.Vector3(6.7, 3.8, 11.1), target: new THREE.Vector3(0, 2.2, -2) },
       { at: 0.58, position: new THREE.Vector3(5.9, 3.45, 9.9), target: new THREE.Vector3(0, 2.2, -2.55) },
-      { at: 0.68, position: new THREE.Vector3(5.6, 3.2, 9.4), target: new THREE.Vector3(0, 2.15, -2.8) },
-      { at: 0.78, position: new THREE.Vector3(4.6, 2.8, 8.1), target: new THREE.Vector3(0, 2.15, -3.15) },
-      { at: 0.88, position: new THREE.Vector3(0.25, 1.75, 4.55), target: new THREE.Vector3(0, 2.05, -4.1) },
-      { at: 1, position: new THREE.Vector3(0, 1.75, 3.55), target: new THREE.Vector3(0, 2.1, -4.4) }
+      { at: 0.68, position: new THREE.Vector3(8.8, 6.4, 15.5), target: new THREE.Vector3(0, 1.8, 0.4) },
+      { at: 0.78, position: new THREE.Vector3(7.1, 4.8, 13.2), target: new THREE.Vector3(0, 2.05, -0.8) },
+      { at: 0.88, position: new THREE.Vector3(2.6, 2.7, 10.2), target: new THREE.Vector3(0, 2.15, -2.4) },
+      { at: 1, position: new THREE.Vector3(0, 1.75, 6.42), target: new THREE.Vector3(0, 2.68, -7.38) }
     ];
 
     const raycaster = new THREE.Raycaster();
     const pointerNdc = new THREE.Vector2();
-    const visitorPosition = new THREE.Vector3(0, 1.75, 3.55);
+    const visitorPosition = new THREE.Vector3(0, 1.75, 6.42);
     let visitorYaw = 0;
     let visitorPitch = 0;
     let storyInteractive = false;
@@ -530,8 +717,7 @@ export function ScrollGalleryStory() {
       if (artworkCloseRef.current) artworkCloseRef.current.tabIndex = -1;
     };
 
-    const showArtworkCard = (index: number) => {
-      const artwork = STORY_ARTWORKS[index];
+    const showArtworkCard = (artwork: StoryArtworkInfo | undefined) => {
       const card = artworkCardRef.current;
       if (!artwork || !card) return;
       if (artworkTitleRef.current) artworkTitleRef.current.textContent = artwork.title;
@@ -582,11 +768,14 @@ export function ScrollGalleryStory() {
       if (direction === 'back') candidate.add(new THREE.Vector3(-forwardX * step, 0, -forwardZ * step));
       if (direction === 'left') candidate.add(new THREE.Vector3(-rightX * step, 0, -rightZ * step));
       if (direction === 'right') candidate.add(new THREE.Vector3(rightX * step, 0, rightZ * step));
-      candidate.x = THREE.MathUtils.clamp(candidate.x, -6.35, 6.35);
-      candidate.z = THREE.MathUtils.clamp(candidate.z, -4.35, 4.25);
+      const usingDannyRoom = dannyRevealAmount > 0.9 && dannyModel !== null;
+      candidate.x = THREE.MathUtils.clamp(candidate.x, usingDannyRoom ? -6.2 : -6.35, usingDannyRoom ? 6.2 : 6.35);
+      candidate.z = THREE.MathUtils.clamp(candidate.z, usingDannyRoom ? -6.62 : -4.35, usingDannyRoom ? 15.3 : 4.25);
       const hitsBench = candidate.x > -3.85 && candidate.x < -0.65 && candidate.z > 0.55 && candidate.z < 1.95;
       const hitsSculpture = candidate.x > 3.05 && candidate.x < 4.55 && candidate.z > 0.4 && candidate.z < 1.9;
-      if (!hitsBench && !hitsSculpture) visitorPosition.copy(candidate);
+      const hitsDannyCollider = usingDannyRoom
+        && dannyColliderBoxes.some((collider) => collider.containsPoint(candidate));
+      if (usingDannyRoom ? !hitsDannyCollider : !hitsBench && !hitsSculpture) visitorPosition.copy(candidate);
       requestStoryRender();
     };
 
@@ -746,6 +935,34 @@ export function ScrollGalleryStory() {
       });
       galleryLight.intensity *= 1 - lightFocus * 0.3;
 
+      dannyRevealAmount = dannyModel ? smooth(between(progress, 0.665, 0.79)) : 0;
+      if (dannyModel) {
+        const visible = dannyRevealAmount > 0.002;
+        dannyModel.visible = visible;
+        dannyModel.position.y = -(1 - dannyRevealAmount) * 0.24;
+        dannyModel.scale.setScalar(0.985 + dannyRevealAmount * 0.015);
+        dannyMaterialSnapshots.forEach((snapshot, material) => {
+          material.opacity = snapshot.opacity * dannyRevealAmount;
+          const transparent = dannyRevealAmount < 0.999 || snapshot.transparent;
+          const depthWrite = dannyRevealAmount > 0.88 && snapshot.depthWrite;
+          if (material.transparent !== transparent || material.depthWrite !== depthWrite) {
+            material.transparent = transparent;
+            material.depthWrite = depthWrite;
+            material.needsUpdate = true;
+          }
+        });
+        const lightReveal = smooth(between(dannyRevealAmount, 0.32, 0.9));
+        dannyActiveLights.forEach((intensity, light) => {
+          light.visible = visible && lightReveal > 0.02;
+          light.intensity = intensity * lightReveal;
+        });
+      }
+      room.visible = !dannyModel || dannyRevealAmount < 0.985;
+      room.scale.setScalar(1 - dannyRevealAmount * 0.055);
+      section.dataset.roomSource = dannyRevealAmount > 0.985 ? 'danny-hirsch-arts' : 'procedural-build';
+      artLights.forEach((light) => { light.intensity *= 1 - dannyRevealAmount; });
+      galleryLight.intensity *= 1 - dannyRevealAmount * 0.35;
+
       const arrangeIn = smooth(between(progress, 0.565, 0.6));
       const arrangeOut = 1 - smooth(between(progress, 0.68, 0.73));
       setUiVisibility(arrangeUiRef.current, arrangeIn * arrangeOut, 16);
@@ -778,7 +995,6 @@ export function ScrollGalleryStory() {
     };
 
     let frame = 0;
-    let disposed = false;
     const readProgress = () => {
       frame = 0;
       resize();
@@ -833,11 +1049,20 @@ export function ScrollGalleryStory() {
         -((event.clientY - bounds.top) / bounds.height) * 2 + 1
       );
       raycaster.setFromCamera(pointerNdc, camera);
-      const hit = raycaster.intersectObjects(artworkObjects, true)[0];
+      const targets = dannyRevealAmount > 0.9 && dannyArtworkObjects.length
+        ? dannyArtworkObjects
+        : artworkObjects;
+      const hit = raycaster.intersectObjects(targets, true)[0];
       let candidate: THREE.Object3D | null = hit?.object ?? null;
-      while (candidate && typeof candidate.userData.artworkIndex !== 'number') candidate = candidate.parent;
-      if (candidate && typeof candidate.userData.artworkIndex === 'number') {
-        showArtworkCard(candidate.userData.artworkIndex);
+      while (
+        candidate
+        && !candidate.userData.storyArtworkInfo
+        && typeof candidate.userData.artworkIndex !== 'number'
+      ) candidate = candidate.parent;
+      if (candidate?.userData.storyArtworkInfo) {
+        showArtworkCard(candidate.userData.storyArtworkInfo as StoryArtworkInfo);
+      } else if (candidate && typeof candidate.userData.artworkIndex === 'number') {
+        showArtworkCard(STORY_ARTWORKS[candidate.userData.artworkIndex]);
       } else {
         hideArtworkCard();
       }
@@ -916,12 +1141,14 @@ export function ScrollGalleryStory() {
       delete section.dataset.webgl;
       delete section.dataset.motion;
       delete section.dataset.interactive;
+      delete section.dataset.dannyRoom;
+      delete section.dataset.roomSource;
     };
   }, []);
 
   return (
     <section className="sgs" ref={sectionRef} aria-labelledby="sgs-title">
-      <h2 className="visually-hidden" id="sgs-title">Build a browser-based virtual exhibition</h2>
+      <h2 className="visually-hidden" id="sgs-title">Build and enter the Danny Hirsch Arts virtual exhibition</h2>
       <div className="sgs__sticky">
         <div className="sgs__visual">
           <canvas
@@ -937,7 +1164,7 @@ export function ScrollGalleryStory() {
         </div>
 
         <div className="sgs__topline" aria-hidden="true">
-          <span>AURA / REAL-TIME WEBGL BUILDER</span>
+          <span>AURA / DANNY HIRSCH ARTS · LIVE ROOM</span>
           <span className="sgs__progress-track"><i /></span>
           <span>SCROLL TO BUILD</span>
         </div>

@@ -11,7 +11,41 @@ concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
+  firestore:
+    name: Deploy Firestore rules and indexes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify app and rules contract
+        run: |
+          npm ci
+          npm run check
+      - name: Check Firebase deployment credentials
+        id: firebase-credentials
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "Firebase rules were not deployed: add the FIREBASE_SERVICE_ACCOUNT repository secret." >&2
+            exit 1
+          fi
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Deploy rules and indexes to the app project
+        run: npx --yes firebase-tools@15.25.1 deploy --only firestore:rules,firestore:indexes --project virtualartplattform --non-interactive
+
   deploy:
+    needs: firestore
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
