@@ -328,6 +328,12 @@ describe("decor placement", () => {
       z: 0.12,
       rotation: 0.37,
     });
+
+    const recolored = updateDecorPlacement(accepted.draft, "second", {
+      potColor: "black",
+    });
+    expect(recolored.ok).toBe(true);
+    expect(recolored.draft.decor[1].potColor).toBe("black");
   });
 
   it("finds a valid snapped slot around occupied floor space", () => {

@@ -9,6 +9,7 @@ import type {
   FloorFinish,
   GalleryDraft,
   LightingPreset,
+  PlantPotFinish,
   TemplateId,
   WallFinish,
   WallId
@@ -22,6 +23,7 @@ const WALL_FINISHES = ['chalk', 'warm', 'travertine', 'linen', 'charcoal', 'micr
 const FLOOR_FINISHES = ['concrete', 'oak', 'terrazzo', 'marble', 'black-marble', 'walnut', 'dark-oak', 'microcement', 'slate', 'dark-concrete', 'travertine-floor'] as const satisfies readonly FloorFinish[];
 const CEILING_FINISHES = ['gallery', 'warm', 'dark', 'skylight', 'vaulted'] as const satisfies readonly CeilingFinish[];
 const LIGHTING_PRESETS = ['daylight', 'museum', 'evening'] as const satisfies readonly LightingPreset[];
+const PLANT_POT_FINISHES = ['light', 'black'] as const satisfies readonly PlantPotFinish[];
 const DECOR_IDS = ['olive', 'monstera', 'arc-lamp', 'pedestal', 'gallery-bench', 'stone-sculpture', 'floor-vase', 'ficus', 'snake-plant', 'leather-bench', 'wood-stool', 'rope-barrier'] as const satisfies readonly DecorId[];
 const ARTWORK_FRAMES = ['black', 'white', 'oak', 'none'] as const satisfies readonly ArtworkFrame[];
 
@@ -179,7 +181,10 @@ function parseDecor(value: unknown, index: number, templateId: TemplateId, recor
     x: numberValue(item.x, recordId, `${field}.x`, -template.dimensions[0] / 2, template.dimensions[0] / 2),
     z: numberValue(item.z, recordId, `${field}.z`, -template.dimensions[1] / 2, template.dimensions[1] / 2),
     rotation: numberValue(item.rotation, recordId, `${field}.rotation`, -7, 7),
-    scale: numberValue(item.scale, recordId, `${field}.scale`, .2, 3)
+    scale: numberValue(item.scale, recordId, `${field}.scale`, .2, 3),
+    ...(item.potColor !== undefined
+      ? { potColor: enumValue(item.potColor, PLANT_POT_FINISHES, recordId, `${field}.potColor`) }
+      : {})
   };
 }
 

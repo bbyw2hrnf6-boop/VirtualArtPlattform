@@ -730,7 +730,7 @@ export function validateDecorPlacement(
 export function updateDecorPlacement(
   draft: GalleryDraft,
   decorId: string,
-  change: Partial<Pick<DecorPlacement, "x" | "z" | "rotation" | "scale">>,
+  change: Partial<Pick<DecorPlacement, "x" | "z" | "rotation" | "scale" | "potColor">>,
 ): PlacementResult {
   const decor = draft.decor.find((item) => item.id === decorId);
   if (!decor)

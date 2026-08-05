@@ -42,6 +42,21 @@ describe('gallery publication payload', () => {
     expect(result.artworks[0].frame).toBe('oak');
   });
 
+  it('keeps the selected plant-pot finish', () => {
+    const source = draft([artwork()]);
+    source.decor = [{
+      id: 'plant-1',
+      type: 'olive',
+      x: 2,
+      z: 1,
+      rotation: 0,
+      scale: 1,
+      potColor: 'black'
+    }];
+    const result = prepareGalleryDraftForPublication(source);
+    expect(result.decor[0].potColor).toBe('black');
+  });
+
   it('omits hidden works and editor lock state from the public record', () => {
     const result = prepareGalleryDraftForPublication(draft([
       artwork({ id: 'visible', locked: true }),

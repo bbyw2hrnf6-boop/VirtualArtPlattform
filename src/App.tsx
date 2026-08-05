@@ -2296,6 +2296,32 @@ function Studio({
                   value={selectedDecor.scale}
                   onChange={(scale) => updateDecor({ scale })}
                 />
+                {[
+                  "olive",
+                  "monstera",
+                  "ficus",
+                  "snake-plant",
+                ].includes(selectedDecor.type) && (
+                  <>
+                    <p className="inspector-subhead">Plant pot</p>
+                    <div className="choices pot-finish-choices">
+                      <button
+                        className={(selectedDecor.potColor ?? "light") === "light" ? "active" : ""}
+                        aria-pressed={(selectedDecor.potColor ?? "light") === "light"}
+                        onClick={() => updateDecor({ potColor: "light" })}
+                      >
+                        Light stone
+                      </button>
+                      <button
+                        className={selectedDecor.potColor === "black" ? "active" : ""}
+                        aria-pressed={selectedDecor.potColor === "black"}
+                        onClick={() => updateDecor({ potColor: "black" })}
+                      >
+                        Matte black
+                      </button>
+                    </div>
+                  </>
+                )}
                 <button
                   className="remove"
                   onClick={() => {

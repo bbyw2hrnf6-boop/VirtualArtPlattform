@@ -6,6 +6,8 @@ The `aura-*-v3.webp` textures were generated specifically for this project on 4 
 
 The three `aura-*-v4.webp` textures were generated specifically for the final material-distinction pass on 4 August 2026. They use the built-in image-generation mode, were visually reviewed, cropped where needed, resized to 1536 × 1536, and encoded as WebP. They remain base-color/albedo assets only.
 
+The five `aura-*-v5.webp` textures were generated with the built-in image-generation mode for the realism pass on 4 August 2026, visually reviewed, upscaled to 2048 × 2048, and encoded as WebP at quality 88. They replace procedural or lower-detail plaster, limewash, microcement, and concrete surfaces.
+
 Shared prompt frame:
 
 > Photorealistic, seamless square PBR base-color texture for a real-time 3D gallery; perfectly orthographic top-down flat surface; neutral cross-polarized diffuse capture; no shadows, hotspot, perspective, objects, text, logo, watermark, vignette, or lighting gradient.
@@ -29,6 +31,11 @@ Material-specific requests:
 - `aura-calacatta-marble-v4.webp`: white Calacatta marble with broad cool-grey and lightly taupe-edged veins that stay legible from the gallery camera, matching the visual confidence of the black marble without copying its pattern.
 - `aura-golden-sandstone-v4.webp`: honey-gold sandstone with ochre and pale-sand sediment bands, pores, and clearly natural variation, designed to remain distinct from plaster and greige microcement.
 - `aura-green-stone-v4.webp`: deep forest-green, olive, and charcoal natural stone with fine pale mineral seams, designed to remain distinct from concrete and black slats.
+- `aura-chalk-plaster-v5.webp`: warm off-white museum plaster with fine trowel movement, tiny pores, and restrained mineral irregularity.
+- `aura-clay-limewash-v5.webp`: muted terracotta limewash with layered translucent brush clouds and subtle mineral bloom.
+- `aura-greige-microcement-v5.webp`: neutral greige microcement with fine aggregate, overlapping trowel arcs, and compressed mineral mottling.
+- `aura-light-concrete-v5.webp`: pale cool-grey fair-face concrete with fine aggregate, sparse pinholes, and faint formwork clouds.
+- `aura-graphite-concrete-v5.webp`: deep graphite concrete with dense polished mineral variation, fine aggregate, and sparse pores.
 
 SHA-256 checksums:
 
@@ -50,4 +57,9 @@ f1b95526700675a1baab5f250215da97c43c8e7ced3a9de0d459da248f0e544b  aura-light-ter
 2cef1f9a634df683a43293f436e9ee9dfeeaf8d23a32dbb1f4b6062f317102c2  aura-calacatta-marble-v4.webp
 56626bacf476f751a836297d47576166326709699f29819696fb347b18a71a30  aura-golden-sandstone-v4.webp
 51c16ab7c1735b124a1280d30d357be1141d5c9c657cdc62845261afe8535d7c  aura-green-stone-v4.webp
+d3b2cdce43ad61c2bf2a961ac959c19a443a8b24be11d11ef4695e874139fb3f  aura-chalk-plaster-v5.webp
+dee976fb8c30c31a04e295a66792403c8acb79c92ca803b6aa905b89b350f172  aura-clay-limewash-v5.webp
+9eb63a129bf43c89e651749f0d244a001792171e031c3976597e46cbd274586f  aura-graphite-concrete-v5.webp
+d6984d80c3f8410d6b57ba95e5b795d94eb7cd5d280d624ab9ab4263286ced85  aura-greige-microcement-v5.webp
+6cbd53963e1ddb60d235f41b396154873eae557b56146616e189c421a202904a  aura-light-concrete-v5.webp
 ```

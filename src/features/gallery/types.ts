@@ -33,6 +33,7 @@ export type FloorFinish =
   | "travertine-floor";
 export type CeilingFinish = "gallery" | "warm" | "dark" | "skylight" | "vaulted";
 export type LightingPreset = "daylight" | "museum" | "evening";
+export type PlantPotFinish = "light" | "black";
 export type DecorId =
   | "olive"
   | "monstera"
@@ -55,6 +56,7 @@ export interface DecorPlacement {
   z: number;
   rotation: number;
   scale: number;
+  potColor?: PlantPotFinish;
 }
 
 export interface Artwork {
