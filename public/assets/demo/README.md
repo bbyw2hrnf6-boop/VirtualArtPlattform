@@ -2,7 +2,7 @@
 
 `danny-gallery.glb` is the full authored exhibition. `danny-gallery-mobile.glb` is its low-tier delivery derivative; the app selects it only when runtime quality detection returns `low`.
 
-`danny-emil-finale.webp` and `danny-emil-finale-mobile.webp` are clean, UI-free captures of that same authored room. The scroll story crossfades to these stills at its endpoint so the final frame stays sharp without keeping WebGL rendering active. The room CTA opens the interactive demo.
+The `danny-emil-finale-v2` desktop and mobile captures are the scroll story's loading/first-frame posters. They show the corrected material contract: matte plaster walls and marble only on the floor. The poster yields to the live GLB during the build; WebGL stays live through the 360° flight and the in-place walk finale. The older non-v2 captures remain reference renders only.
 
 The mobile derivative keeps all 191 nodes, 179 node metadata records, 84 meshes, 31 materials, 12 animations, 27 colliders, 16 view anchors, seven artwork hotspots, and eight route waypoints. Geometry was simplified to roughly half the triangles. Material textures are at most 512 px, artwork textures are at most 768 px, and embedded WebP images use quality 72. Meshopt compression remains enabled and decoding uses up to two Web Workers.
 

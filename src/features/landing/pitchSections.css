@@ -1,0 +1,345 @@
+
+
+.aura-section-heading > p,
+.aura-pilot > div:first-child > p,
+.aura-trust > div:first-child > p {
+  margin: 0;
+  color: var(--acid, #d9ff43);
+  font-size: 12px;
+  font-weight: 680;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.aura-pilot a {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 21px;
+  padding: 0 16px;
+  background: var(--acid, #d9ff43);
+  color: #151713;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .13em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.aura-pilot a:hover {
+  background: #ebff96;
+}
+
+.aura-pilot a:focus-visible {
+  outline: 2px solid #f5f3ea;
+  outline-offset: 3px;
+}
+.aura-pitch {
+  background: #e9e8e3;
+  color: #191a18;
+}
+
+.aura-use-cases,
+.aura-pilot,
+.aura-trust,
+.aura-faq {
+  padding: clamp(88px, 13vh, 150px) clamp(24px, 8vw, 128px);
+}
+
+.aura-section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr);
+  align-items: end;
+  gap: 6vw;
+}
+
+.aura-section-heading > p {
+  grid-column: 1 / -1;
+  color: #62675b;
+}
+
+.aura-section-heading h2,
+.aura-pilot h2,
+.aura-trust h2 {
+  margin: 22px 0 0;
+  color: #1a1b18;
+  font: 400 clamp(52px, 7vw, 102px)/.87 Instrument, Georgia, serif;
+  letter-spacing: -.048em;
+}
+
+.aura-section-heading h2 em,
+.aura-pilot h2 em,
+.aura-trust h2 em {
+  color: #777870;
+  font-weight: 400;
+}
+
+.aura-section-heading > span {
+  display: block;
+  max-width: 430px;
+  padding-bottom: 8px;
+  color: #5f615b;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.aura-use-case-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: clamp(58px, 9vh, 96px);
+  border-top: 1px solid #b9bab4;
+  background: #b9bab4;
+}
+
+.aura-use-case-grid article {
+  min-height: 300px;
+  padding: 28px 24px 32px;
+  background: #e9e8e3;
+}
+
+.aura-use-case-grid article > span {
+  color: #7a7c74;
+  font: italic 28px Instrument, Georgia, serif;
+}
+
+.aura-use-case-grid h3,
+.aura-pilot-options h3 {
+  margin: 64px 0 17px;
+  font: 400 clamp(28px, 2.4vw, 38px)/1 Instrument, Georgia, serif;
+}
+
+.aura-use-case-grid p,
+.aura-pilot-options p {
+  margin: 0;
+  color: #656760;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.aura-pilot {
+  display: grid;
+  grid-template-columns: minmax(300px, .8fr) minmax(540px, 1.2fr);
+  gap: 8vw;
+  background: #171916;
+  color: #f0eee7;
+}
+
+.aura-pilot > div:first-child > p {
+  color: var(--acid, #d9ff43);
+}
+
+.aura-pilot h2 {
+  color: #f0eee7;
+  font-size: clamp(54px, 6.8vw, 98px);
+}
+
+.aura-pilot h2 em {
+  color: #999b94;
+}
+
+.aura-pilot-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: end;
+  gap: 1px;
+  border: 1px solid #41433d;
+  background: #41433d;
+}
+
+.aura-pilot-options article {
+  display: flex;
+  min-height: 380px;
+  flex-direction: column;
+  padding: 26px;
+  background: #1c1f1b;
+}
+
+.aura-pilot-options article > span {
+  color: #a3a69d;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.aura-pilot-options h3 {
+  color: #f1efe8;
+  margin-top: 62px;
+}
+
+.aura-pilot-options p {
+  color: #a6aaa1;
+}
+
+.aura-pilot-options a {
+  margin-top: auto;
+}
+
+.aura-pilot-options article:last-child a {
+  border: 1px solid #777b70;
+  background: transparent;
+  color: #eeece5;
+}
+
+.aura-pilot-options article:last-child a:hover {
+  border-color: #d9ff43;
+  color: #d9ff43;
+}
+
+.aura-trust {
+  display: grid;
+  grid-template-columns: minmax(300px, .8fr) minmax(460px, 1.2fr);
+  gap: 10vw;
+  background: #d8d5cc;
+}
+
+.aura-trust > div:first-child > p {
+  color: #61655a;
+}
+
+.aura-trust h2 {
+  font-size: clamp(52px, 6vw, 88px);
+}
+
+.aura-trust dl {
+  margin: 0;
+  border-top: 1px solid #a5a49d;
+}
+
+.aura-trust dl > div {
+  display: grid;
+  grid-template-columns: minmax(105px, .34fr) minmax(0, .66fr);
+  gap: 28px;
+  padding: 25px 0;
+  border-bottom: 1px solid #a5a49d;
+}
+
+.aura-trust dt {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.aura-trust dd {
+  margin: 0;
+  color: #5d5f59;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.aura-faq {
+  display: grid;
+  grid-template-columns: minmax(280px, .8fr) minmax(480px, 1.2fr);
+  gap: 10vw;
+  background: #efeee9;
+}
+
+.aura-faq .aura-section-heading {
+  display: block;
+  align-self: start;
+}
+
+.aura-faq .aura-section-heading > p {
+  color: #61655a;
+}
+
+.aura-faq .aura-section-heading h2 {
+  font-size: clamp(52px, 6vw, 88px);
+}
+
+.aura-faq-list {
+  border-top: 1px solid #aaa9a2;
+}
+
+.aura-faq details {
+  border: 0;
+  border-bottom: 1px solid #aaa9a2;
+}
+
+.aura-faq summary {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 4px;
+  color: #242522;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .02em;
+  list-style: none;
+  text-transform: none;
+}
+
+.aura-faq summary::-webkit-details-marker { display: none; }
+
+.aura-faq summary i {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border: 1px solid #a4a59e;
+  border-radius: 50%;
+  font: 20px Instrument, Georgia, serif;
+  transition: transform .2s ease, background .2s ease;
+}
+
+.aura-faq details[open] summary i {
+  background: #1a1b18;
+  color: #f1efe8;
+  transform: rotate(45deg);
+}
+
+.aura-faq details > p {
+  max-width: 630px;
+  margin: -2px 55px 26px 4px;
+  color: #60625c;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+@media (max-width: 1000px) {
+  .aura-use-case-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aura-pilot,
+.aura-trust,
+.aura-faq { grid-template-columns: 1fr; }
+  .aura-pilot-options { margin-top: 12px; }
+  .aura-trust dl,
+.aura-faq-list { margin-top: 28px; }
+}
+
+@media (max-width: 720px) {
+
+  .aura-use-cases,
+.aura-pilot,
+.aura-trust,
+.aura-faq {
+    padding: 88px 22px;
+  }
+
+  .aura-section-heading { grid-template-columns: 1fr; gap: 25px; }
+  .aura-section-heading h2,
+.aura-pilot h2,
+.aura-trust h2,
+.aura-faq .aura-section-heading h2 { font-size: clamp(49px, 15vw, 72px); }
+  .aura-section-heading > span { font-size: 12px; }
+  .aura-use-case-grid { grid-template-columns: 1fr; margin-top: 52px; }
+  .aura-use-case-grid article { min-height: 250px; }
+  .aura-use-case-grid h3 { margin-top: 48px; }
+  .aura-pilot-options { grid-template-columns: 1fr; }
+  .aura-pilot-options article { min-height: 330px; }
+  .aura-pilot-options a { min-height: 50px; }
+  .aura-trust dl > div { grid-template-columns: 1fr; gap: 9px; }
+  .aura-faq summary { min-height: 72px; }
+  .aura-faq details > p { margin-right: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aura-faq summary i { transition: none; }
+}
+

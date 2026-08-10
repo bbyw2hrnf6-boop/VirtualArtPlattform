@@ -1,4 +1,4 @@
-import './scrollGalleryStory.css';
+import './pitchSections.css';
 
 const USE_CASES = [
   ['Artists', 'Turn a focused body of work into a spatial exhibition and share it through one browser link.'],
