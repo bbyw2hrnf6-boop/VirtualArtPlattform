@@ -1,5 +1,6 @@
 .sgs {
   --sgs-progress: 0;
+  --sgs-finale: 0;
   position: relative;
   height: 1180svh;
   min-height: 7900px;
@@ -34,6 +35,7 @@
 .sgs__visual,
 .sgs__visual canvas,
 .sgs__fallback,
+.sgs__finale,
 .sgs__vignette {
   position: absolute;
   inset: 0;
@@ -45,6 +47,97 @@
   display: block;
   pointer-events: none;
   touch-action: pan-y;
+}
+
+.sgs__visual {
+  contain: paint;
+}
+
+.sgs__finale {
+  z-index: 2;
+  overflow: hidden;
+  opacity: 0;
+  background: #090b09;
+  pointer-events: none;
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+.sgs__finale::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, #080a08b5 0, transparent 48%),
+    linear-gradient(0deg, #080a08d9 0, transparent 52%);
+}
+
+.sgs__finale > picture,
+.sgs__finale > picture > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sgs__finale > picture > img {
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(1.04) contrast(1.03);
+}
+
+.sgs__finale > div {
+  position: absolute;
+  z-index: 1;
+  left: clamp(24px, 7vw, 112px);
+  bottom: clamp(42px, 8vh, 92px);
+  width: min(520px, 48vw);
+}
+
+.sgs__finale p {
+  margin: 0 0 14px;
+  color: var(--acid, #d9ff43);
+  font-size: 11px;
+  font-weight: 680;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.sgs__finale h3 {
+  margin: 0 0 25px;
+  color: #f4f1ea;
+  font: 400 clamp(44px, 5.2vw, 76px)/.92 Instrument, Georgia, serif;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+
+.sgs__finale a {
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  gap: 28px;
+  padding: 0 18px;
+  background: var(--acid, #d9ff43);
+  color: #131512;
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: .13em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.sgs__finale a:hover { background: #ebff96; }
+.sgs__finale a:focus-visible { outline: 2px solid #f5f3ea; outline-offset: 4px; }
+
+.sgs[data-finale='true'] .sgs__finale { pointer-events: auto; }
+.sgs[data-finale='true'] .sgs__topline,
+.sgs[data-finale='true'] .sgs__chapters,
+.sgs[data-finale='true'] .sgs__blueprint-ui,
+.sgs[data-finale='true'] .sgs__material-ui,
+.sgs[data-finale='true'] .sgs__arrange-ui,
+.sgs[data-finale='true'] .sgs__view-ui,
+.sgs[data-finale='true'] .sgs__visitor-ui {
+  opacity: 0 !important;
+  pointer-events: none;
 }
 
 .sgs[data-interactive='true'] .sgs__visual canvas {
@@ -183,6 +276,7 @@
   font-weight: 650;
   letter-spacing: .18em;
   text-transform: uppercase;
+  opacity: calc(1 - var(--sgs-finale));
 }
 
 .sgs__progress-track {
@@ -210,6 +304,7 @@
   width: min(410px, 34vw);
   min-height: 240px;
   pointer-events: none;
+  opacity: calc(1 - var(--sgs-finale));
 }
 
 .sgs__chapters article {
@@ -965,7 +1060,6 @@
   .sgs {
     height: 1030svh;
     min-height: 6100px;
-    overscroll-behavior: contain;
   }
 
   .sgs__sticky {
@@ -1018,18 +1112,18 @@
   .sgs__arrange-ui,
   .sgs__blueprint-ui,
   .sgs__material-ui {
-    top: 72px;
+    top: 132px;
     right: 14px;
-    width: 246px;
+    width: 224px;
     padding: 12px;
   }
 
-  .sgs__arrange-ui { top: 132px; }
+  .sgs__arrange-ui { top: 190px; }
 
   .sgs__arrange-ui .sgs__control:last-of-type { display: none; }
 
   .sgs__view-ui {
-    top: 70px;
+    top: 126px;
   }
 
   .sgs__view-ui span {
@@ -1053,6 +1147,35 @@
     left: 18px;
     right: 18px;
     width: auto;
+  }
+
+  .sgs__finale::after {
+    background:
+      linear-gradient(0deg, #080a08f0 0, #080a08a8 34%, transparent 68%),
+      radial-gradient(circle at 50% 35%, transparent 28%, #080a0866 100%);
+  }
+
+  .sgs__finale > picture > img {
+    object-position: 52% center;
+  }
+
+  .sgs__finale > div {
+    left: 22px;
+    right: 22px;
+    bottom: max(34px, calc(24px + env(safe-area-inset-bottom)));
+    width: auto;
+  }
+
+  .sgs__finale h3 {
+    max-width: 340px;
+    margin-bottom: 20px;
+    font-size: clamp(42px, 13vw, 58px);
+  }
+
+  .sgs__finale a {
+    width: 100%;
+    min-height: 54px;
+    justify-content: space-between;
   }
 
   .aura-use-cases,
@@ -1147,6 +1270,15 @@
   .sgs__view-ui,
   .sgs__visitor-ui,
   .sgs__artwork-card { display: none; }
+
+  .sgs__finale {
+    position: relative;
+    height: min(78svh, 820px);
+    min-height: 520px;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto;
+  }
 
   .sgs__artwork-card { transition: none; }
   .aura-faq summary i { transition: none; }

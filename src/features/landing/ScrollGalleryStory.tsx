@@ -101,7 +101,28 @@ type CameraKeyframe = {
   target: THREE.Vector3;
 };
 
-function cameraPose(progress: number, keyframes: CameraKeyframe[], position: THREE.Vector3, target: THREE.Vector3) {
+function cameraPose(
+  progress: number,
+  keyframes: CameraKeyframe[],
+  position: THREE.Vector3,
+  target: THREE.Vector3,
+  compact = false
+) {
+  // Once the work is installed, fly one complete orbit around the authored
+  // room. Returning to the same axis makes the hand-off to the final visitor
+  // viewpoint continuous; the previous left/right target swap caused a whip.
+  if (progress >= 0.38 && progress <= 0.82) {
+    const local = smooth(between(progress, 0.38, 0.82));
+    const angle = local * Math.PI * 2;
+    const radius = 6.95 + Math.sin(local * Math.PI) * (compact ? 2.1 : 0.52);
+    position.set(
+      Math.sin(angle) * radius,
+      2.2 + Math.sin(local * Math.PI) * 1.05,
+      -0.8 + Math.cos(angle) * radius
+    );
+    target.set(0, 2.25 + Math.sin(local * Math.PI) * 0.22, -0.8);
+    return;
+  }
   let nextIndex = keyframes.findIndex((keyframe) => keyframe.at >= progress);
   if (nextIndex < 0) nextIndex = keyframes.length - 1;
   if (nextIndex === 0) {
@@ -129,6 +150,7 @@ export function ScrollGalleryStory() {
   const viewUiRef = useRef<HTMLDivElement>(null);
   const visitorUiRef = useRef<HTMLDivElement>(null);
   const visitorControlsRef = useRef<HTMLDivElement>(null);
+  const finaleRef = useRef<HTMLDivElement>(null);
   const artworkCardRef = useRef<HTMLElement>(null);
   const artworkTitleRef = useRef<HTMLHeadingElement>(null);
   const artworkMediumRef = useRef<HTMLParagraphElement>(null);
@@ -169,7 +191,7 @@ export function ScrollGalleryStory() {
     canvas.tabIndex = -1;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.04;
+    renderer.toneMappingExposure = 0.92;
     renderer.shadowMap.enabled = !compact;
     renderer.shadowMap.type = THREE.PCFShadowMap;
 
@@ -188,9 +210,9 @@ export function ScrollGalleryStory() {
     const environmentGenerator = new THREE.PMREMGenerator(renderer);
     const environment = environmentGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = environment;
-    scene.environmentIntensity = compact ? 0.52 : 0.62;
+    scene.environmentIntensity = compact ? 0.58 : 0.72;
 
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80);
+    const camera = new THREE.PerspectiveCamera(compact ? 54 : 42, 1, 0.1, 80);
     const room = new THREE.Group();
     room.name = 'LandingStoryRoom';
     // The procedural room is a load-error fallback only. Showing it while the
@@ -466,6 +488,17 @@ export function ScrollGalleryStory() {
     scene.add(dannyBlueprint);
     section.dataset.dannyRoom = 'loading';
 
+    const dannyMarbleTexture = new THREE.TextureLoader().load(
+      './assets/materials/aura-nero-marquina-v2.webp',
+      requestStoryRender,
+      undefined,
+      requestStoryRender
+    );
+    dannyMarbleTexture.flipY = false;
+    dannyMarbleTexture.wrapS = dannyMarbleTexture.wrapT = THREE.RepeatWrapping;
+    dannyMarbleTexture.colorSpace = THREE.SRGBColorSpace;
+    dannyMarbleTexture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), compact ? 2 : 4);
+
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     loader.load(
@@ -552,6 +585,7 @@ export function ScrollGalleryStory() {
               themed.toneMapped = false;
             } else if (themed.color) {
               const floorLike = themeRole === 'floor' || /floor|marble|stone/.test(materialName);
+              const polishedMarble = /marble|floor_tile|floor_alt|polished/.test(materialName);
               const wallLike = themeRole === 'wall' || /(^|_)wall/.test(materialName);
               const ceilingLike = themeRole === 'ceiling' || /ceiling|roof/.test(materialName);
               const bronzeLike = themeRole === 'bronze' || /bronze|frame|trim/.test(materialName);
@@ -559,27 +593,46 @@ export function ScrollGalleryStory() {
                 material,
                 floorLike ? 0 : wallLike ? 1 : ceilingLike ? 2 : 3
               );
+              // Keep the authored black-marble texture. Tinting every floor to
+              // flat charcoal removed its veins, gloss, and reflected lights.
               themed.color.set(
-                floorLike ? '#20211f'
+                polishedMarble ? '#ffffff'
+                  : floorLike && themed.map ? '#0f100f'
+                  : floorLike ? '#171817'
                   : wallLike ? '#514c45'
                     : ceilingLike ? '#2b2c28'
                       : bronzeLike ? '#98764a'
                         : /leaf|stem|botanical/.test(materialName) ? '#355b3b'
                           : '#252622'
               );
-              themed.roughness = floorLike ? 0.78 : bronzeLike ? 0.42 : 0.74;
+              if (polishedMarble) themed.map = dannyMarbleTexture;
+              themed.roughness = polishedMarble ? (compact ? 0.28 : 0.18) : floorLike ? 0.58 : bronzeLike ? 0.34 : 0.72;
+              themed.metalness = polishedMarble ? 0.02 : bronzeLike ? 0.62 : themed.metalness;
+              themed.envMapIntensity = polishedMarble ? (compact ? 0.72 : 1.05) : bronzeLike ? 1.1 : floorLike ? 0.48 : 0.28;
+              if (polishedMarble && themed instanceof THREE.MeshPhysicalMaterial) {
+                themed.clearcoat = compact ? 0.18 : 0.3;
+                themed.clearcoatRoughness = 0.12;
+              }
+              if (themed.map) {
+                themed.map.colorSpace = THREE.SRGBColorSpace;
+                themed.map.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), compact ? 2 : 4);
+                themed.map.needsUpdate = true;
+              }
             }
             material.needsUpdate = true;
           });
 
+          mesh.receiveShadow = true;
+          mesh.castShadow = !compact && !isArtwork && /frame|bench|vessel|plant|botanical|sculpture|plaque/.test(object.name.toLowerCase());
+
           if (isArtwork) materials.forEach((material) => dannyArtworkMaterials.add(material));
 
           const positionCount = mesh.geometry?.getAttribute('position')?.count ?? 0;
-          const blueprintLimit = compact ? 44 : 88;
+          const blueprintLimit = compact ? 26 : 88;
           if (
             !isArtwork
             && positionCount > 0
-            && positionCount < 75_000
+            && positionCount < (compact ? 45_000 : 75_000)
             && dannyBlueprintLines.length < blueprintLimit
           ) {
             const edges = new THREE.EdgesGeometry(mesh.geometry, 38);
@@ -615,9 +668,16 @@ export function ScrollGalleryStory() {
         });
 
         const selectedLights = selectDannyAuthoredLights(authoredLights, compact ? 'low' : 'balanced');
-        selectedLights.active.forEach((light) => {
+        selectedLights.active.forEach((light, index) => {
           dannyActiveLights.set(light, light.intensity);
           light.visible = false;
+          light.castShadow = !compact && index === 0;
+          const shadow = (light as THREE.Light & { shadow?: THREE.LightShadow }).shadow;
+          if (shadow && light.castShadow) {
+            shadow.mapSize.set(1024, 1024);
+            shadow.bias = -0.00035;
+            shadow.normalBias = 0.028;
+          }
         });
         authoredLights.filter((light) => !dannyActiveLights.has(light)).forEach((light) => { light.visible = false; });
 
@@ -741,13 +801,9 @@ export function ScrollGalleryStory() {
       { at: 0, position: new THREE.Vector3(9.8, 10.5, 14.8), target: new THREE.Vector3(0, 0.25, -0.8) },
       { at: 0.1, position: new THREE.Vector3(9.2, 9.4, 14.2), target: new THREE.Vector3(0, 0.4, -0.8) },
       { at: 0.22, position: new THREE.Vector3(0, 2.45, 10.8), target: new THREE.Vector3(0, 2.05, -1.5) },
-      { at: 0.38, position: new THREE.Vector3(0, 2.2, 6.15), target: new THREE.Vector3(0, 2.05, -4.2) },
-      { at: 0.52, position: new THREE.Vector3(-0.8, 2.2, 3.6), target: new THREE.Vector3(-6.7, 2.75, 0.6) },
-      { at: 0.6, position: new THREE.Vector3(0, 2.15, 1.5), target: new THREE.Vector3(-6.7, 2.75, 0.5) },
-      { at: 0.68, position: new THREE.Vector3(0, 2.15, 1.5), target: new THREE.Vector3(6.7, 2.75, 0.5) },
-      { at: 0.76, position: new THREE.Vector3(1, 2.2, 3.5), target: new THREE.Vector3(6.7, 2.75, -1) },
-      { at: 0.84, position: new THREE.Vector3(0, 2.1, 5.5), target: new THREE.Vector3(0, 2.05, -4.2) },
-      { at: 0.92, position: new THREE.Vector3(0.8, 1.9, 7.5), target: new THREE.Vector3(0, 2.3, -5.6) },
+      { at: 0.38, position: new THREE.Vector3(0, 2.2, 6.15), target: new THREE.Vector3(0, 2.25, -0.8) },
+      { at: 0.82, position: new THREE.Vector3(0, 2.2, 6.15), target: new THREE.Vector3(0, 2.25, -0.8) },
+      { at: 0.9, position: new THREE.Vector3(0.45, 1.94, 6.7), target: new THREE.Vector3(0, 2.48, -5.8) },
       { at: 0.94, position: new THREE.Vector3(0, 1.75, 6.42), target: new THREE.Vector3(0, 2.68, -7.38) },
       { at: 1, position: new THREE.Vector3(0, 1.75, 6.42), target: new THREE.Vector3(0, 2.68, -7.38) }
     ];
@@ -880,7 +936,7 @@ export function ScrollGalleryStory() {
       // the mobile opening never reads as an empty black video frame.
       const edgeReveal = 0.14 + easeOut(between(progress, 0, 0.14)) * 0.86;
       const blueprintIn = smooth(between(progress, 0.1, 0.18));
-      const blueprintOut = 1 - smooth(between(progress, 0.5, 0.64));
+      const blueprintOut = 1 - smooth(between(progress, 0.44, 0.53));
       const blueprintOpacity = blueprintIn * blueprintOut;
       const buildStage = progress < 0.2
         ? 'plan'
@@ -951,7 +1007,7 @@ export function ScrollGalleryStory() {
       if (materialLabelRef.current) {
         materialLabelRef.current.textContent = dannyModel ? 'Authored Danny Hirsch palette' : palette.label;
       }
-      const materialUiIn = smooth(between(progress, 0.42, 0.48));
+      const materialUiIn = smooth(between(progress, 0.5, 0.56));
       const materialUiOut = 1 - smooth(between(progress, 0.62, 0.7));
       setUiVisibility(materialUiRef.current, materialUiIn * materialUiOut, 14);
       const nocturneIn = smooth(between(materialProgress, 0.25, 0.43));
@@ -1077,14 +1133,24 @@ export function ScrollGalleryStory() {
       const viewOut = 1 - smooth(between(progress, 0.82, 0.88));
       setUiVisibility(viewUiRef.current, viewIn * viewOut, -10);
       if (viewUiRef.current) viewUiRef.current.dataset.mode = progress >= 0.78 ? 'walk' : 'arrange';
-      const visitorIn = smooth(between(progress, 0.88, 0.93));
-      setUiVisibility(visitorUiRef.current, visitorIn, 14);
+      setUiVisibility(visitorUiRef.current, 0, 14);
 
-      cameraPose(progress, cameraKeyframes, cameraPosition, cameraTarget);
-      const shouldInteract = progress >= 0.915
-        && !reducedMotion
-        && section.dataset.webgl === 'ready'
-        && dannyModel !== null;
+      const finaleProgress = smooth(between(progress, 0.875, 0.925));
+      section.style.setProperty('--sgs-finale', finaleProgress.toFixed(3));
+      const finale = finaleRef.current;
+      if (finale) {
+        finale.style.opacity = finaleProgress.toFixed(3);
+        finale.style.transform = `scale(${(1.012 - finaleProgress * 0.012).toFixed(4)})`;
+        finale.setAttribute('aria-hidden', finaleProgress > 0.88 ? 'false' : 'true');
+        const enterLink = finale.querySelector<HTMLAnchorElement>('a');
+        if (enterLink) enterLink.tabIndex = finaleProgress > 0.88 ? 0 : -1;
+      }
+      section.dataset.finale = finaleProgress > 0.4 ? 'true' : 'false';
+
+      cameraPose(progress, cameraKeyframes, cameraPosition, cameraTarget, compact);
+      // The scroll story now resolves to a lightweight, art-directed still.
+      // The dedicated demo owns all room interaction and navigation controls.
+      const shouldInteract = false;
       if (shouldInteract && !storyInteractive) {
         visitorPosition.copy(cameraPosition);
         visitorPosition.y = 1.75;
@@ -1101,7 +1167,7 @@ export function ScrollGalleryStory() {
         camera.position.copy(cameraPosition);
         camera.lookAt(cameraTarget);
       }
-      renderer.render(scene, camera);
+      if (finaleProgress < 0.999) renderer.render(scene, camera);
     };
 
     let frame = 0;
@@ -1109,6 +1175,19 @@ export function ScrollGalleryStory() {
     let renderedProgress = 0;
     let hasRenderedProgress = false;
     let previousFrameAt = 0;
+    let storyTop = 0;
+    let storyTravel = 1;
+    let measuredViewportWidth = 0;
+    let stableViewportHeight = 0;
+    const measureStory = (force = false) => {
+      const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+      const widthChanged = Math.abs(viewportWidth - measuredViewportWidth) > 2;
+      if (!force && compact && measuredViewportWidth > 0 && !widthChanged) return;
+      measuredViewportWidth = viewportWidth;
+      stableViewportHeight = document.documentElement.clientHeight || window.innerHeight;
+      storyTop = section.getBoundingClientRect().top + window.scrollY;
+      storyTravel = Math.max(1, section.offsetHeight - stableViewportHeight);
+    };
     const readProgress = (frameAt: number) => {
       frame = 0;
       resize();
@@ -1119,15 +1198,13 @@ export function ScrollGalleryStory() {
         renderProgress(1);
         return;
       }
-      const bounds = section.getBoundingClientRect();
-      const travel = Math.max(1, bounds.height - window.innerHeight);
-      targetProgress = clamp01(-bounds.top / travel);
+      targetProgress = clamp01((window.scrollY - storyTop) / storyTravel);
       if (!hasRenderedProgress) {
         renderedProgress = targetProgress;
         hasRenderedProgress = true;
       } else {
         const elapsed = previousFrameAt > 0 ? Math.min(64, frameAt - previousFrameAt) : 16.67;
-        const responseTime = compact ? 300 : 360;
+        const responseTime = compact ? 170 : 220;
         const damping = 1 - Math.exp(-elapsed / responseTime);
         renderedProgress += (targetProgress - renderedProgress) * damping;
         if (Math.abs(targetProgress - renderedProgress) < 0.00035) renderedProgress = targetProgress;
@@ -1145,6 +1222,11 @@ export function ScrollGalleryStory() {
       }
     };
     requestStoryRender = requestRender;
+
+    const handleResize = () => {
+      measureStory();
+      requestRender();
+    };
 
     const handleMotionChange = (event: MediaQueryListEvent) => {
       reducedMotion = event.matches;
@@ -1238,7 +1320,7 @@ export function ScrollGalleryStory() {
     const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(requestRender);
     resizeObserver?.observe(canvas);
     window.addEventListener('scroll', requestRender, { passive: true });
-    window.addEventListener('resize', requestRender, { passive: true });
+    window.addEventListener('resize', handleResize, { passive: true });
     window.addEventListener('keydown', handleKeyDown);
     reducedMotionQuery.addEventListener('change', handleMotionChange);
     canvas.addEventListener('pointerdown', handlePointerDown);
@@ -1247,13 +1329,19 @@ export function ScrollGalleryStory() {
     canvas.addEventListener('pointercancel', handlePointerUp);
     visitorControls?.addEventListener('click', handleMoveControl);
     artworkClose?.addEventListener('click', handleCloseArtwork);
+    measureStory(true);
+    document.fonts?.ready.then(() => {
+      if (disposed) return;
+      measureStory(true);
+      requestRender();
+    });
     requestRender();
 
     return () => {
       disposed = true;
       requestStoryRender = () => undefined;
       window.removeEventListener('scroll', requestRender);
-      window.removeEventListener('resize', requestRender);
+      window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKeyDown);
       reducedMotionQuery.removeEventListener('change', handleMotionChange);
       canvas.removeEventListener('pointerdown', handlePointerDown);
@@ -1272,6 +1360,7 @@ export function ScrollGalleryStory() {
         materials.forEach((material) => material.dispose());
       });
       artworkTextures.forEach((texture) => texture.dispose());
+      dannyMarbleTexture.dispose();
       environment.dispose();
       environmentGenerator.dispose();
       renderer.dispose();
@@ -1280,6 +1369,7 @@ export function ScrollGalleryStory() {
       delete section.dataset.interactive;
       delete section.dataset.dannyRoom;
       delete section.dataset.roomSource;
+      delete section.dataset.finale;
     };
   }, []);
 
@@ -1296,6 +1386,21 @@ export function ScrollGalleryStory() {
           />
           <div className="sgs__fallback" aria-hidden="true">
             <div className="sgs__fallback-room"><i /><i /><i /></div>
+          </div>
+          <div className="sgs__finale" ref={finaleRef} aria-hidden="true">
+            <picture>
+              <source media="(max-width: 720px)" srcSet="./assets/demo/danny-emil-finale-mobile.webp" />
+              <img
+                src="./assets/demo/danny-emil-finale.webp"
+                alt="Danny Hirsch Arts gallery with polished black marble, framed artworks, focused lighting, and reflected light"
+                decoding="async"
+              />
+            </picture>
+            <div>
+              <p>Room ready · Danny Hirsch Arts</p>
+              <h3>Enter the finished exhibition.</h3>
+              <a href="#/demo" tabIndex={-1}>Enter the room <span>→</span></a>
+            </div>
           </div>
           <div className="sgs__vignette" aria-hidden="true" />
         </div>

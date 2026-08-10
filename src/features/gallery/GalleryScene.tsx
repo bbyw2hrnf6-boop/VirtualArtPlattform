@@ -1354,7 +1354,7 @@ function buildRoom(
     roughness: isMarble
       ? draft.templateId === "pavilion"
         ? 0.42
-        : 0.27
+        : 0.22
       : isWood
         ? 0.48
         : isSlate
@@ -1366,7 +1366,7 @@ function buildRoom(
     clearcoat: isMarble
       ? draft.templateId === "pavilion"
         ? 0.24
-        : 0.42
+        : 0.48
       : isWood
         ? 0.16
       : isSlate
@@ -1377,14 +1377,14 @@ function buildRoom(
     clearcoatRoughness: isMarble
       ? draft.templateId === "pavilion"
         ? 0.42
-        : 0.28
+        : 0.2
       : isWood
         ? 0.52
         : 0.82,
     envMapIntensity: isMarble
       ? draft.templateId === "pavilion"
         ? 0.48
-        : 0.72
+        : 0.9
       : isWood
         ? 0.46
         : 0.25,
@@ -1869,7 +1869,7 @@ function updateRoomSurface(
     materials.forEach((material) => {
       material.color.set("#eeeae1");
       material.roughness = marble
-        ? 0.34
+        ? 0.24
         : wood
           ? 0.54
           : slate
@@ -1879,7 +1879,7 @@ function updateRoomSurface(
               : 0.82;
       material.metalness = marble ? 0.02 : 0.005;
       material.clearcoat = marble
-        ? 0.28
+        ? 0.44
         : wood
           ? 0.1
           : slate
@@ -1887,8 +1887,8 @@ function updateRoomSurface(
             : polishedConcrete
               ? 0.1
               : 0.01;
-      material.clearcoatRoughness = marble ? 0.36 : 0.72;
-      material.envMapIntensity = marble ? 0.68 : wood ? 0.42 : 0.22;
+      material.clearcoatRoughness = marble ? 0.22 : 0.72;
+      material.envMapIntensity = marble ? 0.88 : wood ? 0.46 : 0.24;
     });
     return;
   }
@@ -3064,6 +3064,7 @@ function GallerySceneRenderer({
     roomEnvironment.dispose();
     pmremGenerator.dispose();
     scene.environment = environment;
+    scene.environmentIntensity = quality.tier === "low" ? 0.56 : 0.7;
     const controls = new OrbitControls(camera, renderer.domElement);
     const largestDimension = Math.max(templateW, templateD);
     controls.enableDamping = true;
@@ -4807,7 +4808,9 @@ export function DannyDemoScene({
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure =
-      quality.tier === "low" ? 1.02 : quality.tier === "high" ? 0.9 : 0.96;
+      quality.tier === "low" ? 1.04 : quality.tier === "high" ? 0.96 : 1;
+    renderer.shadowMap.enabled = quality.tier !== "low";
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     configureSceneCanvas(
       renderer.domElement,
       "Danny Hirsch virtual exhibition. Focus this view to use keyboard movement.",
@@ -4833,7 +4836,8 @@ export function DannyDemoScene({
     roomEnvironment.dispose();
     pmremGenerator.dispose();
     scene.environment = environment;
-    scene.environmentIntensity = quality.tier === "low" ? 0.54 : 0.62;
+    scene.environmentIntensity =
+      quality.tier === "low" ? 0.58 : quality.tier === "high" ? 0.74 : 0.68;
     element.dataset.environmentIntensity =
       scene.environmentIntensity.toFixed(2);
 
@@ -4913,8 +4917,32 @@ export function DannyDemoScene({
         authoredLights,
         effectiveQualityTier,
       );
+      authoredLights.forEach((light) => {
+        light.castShadow = false;
+      });
+      const shadowLight =
+        effectiveQualityTier === "low"
+          ? undefined
+          : selection.active.find(
+              (light) =>
+                (light as THREE.SpotLight).isSpotLight ||
+                (light as THREE.DirectionalLight).isDirectionalLight,
+            );
+      if (shadowLight) {
+        shadowLight.castShadow = true;
+        const shadow = (
+          shadowLight as THREE.Light & { shadow?: THREE.LightShadow }
+        ).shadow;
+        if (shadow) {
+          const size = effectiveQualityTier === "high" ? 1024 : 512;
+          shadow.mapSize.set(size, size);
+          shadow.bias = -0.00035;
+          shadow.normalBias = 0.028;
+        }
+      }
       element.dataset.activeAuthoredLights = String(selection.active.length);
       element.dataset.authoredLightBudget = String(selection.budget);
+      element.dataset.shadowLight = shadowLight?.name || "environment-only";
       return selection.active.length;
     };
     const ceilingObjects = new Set<THREE.Object3D>();
@@ -5391,6 +5419,16 @@ export function DannyDemoScene({
 
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
+    const dannyMarbleTexture = new THREE.TextureLoader().load(
+      "./assets/materials/aura-nero-marquina-v2.webp",
+    );
+    dannyMarbleTexture.flipY = false;
+    dannyMarbleTexture.wrapS = dannyMarbleTexture.wrapT = THREE.RepeatWrapping;
+    dannyMarbleTexture.colorSpace = THREE.SRGBColorSpace;
+    dannyMarbleTexture.anisotropy = Math.min(
+      renderer.capabilities.getMaxAnisotropy(),
+      quality.tier === "low" ? 2 : 4,
+    );
     const modelUrl =
       quality.tier === "low"
         ? "./assets/demo/danny-gallery-mobile.glb"
@@ -5509,11 +5547,17 @@ export function DannyDemoScene({
             } else if (material.color) {
               const floorLike =
                 metadataRole === "floor" || /floor|marble|stone/.test(name);
+              const polishedMarble =
+                /marble|floor_tile|floor_alt|polished/.test(name);
               const bronze =
                 metadataRole === "bronze" || /bronze|frame|trim/.test(name);
               material.color.set(
-                floorLike
-                  ? "#171817"
+                polishedMarble
+                  ? "#ffffff"
+                  : floorLike && material.map
+                    ? "#0f100f"
+                  : floorLike
+                    ? "#171817"
                   : isWall
                     ? "#423e38"
                     : isCeiling
@@ -5524,10 +5568,55 @@ export function DannyDemoScene({
                           ? "#2b482d"
                           : "#1b1c19",
               );
-              material.roughness = floorLike ? 0.78 : bronze ? 0.42 : 0.74;
+              if (polishedMarble) material.map = dannyMarbleTexture;
+              material.roughness = polishedMarble
+                ? quality.tier === "low"
+                  ? 0.28
+                  : 0.18
+                : floorLike
+                  ? 0.58
+                  : bronze
+                    ? 0.34
+                    : 0.72;
+              material.metalness = polishedMarble
+                ? 0.02
+                : bronze
+                  ? 0.62
+                  : material.metalness;
+              material.envMapIntensity = polishedMarble
+                ? quality.tier === "low"
+                  ? 0.72
+                  : 1.05
+                : bronze
+                  ? 1.1
+                  : floorLike
+                    ? 0.48
+                    : 0.28;
+              if (
+                polishedMarble &&
+                material instanceof THREE.MeshPhysicalMaterial
+              ) {
+                material.clearcoat = quality.tier === "low" ? 0.18 : 0.3;
+                material.clearcoatRoughness = 0.12;
+              }
+              if (material.map) {
+                material.map.colorSpace = THREE.SRGBColorSpace;
+                material.map.anisotropy = Math.min(
+                  renderer.capabilities.getMaxAnisotropy(),
+                  quality.tier === "low" ? 2 : 4,
+                );
+                material.map.needsUpdate = true;
+              }
             }
             material.needsUpdate = true;
           });
+          mesh.receiveShadow = true;
+          mesh.castShadow =
+            quality.tier !== "low" &&
+            !isArtwork &&
+            /frame|bench|vessel|plant|botanical|sculpture|plaque/.test(
+              object.name.toLowerCase(),
+            );
           if (isArtwork) {
             const info: ArtworkFocusInfo = {
               id: String(metadata.asset_id || object.uuid),
