@@ -1,28 +1,56 @@
-import 'fake-indexeddb/auto';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { GalleryDraft, TemplateId } from '../features/gallery/types';
-import { deleteGalleryDraft, loadGalleryDraft, saveGalleryDraft, type StoredGalleryDraft } from './draftStorage';
+import "fake-indexeddb/auto";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { GalleryDraft, TemplateId } from "../features/gallery/types";
+import {
+  createGalleryProjectId,
+  deleteGalleryDraft,
+  listGalleryDrafts,
+  loadGalleryDraft,
+  saveGalleryDraft,
+  type StoredGalleryDraft,
+} from "./draftStorage";
 
-const DATABASE_NAME = 'aura-gallery-editor';
-const FALLBACK_PREFIX = 'aura-gallery-draft-v1:';
+const DATABASE_NAME = "aura-gallery-editor";
+const FALLBACK_PREFIX = "aura-gallery-project-v2:";
+const LEGACY_FALLBACK_PREFIX = "aura-gallery-draft-v1:";
 
 class MemoryStorage implements Storage {
   private values = new Map<string, string>();
 
-  get length() { return this.values.size; }
-  clear() { this.values.clear(); }
-  getItem(key: string) { return this.values.get(key) ?? null; }
-  key(index: number) { return [...this.values.keys()][index] ?? null; }
-  removeItem(key: string) { this.values.delete(key); }
-  setItem(key: string, value: string) { this.values.set(key, String(value)); }
+  get length() {
+    return this.values.size;
+  }
+  clear() {
+    this.values.clear();
+  }
+  getItem(key: string) {
+    return this.values.get(key) ?? null;
+  }
+  key(index: number) {
+    return [...this.values.keys()][index] ?? null;
+  }
+  removeItem(key: string) {
+    this.values.delete(key);
+  }
+  setItem(key: string, value: string) {
+    this.values.set(key, String(value));
+  }
 }
 
 let storage: MemoryStorage;
 
 function exposeBrowser(indexedDbAvailable = true) {
   const browser = indexedDbAvailable ? { indexedDB: globalThis.indexedDB } : {};
-  Object.defineProperty(globalThis, 'window', { configurable: true, writable: true, value: browser });
-  Object.defineProperty(globalThis, 'localStorage', { configurable: true, writable: true, value: storage });
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    writable: true,
+    value: browser,
+  });
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    writable: true,
+    value: storage,
+  });
 }
 
 function removeDatabase() {
@@ -30,32 +58,41 @@ function removeDatabase() {
     const request = indexedDB.deleteDatabase(DATABASE_NAME);
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
-    request.onblocked = () => reject(new Error('The test database is still open.'));
+    request.onblocked = () =>
+      reject(new Error("The test database is still open."));
   });
 }
 
-function draft(templateId: TemplateId = 'white-cube', title = 'Saved exhibition'): GalleryDraft {
+function draft(
+  templateId: TemplateId = "white-cube",
+  title = "Saved exhibition",
+): GalleryDraft {
   return {
     title,
-    artist: 'Saved artist',
+    artist: "Saved artist",
     templateId,
-    wall: templateId === 'nocturne' ? 'charcoal' : 'chalk',
-    floor: templateId === 'nocturne' ? 'dark-oak' : 'concrete',
-    ceiling: templateId === 'nocturne' ? 'dark' : 'gallery',
-    lighting: templateId === 'nocturne' ? 'evening' : 'daylight',
+    wall: templateId === "nocturne" ? "charcoal" : "chalk",
+    floor: templateId === "nocturne" ? "dark-oak" : "concrete",
+    ceiling: templateId === "nocturne" ? "dark" : "gallery",
+    lighting: templateId === "nocturne" ? "evening" : "daylight",
     decor: [],
-    artworks: []
+    artworks: [],
   };
 }
 
-function fallbackRecord(templateId: TemplateId, overrides: Partial<StoredGalleryDraft> = {}): StoredGalleryDraft {
+function fallbackRecord(
+  projectId: string,
+  templateId: TemplateId,
+  overrides: Partial<StoredGalleryDraft> = {},
+): StoredGalleryDraft {
   return {
+    projectId,
     templateId,
-    schemaVersion: 1,
+    schemaVersion: 2,
     revision: 1,
-    savedAt: '2026-08-02T12:00:00.000Z',
+    savedAt: "2026-08-02T12:00:00.000Z",
     draft: draft(templateId),
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -68,70 +105,120 @@ beforeEach(async () => {
 afterEach(async () => {
   exposeBrowser();
   await removeDatabase();
-  Reflect.deleteProperty(globalThis, 'window');
-  Reflect.deleteProperty(globalThis, 'localStorage');
+  Reflect.deleteProperty(globalThis, "window");
+  Reflect.deleteProperty(globalThis, "localStorage");
 });
 
-describe('versioned IndexedDB draft storage', () => {
-  it('round-trips a versioned record with revision and save time', async () => {
-    const saved = await saveGalleryDraft(draft(), 7);
-    expect(saved).toMatchObject({ templateId: 'white-cube', schemaVersion: 1, revision: 7 });
+describe("versioned multi-project draft storage", () => {
+  it("round-trips a versioned project with revision and save time", async () => {
+    const saved = await saveGalleryDraft("white-one", draft(), 7);
+    expect(saved).toMatchObject({
+      projectId: "white-one",
+      templateId: "white-cube",
+      schemaVersion: 2,
+      revision: 7,
+    });
     expect(saved.savedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-
-    const loaded = await loadGalleryDraft('white-cube');
-    expect(loaded).toEqual(saved);
+    expect(await loadGalleryDraft("white-one")).toEqual(saved);
   });
 
-  it('keeps a newer persisted revision when a stale save completes later', async () => {
-    await saveGalleryDraft(draft('white-cube', 'Newer'), 5);
-    const staleResult = await saveGalleryDraft(draft('white-cube', 'Stale'), 4);
-    const loaded = await loadGalleryDraft('white-cube');
-    expect(staleResult).toMatchObject({ revision: 5, draft: { title: 'Newer' } });
-    expect(loaded).toMatchObject({ revision: 5, draft: { title: 'Newer' } });
+  it("keeps a newer project revision when a stale save completes later", async () => {
+    await saveGalleryDraft("white-one", draft("white-cube", "Newer"), 5);
+    const stale = await saveGalleryDraft(
+      "white-one",
+      draft("white-cube", "Stale"),
+      4,
+    );
+    expect(stale).toMatchObject({ revision: 5, draft: { title: "Newer" } });
   });
 
-  it('isolates records by template', async () => {
-    await saveGalleryDraft(draft('white-cube', 'White'), 1);
-    await saveGalleryDraft(draft('nocturne', 'Night'), 2);
-    expect((await loadGalleryDraft('white-cube'))?.draft.title).toBe('White');
-    expect((await loadGalleryDraft('nocturne'))?.draft.title).toBe('Night');
-    expect(await loadGalleryDraft('pavilion')).toBeNull();
+  it("stores multiple projects using the same template", async () => {
+    await saveGalleryDraft("white-one", draft("white-cube", "First"), 1);
+    await saveGalleryDraft("white-two", draft("white-cube", "Second"), 1);
+    await saveGalleryDraft("night-one", draft("nocturne", "Night"), 1);
+
+    const whiteProjects = await listGalleryDrafts("white-cube");
+    expect(whiteProjects).toHaveLength(2);
+    expect(new Set(whiteProjects.map((project) => project.draft.title))).toEqual(
+      new Set(["First", "Second"]),
+    );
+    expect((await loadGalleryDraft("night-one"))?.draft.title).toBe("Night");
   });
 
-  it('deletes both the database draft and any local fallback', async () => {
-    await saveGalleryDraft(draft(), 1);
-    storage.setItem(`${FALLBACK_PREFIX}white-cube`, JSON.stringify(fallbackRecord('white-cube')));
-    await deleteGalleryDraft('white-cube');
-    expect(await loadGalleryDraft('white-cube')).toBeNull();
-    expect(storage.getItem(`${FALLBACK_PREFIX}white-cube`)).toBeNull();
+  it("deletes only the selected project", async () => {
+    await saveGalleryDraft("white-one", draft("white-cube", "First"), 1);
+    await saveGalleryDraft("white-two", draft("white-cube", "Second"), 1);
+    await deleteGalleryDraft("white-one");
+    expect(await loadGalleryDraft("white-one")).toBeNull();
+    expect((await loadGalleryDraft("white-two"))?.draft.title).toBe("Second");
+  });
+
+  it("creates distinct readable project ids", () => {
+    const first = createGalleryProjectId("pavilion");
+    const second = createGalleryProjectId("pavilion");
+    expect(first).toMatch(/^pavilion-[a-zA-Z0-9-]+$/);
+    expect(second).not.toBe(first);
   });
 });
 
-describe('local fallback and schema guard', () => {
-  it('saves and recovers through localStorage when IndexedDB is unavailable', async () => {
+describe("local fallback and schema guard", () => {
+  it("saves, lists, and recovers when IndexedDB is unavailable", async () => {
     exposeBrowser(false);
-    const saved = await saveGalleryDraft(draft(), 3);
-    expect(storage.getItem(`${FALLBACK_PREFIX}white-cube`)).not.toBeNull();
-    expect(await loadGalleryDraft('white-cube')).toEqual(saved);
+    const saved = await saveGalleryDraft("white-one", draft(), 3);
+    expect(storage.getItem(`${FALLBACK_PREFIX}white-one`)).not.toBeNull();
+    expect(await loadGalleryDraft("white-one")).toEqual(saved);
+    expect(await listGalleryDrafts("white-cube")).toEqual([saved]);
   });
 
-  it('keeps the newest fallback revision', async () => {
+  it("keeps the newest fallback revision", async () => {
     exposeBrowser(false);
-    await saveGalleryDraft(draft('white-cube', 'Newer fallback'), 9);
-    const staleResult = await saveGalleryDraft(draft('white-cube', 'Stale fallback'), 8);
-    expect(staleResult).toMatchObject({ revision: 9, draft: { title: 'Newer fallback' } });
-    expect(await loadGalleryDraft('white-cube')).toMatchObject({ revision: 9, draft: { title: 'Newer fallback' } });
+    await saveGalleryDraft("white-one", draft("white-cube", "Newer"), 9);
+    const stale = await saveGalleryDraft(
+      "white-one",
+      draft("white-cube", "Stale"),
+      8,
+    );
+    expect(stale).toMatchObject({ revision: 9, draft: { title: "Newer" } });
   });
 
-  it('ignores corrupted, wrong-template, and incompatible-schema records', async () => {
+  it("ignores corrupted, wrong-project, and incompatible records", async () => {
     exposeBrowser(false);
-    storage.setItem(`${FALLBACK_PREFIX}white-cube`, '{broken-json');
-    expect(await loadGalleryDraft('white-cube')).toBeNull();
+    storage.setItem(`${FALLBACK_PREFIX}white-one`, "{broken-json");
+    expect(await loadGalleryDraft("white-one")).toBeNull();
 
-    storage.setItem(`${FALLBACK_PREFIX}white-cube`, JSON.stringify(fallbackRecord('nocturne')));
-    expect(await loadGalleryDraft('white-cube')).toBeNull();
+    storage.setItem(
+      `${FALLBACK_PREFIX}white-one`,
+      JSON.stringify(fallbackRecord("white-two", "white-cube")),
+    );
+    expect(await loadGalleryDraft("white-one")).toBeNull();
 
-    storage.setItem(`${FALLBACK_PREFIX}white-cube`, JSON.stringify({ ...fallbackRecord('white-cube'), schemaVersion: 0 }));
-    expect(await loadGalleryDraft('white-cube')).toBeNull();
+    storage.setItem(
+      `${FALLBACK_PREFIX}white-one`,
+      JSON.stringify({
+        ...fallbackRecord("white-one", "white-cube"),
+        schemaVersion: 1,
+      }),
+    );
+    expect(await loadGalleryDraft("white-one")).toBeNull();
+  });
+
+  it("recovers the previous one-draft-per-template fallback", async () => {
+    exposeBrowser(false);
+    storage.setItem(
+      `${LEGACY_FALLBACK_PREFIX}white-cube`,
+      JSON.stringify({
+        templateId: "white-cube",
+        schemaVersion: 1,
+        revision: 4,
+        savedAt: "2026-08-02T12:00:00.000Z",
+        draft: draft("white-cube", "Legacy room"),
+      }),
+    );
+    expect(await loadGalleryDraft("legacy-white-cube")).toMatchObject({
+      projectId: "legacy-white-cube",
+      schemaVersion: 2,
+      revision: 4,
+      draft: { title: "Legacy room" },
+    });
   });
 });

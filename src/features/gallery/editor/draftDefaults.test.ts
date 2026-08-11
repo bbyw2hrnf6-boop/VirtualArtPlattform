@@ -5,7 +5,7 @@ describe('template draft defaults', () => {
   it('starts every template with a visually distinct authored atmosphere', () => {
     expect(createGalleryDraft('white-cube')).toMatchObject({ wall: 'chalk', floor: 'concrete', ceiling: 'gallery', lighting: 'daylight' });
     expect(createGalleryDraft('nocturne')).toMatchObject({ wall: 'charcoal', floor: 'dark-oak', ceiling: 'dark', lighting: 'evening' });
-    expect(createGalleryDraft('pavilion')).toMatchObject({ wall: 'travertine', floor: 'marble', ceiling: 'gallery', lighting: 'daylight' });
+    expect(createGalleryDraft('pavilion')).toMatchObject({ wall: 'travertine', floor: 'marble', ceiling: 'skylight', lighting: 'daylight' });
   });
 
   it('returns fresh collections so one draft cannot mutate another', () => {

@@ -3,7 +3,7 @@ import type { GalleryDraft, TemplateId } from '../types';
 const DEFAULT_ATMOSPHERES: Record<TemplateId, Pick<GalleryDraft, 'wall' | 'floor' | 'ceiling' | 'lighting'>> = {
   'white-cube': { wall: 'chalk', floor: 'concrete', ceiling: 'gallery', lighting: 'daylight' },
   nocturne: { wall: 'charcoal', floor: 'dark-oak', ceiling: 'dark', lighting: 'evening' },
-  pavilion: { wall: 'travertine', floor: 'marble', ceiling: 'gallery', lighting: 'daylight' }
+  pavilion: { wall: 'travertine', floor: 'marble', ceiling: 'skylight', lighting: 'daylight' }
 };
 
 export function createGalleryDraft(templateId: TemplateId): GalleryDraft {

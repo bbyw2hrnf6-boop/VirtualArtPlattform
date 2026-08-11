@@ -656,3 +656,9 @@
     font-weight: 400;
   }
 }
+.sgs__mobile-controls { display: none; }
+
+@media (max-width: 620px) {
+  .sgs__desktop-controls { display: none; }
+  .sgs__mobile-controls { display: inline; }
+}

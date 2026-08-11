@@ -1,10 +1,13 @@
 # AURA – Umsetzungsstatus nach dem Audit
 
-Stand: 2. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
+Stand: 11. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
 
 ## Verifiziertes Ergebnis
 
-- `npm run check`: grün; 62 Tests bestehen.
+- `npm run check`: grün; 75 Tests bestehen.
+- Ein gemeinsames Visitor-Control-System vereinheitlicht Danny, öffentliche Räume und Builder Walk Preview. Guided Tours besitzen nun denselben Playback-Vertrag; prozedurale Räume nutzen generierte Artwork-Stops, Danny weiterhin authored Routen.
+- Mehrere lokale Projekte pro Template, Legacy-Migration und ein expliziter Publish-State verhindern das Überschreiben einzelner Template-Slots und den früheren widersprüchlichen Post-Publish-Zustand.
+- Die neue P0-Sichtprüfung bei 1440 × 1000 und 390 × 844 konnte in dieser Sitzung nicht wiederholt werden, weil kein verbundener Browser verfügbar war; die unten dokumentierten Browser-Messungen bleiben historische Nachweise des vorherigen Stands.
 - Neue Scroll-/Licht-Regression über einen isolierten Headless-Chromium-Pipe-Lauf: 11/11 Assertions grün, neun eindeutige reversible Story-Phasen, anklickbare Kunst, Reduced Motion, sichtbarer WebGL-Fallback, Desktop- und Mobile-WebGL, fokussierbare Live-Besuchersteuerung, direkte Übergabe an die drei Raumkarten und keine unerwarteten Page-Errors.
 - Aktuelle Browser-Regression: 13/13 Kernflüsse grün; zusätzliche Audit-Abschluss-Regression: 13/13 neue Editor-, Forum- und Danny-Flüsse grün. Keine neuen Console-Diagnosen.
 - Lighthouse Mobile Landing: Performance 96, Accessibility 100, Best Practices 100, SEO 100; LCP 2,7 s, TBT 0 ms.

@@ -4,6 +4,8 @@ import App from './App';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import './styles/global.css';
 import './styles/generatedAssets.css';
+import './styles/visitorControls.css';
+import './styles/p0Consistency.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

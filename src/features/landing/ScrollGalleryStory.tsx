@@ -197,8 +197,17 @@ export function ScrollGalleryStory() {
     let visitorPitch = 0;
     let interactive = false;
     let looking = false;
+    let lookPointerId = -1;
+    let pointerMoved = false;
     let pointerX = 0;
     let pointerY = 0;
+    let visitorFov = camera.fov;
+    let visitorDestination: THREE.Vector3 | null = null;
+    let previousVisitorFrame = 0;
+    let lastPinchDistance = 0;
+    const touchPointers = new Map<number, { x: number; y: number }>();
+    const floorRaycaster = new THREE.Raycaster();
+    const floorPointer = new THREE.Vector2();
 
     const ambient = new THREE.HemisphereLight("#eef3e9", "#28231d", 0.28);
     const key = new THREE.DirectionalLight("#fff0d5", 0.4);
@@ -242,6 +251,8 @@ export function ScrollGalleryStory() {
       if (fullRoomLink) fullRoomLink.tabIndex = enabled ? 0 : -1;
       if (!enabled) {
         looking = false;
+        visitorDestination = null;
+        touchPointers.clear();
         canvas.classList.remove("is-looking");
       }
     };
@@ -255,10 +266,62 @@ export function ScrollGalleryStory() {
       );
       camera.position.copy(visitorPosition);
       camera.lookAt(visitorTarget);
+      camera.fov = visitorFov;
+      camera.updateProjectionMatrix();
     };
 
-    const moveVisitor = (direction: "forward" | "back" | "left" | "right") => {
+    const segmentIsReachable = (from: THREE.Vector3, to: THREE.Vector3) => {
+      const distance = from.distanceTo(to);
+      const samples = Math.max(2, Math.ceil(distance / 0.18));
+      const sample = new THREE.Vector3();
+      for (let index = 1; index <= samples; index += 1) {
+        sample.lerpVectors(from, to, index / samples);
+        sample.y = 1.75;
+        if (colliderBoxes.some((collider) => collider.containsPoint(sample)))
+          return false;
+      }
+      return true;
+    };
+
+    const updateVisitorDestination = (frameAt: number) => {
+      if (!interactive || !visitorDestination) {
+        previousVisitorFrame = frameAt;
+        return false;
+      }
+      const delta = Math.min(
+        (frameAt - (previousVisitorFrame || frameAt)) / 1000,
+        0.05,
+      );
+      previousVisitorFrame = frameAt;
+      const offset = visitorDestination.clone().sub(visitorPosition);
+      offset.y = 0;
+      const distance = offset.length();
+      if (distance < 0.08) {
+        visitorDestination = null;
+        return false;
+      }
+      const candidate = visitorPosition.clone().addScaledVector(
+        offset.normalize(),
+        Math.min(distance, 2.25 * Math.max(delta, 1 / 120)),
+      );
+      if (!segmentIsReachable(visitorPosition, candidate)) {
+        visitorDestination = null;
+        return false;
+      }
+      visitorPosition.copy(candidate);
+      return true;
+    };
+
+    const moveVisitor = (
+      direction: "forward" | "back" | "left" | "right" | "turn-left" | "turn-right",
+    ) => {
       if (!interactive || !modelReady) return;
+      visitorDestination = null;
+      if (direction === "turn-left" || direction === "turn-right") {
+        visitorYaw += direction === "turn-left" ? 0.14 : -0.14;
+        requestRender();
+        return;
+      }
       const step = compact ? 0.3 : 0.38;
       const forward = new THREE.Vector3(Math.sin(visitorYaw), 0, -Math.cos(visitorYaw));
       const right = new THREE.Vector3(Math.cos(visitorYaw), 0, Math.sin(visitorYaw));
@@ -546,6 +609,7 @@ export function ScrollGalleryStory() {
       if (shouldInteract && !interactive) {
         visitorPosition.copy(cameraPosition);
         visitorPosition.y = 1.75;
+        visitorFov = camera.fov;
         const direction = cameraTarget.clone().sub(cameraPosition).normalize();
         visitorYaw = Math.atan2(direction.x, -direction.z);
         visitorPitch = Math.asin(THREE.MathUtils.clamp(direction.y, -1, 1));
@@ -595,9 +659,13 @@ export function ScrollGalleryStory() {
         if (Math.abs(targetProgress - renderedProgress) < 0.00035) renderedProgress = targetProgress;
       }
       previousFrameAt = frameAt;
+      const walkingToPoint = updateVisitorDestination(frameAt);
       const holdVisitorCamera = interactive && targetProgress >= 0.92;
       renderProgress(holdVisitorCamera ? Math.max(0.94, renderedProgress) : renderedProgress);
-      if (!holdVisitorCamera && Math.abs(targetProgress - renderedProgress) >= 0.00035) {
+      if (
+        walkingToPoint ||
+        (!holdVisitorCamera && Math.abs(targetProgress - renderedProgress) >= 0.00035)
+      ) {
         frameRequest = window.requestAnimationFrame(renderFrame);
       }
     };
@@ -619,35 +687,141 @@ export function ScrollGalleryStory() {
     const handlePointerDown = (event: PointerEvent) => {
       if (!interactive || event.button !== 0) return;
       canvas.focus({ preventScroll: true });
+      visitorDestination = null;
+      pointerMoved = false;
+      if (event.pointerType === "touch") {
+        touchPointers.set(event.pointerId, {
+          x: event.clientX,
+          y: event.clientY,
+        });
+        if (touchPointers.size > 1) {
+          const points = [...touchPointers.values()];
+          lastPinchDistance = Math.hypot(
+            points[0].x - points[1].x,
+            points[0].y - points[1].y,
+          );
+          looking = false;
+          pointerMoved = true;
+          return;
+        }
+      }
       looking = true;
+      lookPointerId = event.pointerId;
       pointerX = event.clientX;
       pointerY = event.clientY;
       canvas.classList.add("is-looking");
       canvas.setPointerCapture(event.pointerId);
     };
     const handlePointerMove = (event: PointerEvent) => {
-      if (!looking || !interactive) return;
-      visitorYaw -= (event.clientX - pointerX) * 0.0042;
-      visitorPitch = THREE.MathUtils.clamp(visitorPitch - (event.clientY - pointerY) * 0.0036, -0.62, 0.62);
+      if (!interactive) return;
+      if (event.pointerType === "touch" && touchPointers.has(event.pointerId)) {
+        touchPointers.set(event.pointerId, {
+          x: event.clientX,
+          y: event.clientY,
+        });
+        if (touchPointers.size > 1) {
+          const points = [...touchPointers.values()];
+          const distance = Math.hypot(
+            points[0].x - points[1].x,
+            points[0].y - points[1].y,
+          );
+          if (lastPinchDistance)
+            visitorFov = THREE.MathUtils.clamp(
+              visitorFov + (lastPinchDistance - distance) * 0.075,
+              38,
+              72,
+            );
+          lastPinchDistance = distance;
+          pointerMoved = true;
+          requestRender();
+          event.preventDefault();
+          return;
+        }
+      }
+      if (!looking || event.pointerId !== lookPointerId) return;
+      const deltaX = event.clientX - pointerX;
+      const deltaY = event.clientY - pointerY;
+      if (Math.abs(deltaX) + Math.abs(deltaY) > 3) pointerMoved = true;
+      visitorYaw -= deltaX * 0.0042;
+      visitorPitch = THREE.MathUtils.clamp(
+        visitorPitch - deltaY * 0.0036,
+        -0.62,
+        0.62,
+      );
       pointerX = event.clientX;
       pointerY = event.clientY;
       requestRender();
     };
     const handlePointerUp = (event: PointerEvent) => {
+      if (event.pointerType === "touch") {
+        touchPointers.delete(event.pointerId);
+        lastPinchDistance = 0;
+      }
+      const wasLookPointer = event.pointerId === lookPointerId;
       looking = false;
+      lookPointerId = -1;
       canvas.classList.remove("is-looking");
       if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      if (!interactive || !wasLookPointer || pointerMoved) return;
+      const bounds = canvas.getBoundingClientRect();
+      floorPointer.set(
+        ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+        -((event.clientY - bounds.top) / bounds.height) * 2 + 1,
+      );
+      floorRaycaster.setFromCamera(floorPointer, camera);
+      const floorMeshes = preparedMeshes
+        .filter((entry) => entry.part === "floor" && entry.mesh.visible)
+        .map((entry) => entry.mesh);
+      const floorHit = floorRaycaster.intersectObjects(floorMeshes, false)[0];
+      if (!floorHit) return;
+      const candidate = floorHit.point.clone();
+      candidate.y = 1.75;
+      candidate.x = THREE.MathUtils.clamp(candidate.x, -6.2, 6.2);
+      candidate.z = THREE.MathUtils.clamp(candidate.z, -6.62, 15.3);
+      if (!segmentIsReachable(visitorPosition, candidate)) return;
+      visitorDestination = candidate;
+      previousVisitorFrame = performance.now();
+      requestRender();
+    };
+    const handleWheel = (event: WheelEvent) => {
+      if (!interactive || document.activeElement !== canvas) return;
+      visitorFov = THREE.MathUtils.clamp(
+        visitorFov + event.deltaY * 0.012,
+        38,
+        72,
+      );
+      event.preventDefault();
+      requestRender();
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!interactive || document.activeElement !== canvas) return;
       const value = event.key.toLowerCase();
-      const direction = value === "w" || value === "arrowup"
+      if (value === "escape") {
+        event.preventDefault();
+        canvas.blur();
+        setInteractive(false);
+        return;
+      }
+      if (value === "arrowleft" || value === "arrowright") {
+        event.preventDefault();
+        visitorYaw += value === "arrowleft" ? 0.12 : -0.12;
+        requestRender();
+        return;
+      }
+      if (value === "q" || value === "arrowup" || value === "r" || value === "arrowdown") {
+        event.preventDefault();
+        const up = value === "q" || value === "arrowup";
+        visitorPitch = THREE.MathUtils.clamp(visitorPitch + (up ? 0.09 : -0.09), -0.9, 0.9);
+        requestRender();
+        return;
+      }
+      const direction = value === "w"
         ? "forward"
-        : value === "s" || value === "arrowdown"
+        : value === "s"
           ? "back"
-          : value === "a" || value === "arrowleft"
+          : value === "a"
             ? "left"
-            : value === "d" || value === "arrowright"
+            : value === "d"
               ? "right"
               : null;
       if (!direction) return;
@@ -656,7 +830,12 @@ export function ScrollGalleryStory() {
     };
     const handleMoveControl = (event: Event) => {
       const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-story-move]");
-      const direction = button?.dataset.storyMove as "forward" | "back" | "left" | "right" | undefined;
+      const direction = button?.dataset.storyMove as
+        | "forward"
+        | "back"
+        | "turn-left"
+        | "turn-right"
+        | undefined;
       if (direction) moveVisitor(direction);
     };
     const handleContextLost = (event: Event) => {
@@ -679,6 +858,7 @@ export function ScrollGalleryStory() {
     canvas.addEventListener("pointermove", handlePointerMove);
     canvas.addEventListener("pointerup", handlePointerUp);
     canvas.addEventListener("pointercancel", handlePointerUp);
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
     canvas.addEventListener("webglcontextlost", handleContextLost);
     visitor.addEventListener("click", handleMoveControl);
     measureStory(true);
@@ -700,6 +880,7 @@ export function ScrollGalleryStory() {
       canvas.removeEventListener("pointermove", handlePointerMove);
       canvas.removeEventListener("pointerup", handlePointerUp);
       canvas.removeEventListener("pointercancel", handlePointerUp);
+      canvas.removeEventListener("wheel", handleWheel);
       canvas.removeEventListener("webglcontextlost", handleContextLost);
       visitor.removeEventListener("click", handleMoveControl);
       resizeObserver?.disconnect();
@@ -735,7 +916,7 @@ export function ScrollGalleryStory() {
           <canvas
             ref={canvasRef}
             aria-hidden="true"
-            aria-label="Danny Hirsch Arts room. At the end, drag to look and use W A S D to walk."
+            aria-label="Danny Hirsch Arts room. At the end, drag to look, click or tap the floor to walk, and scroll or pinch to zoom."
             tabIndex={-1}
           />
           <div className="sgs__shade" aria-hidden="true" />
@@ -799,14 +980,17 @@ export function ScrollGalleryStory() {
         <div className="sgs__visitor" ref={visitorRef} aria-hidden="true">
           <div>
             <p><i /> Live walk preview</p>
-            <strong>Drag to look. Use W A S D to walk.</strong>
+            <strong>
+              <span className="sgs__desktop-controls">W/S move · A/D strafe · Q/R or ↑↓ look · ←→ turn</span>
+              <span className="sgs__mobile-controls">Drag to look · Tap floor to walk · Pinch to zoom</span>
+            </strong>
             <a href="#/demo" tabIndex={-1}>Open full room <span>→</span></a>
           </div>
           <div className="sgs__visitor-pad" aria-label="Walk controls">
             <button type="button" data-story-move="forward" aria-label="Move forward" tabIndex={-1}>↑</button>
-            <button type="button" data-story-move="left" aria-label="Move left" tabIndex={-1}>←</button>
+            <button type="button" data-story-move="turn-left" aria-label="Turn left" tabIndex={-1}>←</button>
             <button type="button" data-story-move="back" aria-label="Move back" tabIndex={-1}>↓</button>
-            <button type="button" data-story-move="right" aria-label="Move right" tabIndex={-1}>→</button>
+            <button type="button" data-story-move="turn-right" aria-label="Turn right" tabIndex={-1}>→</button>
           </div>
         </div>
 

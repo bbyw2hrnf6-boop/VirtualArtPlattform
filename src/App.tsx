@@ -5,6 +5,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from "react";
@@ -43,9 +44,15 @@ import {
   reviewGalleryForPublish,
   type PublishReviewIssue,
 } from "./features/gallery/editor/publishReview";
+import {
+  publishStatusReducer,
+  type PublishStatus,
+} from "./features/gallery/editor/publishState";
 import { useDraftHistory } from "./features/gallery/editor/useDraftHistory";
 import {
+  createGalleryProjectId,
   deleteGalleryDraft,
+  listGalleryDrafts,
   loadGalleryDraft,
   saveGalleryDraft,
   type StoredGalleryDraft,
@@ -76,6 +83,7 @@ type Route = {
   id?: string;
   template?: TemplateId;
   demoArt?: boolean;
+  projectId?: string;
 };
 type ViewMode = "walk" | "overview";
 type ArtworkFocus = {
@@ -217,12 +225,18 @@ const routeFromHash = (): Route => {
   const hash = location.hash.replace(/^#/, "");
   if (hash === "/create") return { page: "create" };
   const templateMatch =
-    /^\/create\/(white-cube|nocturne|pavilion)(\/demo)?$/.exec(hash);
+    /^\/create\/(white-cube|nocturne|pavilion)(?:\/(demo|[a-zA-Z0-9-]+))?$/.exec(hash);
   if (templateMatch)
     return {
       page: "create",
       template: templateMatch[1] as TemplateId,
-      demoArt: Boolean(templateMatch[2]),
+      demoArt: templateMatch[2] === "demo",
+      projectId:
+        templateMatch[2] && templateMatch[2] !== "demo"
+          ? templateMatch[2]
+          : templateMatch[2] === "demo"
+            ? `demo-${templateMatch[1]}`
+            : `legacy-${templateMatch[1]}`,
     };
   if (hash === "/demo") return { page: "demo" };
   if (hash === "/data") return { page: "data" };
@@ -728,25 +742,17 @@ function MvpDataNotice() {
   );
 }
 
-function TemplatePicker({ onChoose }: { onChoose: (id: TemplateId) => void }) {
-  const [savedTemplates, setSavedTemplates] = useState<Set<TemplateId>>(
-    new Set(),
-  );
+function TemplatePicker({
+  onChoose,
+}: {
+  onChoose: (id: TemplateId, projectId: string) => void;
+}) {
+  const [savedProjects, setSavedProjects] = useState<StoredGalleryDraft[]>([]);
   useEffect(() => {
     let active = true;
-    void Promise.all(
-      TEMPLATES.map(
-        async (template) =>
-          [template.id, await loadGalleryDraft(template.id)] as const,
-      ),
-    )
+    void listGalleryDrafts()
       .then((records) => {
-        if (active)
-          setSavedTemplates(
-            new Set(
-              records.filter(([, record]) => Boolean(record)).map(([id]) => id),
-            ),
-          );
+        if (active) setSavedProjects(records);
       })
       .catch(() => undefined);
     return () => {
@@ -776,31 +782,62 @@ function TemplatePicker({ onChoose }: { onChoose: (id: TemplateId) => void }) {
         </button>
       </div>
       <div className="template-grid">
-        {TEMPLATES.map((template) => (
-          <button
-            className={`template-card template-card--${template.id}`}
-            key={template.id}
-            onClick={() => onChoose(template.id)}
-          >
-            <span className="template-number">{template.index}</span>
-            <div className="template-preview">
-              <img
-                src={`./assets/templates/${template.id}-preview.webp`}
-                width="965"
-                height="752"
-                decoding="async"
-                alt={`${template.name} premium concept visualization`}
-              />
-              {savedTemplates.has(template.id) && (
-                <b className="template-draft-badge">Local draft</b>
+        {TEMPLATES.map((template) => {
+          const projects = savedProjects.filter(
+            (project) => project.templateId === template.id,
+          );
+          return (
+            <article
+              className={`template-card template-card--${template.id}`}
+              key={template.id}
+            >
+              <button
+                type="button"
+                className="template-card-main"
+                onClick={() =>
+                  onChoose(template.id, createGalleryProjectId(template.id))
+                }
+              >
+                <span className="template-number">{template.index}</span>
+                <div className="template-preview">
+                  <img
+                    src={`./assets/templates/${template.id}-preview.webp`}
+                    width="965"
+                    height="752"
+                    decoding="async"
+                    alt={`${template.name} premium concept visualization`}
+                  />
+                  {projects.length > 0 && (
+                    <b className="template-draft-badge">
+                      {projects.length} local project{projects.length === 1 ? "" : "s"}
+                    </b>
+                  )}
+                  <span>Start new exhibition ↗</span>
+                </div>
+              </button>
+              <p>{template.label}</p>
+              <h2>{template.name}</h2>
+              <small>{template.description}</small>
+              {projects.length > 0 && (
+                <div className="template-project-list" aria-label={`${template.name} saved projects`}>
+                  <p>Saved projects</p>
+                  {projects.map((project) => (
+                    <button
+                      key={project.projectId}
+                      type="button"
+                      onClick={() => onChoose(template.id, project.projectId)}
+                    >
+                      <span>{project.draft.title}</span>
+                      <time dateTime={project.savedAt}>
+                        {new Date(project.savedAt).toLocaleDateString()}
+                      </time>
+                    </button>
+                  ))}
+                </div>
               )}
-              <span>Use this space ↗</span>
-            </div>
-            <p>{template.label}</p>
-            <h2>{template.name}</h2>
-            <small>{template.description}</small>
-          </button>
-        ))}
+            </article>
+          );
+        })}
       </div>
       <p className="picker-footnote">
         Concept direction imagery · Every room opens in the live browser builder.
@@ -925,9 +962,11 @@ function availableWalls(templateId: TemplateId): WallId[] {
 
 function Studio({
   initialTemplate,
+  initialProjectId,
   initialDemoArt = false,
 }: {
   initialTemplate: TemplateId;
+  initialProjectId: string;
   initialDemoArt?: boolean;
 }) {
   const starterDraft = useMemo(
@@ -950,7 +989,10 @@ function Studio({
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedDecorId, setSelectedDecorId] = useState<string>();
   const [published, setPublished] = useState<GalleryRecord>();
-  const [publishing, setPublishing] = useState(false);
+  const [publishStatus, transitionPublish] = useReducer(
+    publishStatusReducer,
+    "idle",
+  );
   const [publishError, setPublishError] = useState<string>();
   const [publishReviewOpen, setPublishReviewOpen] = useState(false);
   const [publishCover, setPublishCover] = useState<string>();
@@ -971,11 +1013,18 @@ function Studio({
     "checking" | "ready" | "saving" | "saved" | "error"
   >("checking");
   const [toolSheet, setToolSheet] = useState<"peek" | "half" | "full">("half");
+  const [editorDirectoryOpen, setEditorDirectoryOpen] = useState(false);
+  const [successDirectoryOpen, setSuccessDirectoryOpen] = useState(false);
+  const [successViewMode, setSuccessViewMode] = useState<ViewMode>("walk");
   const wallFocusToken = useRef(0);
   const decorInsertion = useRef({ x: 0, z: 1 });
   const saveRevision = useRef(0);
   const latestSaveRequest = useRef(0);
+  const publishAttemptInFlight = useRef(false);
   const publishButton = useRef<HTMLButtonElement>(null);
+  const editorDirectoryButton = useRef<HTMLButtonElement>(null);
+  const successDirectoryButton = useRef<HTMLButtonElement>(null);
+  const previousToolSheet = useRef<"peek" | "half" | "full">("half");
   const sceneCapture = useRef<GallerySceneCapture | null>(null);
   const selected = draft.artworks.find((item) => item.id === selectedId);
   const selectedDecor = draft.decor.find((item) => item.id === selectedDecorId);
@@ -1000,10 +1049,40 @@ function Studio({
   const publishBlockers = publishIssues.filter(
     (issue) => issue.severity === "error",
   );
+  const publishing =
+    publishStatus === "preparing" || publishStatus === "publishing";
+  const editorDirectoryArtworks = useMemo<DirectoryArtwork[]>(
+    () =>
+      draft.artworks
+        .filter((artwork) => !artwork.hidden)
+        .map((artwork) => ({
+          id: artwork.id,
+          title: artwork.title,
+          artist: draft.artist,
+          description: artwork.description,
+          year: artwork.year,
+          image: artwork.src,
+          imageAlt: `${artwork.title} by ${draft.artist}`,
+        })),
+    [draft.artist, draft.artworks],
+  );
+  const handleEditorModeChange = useCallback((mode: "arrange" | "walk") => {
+    if (!window.matchMedia("(max-width: 620px)").matches) return;
+    if (mode === "walk") {
+      setToolSheet((current) => {
+        previousToolSheet.current = current === "peek" ? "half" : current;
+        return "peek";
+      });
+    } else {
+      setToolSheet((current) =>
+        current === "peek" ? previousToolSheet.current : current,
+      );
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
-    void loadGalleryDraft(initialTemplate)
+    void loadGalleryDraft(initialProjectId)
       .then((stored) => {
         if (!active) return;
         if (stored) {
@@ -1023,7 +1102,7 @@ function Studio({
     return () => {
       active = false;
     };
-  }, [initialTemplate]);
+  }, [initialProjectId]);
 
   useEffect(() => {
     if (!storageReady || (!canUndo && !canRedo)) return;
@@ -1031,7 +1110,7 @@ function Studio({
     const requestId = ++latestSaveRequest.current;
     const revision = ++saveRevision.current;
     const timeout = window.setTimeout(() => {
-      void saveGalleryDraft(draft, revision)
+      void saveGalleryDraft(initialProjectId, draft, revision)
         .then(() => {
           if (latestSaveRequest.current === requestId) setSaveStatus("saved");
         })
@@ -1043,12 +1122,16 @@ function Studio({
       window.clearTimeout(statusTimeout);
       window.clearTimeout(timeout);
     };
-  }, [draft, storageReady, canUndo, canRedo]);
+  }, [draft, storageReady, canUndo, canRedo, initialProjectId]);
 
   useEffect(() => {
     if (!storageReady || (!canUndo && !canRedo)) return;
     const flush = () => {
-      void saveGalleryDraft(draftRef.current, ++saveRevision.current);
+      void saveGalleryDraft(
+        initialProjectId,
+        draftRef.current,
+        ++saveRevision.current,
+      );
     };
     const flushWhenHidden = () => {
       if (document.visibilityState === "hidden") flush();
@@ -1059,7 +1142,7 @@ function Studio({
       removeEventListener("pagehide", flush);
       document.removeEventListener("visibilitychange", flushWhenHidden);
     };
-  }, [storageReady, canUndo, canRedo, draftRef]);
+  }, [storageReady, canUndo, canRedo, draftRef, initialProjectId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1431,6 +1514,7 @@ function Studio({
   };
   const openPublishReview = () => {
     setPublishError(undefined);
+    transitionPublish({ type: "RESET" });
     setPublishCover(undefined);
     setPublishReviewOpen(true);
     void sceneCapture
@@ -1441,6 +1525,7 @@ function Studio({
       );
   };
   const publish = async () => {
+    if (publishAttemptInFlight.current) return;
     const latestIssues = reviewGalleryForPublish(draftRef.current);
     const blocker = latestIssues.find((issue) => issue.severity === "error");
     if (blocker) {
@@ -1449,8 +1534,9 @@ function Studio({
     }
     const title = draftRef.current.title.trim();
     const artist = draftRef.current.artist.trim();
+    publishAttemptInFlight.current = true;
     setPublishError(undefined);
-    setPublishing(true);
+    transitionPublish({ type: "PREPARE" });
     try {
       let roomCoverSource = publishCover;
       try {
@@ -1467,13 +1553,14 @@ function Studio({
           captureError,
         );
       }
+      transitionPublish({ type: "WRITE" });
       const publishedGallery = await galleryRepository.publish(
         { ...draftRef.current, title, artist },
         roomCoverSource,
       );
       setPublished(publishedGallery);
+      transitionPublish({ type: "SUCCEED" });
       setPublishReviewOpen(false);
-      navigate(`/g/${publishedGallery.id}`);
     } catch (error) {
       console.error(error);
       setPublishError(
@@ -1481,8 +1568,9 @@ function Studio({
           ? error.message
           : "Publishing could not connect to Firebase. Please check the connection and try again.",
       );
+      transitionPublish({ type: "FAIL" });
     } finally {
-      setPublishing(false);
+      publishAttemptInFlight.current = false;
     }
   };
   const recoverSavedDraft = useCallback(() => {
@@ -1502,7 +1590,7 @@ function Studio({
     setRecoveryDraft(undefined);
     setStorageReady(false);
     setSaveStatus("checking");
-    void deleteGalleryDraft(initialTemplate)
+    void deleteGalleryDraft(initialProjectId)
       .then(() => {
         setStorageReady(true);
         setSaveStatus("ready");
@@ -1511,7 +1599,7 @@ function Studio({
         setStorageReady(true);
         setSaveStatus("error");
       });
-  }, [initialDemoArt, initialTemplate, resetDraft]);
+  }, [initialDemoArt, initialProjectId, initialTemplate, resetDraft]);
   const closePublishReview = useCallback(() => setPublishReviewOpen(false), []);
   const rememberSceneCapture = useCallback(
     (capture: GallerySceneCapture | null) => {
@@ -1645,13 +1733,36 @@ function Studio({
             </button>
             <button
               className="text-link"
-              onClick={() => setPublished(undefined)}
+              onClick={() => {
+                setPublished(undefined);
+                transitionPublish({ type: "RESET" });
+              }}
             >
               Back to editor
             </button>
           </div>
         </div>
-        <GalleryScene draft={published} visitor />
+        <GalleryScene
+          draft={published}
+          visitor
+          viewMode={successViewMode}
+          onViewModeChange={setSuccessViewMode}
+          artworkCount={editorDirectoryArtworks.length}
+          artworkDirectoryExpanded={successDirectoryOpen}
+          artworkButtonRef={successDirectoryButton}
+          onOpenArtworkDirectory={() => setSuccessDirectoryOpen(true)}
+        />
+        {successDirectoryOpen && (
+          <ArtworkDirectory
+            exhibitionTitle={published.title}
+            artist={published.artist}
+            artworks={editorDirectoryArtworks}
+            sourceNote="This is the visitor artwork directory for the published exhibition."
+            unavailable={false}
+            returnFocus={successDirectoryButton}
+            onClose={() => setSuccessDirectoryOpen(false)}
+          />
+        )}
       </main>
     );
   }
@@ -1739,7 +1850,12 @@ function Studio({
             onClick={openPublishReview}
             disabled={publishing || uploading || curating}
           >
-            {publishing ? "Publishing…" : "Review & publish"} <span>↗</span>
+            {publishStatus === "preparing"
+              ? "Preparing…"
+              : publishStatus === "publishing"
+                ? "Publishing…"
+                : "Review & publish"}{" "}
+            <span>↗</span>
           </button>
         </div>
       </header>
@@ -2350,6 +2466,11 @@ function Studio({
             onMoveArtwork={placeArtwork}
             onViewPlacementChange={rememberDecorInsertion}
             onCaptureReady={rememberSceneCapture}
+            onEditorModeChange={handleEditorModeChange}
+            artworkCount={editorDirectoryArtworks.length}
+            artworkDirectoryExpanded={editorDirectoryOpen}
+            artworkButtonRef={editorDirectoryButton}
+            onOpenArtworkDirectory={() => setEditorDirectoryOpen(true)}
           />
           <div className="canvas-badge">
             <span>Editing</span>
@@ -2417,6 +2538,17 @@ function Studio({
           )}
         </section>
       </div>
+      {editorDirectoryOpen && (
+        <ArtworkDirectory
+          exhibitionTitle={draft.title}
+          artist={draft.artist}
+          artworks={editorDirectoryArtworks}
+          sourceNote="Preview the same artwork information visitors receive after publishing."
+          unavailable={false}
+          returnFocus={editorDirectoryButton}
+          onClose={() => setEditorDirectoryOpen(false)}
+        />
+      )}
       {recoveryDraft && (
         <RecoveryDialog
           stored={recoveryDraft}
@@ -2429,6 +2561,7 @@ function Studio({
           issues={publishIssues}
           blockers={publishBlockers.length}
           publishing={publishing}
+          publishStatus={publishStatus}
           publishError={publishError}
           coverSrc={publishCover}
           returnFocus={publishButton}
@@ -2541,6 +2674,7 @@ function PublishReviewDialog({
   issues,
   blockers,
   publishing,
+  publishStatus,
   publishError,
   coverSrc,
   returnFocus,
@@ -2551,6 +2685,7 @@ function PublishReviewDialog({
   issues: PublishReviewIssue[];
   blockers: number;
   publishing: boolean;
+  publishStatus: PublishStatus;
   publishError?: string;
   coverSrc?: string;
   returnFocus: React.RefObject<HTMLElement | null>;
@@ -2658,7 +2793,13 @@ function PublishReviewDialog({
             onClick={onPublish}
             disabled={blockers > 0 || publishing}
           >
-            {publishing ? "Publishing…" : "Publish public gallery"}
+            {publishStatus === "preparing"
+              ? "Preparing room cover…"
+              : publishStatus === "publishing"
+                ? "Publishing…"
+                : publishStatus === "error"
+                  ? "Retry publishing"
+                  : "Publish public gallery"}
           </button>
           <button className="text-link" onClick={onClose} disabled={publishing}>
             Back to editor
@@ -3005,37 +3146,6 @@ function useViewerSceneUnavailable(
   return unavailable;
 }
 
-function ArtworkDirectoryButton({
-  count,
-  unavailable,
-  expanded,
-  buttonRef,
-  onOpen,
-}: {
-  count: number;
-  unavailable: boolean;
-  expanded: boolean;
-  buttonRef: React.RefObject<HTMLButtonElement | null>;
-  onOpen: () => void;
-}) {
-  return (
-    <button
-      ref={buttonRef}
-      type="button"
-      className={`artwork-directory-toggle ${unavailable ? "is-fallback" : ""}`}
-      aria-controls="artwork-directory"
-      aria-haspopup="dialog"
-      aria-expanded={expanded}
-      aria-label={`Open artwork list, ${count} work${count === 1 ? "" : "s"}${unavailable ? ". The 3D view is unavailable." : ""}`}
-      onClick={onOpen}
-    >
-      <span aria-hidden="true">☷</span>
-      <span>Artworks</span>
-      <b>{count}</b>
-    </button>
-  );
-}
-
 function DirectoryArtworkImage({
   artwork,
   loading,
@@ -3205,33 +3315,6 @@ function ArtworkDirectory({
   );
 }
 
-function ViewSwitch({
-  value,
-  onChange,
-}: {
-  value: ViewMode;
-  onChange: (value: ViewMode) => void;
-}) {
-  return (
-    <div className="view-switch" role="group" aria-label="Gallery view">
-      <button
-        className={value === "walk" ? "active" : ""}
-        onClick={() => onChange("walk")}
-        aria-pressed={value === "walk"}
-      >
-        <span>⌖</span> Walk
-      </button>
-      <button
-        className={value === "overview" ? "active" : ""}
-        onClick={() => onChange("overview")}
-        aria-pressed={value === "overview"}
-      >
-        <span>◫</span> Overview
-      </button>
-    </div>
-  );
-}
-
 function ArtworkInfoCard({
   artwork,
   onClose,
@@ -3303,7 +3386,7 @@ function MovementHint({ viewMode }: { viewMode: ViewMode }) {
     <div className="movement-hint" role="note">
       <span className="movement-hint__desktop">
         {viewMode === "walk"
-          ? "WASD to walk · ↑↓ move · ←→ turn · Click floor to move"
+          ? "W/S move · A/D strafe · Q/R or ↑↓ look · ←→ turn · Click floor to move"
           : "Drag to orbit · Scroll to zoom"}
       </span>
       <span className="movement-hint__mobile">
@@ -3390,6 +3473,15 @@ function Demo() {
             playIntro
             onArtworkFocus={setArtworkFocus}
             onLoadProgress={setLoadProgress}
+            onViewModeChange={changeView}
+            artworkCount={directoryArtworks.length}
+            artworkDirectoryExpanded={directoryOpen}
+            artworkDirectoryUnavailable={sceneUnavailable}
+            artworkButtonRef={directoryButton}
+            onOpenArtworkDirectory={() => {
+              setArtworkFocus(null);
+              setDirectoryOpen(true);
+            }}
           />
           <DemoLoadingPoster
             progress={loadProgress}
@@ -3397,17 +3489,6 @@ function Demo() {
           />
         </Suspense>
       </div>
-      <ViewSwitch value={viewMode} onChange={changeView} />
-      <ArtworkDirectoryButton
-        count={directoryArtworks.length}
-        unavailable={sceneUnavailable}
-        expanded={directoryOpen}
-        buttonRef={directoryButton}
-        onOpen={() => {
-          setArtworkFocus(null);
-          setDirectoryOpen(true);
-        }}
-      />
       {sceneUnavailable && (
         <span className="visually-hidden" role="status">
           3D view unavailable. The artwork directory has opened.
@@ -3559,14 +3640,12 @@ function PublishedGallery({ id }: { id: string }) {
         viewMode={viewMode}
         playIntro
         onArtworkFocus={setArtworkFocus}
-      />
-      <ViewSwitch value={viewMode} onChange={changeView} />
-      <ArtworkDirectoryButton
-        count={directoryArtworks.length}
-        unavailable={sceneUnavailable}
-        expanded={directoryOpen}
-        buttonRef={directoryButton}
-        onOpen={() => {
+        onViewModeChange={changeView}
+        artworkCount={directoryArtworks.length}
+        artworkDirectoryExpanded={directoryOpen}
+        artworkDirectoryUnavailable={sceneUnavailable}
+        artworkButtonRef={directoryButton}
+        onOpenArtworkDirectory={() => {
           setArtworkFocus(null);
           setDirectoryOpen(true);
         }}
@@ -3606,7 +3685,7 @@ function PublishedGallery({ id }: { id: string }) {
 export default function App() {
   const [route, setRoute] = useState(routeFromHash);
   const previousRoute = useRef(
-    `${route.page}:${route.id ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`,
+    `${route.page}:${route.id ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`,
   );
   useEffect(() => {
     const handler = () => setRoute(routeFromHash());
@@ -3624,7 +3703,7 @@ export default function App() {
             : route.page === "data"
               ? "MVP data and rights | AURA"
               : "Virtual exhibition | AURA";
-    const routeKey = `${route.page}:${route.id ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`;
+    const routeKey = `${route.page}:${route.id ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`;
     if (previousRoute.current === routeKey) return;
     previousRoute.current = routeKey;
     const frame = requestAnimationFrame(() =>
@@ -3636,13 +3715,18 @@ export default function App() {
     if (route.page === "create")
       return route.template ? (
         <Studio
-          key={`${route.template}:${route.demoArt ? "demo-art" : "empty"}`}
+          key={`${route.template}:${route.projectId}:${route.demoArt ? "demo-art" : "empty"}`}
           initialTemplate={route.template}
+          initialProjectId={
+            route.projectId ?? createGalleryProjectId(route.template)
+          }
           initialDemoArt={route.demoArt}
         />
       ) : (
         <TemplatePicker
-          onChoose={(template) => navigate(`/create/${template}`)}
+          onChoose={(template, projectId) =>
+            navigate(`/create/${template}/${projectId}`)
+          }
         />
       );
     if (route.page === "demo") return <Demo />;

@@ -2,6 +2,19 @@
 
 > **Hinweis:** Dieses Dokument ist der Vorher-Snapshot. Der umgesetzte und neu gemessene Stand steht in [`IMPLEMENTATION-STATUS.md`](./IMPLEMENTATION-STATUS.md).
 
+## P0-Konsistenz-Update · 11. August 2026
+
+- Danny, veröffentlichte prozedurale Räume und Builder Walk Preview verwenden jetzt dieselbe `VisitorControls`-Komponente und dieselbe Reihenfolge: Modus, Guided Tour, Smart View, Reset View, Artworks.
+- Intro und Guided Tour sind getrennte Abläufe. Danny behält authored Routen; Builder-Räume erzeugen reproduzierbare Stops aus Kunstwerkpositionen und Wandnormalen.
+- Beide Tour-Systeme unterstützen Skip, Pause/Resume, Vor/Zurück, Stopname und Fortschritt. Eigene Bewegung pausiert die Tour; Reduced Motion springt ohne Kamerafahrt zu einem sinnvollen Ziel.
+- Die gemeinsame Walk-Steuerung lautet: W/S vor/zurück, A/D seitlich, Q/R oder Pfeil hoch/runter schauen, Pfeil links/rechts drehen, Drag-look, Click/Tap-to-walk, Scroll/Pinch-Zoom und Escape zurück zu Overview beziehungsweise Arrange.
+- Auf Touch-Geräten wird kein WASD-Hinweis mehr angezeigt. Walk Preview klappt das Mobile-Bottom-Sheet auf Peek ein, zeigt die Controls als Safe-Area-Bottom-Bar und stellt beim Rückweg zu Arrange den vorherigen Sheet-Zustand wieder her.
+- Lokale Entwürfe sind jetzt echte Projekte mit eigener ID. Mehrere Räume desselben Templates können gespeichert und im Picker einzeln fortgesetzt werden. IndexedDB-v1- und localStorage-v1-Entwürfe werden als Legacy-Projekte migriert.
+- Publishing besitzt eine getestete State Machine für Vorbereitung, Write, Erfolg, Fehler und Retry. Nach erfolgreichem Publish bleibt die stabile Success-Seite sichtbar; fehlgeschlagene Writes löschen den lokalen Entwurf nicht.
+- Neue White-Cube-Projekte starten mit hellem mineralischem Concrete; Grand Forum mit Skylight. Belichtung und Cutaway-Hintergründe wurden pro Template ruhiger kalibriert.
+
+Automatische Abnahme: Lint, 75 Tests und TypeScript-Build grün. Die verpflichtende neue Sichtprüfung bei 1440 × 1000 und 390 × 844 bleibt offen, weil in dieser Sitzung kein verbundener Browser verfügbar war. Keine Live-Daten, Firebase-Regeln oder Deployments wurden verändert.
+
 Stand: 2. August 2026  
 Scope: Landingpage, Template-Auswahl, Raumgestalter, alle drei Runtime-Räume, Danny-Hirsch-Demo, Walk/Overview, Mobile, Accessibility, Performance, Publishing und B2B-Tauglichkeit.
 

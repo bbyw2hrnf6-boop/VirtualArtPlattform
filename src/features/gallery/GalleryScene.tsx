@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
@@ -25,6 +25,11 @@ import {
   normalizeDannyLight,
   selectDannyAuthoredLights,
 } from "./scene/dannyLighting";
+import { VisitorControls } from "./VisitorControls";
+import {
+  IDLE_VISITOR_TOUR,
+  type VisitorTourState,
+} from "./visitorTourState";
 
 const PAVILION_DIVIDER_WIDTH = 14;
 const PAVILION_DIVIDER_Z = 0;
@@ -1988,7 +1993,13 @@ function addLighting(
     },
   }[draft.lighting];
   // The environment stays neutral; only this room-owned rig changes presets.
-  scene.background = new THREE.Color("#111310");
+  scene.background = new THREE.Color(
+    draft.templateId === "nocturne"
+      ? "#090a09"
+      : draft.templateId === "pavilion"
+        ? "#302e2a"
+        : "#343732",
+  );
   const rig = new THREE.Group();
   rig.name = `room-lighting-${draft.templateId}-${draft.lighting}`;
   scene.add(rig);
@@ -2171,6 +2182,8 @@ function createFirstPersonWalk(
   bounds: () => Bounds,
   collision?: WalkCollision,
   canMoveTo?: (from: THREE.Vector3, to: THREE.Vector3) => boolean,
+  onUserIntent?: () => void,
+  onEscape?: () => void,
 ) {
   const keys = new Set<string>();
   let enabled = true;
@@ -2185,11 +2198,23 @@ function createFirstPersonWalk(
     "ArrowDown",
     "ArrowLeft",
     "ArrowRight",
+    "KeyQ",
+    "KeyR",
   ];
   const keyDown = (event: KeyboardEvent) => {
-    if (movementKeys.includes(event.code) && enabled) {
+    if (event.code === "Escape") {
+      event.preventDefault();
+      onEscape?.();
+      return;
+    }
+    if (movementKeys.includes(event.code)) {
+      if (!enabled) {
+        onUserIntent?.();
+        return;
+      }
       destination = null;
       keys.add(event.code);
+      onUserIntent?.();
       event.preventDefault();
     }
   };
@@ -2231,7 +2256,9 @@ function createFirstPersonWalk(
       : Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
   };
   const pointerDown = (event: PointerEvent) => {
-    if (!enabled || event.button !== 0) return;
+    if (event.button !== 0) return;
+    onUserIntent?.();
+    if (!enabled) return;
     canvas.focus({ preventScroll: true });
     if (event.pointerType === "touch") {
       touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -2291,6 +2318,7 @@ function createFirstPersonWalk(
   };
   const wheel = (event: WheelEvent) => {
     if (!enabled) return;
+    onUserIntent?.();
     targetFov = THREE.MathUtils.clamp(targetFov + event.deltaY * 0.012, 40, 72);
     event.preventDefault();
   };
@@ -2324,14 +2352,21 @@ function createFirstPersonWalk(
       yaw += turnDirection * 1.72 * delta;
       camera.rotation.set(pitch, yaw, 0, "YXZ");
     }
+    const lookDirection =
+      (keys.has("KeyQ") || keys.has("ArrowUp") ? 1 : 0) -
+      (keys.has("KeyR") || keys.has("ArrowDown") ? 1 : 0);
+    if (lookDirection) {
+      pitch = THREE.MathUtils.clamp(pitch + lookDirection * 1.15 * delta, -1.22, 1.22);
+      camera.rotation.set(pitch, yaw, 0, "YXZ");
+    }
     camera.getWorldDirection(forward);
     forward.y = 0;
     if (forward.lengthSq() < 0.001) forward.set(0, 0, -1);
     forward.normalize();
     right.crossVectors(forward, camera.up).normalize();
     desired.set(0, 0, 0);
-    if (keys.has("KeyW") || keys.has("ArrowUp")) desired.add(forward);
-    if (keys.has("KeyS") || keys.has("ArrowDown")) desired.sub(forward);
+    if (keys.has("KeyW")) desired.add(forward);
+    if (keys.has("KeyS")) desired.sub(forward);
     if (keys.has("KeyD")) desired.add(right);
     if (keys.has("KeyA")) desired.sub(right);
     if (desired.lengthSq()) desired.normalize().multiplyScalar(2.75);
@@ -2681,6 +2716,13 @@ export interface GallerySceneProps {
   onIntroComplete?: () => void;
   onArtworkFocus?: (artwork: ArtworkFocusInfo | null) => void;
   onCaptureReady?: (capture: GallerySceneCapture | null) => void;
+  onViewModeChange?: (mode: GalleryViewMode) => void;
+  onEditorModeChange?: (mode: GalleryEditorMode) => void;
+  artworkCount?: number;
+  artworkDirectoryExpanded?: boolean;
+  artworkDirectoryUnavailable?: boolean;
+  artworkButtonRef?: RefObject<HTMLButtonElement | null>;
+  onOpenArtworkDirectory?: () => void;
 }
 
 function sceneDraftKey(draft: GalleryDraft, visitor: boolean) {
@@ -2903,7 +2945,27 @@ type GalleryRuntime = {
   focusWall: (wall: WallId) => void;
   focusPavilionZone: (zone: PavilionZoneId) => void;
   startGuidedTour: () => void;
+  skipGuidedTour: () => void;
+  pauseOrResumeGuidedTour: () => void;
+  stepGuidedTour: (direction: -1 | 1) => void;
+  smartView: () => void;
   capture: GallerySceneCapture;
+};
+
+type GalleryTourPose = {
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  label: string;
+  artworkId?: string;
+};
+
+type GalleryActiveTour = {
+  poses: GalleryTourPose[];
+  startedAt: number;
+  duration: number;
+  segment: number;
+  pausedAt?: number;
+  lastUiUpdate: number;
 };
 
 function GallerySceneRenderer({
@@ -2922,6 +2984,13 @@ function GallerySceneRenderer({
   onIntroComplete,
   onArtworkFocus,
   onCaptureReady,
+  onViewModeChange,
+  onEditorModeChange,
+  artworkCount,
+  artworkDirectoryExpanded,
+  artworkDirectoryUnavailable,
+  artworkButtonRef,
+  onOpenArtworkDirectory,
 }: GallerySceneProps) {
   const host = useRef<HTMLDivElement>(null);
   const introPlayed = useRef(false);
@@ -2936,6 +3005,8 @@ function GallerySceneRenderer({
   const [editorCutaway, setEditorCutaway] = useState(true);
   const [activePavilionZone, setActivePavilionZone] =
     useState<PavilionZoneId>("central-axis");
+  const [tourState, setTourState] = useState<VisitorTourState>(IDLE_VISITOR_TOUR);
+  const [smartViewLabel, setSmartViewLabel] = useState("Artwork views");
   const latest = useRef({
     draft,
     selectedId,
@@ -2952,6 +3023,7 @@ function GallerySceneRenderer({
     playIntro,
     onIntroComplete,
     onArtworkFocus,
+    onViewModeChange,
   });
   const runtimeKey = `${draft.templateId}:${visitor ? "visitor" : "editor"}`;
   useEffect(() => {
@@ -2971,6 +3043,7 @@ function GallerySceneRenderer({
       playIntro,
       onIntroComplete,
       onArtworkFocus,
+      onViewModeChange,
     };
   }, [
     draft,
@@ -2988,6 +3061,7 @@ function GallerySceneRenderer({
     playIntro,
     onIntroComplete,
     onArtworkFocus,
+    onViewModeChange,
   ]);
   useEffect(() => {
     if (!host.current) return;
@@ -3034,7 +3108,11 @@ function GallerySceneRenderer({
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure =
-      currentDraft.templateId === "pavilion" ? 0.72 : 0.9;
+      currentDraft.templateId === "white-cube"
+        ? 0.82
+        : currentDraft.templateId === "nocturne"
+          ? 0.78
+          : 0.84;
     configureSceneCanvas(
       renderer.domElement,
       initial.visitor
@@ -3153,12 +3231,16 @@ function GallerySceneRenderer({
         ),
       );
     };
+    let onWalkIntent = () => undefined;
+    let onWalkEscape = () => undefined;
     const navigation = createFirstPersonWalk(
       camera,
       renderer.domElement,
       () => roomBounds,
       (next, previous) => collision.resolve(next, previous),
       (from, to) => collision.canReach(from, to),
+      () => onWalkIntent(),
+      () => onWalkEscape(),
     );
     const walkMarker = new THREE.Mesh(
       new THREE.RingGeometry(0.18, 0.25, 32),
@@ -3244,6 +3326,8 @@ function GallerySceneRenderer({
             currentDraft.title,
           )
         : null;
+    let activeGuidedTour: GalleryActiveTour | null = null;
+    let smartGalleryViewIndex = -1;
     const applyCutawayMode = () => {
       const active = isCutawayActive();
       roof.visible = ceilingPlane.visible = ceilingDetails.visible = !active;
@@ -3329,6 +3413,7 @@ function GallerySceneRenderer({
         (!initial.visitor && nextMode === "overview")
       )
         return;
+      if (activeGuidedTour) stopGuidedTour("mode-change");
       intro?.skip();
       intro = null;
       latest.current.onArtworkFocus?.(null);
@@ -3475,6 +3560,7 @@ function GallerySceneRenderer({
       if (reducedMotion.matches) finish();
     };
     const resetSceneView = () => {
+      if (activeGuidedTour) stopGuidedTour("reset");
       wallCameraAnimation = null;
       orbitAnimation = null;
       modeTransition = null;
@@ -4202,30 +4288,190 @@ function GallerySceneRenderer({
       return { dataUrl, width, height, mimeType, mode };
     };
     element.dataset.captureReady = "true";
-    const startGuidedTour = () => {
+    const galleryTourPoses = () => {
+      const entranceTarget = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, -1);
+      const entrance = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, d / 2 - 1);
+      const center = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, 0);
+      const poses: GalleryTourPose[] = [
+        {
+          position: entrance,
+          quaternion: cameraQuaternionFor(entrance, entranceTarget),
+          label: "Entrance",
+        },
+        {
+          position: center,
+          quaternion: cameraQuaternionFor(center, new THREE.Vector3(0, VISITOR_EYE_HEIGHT, -d * 0.34)),
+          label: "Room overview",
+        },
+      ];
+      currentDraft.artworks
+        .filter((artwork) => !artwork.hidden)
+        .slice(0, 12)
+        .forEach((artwork) => {
+          const target = new THREE.Vector3(
+            ...WALLS[artwork.wall].position(artwork.x, artwork.y, w, d),
+          );
+          const distance = THREE.MathUtils.clamp(2.5 + artwork.scale * 0.45, 2.7, 4.8);
+          const position = target.clone().addScaledVector(inwardNormals[artwork.wall], distance);
+          position.set(
+            THREE.MathUtils.clamp(position.x, roomBounds.minX, roomBounds.maxX),
+            VISITOR_EYE_HEIGHT,
+            THREE.MathUtils.clamp(position.z, roomBounds.minZ, roomBounds.maxZ),
+          );
+          const previous = poses.at(-1)?.position ?? entrance;
+          collision.resolve(position, previous);
+          poses.push({
+            position,
+            quaternion: cameraQuaternionFor(position, target),
+            label: artwork.title || "Untitled artwork",
+            artworkId: artwork.id,
+          });
+        });
+      if (poses.length === 2)
+        poses.push({
+          position: entrance.clone(),
+          quaternion: cameraQuaternionFor(entrance, entranceTarget),
+          label: "Visitor view",
+        });
+      return poses;
+    };
+    const publishGalleryTourState = (
+      status: VisitorTourState["status"],
+      progress: number,
+      pose: GalleryTourPose,
+      index: number,
+      count: number,
+    ) => {
       if (disposed) return;
+      setTourState({
+        status,
+        progress,
+        currentLabel: pose.label,
+        currentStop: Math.min(count, index + 1),
+        stopCount: count,
+      });
+      element.dataset.guidedTour = status;
+      element.dataset.tourStop = pose.label;
+    };
+    const stopGuidedTour = (
+      result: "skipped" | "completed" | "mode-change" | "reset" = "skipped",
+    ) => {
+      if (!activeGuidedTour) return;
+      activeGuidedTour = null;
+      element.dataset.guidedTour = "idle";
+      element.dataset.lastTourResult = result;
+      setTourState(IDLE_VISITOR_TOUR);
+      if (mode === "walk") {
+        walkState.position.copy(camera.position);
+        walkState.quaternion.copy(camera.quaternion);
+        walkState.fov = camera.fov;
+        navigation.syncFromCamera();
+        navigation.setEnabled(true);
+      }
+    };
+    const pauseOrResumeGuidedTour = () => {
+      if (!activeGuidedTour) return;
+      const now = performance.now();
+      if (activeGuidedTour.pausedAt !== undefined) {
+        activeGuidedTour.startedAt += now - activeGuidedTour.pausedAt;
+        activeGuidedTour.pausedAt = undefined;
+        navigation.setEnabled(false);
+        const pose = activeGuidedTour.poses[Math.max(0, activeGuidedTour.segment + 1)];
+        publishGalleryTourState(
+          "playing",
+          THREE.MathUtils.clamp((now - activeGuidedTour.startedAt) / activeGuidedTour.duration, 0, 1),
+          pose,
+          Math.max(0, activeGuidedTour.segment + 1),
+          activeGuidedTour.poses.length,
+        );
+      } else {
+        activeGuidedTour.pausedAt = now;
+        navigation.syncFromCamera();
+        navigation.setEnabled(true);
+        const pose = activeGuidedTour.poses[Math.max(0, activeGuidedTour.segment + 1)];
+        publishGalleryTourState(
+          "paused",
+          THREE.MathUtils.clamp((now - activeGuidedTour.startedAt) / activeGuidedTour.duration, 0, 1),
+          pose,
+          Math.max(0, activeGuidedTour.segment + 1),
+          activeGuidedTour.poses.length,
+        );
+      }
+    };
+    const stepGuidedTour = (direction: -1 | 1) => {
+      if (!activeGuidedTour) return;
+      const tour = activeGuidedTour;
+      const index = THREE.MathUtils.clamp(tour.segment + 1 + direction, 0, tour.poses.length - 1);
+      const pose = tour.poses[index];
+      const progress = index / Math.max(1, tour.poses.length - 1);
+      camera.position.copy(pose.position);
+      camera.quaternion.copy(pose.quaternion);
+      camera.fov = 58;
+      camera.updateProjectionMatrix();
+      tour.segment = Math.max(-1, index - 1);
+      tour.startedAt = performance.now() - progress * tour.duration;
+      tour.pausedAt = performance.now();
+      navigation.syncFromCamera();
+      navigation.setEnabled(true);
+      publishGalleryTourState("paused", progress, pose, index, tour.poses.length);
+    };
+    const startGuidedTour = () => {
+      if (disposed || mode !== "walk" || activeGuidedTour) return;
       intro?.dispose();
       intro = null;
-      if (mode !== "walk") {
-        setMode("walk");
-        window.setTimeout(startGuidedTour, 360);
+      latest.current.onArtworkFocus?.(null);
+      walkMarker.visible = false;
+      const poses = galleryTourPoses();
+      const featured = poses.find((pose) => pose.artworkId) ?? poses[1];
+      if (reducedMotion.matches) {
+        camera.position.copy(featured.position);
+        camera.quaternion.copy(featured.quaternion);
+        camera.fov = 58;
+        camera.updateProjectionMatrix();
+        navigation.syncFromCamera();
+        navigation.setEnabled(true);
+        element.dataset.lastTourResult = "reduced-instant";
+        setSmartViewLabel(featured.label);
+        setTourState(IDLE_VISITOR_TOUR);
         return;
       }
-      latest.current.onArtworkFocus?.(null);
-      element.dataset.guidedTour = "playing";
-      intro = createCinematicIntro(
-        camera,
-        galleryIntroTour(currentDraft, w, d),
-        navigation,
-        element,
-        () => {
-          introPlayed.current = true;
-          element.dataset.guidedTour = "idle";
-          latest.current.onIntroComplete?.();
-        },
-        "Guided tour",
-        currentDraft.title,
-      );
+      camera.position.copy(poses[0].position);
+      camera.quaternion.copy(poses[0].quaternion);
+      camera.fov = 58;
+      camera.updateProjectionMatrix();
+      navigation.setEnabled(false);
+      activeGuidedTour = {
+        poses,
+        startedAt: performance.now(),
+        duration: THREE.MathUtils.clamp((poses.length - 1) * 4_500, 20_000, 45_000),
+        segment: -1,
+        lastUiUpdate: 0,
+      };
+      publishGalleryTourState("playing", 0, poses[0], 0, poses.length);
+    };
+    const smartView = () => {
+      if (mode !== "walk" || activeGuidedTour) return;
+      const poses = galleryTourPoses().filter((pose) => pose.artworkId);
+      if (!poses.length) return;
+      smartGalleryViewIndex = (smartGalleryViewIndex + 1) % poses.length;
+      const pose = poses[smartGalleryViewIndex];
+      camera.position.copy(pose.position);
+      camera.quaternion.copy(pose.quaternion);
+      camera.fov = 58;
+      camera.updateProjectionMatrix();
+      navigation.syncFromCamera();
+      navigation.setEnabled(true);
+      setSmartViewLabel(pose.label);
+      element.dataset.smartViewLabel = pose.label;
+    };
+    onWalkIntent = () => {
+      if (activeGuidedTour && activeGuidedTour.pausedAt === undefined)
+        pauseOrResumeGuidedTour();
+    };
+    onWalkEscape = () => {
+      if (activeGuidedTour) stopGuidedTour("skipped");
+      else if (initial.visitor) latest.current.onViewModeChange?.("overview");
+      else setEditorMode("arrange");
     };
     runtime.current = {
       sync: syncDraft,
@@ -4240,6 +4486,10 @@ function GallerySceneRenderer({
       focusWall: focusWallView,
       focusPavilionZone: focusPavilionZoneView,
       startGuidedTour,
+      skipGuidedTour: () => stopGuidedTour("skipped"),
+      pauseOrResumeGuidedTour,
+      stepGuidedTour,
+      smartView,
       capture,
     };
     const overviewCenter = new THREE.Vector3(0, h * 0.34, 0);
@@ -4299,7 +4549,26 @@ function GallerySceneRenderer({
     let placementFrame = 0;
     const animate = (now = performance.now()) => {
       intro?.update();
-      if (mode === "walk" && !modeTransition) navigation.update();
+      if (activeGuidedTour && activeGuidedTour.pausedAt === undefined) {
+        const tour = activeGuidedTour;
+        const raw = THREE.MathUtils.clamp((now - tour.startedAt) / tour.duration, 0, 1);
+        const scaled = raw * Math.max(1, tour.poses.length - 1);
+        const segment = Math.min(tour.poses.length - 2, Math.floor(scaled));
+        const localRaw = scaled - segment;
+        const local = localRaw * localRaw * (3 - 2 * localRaw);
+        const from = tour.poses[segment];
+        const to = tour.poses[segment + 1];
+        camera.position.lerpVectors(from.position, to.position, local);
+        camera.quaternion.slerpQuaternions(from.quaternion, to.quaternion, local);
+        camera.fov = 58 + Math.sin(local * Math.PI) * 1.2;
+        camera.updateProjectionMatrix();
+        if (tour.segment !== segment || now - tour.lastUiUpdate > 120) {
+          tour.segment = segment;
+          tour.lastUiUpdate = now;
+          publishGalleryTourState("playing", raw, to, segment + 1, tour.poses.length);
+        }
+        if (raw >= 1) stopGuidedTour("completed");
+      } else if (mode === "walk" && !modeTransition) navigation.update();
       updateCutaway();
       if (modeTransition) {
         const raw = Math.min(1, (now - modeTransition.startedAt) / 320);
@@ -4504,6 +4773,9 @@ function GallerySceneRenderer({
     if (!visitor) runtime.current?.setEditorMode(editorMode);
   }, [editorMode, visitor]);
   useEffect(() => {
+    if (!visitor) onEditorModeChange?.(editorMode);
+  }, [editorMode, onEditorModeChange, visitor]);
+  useEffect(() => {
     if (!visitor) runtime.current?.setEditorCutaway(editorCutaway);
   }, [editorCutaway, visitor]);
   useEffect(() => {
@@ -4530,15 +4802,44 @@ function GallerySceneRenderer({
       ref={host}
     >
       {(visitor || editorMode === "walk") && (
-        <button
-          type="button"
-          className="gallery-guided-tour"
-          onClick={() => runtime.current?.startGuidedTour()}
-        >
-          <span>✦</span> Guided tour
-        </button>
+        <VisitorControls
+          mode={visitor ? viewMode : editorMode}
+          modeOptions={
+            visitor
+              ? [
+                  { value: "walk", label: "Walk", icon: "⌖" },
+                  { value: "overview", label: "Overview", icon: "◫" },
+                ]
+              : [
+                  { value: "arrange", label: "Arrange", icon: "◇" },
+                  { value: "walk", label: "Walk preview", icon: "⌖" },
+                ]
+          }
+          onModeChange={(next) => {
+            if (visitor) onViewModeChange?.(next as GalleryViewMode);
+            else setEditorMode(next as GalleryEditorMode);
+          }}
+          tour={tourState}
+          tourAvailable={(visitor ? viewMode : editorMode) === "walk"}
+          onStartOrSkipTour={() =>
+            tourState.status === "idle"
+              ? runtime.current?.startGuidedTour()
+              : runtime.current?.skipGuidedTour()
+          }
+          onPauseOrResumeTour={() => runtime.current?.pauseOrResumeGuidedTour()}
+          onStepTour={(direction) => runtime.current?.stepGuidedTour(direction)}
+          onSmartView={() => runtime.current?.smartView()}
+          smartViewLabel={smartViewLabel}
+          onResetView={() => runtime.current?.resetView()}
+          artworkCount={artworkCount ?? draft.artworks.filter((item) => !item.hidden).length}
+          artworkDirectoryExpanded={artworkDirectoryExpanded}
+          artworkDirectoryUnavailable={artworkDirectoryUnavailable}
+          artworkButtonRef={artworkButtonRef}
+          onOpenArtworkDirectory={onOpenArtworkDirectory}
+          compactLabel={visitor ? "Exhibition controls" : "Walk preview controls"}
+        />
       )}
-      {!visitor && (
+      {!visitor && arranging && (
         <>
           <div
             className="builder-scene-controls"
@@ -4561,39 +4862,37 @@ function GallerySceneRenderer({
               <button
                 type="button"
                 data-scene-mode-option="walk-preview"
-                className={editorMode === "walk" ? "active" : ""}
-                aria-pressed={editorMode === "walk"}
+                className=""
+                aria-pressed={false}
                 onClick={() => setEditorMode("walk")}
               >
                 Walk preview
               </button>
             </div>
-            {arranging && (
-              <div
-                className="builder-scene-switch builder-scene-switch--secondary"
-                role="group"
-                aria-label="Arrange roof view"
+            <div
+              className="builder-scene-switch builder-scene-switch--secondary"
+              role="group"
+              aria-label="Arrange roof view"
+            >
+              <button
+                type="button"
+                data-roof-option="open"
+                className={editorCutaway ? "active" : ""}
+                aria-pressed={editorCutaway}
+                onClick={() => setEditorCutaway(true)}
               >
-                <button
-                  type="button"
-                  data-roof-option="open"
-                  className={editorCutaway ? "active" : ""}
-                  aria-pressed={editorCutaway}
-                  onClick={() => setEditorCutaway(true)}
-                >
-                  Open roof
-                </button>
-                <button
-                  type="button"
-                  data-roof-option="ceiling"
-                  className={!editorCutaway ? "active" : ""}
-                  aria-pressed={!editorCutaway}
-                  onClick={() => setEditorCutaway(false)}
-                >
-                  Preview ceiling
-                </button>
-              </div>
-            )}
+                Open roof
+              </button>
+              <button
+                type="button"
+                data-roof-option="ceiling"
+                className={!editorCutaway ? "active" : ""}
+                aria-pressed={!editorCutaway}
+                onClick={() => setEditorCutaway(false)}
+              >
+                Preview ceiling
+              </button>
+            </div>
             <button
               type="button"
               className="builder-reset-view"
@@ -4603,27 +4902,25 @@ function GallerySceneRenderer({
               Reset view
             </button>
           </div>
-          {arranging && (
-            <>
-              <button
-                className="room-turn room-turn--left"
-                type="button"
-                onClick={() => roomTurn.current?.(-1)}
-                aria-label="Rotate room 45 degrees left"
-              >
-                ←
-              </button>
-              <button
-                className="room-turn room-turn--right"
-                type="button"
-                onClick={() => roomTurn.current?.(1)}
-                aria-label="Rotate room 45 degrees right"
-              >
-                →
-              </button>
-            </>
-          )}
-          {arranging && draft.templateId === "pavilion" && (
+          <>
+            <button
+              className="room-turn room-turn--left"
+              type="button"
+              onClick={() => roomTurn.current?.(-1)}
+              aria-label="Rotate room 45 degrees left"
+            >
+              ←
+            </button>
+            <button
+              className="room-turn room-turn--right"
+              type="button"
+              onClick={() => roomTurn.current?.(1)}
+              aria-label="Rotate room 45 degrees right"
+            >
+              →
+            </button>
+          </>
+          {draft.templateId === "pavilion" && (
             <nav
               className="pavilion-zone-nav"
               aria-label="Grand Forum camera zones"
@@ -4661,21 +4958,34 @@ function GallerySceneRenderer({
         </>
       )}
       <div className="scene-hint">
-        {visitor
-          ? viewMode === "walk"
-            ? "WASD to walk · ↑↓ move · ←→ turn · Drag to look"
-            : "Dollhouse overview · Walls fade as you orbit · Scroll or pinch to zoom"
-          : editorMode === "walk"
-            ? "Walk preview · WASD to walk · Click floor to move · Editing locked"
+        <span className="movement-hint__desktop">
+          {visitor
+            ? viewMode === "walk"
+              ? "W/S move · A/D strafe · Q/R or ↑↓ look · ←→ turn · Drag to look"
+              : "Dollhouse overview · Walls fade as you orbit · Scroll or pinch to zoom"
+            : editorMode === "walk"
+              ? "Walk preview · W/S move · A/D strafe · Q/R or ↑↓ look · Click floor to move"
+              : selectedDecorId
+                ? "Drag object · Click floor to place · Camera stays here"
+                : selectedId
+                  ? "Choose wall → click to place → drag to refine"
+                  : draft.templateId === "pavilion"
+                    ? "Forum arrange · Use map to jump · Right-drag to pan · Scroll to zoom"
+                    : editorCutaway
+                      ? "Open-roof arrange view · Drag to orbit · Scroll or pinch to zoom"
+                      : "Ceiling preview · Drag to orbit · Scroll or pinch to zoom"}
+        </span>
+        <span className="movement-hint__mobile">
+          {visitor || editorMode === "walk"
+            ? "Drag to look · Tap floor to walk · Pinch to zoom"
             : selectedDecorId
-              ? "Drag object · Click floor to place · Camera stays here"
+              ? "Drag object · Tap floor to place"
               : selectedId
-                ? "Choose wall → click to place → drag to refine"
+                ? "Choose wall · Tap to place · Drag to refine"
                 : draft.templateId === "pavilion"
-                  ? "Forum arrange · Use map to jump · Right-drag to pan · Scroll to zoom"
-                  : editorCutaway
-                    ? "Open-roof arrange view · Drag to orbit · Scroll or pinch to zoom"
-                    : "Ceiling preview · Drag to orbit · Scroll or pinch to zoom"}
+                  ? "Use map to jump · Drag to orbit · Pinch to zoom"
+                  : "Drag to orbit · Pinch to zoom"}
+        </span>
       </div>
     </div>
   );
@@ -4700,7 +5010,14 @@ export const GalleryScene = memo(
     previous.playIntro === next.playIntro &&
     previous.onIntroComplete === next.onIntroComplete &&
     previous.onArtworkFocus === next.onArtworkFocus &&
-    previous.onCaptureReady === next.onCaptureReady,
+    previous.onCaptureReady === next.onCaptureReady &&
+    previous.onViewModeChange === next.onViewModeChange &&
+    previous.onEditorModeChange === next.onEditorModeChange &&
+    previous.artworkCount === next.artworkCount &&
+    previous.artworkDirectoryExpanded === next.artworkDirectoryExpanded &&
+    previous.artworkDirectoryUnavailable === next.artworkDirectoryUnavailable &&
+    previous.artworkButtonRef === next.artworkButtonRef &&
+    previous.onOpenArtworkDirectory === next.onOpenArtworkDirectory,
 );
 
 export interface DannyDemoSceneProps {
@@ -4709,6 +5026,12 @@ export interface DannyDemoSceneProps {
   onIntroComplete?: () => void;
   onArtworkFocus?: (artwork: ArtworkFocusInfo | null) => void;
   onLoadProgress?: (progress: number) => void;
+  onViewModeChange?: (mode: GalleryViewMode) => void;
+  artworkCount?: number;
+  artworkDirectoryExpanded?: boolean;
+  artworkDirectoryUnavailable?: boolean;
+  artworkButtonRef?: RefObject<HTMLButtonElement | null>;
+  onOpenArtworkDirectory?: () => void;
 }
 
 type DannyViewAnchor = {
@@ -4738,11 +5061,15 @@ type DannyActiveTour = {
   weights: number[];
   totalWeight: number;
   segment: number;
+  pausedAt?: number;
+  lastUiUpdate: number;
 };
 type DannyDemoRuntime = {
   setMode: (mode: GalleryViewMode) => void;
   startGuidedTour: () => void;
   skipGuidedTour: () => void;
+  pauseOrResumeGuidedTour: () => void;
+  stepGuidedTour: (direction: -1 | 1) => void;
   smartView: () => void;
   resetView: () => void;
 };
@@ -4755,6 +5082,12 @@ export function DannyDemoScene({
   onIntroComplete,
   onArtworkFocus,
   onLoadProgress,
+  onViewModeChange,
+  artworkCount,
+  artworkDirectoryExpanded,
+  artworkDirectoryUnavailable,
+  artworkButtonRef,
+  onOpenArtworkDirectory,
 }: DannyDemoSceneProps) {
   const host = useRef<HTMLDivElement>(null);
   const introPlayed = useRef(false);
@@ -4765,9 +5098,11 @@ export function DannyDemoScene({
     onIntroComplete,
     onArtworkFocus,
     onLoadProgress,
+    onViewModeChange,
   });
   const [sceneReady, setSceneReady] = useState(false);
   const [tourActive, setTourActive] = useState(false);
+  const [tourState, setTourState] = useState<VisitorTourState>(IDLE_VISITOR_TOUR);
   const [smartViewLabel, setSmartViewLabel] = useState("Authored views");
   useEffect(() => {
     latest.current = {
@@ -4776,8 +5111,16 @@ export function DannyDemoScene({
       onIntroComplete,
       onArtworkFocus,
       onLoadProgress,
+      onViewModeChange,
     };
-  }, [viewMode, playIntro, onIntroComplete, onArtworkFocus, onLoadProgress]);
+  }, [
+    viewMode,
+    playIntro,
+    onIntroComplete,
+    onArtworkFocus,
+    onLoadProgress,
+    onViewModeChange,
+  ]);
   useEffect(() => {
     if (!host.current) return;
     const element = host.current;
@@ -4869,12 +5212,16 @@ export function DannyDemoScene({
 
     let bounds: Bounds = { minX: -7, maxX: 7, minZ: -8, maxZ: 16 };
     let collision = createPlanarCollisionSystem([]);
+    let onDannyWalkIntent = () => undefined;
+    let onDannyWalkEscape = () => undefined;
     const navigation = createFirstPersonWalk(
       camera,
       renderer.domElement,
       () => bounds,
       (next, previous) => collision.resolve(next, previous),
       (from, to) => collision.canReach(from, to),
+      () => onDannyWalkIntent(),
+      () => onDannyWalkEscape(),
     );
     navigation.setEnabled(false);
     let destroyed = false;
@@ -5045,7 +5392,32 @@ export function DannyDemoScene({
     ) => {
       element.dataset.guidedTour = playing ? "playing" : "idle";
       element.dataset.lastTourResult = result;
-      if (!destroyed) setTourActive(playing);
+      if (!destroyed) {
+        setTourActive(playing);
+        if (!playing) setTourState(IDLE_VISITOR_TOUR);
+      }
+    };
+    const publishDannyTourState = (
+      status: VisitorTourState["status"],
+      progress: number,
+      poseIndex: number,
+    ) => {
+      if (destroyed || !tourPoses.length) return;
+      const pose = tourPoses[THREE.MathUtils.clamp(poseIndex, 0, tourPoses.length - 1)];
+      const viewPoses = tourPoses.filter((candidate) => candidate.isView);
+      const currentStop = Math.max(
+        1,
+        tourPoses.slice(0, poseIndex + 1).filter((candidate) => candidate.isView).length,
+      );
+      setTourState({
+        status,
+        progress,
+        currentLabel: pose.label,
+        currentStop: Math.min(viewPoses.length, currentStop),
+        stopCount: viewPoses.length,
+      });
+      element.dataset.guidedTour = status;
+      element.dataset.tourStop = pose.label;
     };
     const stopGuidedTour = (
       result: "skipped" | "completed" | "mode-change" | "reset" = "skipped",
@@ -5061,6 +5433,61 @@ export function DannyDemoScene({
       if (result !== "completed")
         element.style.setProperty("--danny-tour-progress", "0");
       resumeInteraction();
+    };
+    const progressForDannyPose = (poseIndex: number) => {
+      if (!activeTour || poseIndex <= 0) return 0;
+      const distance = activeTour.weights
+        .slice(0, Math.min(poseIndex, activeTour.weights.length))
+        .reduce((sum, weight) => sum + weight, 0);
+      return distance / Math.max(activeTour.totalWeight, 0.001);
+    };
+    const pauseOrResumeGuidedTour = () => {
+      if (!activeTour) return;
+      const now = performance.now();
+      if (activeTour.pausedAt !== undefined) {
+        activeTour.startedAt += now - activeTour.pausedAt;
+        activeTour.pausedAt = undefined;
+        navigation.setEnabled(false);
+        controls.enabled = false;
+        publishDannyTourState(
+          "playing",
+          THREE.MathUtils.clamp((now - activeTour.startedAt) / activeTour.duration, 0, 1),
+          Math.max(0, activeTour.segment + 1),
+        );
+      } else {
+        activeTour.pausedAt = now;
+        resumeInteraction();
+        publishDannyTourState(
+          "paused",
+          THREE.MathUtils.clamp((now - activeTour.startedAt) / activeTour.duration, 0, 1),
+          Math.max(0, activeTour.segment + 1),
+        );
+      }
+    };
+    const stepGuidedTour = (direction: -1 | 1) => {
+      if (!activeTour) return;
+      const viewIndices = activeTour.poses
+        .map((pose, index) => (pose.isView ? index : -1))
+        .filter((index) => index >= 0);
+      if (!viewIndices.length) return;
+      const currentPose = Math.max(0, activeTour.segment + 1);
+      const currentView = Math.max(
+        0,
+        viewIndices.findIndex((index) => index >= currentPose),
+      );
+      const targetView = THREE.MathUtils.clamp(currentView + direction, 0, viewIndices.length - 1);
+      const poseIndex = viewIndices[targetView];
+      const pose = activeTour.poses[poseIndex];
+      const progress = progressForDannyPose(poseIndex);
+      camera.position.copy(pose.position);
+      camera.quaternion.copy(pose.quaternion);
+      camera.fov = 58;
+      camera.updateProjectionMatrix();
+      activeTour.segment = Math.max(-1, poseIndex - 1);
+      activeTour.startedAt = performance.now() - progress * activeTour.duration;
+      activeTour.pausedAt = performance.now();
+      resumeInteraction();
+      publishDannyTourState("paused", progress, poseIndex);
     };
     const transitionToPose = (
       position: THREE.Vector3,
@@ -5251,9 +5678,11 @@ export function DannyDemoScene({
         weights,
         totalWeight: weights.reduce((sum, weight) => sum + weight, 0),
         segment: -1,
+        lastUiUpdate: 0,
       };
       element.style.setProperty("--danny-tour-progress", "0");
       setGuidedTourState(true);
+      publishDannyTourState("playing", 0, 0);
     };
     const setMode = (nextMode: GalleryViewMode) => {
       if (nextMode === mode) return;
@@ -5300,10 +5729,20 @@ export function DannyDemoScene({
         finish,
       };
     };
+    onDannyWalkIntent = () => {
+      if (activeTour && activeTour.pausedAt === undefined)
+        pauseOrResumeGuidedTour();
+    };
+    onDannyWalkEscape = () => {
+      if (activeTour) stopGuidedTour("skipped");
+      else latest.current.onViewModeChange?.("overview");
+    };
     modeRuntime.current = {
       setMode,
       startGuidedTour,
       skipGuidedTour: () => stopGuidedTour("skipped"),
+      pauseOrResumeGuidedTour,
+      stepGuidedTour,
       smartView,
       resetView,
     };
@@ -6002,7 +6441,7 @@ export function DannyDemoScene({
       element.dataset.motion = reducedMotion.matches ? "reduced" : "full";
       if (!reducedMotion.matches) return;
       intro?.skip();
-      if (activeTour) {
+      if (activeTour && activeTour.pausedAt === undefined) {
         const featured =
           activeTour.poses.find((pose) => /wARTrobe/i.test(pose.label)) ??
           activeTour.poses[activeTour.poses.length - 1];
@@ -6075,10 +6514,12 @@ export function DannyDemoScene({
         camera.fov = 58 + Math.sin(local * Math.PI) * 1.25;
         camera.updateProjectionMatrix();
         element.style.setProperty("--danny-tour-progress", String(raw));
-        if (activeTour.segment !== segment) {
+        if (activeTour.segment !== segment || now - activeTour.lastUiUpdate > 120) {
           activeTour.segment = segment;
+          activeTour.lastUiUpdate = now;
           element.dataset.tourStop = to.label;
           setSmartViewLabel(to.label);
+          publishDannyTourState("playing", raw, segment + 1);
         }
         if (raw >= 1) stopGuidedTour("completed");
       } else {
@@ -6156,62 +6597,44 @@ export function DannyDemoScene({
   useEffect(() => {
     modeRuntime.current?.setMode(viewMode);
   }, [viewMode]);
-  const guidedTourDisabled =
-    !sceneReady || (viewMode !== "walk" && !tourActive);
   return (
     <div className={`gallery-scene gallery-scene--${viewMode}`} ref={host}>
-      <div
-        className="danny-visitor-controls"
-        role="group"
-        aria-label="Exhibition camera controls"
-        data-danny-controls
-      >
-        <button
-          className={`danny-tour-control${tourActive ? " is-active" : ""}`}
-          type="button"
-          onClick={() =>
-            tourActive
-              ? modeRuntime.current?.skipGuidedTour()
-              : modeRuntime.current?.startGuidedTour()
-          }
-          disabled={guidedTourDisabled}
-          aria-pressed={tourActive}
-          data-danny-tour-control
-        >
-          <span>{tourActive ? "Skip tour" : "Guided tour"}</span>
-          <small>
-            {tourActive
-              ? "Playing · skip anytime"
-              : viewMode === "walk"
-                ? "45 sec · optional"
-                : "Available in Walk"}
-          </small>
-          <i aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          onClick={() => modeRuntime.current?.smartView()}
-          disabled={!sceneReady || tourActive}
-          aria-label={`Smart view. Current view: ${smartViewLabel}`}
-          data-danny-smart-view
-        >
-          <span>Smart view</span>
-          <small aria-live="polite">{smartViewLabel}</small>
-        </button>
-        <button
-          type="button"
-          onClick={() => modeRuntime.current?.resetView()}
-          disabled={!sceneReady}
-          data-danny-reset-view
-        >
-          <span>Reset view</span>
-          <small>Return to start</small>
-        </button>
-      </div>
+      <VisitorControls
+        mode={viewMode}
+        modeOptions={[
+          { value: "walk", label: "Walk", icon: "⌖" },
+          { value: "overview", label: "Overview", icon: "◫" },
+        ]}
+        onModeChange={(next) => onViewModeChange?.(next)}
+        tour={tourState}
+        tourAvailable={sceneReady && viewMode === "walk"}
+        onStartOrSkipTour={() =>
+          tourActive
+            ? modeRuntime.current?.skipGuidedTour()
+            : modeRuntime.current?.startGuidedTour()
+        }
+        onPauseOrResumeTour={() => modeRuntime.current?.pauseOrResumeGuidedTour()}
+        onStepTour={(direction) => modeRuntime.current?.stepGuidedTour(direction)}
+        onSmartView={() => modeRuntime.current?.smartView()}
+        smartViewLabel={smartViewLabel}
+        onResetView={() => modeRuntime.current?.resetView()}
+        artworkCount={artworkCount}
+        artworkDirectoryExpanded={artworkDirectoryExpanded}
+        artworkDirectoryUnavailable={artworkDirectoryUnavailable}
+        artworkButtonRef={artworkButtonRef}
+        onOpenArtworkDirectory={onOpenArtworkDirectory}
+      />
       <div className="scene-hint">
-        {viewMode === "walk"
-          ? "Danny Hirsch Arts · WASD to walk · ↑↓ move · ←→ turn"
-          : "Danny Hirsch Arts · Open-roof dollhouse overview"}
+        <span className="movement-hint__desktop">
+          {viewMode === "walk"
+            ? "Danny Hirsch Arts · W/S move · A/D strafe · Q/R or ↑↓ look · ←→ turn"
+            : "Danny Hirsch Arts · Open-roof dollhouse overview"}
+        </span>
+        <span className="movement-hint__mobile">
+          {viewMode === "walk"
+            ? "Drag to look · Tap floor to walk · Pinch to zoom"
+            : "Drag to orbit · Pinch to zoom"}
+        </span>
       </div>
     </div>
   );
