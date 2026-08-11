@@ -13,7 +13,7 @@
 - Publishing besitzt eine getestete State Machine für Vorbereitung, Write, Erfolg, Fehler und Retry. Nach erfolgreichem Publish bleibt die stabile Success-Seite sichtbar; fehlgeschlagene Writes löschen den lokalen Entwurf nicht.
 - Neue White-Cube-Projekte starten mit hellem mineralischem Concrete; Grand Forum mit Skylight. Belichtung und Cutaway-Hintergründe wurden pro Template ruhiger kalibriert.
 
-Automatische Abnahme: Lint, 75 Tests und TypeScript-Build grün. Die verpflichtende neue Sichtprüfung bei 1440 × 1000 und 390 × 844 bleibt offen, weil in dieser Sitzung kein verbundener Browser verfügbar war. Keine Live-Daten, Firebase-Regeln oder Deployments wurden verändert.
+Abnahme: Lint, 75 Tests und TypeScript-Build grün. Die Sichtprüfung bei exakt 1440 × 1000 und 390 × 844 ist abgeschlossen: Landing/Emil Scroll, Picker, White Cube, Nocturne, Grand Forum, Danny, ein bestehender veröffentlichter Raum, Arrange, Walk Preview, Walk, Overview, Guided Tour und Publish Review wurden geprüft. Mobile Walk Preview hält mehr als 60 % nutzbare 3D-Fläche, klappt den Editor ein und stellt ihn beim Rückweg wieder her. Eine dabei sichtbare Artwork-Textur-Regression wurde behoben. Zwei lokale Projekte desselben Templates sowie Reload-Recovery wurden verifiziert. Ein neuer anonymer Firestore-Write und der finale Publish-Schritt bleiben offen, da die Abnahme keine Live-Daten verändern durfte. Keine Firebase-Regeln oder Deployments wurden verändert.
 
 Stand: 2. August 2026  
 Scope: Landingpage, Template-Auswahl, Raumgestalter, alle drei Runtime-Räume, Danny-Hirsch-Demo, Walk/Overview, Mobile, Accessibility, Performance, Publishing und B2B-Tauglichkeit.

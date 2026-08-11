@@ -2876,16 +2876,31 @@ function syncArtworkObject(
   if (group.userData.source !== artwork.src) {
     const previous = canvas.material.map;
     group.userData.source = artwork.src;
-    new THREE.TextureLoader().load(artwork.src, (texture) => {
-      if (group.userData.source !== artwork.src) {
+    const texture = new THREE.TextureLoader().load(
+      artwork.src,
+      (loadedTexture) => {
+        if (group.userData.source !== artwork.src) {
+          loadedTexture.dispose();
+          return;
+        }
+        loadedTexture.colorSpace = THREE.SRGBColorSpace;
+        loadedTexture.needsUpdate = true;
+        canvas.material.needsUpdate = true;
+      },
+      undefined,
+      () => {
+        if (group.userData.source !== artwork.src) return;
+        group.userData.source = undefined;
+        if (canvas.material.map === texture) canvas.material.map = null;
+        canvas.material.needsUpdate = true;
         texture.dispose();
-        return;
-      }
-      texture.colorSpace = THREE.SRGBColorSpace;
-      canvas.material.map = texture;
-      canvas.material.needsUpdate = true;
-      previous?.dispose();
-    });
+      },
+    );
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
+    canvas.material.map = texture;
+    canvas.material.needsUpdate = true;
+    previous?.dispose();
   }
   const frameColor =
     artwork.frame === "white"

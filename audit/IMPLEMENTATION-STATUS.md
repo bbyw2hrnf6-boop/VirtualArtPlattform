@@ -7,7 +7,10 @@ Stand: 11. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapsh
 - `npm run check`: grün; 75 Tests bestehen.
 - Ein gemeinsames Visitor-Control-System vereinheitlicht Danny, öffentliche Räume und Builder Walk Preview. Guided Tours besitzen nun denselben Playback-Vertrag; prozedurale Räume nutzen generierte Artwork-Stops, Danny weiterhin authored Routen.
 - Mehrere lokale Projekte pro Template, Legacy-Migration und ein expliziter Publish-State verhindern das Überschreiben einzelner Template-Slots und den früheren widersprüchlichen Post-Publish-Zustand.
-- Die neue P0-Sichtprüfung bei 1440 × 1000 und 390 × 844 konnte in dieser Sitzung nicht wiederholt werden, weil kein verbundener Browser verfügbar war; die unten dokumentierten Browser-Messungen bleiben historische Nachweise des vorherigen Stands.
+- Die P0-Sichtprüfung wurde erneut bei exakt 1440 × 1000 und 390 × 844 durchgeführt. Landing/Emil Scroll, Picker, alle drei Templates, Danny, ein bestehender veröffentlichter Raum, Arrange, Walk Preview, Walk, Overview, Guided Tour und Publish Review wurden im Browser geprüft.
+- Mobile Walk Preview stellt bei 390 × 844 rund zwei Drittel der Höhe für die 3D-Fläche bereit, klappt den Editor auf Peek ein, zeigt ausschließlich Touch-Hinweise und stellt beim Rückweg den vorherigen Half-Sheet-Zustand wieder her.
+- Zwei getrennte White-Cube-Projekte wurden lokal gespeichert, im Picker parallel angezeigt und nach Reload wiederhergestellt. Der echte Firestore-Write und finale Publish-Klick wurden wegen des Verbots von Live-Datenänderungen bewusst nicht ausgeführt.
+- Während der Sichtprüfung wurde eine Safari-/WebGL-Regression gefunden und behoben: Artwork-Texturen werden jetzt sofort an das Material gebunden und besitzen einen verlustfreien Fehlerpfad; weiße Platzhalter bleiben dadurch nicht mehr nach erfolgreichem Bild-Load stehen.
 - Neue Scroll-/Licht-Regression über einen isolierten Headless-Chromium-Pipe-Lauf: 11/11 Assertions grün, neun eindeutige reversible Story-Phasen, anklickbare Kunst, Reduced Motion, sichtbarer WebGL-Fallback, Desktop- und Mobile-WebGL, fokussierbare Live-Besuchersteuerung, direkte Übergabe an die drei Raumkarten und keine unerwarteten Page-Errors.
 - Aktuelle Browser-Regression: 13/13 Kernflüsse grün; zusätzliche Audit-Abschluss-Regression: 13/13 neue Editor-, Forum- und Danny-Flüsse grün. Keine neuen Console-Diagnosen.
 - Lighthouse Mobile Landing: Performance 96, Accessibility 100, Best Practices 100, SEO 100; LCP 2,7 s, TBT 0 ms.
@@ -58,7 +61,7 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 | Punkt | Warum nicht lokal abschließbar | Nächster Schritt |
 |---|---|---|
-| Live Discover / Publish | Firestore-Regeln bleiben bewusst ein manueller Firebase-Console-Schritt; der GitHub-Workflow deployt ausschließlich die Website. | Aktuelle `firestore.rules` manuell veröffentlichen und Publish→Private Window→Discover einmal live testen. |
+| Live Discover / Publish | Ein bestehender veröffentlichter Raum wurde read-only geladen; Firestore-Regeln bleiben bewusst ein manueller Firebase-Console-Schritt und Live-Writes waren in dieser Abnahme verboten. | Aktuelle `firestore.rules` manuell veröffentlichen und einen neuen anonymen Save→Publish→Private Window→Discover-Durchlauf live testen. |
 | Private, unlisted, permanent, Revisionen | Erfordert Zugriffsmodell, Accounts, Storage, Rate Limits, Moderation und Tarifentscheidung. | Pilot-Backend und Rollenmodell definieren; erst danach UI aktivieren. Die aktuelle UI behauptet diese Funktionen nicht. |
 | Vollständige Rechtstexte | Controller, Kontakt, Sitz, Rechtsgrundlage, Auftragsverarbeitung und Vertragsbedingungen fehlen als Eingaben. | Mit realen Betreiberangaben Privacy, Terms, Content Rights und Pilotvertrag juristisch erstellen. |
 | Dynamische Social Cards / eigener Slug / Custom Domain | Hash-Routing und GitHub Pages können Galerie-spezifische Server-Metadaten nicht erzeugen. | Hosting/Edge-Rendering und Domain auswählen; OG-Route serverseitig aus Gallery-Metadaten erzeugen. |
