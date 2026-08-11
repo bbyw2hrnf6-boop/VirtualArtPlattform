@@ -8,6 +8,7 @@ import {
   selectDannyAuthoredLights,
 } from "../gallery/scene/dannyLighting";
 import {
+  advanceStoryProgress,
   classifyDannyPart,
   isMarbleFloor,
   isMisplacedMarble,
@@ -16,38 +17,43 @@ import {
   storyFrame,
   type StoryPart,
 } from "./scrollStoryModel";
+import {
+  VISITOR_KEYBOARD_HINT,
+  VISITOR_LOOK_CODES,
+  visitorLookDirection,
+} from "../gallery/visitorKeyboard";
 import "./scrollGalleryStory.css";
 
 const CHAPTERS = [
   {
-    eyebrow: "Act I · Intent",
-    title: "Start with the room.",
-    body: "Danny Hirsch Arts begins as one legible spatial idea—not a random template.",
-  },
-  {
     eyebrow: "01 · Blueprint",
-    title: "Draw the route first.",
-    body: "Scale, thresholds, sightlines, and visitor circulation establish the exhibition.",
+    title: "Draw DannyHirschArts.",
+    body: "Scale, thresholds, sightlines, and visitor circulation establish this exhibition—not a random template.",
   },
   {
-    eyebrow: "02 · Architecture",
+    eyebrow: "02 · Foundation",
+    title: "Set the floor first.",
+    body: "The black marble floor establishes the footprint and the visitor route.",
+  },
+  {
+    eyebrow: "03 · Architecture",
     title: "Build in real layers.",
-    body: "The marble floor arrives first. Plaster walls, ceiling, and details follow.",
+    body: "Matte plaster walls, ceiling, thresholds, and architectural details follow in sequence.",
   },
   {
-    eyebrow: "03 · Materials",
+    eyebrow: "04 · Materials",
     title: "Let every surface do one job.",
-    body: "Black marble stays on the floor. Matte plaster walls hold the art. Bronze guides the eye.",
+    body: "Marble stays on the floor. Quiet plaster holds the art. Bronze guides the eye.",
   },
   {
-    eyebrow: "04 · Curation",
+    eyebrow: "05 · Curation",
     title: "Circle the finished exhibition.",
     body: "Art, light, eye line, and spacing settle during one continuous 360° flight.",
   },
   {
-    eyebrow: "Act II · Visit",
-    title: "Now enter the exhibition.",
-    body: "The camera resolves at visitor height. Drag to look, then walk the finished room.",
+    eyebrow: "06 · DannyHirschArts",
+    title: "Enter DannyHirschArts.",
+    body: "The live room resolves at visitor height. Drag to look, then walk the completed exhibition.",
   },
 ] as const;
 
@@ -73,10 +79,10 @@ const BUILD_COPY = {
 } as const;
 
 function buildStage(progress: number): keyof typeof BUILD_COPY {
-  if (progress < 0.2) return "plan";
-  if (progress < 0.31) return "floor";
-  if (progress < 0.41) return "walls";
-  if (progress < 0.5) return "ceiling";
+  if (progress < 0.18) return "plan";
+  if (progress < 0.32) return "floor";
+  if (progress < 0.44) return "walls";
+  if (progress < 0.55) return "ceiling";
   return "details";
 }
 
@@ -550,29 +556,28 @@ export function ScrollGalleryStory() {
       const state = storyFrame(progress);
       const stage = buildStage(progress);
       section.style.setProperty("--sgs-progress", progress.toFixed(4));
-      section.style.setProperty("--sgs-poster", (1 - range(progress, 0.015, 0.11)).toFixed(4));
       section.style.setProperty("--sgs-blueprint", state.blueprint.toFixed(4));
       section.style.setProperty(
         "--sgs-materials",
-        (range(progress, 0.47, 0.55) * (1 - range(progress, 0.65, 0.7))).toFixed(4),
+        (range(progress, 0.5, 0.57) * (1 - range(progress, 0.67, 0.73))).toFixed(4),
       );
       section.style.setProperty(
         "--sgs-curation",
-        (range(progress, 0.62, 0.69) * (1 - range(progress, 0.83, 0.87))).toFixed(4),
+        (range(progress, 0.65, 0.72) * (1 - range(progress, 0.86, 0.91))).toFixed(4),
       );
       section.style.setProperty("--sgs-finale", state.finale.toFixed(4));
       section.dataset.buildStage = stage;
-      section.dataset.panel = progress < 0.46
+      section.dataset.panel = progress < 0.48
         ? "build"
-        : progress < 0.65
+        : progress < 0.68
           ? "materials"
-          : progress < 0.84
+          : progress < 0.88
             ? "curation"
             : "none";
       updateChapter(state.chapter);
       if (buildLabelRef.current) buildLabelRef.current.textContent = BUILD_COPY[stage];
 
-      const blueprintDraw = range(progress, 0.04, 0.24);
+      const blueprintDraw = range(progress + 0.055, 0, 0.22);
       blueprintRoot.visible = modelReady && state.blueprint > 0.002;
       blueprintLines.forEach((lines, index) => {
         const local = range(blueprintDraw, index * 0.018, 0.58 + index * 0.018);
@@ -605,7 +610,7 @@ export function ScrollGalleryStory() {
       const pose = storyCamera(progress, compact);
       cameraPosition.fromArray(pose.position);
       cameraTarget.fromArray(pose.target);
-      const shouldInteract = modelReady && progress >= 0.94;
+      const shouldInteract = modelReady && progress >= 0.985;
       if (shouldInteract && !interactive) {
         visitorPosition.copy(cameraPosition);
         visitorPosition.y = 1.75;
@@ -639,7 +644,7 @@ export function ScrollGalleryStory() {
       measuredViewportWidth = viewportWidth;
       const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
       storyTop = section.getBoundingClientRect().top + window.scrollY;
-      const visitorDwell = viewportHeight * (compact ? 1.05 : 0.9);
+      const visitorDwell = viewportHeight * (compact ? 1.25 : 1.15);
       storyTravel = Math.max(1, section.offsetHeight - viewportHeight - visitorDwell);
     };
 
@@ -652,16 +657,20 @@ export function ScrollGalleryStory() {
       if (!hasProgress) {
         renderedProgress = targetProgress;
         hasProgress = true;
-      } else if (!interactive || targetProgress < 0.92) {
+      } else if (!interactive || targetProgress < 0.965) {
         const elapsed = previousFrameAt ? Math.min(64, frameAt - previousFrameAt) : 16.67;
-        const response = compact ? 175 : 190;
-        renderedProgress += (targetProgress - renderedProgress) * (1 - Math.exp(-elapsed / response));
-        if (Math.abs(targetProgress - renderedProgress) < 0.00035) renderedProgress = targetProgress;
+        renderedProgress = advanceStoryProgress(
+          renderedProgress,
+          targetProgress,
+          elapsed,
+          compact,
+        );
       }
+      if (interactive && targetProgress < 0.92) setInteractive(false);
       previousFrameAt = frameAt;
       const walkingToPoint = updateVisitorDestination(frameAt);
-      const holdVisitorCamera = interactive && targetProgress >= 0.92;
-      renderProgress(holdVisitorCamera ? Math.max(0.94, renderedProgress) : renderedProgress);
+      const holdVisitorCamera = interactive && targetProgress >= 0.965;
+      renderProgress(holdVisitorCamera ? 1 : renderedProgress);
       if (
         walkingToPoint ||
         (!holdVisitorCamera && Math.abs(targetProgress - renderedProgress) >= 0.00035)
@@ -808,10 +817,13 @@ export function ScrollGalleryStory() {
         requestRender();
         return;
       }
-      if (value === "q" || value === "arrowup" || value === "r" || value === "arrowdown") {
+      if (VISITOR_LOOK_CODES.has(event.code)) {
         event.preventDefault();
-        const up = value === "q" || value === "arrowup";
-        visitorPitch = THREE.MathUtils.clamp(visitorPitch + (up ? 0.09 : -0.09), -0.9, 0.9);
+        visitorPitch = THREE.MathUtils.clamp(
+          visitorPitch + visitorLookDirection(new Set([event.code])) * 0.09,
+          -0.9,
+          0.9,
+        );
         requestRender();
         return;
       }
@@ -981,7 +993,7 @@ export function ScrollGalleryStory() {
           <div>
             <p><i /> Live walk preview</p>
             <strong>
-              <span className="sgs__desktop-controls">W/S move · A/D strafe · Q/R or ↑↓ look · ←→ turn</span>
+              <span className="sgs__desktop-controls">{VISITOR_KEYBOARD_HINT}</span>
               <span className="sgs__mobile-controls">Drag to look · Tap floor to walk · Pinch to zoom</span>
             </strong>
             <a href="#/demo" tabIndex={-1}>Open full room <span>→</span></a>

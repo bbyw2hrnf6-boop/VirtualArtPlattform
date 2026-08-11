@@ -1,13 +1,12 @@
 .sgs {
   --sgs-progress: 0;
-  --sgs-poster: 1;
   --sgs-blueprint: 0;
   --sgs-materials: 0;
   --sgs-curation: 0;
   --sgs-finale: 0;
   position: relative;
-  height: 760svh;
-  min-height: 5700px;
+  height: 1000svh;
+  min-height: 7600px;
   overflow: clip;
   color: #f2f0e9;
   background: #0c0f0d;
@@ -63,7 +62,7 @@
 .sgs__poster {
   z-index: 2;
   overflow: hidden;
-  opacity: var(--sgs-poster);
+  opacity: 0;
   pointer-events: none;
   transition: opacity 180ms linear;
 }
@@ -137,7 +136,7 @@
   width: min(600px, calc(100vw - 48px));
   opacity: 0;
   transform: translateY(24px);
-  transition: opacity 260ms ease, transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: opacity 140ms ease, transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .sgs__chapters article[data-active="true"] {
@@ -467,6 +466,24 @@
 .sgs__visitor-pad button:nth-child(3) { grid-column: 2; grid-row: 2; }
 .sgs__visitor-pad button:nth-child(4) { grid-column: 3; grid-row: 2; }
 
+@media (min-width: 721px) {
+  .sgs[data-interactive="true"] .sgs__chapters article[data-active="true"] {
+    width: min(430px, 38vw);
+  }
+
+  .sgs[data-interactive="true"] .sgs__chapters h2 {
+    font-size: clamp(48px, 4.6vw, 72px);
+  }
+
+  .sgs[data-interactive="true"] .sgs__chapters article > span {
+    max-width: 380px;
+  }
+
+  .sgs[data-interactive="true"] .sgs__visitor {
+    width: min(540px, 48vw);
+  }
+}
+
 .sgs__accessible-sequence {
   position: absolute;
   width: 1px;
@@ -480,8 +497,8 @@
 
 @media (max-width: 720px) {
   .sgs {
-    height: 850svh;
-    min-height: 6100px;
+    height: 1100svh;
+    min-height: 7800px;
   }
 
   .sgs__sticky {

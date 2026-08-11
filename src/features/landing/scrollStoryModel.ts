@@ -27,7 +27,7 @@ export const smoothstep = (value: number) => {
 export const range = (value: number, start: number, end: number) =>
   smoothstep((value - start) / (end - start));
 
-const CHAPTER_CENTERS = [0.04, 0.2, 0.39, 0.58, 0.74, 0.93] as const;
+const CHAPTER_CENTERS = [0.06, 0.23, 0.4, 0.57, 0.75, 0.96] as const;
 
 export function storyFrame(rawProgress: number): StoryFrame {
   const progress = clamp01(rawProgress);
@@ -42,15 +42,40 @@ export function storyFrame(rawProgress: number): StoryFrame {
   });
   return {
     chapter,
-    blueprint: range(progress, 0.04, 0.24) * (1 - range(progress, 0.34, 0.47)),
-    floor: range(progress, 0.2, 0.31),
-    wall: range(progress, 0.29, 0.41),
-    ceiling: range(progress, 0.39, 0.5),
-    detail: range(progress, 0.47, 0.6),
-    artwork: range(progress, 0.57, 0.7),
-    lighting: range(progress, 0.5, 0.67),
-    finale: range(progress, 0.88, 0.95),
+    blueprint: 1 - range(progress, 0.3, 0.45),
+    floor: range(progress, 0.18, 0.32),
+    wall: range(progress, 0.29, 0.44),
+    ceiling: range(progress, 0.41, 0.55),
+    detail: range(progress, 0.5, 0.65),
+    artwork: range(progress, 0.59, 0.73),
+    lighting: range(progress, 0.52, 0.72),
+    finale: range(progress, 0.9, 0.985),
   };
+}
+
+/**
+ * Advances the cinematic playhead toward the document scroll target. The
+ * response keeps ordinary scrolling direct while the rate cap prevents a
+ * wheel burst from skipping whole construction stages in one frame.
+ */
+export function advanceStoryProgress(
+  current: number,
+  target: number,
+  elapsedMs: number,
+  compact = false,
+) {
+  const from = clamp01(current);
+  const to = clamp01(target);
+  const difference = to - from;
+  if (Math.abs(difference) < 0.00035) return to;
+  const elapsed = Math.min(64, Math.max(0, elapsedMs));
+  const responseMs = compact ? 300 : 270;
+  const easedStep = difference * (1 - Math.exp(-elapsed / responseMs));
+  const maxStep = (compact ? 0.44 : 0.5) * (elapsed / 1000);
+  const step = Math.sign(easedStep) * Math.min(Math.abs(easedStep), maxStep);
+  const next = from + step;
+  if ((difference > 0 && next >= to) || (difference < 0 && next <= to)) return to;
+  return clamp01(next);
 }
 
 const mix = (start: number, end: number, amount: number) => start + (end - start) * amount;
@@ -64,16 +89,16 @@ function mixPose(from: CameraPose, to: CameraPose, amount: number): CameraPose {
 
 const DESKTOP_BUILD: Array<{ at: number; pose: CameraPose }> = [
   { at: 0, pose: { position: [10.2, 9.6, 14.6], target: [0, 0.7, -0.8] } },
-  { at: 0.22, pose: { position: [8.8, 8.8, 13.2], target: [0, 0.9, -0.8] } },
-  { at: 0.42, pose: { position: [0, 3.55, 6.15], target: [0, 1.35, -1.8] } },
-  { at: 0.64, pose: { position: [0, 2.75, 4.1], target: [0, 1.75, -1] } },
+  { at: 0.23, pose: { position: [8.8, 8.8, 13.2], target: [0, 0.9, -0.8] } },
+  { at: 0.44, pose: { position: [0, 3.55, 6.15], target: [0, 1.35, -1.8] } },
+  { at: 0.66, pose: { position: [0, 2.75, 4.1], target: [0, 1.75, -1] } },
 ];
 
 const MOBILE_BUILD: Array<{ at: number; pose: CameraPose }> = [
   { at: 0, pose: { position: [8.7, 8.2, 13.8], target: [0, 1.2, -0.8] } },
-  { at: 0.22, pose: { position: [7.4, 7.6, 12.4], target: [0, 1, -0.8] } },
-  { at: 0.42, pose: { position: [0, 3.35, 6.15], target: [0, 1.35, -1.8] } },
-  { at: 0.64, pose: { position: [0, 2.9, 3.6], target: [0, 1.75, -1.2] } },
+  { at: 0.23, pose: { position: [7.4, 7.6, 12.4], target: [0, 1, -0.8] } },
+  { at: 0.44, pose: { position: [0, 3.35, 6.15], target: [0, 1.35, -1.8] } },
+  { at: 0.66, pose: { position: [0, 2.9, 3.6], target: [0, 1.75, -1.2] } },
 ];
 
 /** A continuous build-to-orbit camera. The 360-degree flight starts and ends
@@ -81,15 +106,15 @@ const MOBILE_BUILD: Array<{ at: number; pose: CameraPose }> = [
 export function storyCamera(rawProgress: number, compact = false): CameraPose {
   const progress = clamp01(rawProgress);
   const build = compact ? MOBILE_BUILD : DESKTOP_BUILD;
-  if (progress < 0.64) {
+  if (progress < 0.66) {
     const nextIndex = Math.max(1, build.findIndex(({ at }) => at >= progress));
     const previous = build[nextIndex - 1];
     const next = build[nextIndex];
     return mixPose(previous.pose, next.pose, range(progress, previous.at, next.at));
   }
 
-  const orbitEnd = 0.88;
-  const orbit = range(progress, 0.64, orbitEnd);
+  const orbitEnd = 0.9;
+  const orbit = range(progress, 0.66, orbitEnd);
   const angle = orbit * Math.PI * 2;
   const radius = compact ? 4.8 : 5.1;
   const centerZ = compact ? -1.2 : -1;

@@ -28,6 +28,7 @@ import {
 import { createGalleryDraft } from "./features/gallery/editor/draftDefaults";
 import { createDemoCollectionDraft } from "./features/gallery/editor/demoCollection";
 import type { GallerySceneCapture } from "./features/gallery/GalleryScene";
+import { VISITOR_KEYBOARD_HINT } from "./features/gallery/visitorKeyboard";
 import {
   DEFAULT_ARTWORK_EYE_LINE_METRES,
   PLACEMENT_GRID_STEP_METRES,
@@ -3386,7 +3387,7 @@ function MovementHint({ viewMode }: { viewMode: ViewMode }) {
     <div className="movement-hint" role="note">
       <span className="movement-hint__desktop">
         {viewMode === "walk"
-          ? "W/S move · A/D strafe · Q/R or ↑↓ look · ←→ turn · Click floor to move"
+          ? `${VISITOR_KEYBOARD_HINT} · Click floor to move`
           : "Drag to orbit · Scroll to zoom"}
       </span>
       <span className="movement-hint__mobile">
@@ -3684,9 +3685,8 @@ function PublishedGallery({ id }: { id: string }) {
 
 export default function App() {
   const [route, setRoute] = useState(routeFromHash);
-  const previousRoute = useRef(
-    `${route.page}:${route.id ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`,
-  );
+  const routeKey = `${route.page}:${route.id ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`;
+  const previousRoute = useRef(routeKey);
   useEffect(() => {
     const handler = () => setRoute(routeFromHash());
     addEventListener("hashchange", handler);
@@ -3703,14 +3703,13 @@ export default function App() {
             : route.page === "data"
               ? "MVP data and rights | AURA"
               : "Virtual exhibition | AURA";
-    const routeKey = `${route.page}:${route.id ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`;
     if (previousRoute.current === routeKey) return;
     previousRoute.current = routeKey;
     const frame = requestAnimationFrame(() =>
       document.getElementById("main-content")?.focus({ preventScroll: true }),
     );
     return () => cancelAnimationFrame(frame);
-  }, [route]);
+  }, [route, routeKey]);
   const page = useMemo(() => {
     if (route.page === "create")
       return route.template ? (
@@ -3748,7 +3747,12 @@ export default function App() {
         Skip to content
       </a>
       <div id="main-content" tabIndex={-1}>
-        {page}
+        <Suspense
+          key={routeKey}
+          fallback={<div className="loading" role="status" aria-live="polite">Preparing your space…</div>}
+        >
+          {page}
+        </Suspense>
       </div>
     </>
   );

@@ -30,6 +30,11 @@ import {
   IDLE_VISITOR_TOUR,
   type VisitorTourState,
 } from "./visitorTourState";
+import {
+  VISITOR_KEYBOARD_CODES,
+  VISITOR_KEYBOARD_HINT,
+  visitorLookDirection,
+} from "./visitorKeyboard";
 
 const PAVILION_DIVIDER_WIDTH = 14;
 const PAVILION_DIVIDER_Z = 0;
@@ -2189,25 +2194,13 @@ function createFirstPersonWalk(
   let enabled = true;
   let destination: THREE.Vector3 | null = null;
   let blockedFrames = 0;
-  const movementKeys = [
-    "KeyW",
-    "KeyA",
-    "KeyS",
-    "KeyD",
-    "ArrowUp",
-    "ArrowDown",
-    "ArrowLeft",
-    "ArrowRight",
-    "KeyQ",
-    "KeyR",
-  ];
   const keyDown = (event: KeyboardEvent) => {
     if (event.code === "Escape") {
       event.preventDefault();
       onEscape?.();
       return;
     }
-    if (movementKeys.includes(event.code)) {
+    if (VISITOR_KEYBOARD_CODES.has(event.code)) {
       if (!enabled) {
         onUserIntent?.();
         return;
@@ -2352,9 +2345,7 @@ function createFirstPersonWalk(
       yaw += turnDirection * 1.72 * delta;
       camera.rotation.set(pitch, yaw, 0, "YXZ");
     }
-    const lookDirection =
-      (keys.has("KeyQ") || keys.has("ArrowUp") ? 1 : 0) -
-      (keys.has("KeyR") || keys.has("ArrowDown") ? 1 : 0);
+    const lookDirection = visitorLookDirection(keys);
     if (lookDirection) {
       pitch = THREE.MathUtils.clamp(pitch + lookDirection * 1.15 * delta, -1.22, 1.22);
       camera.rotation.set(pitch, yaw, 0, "YXZ");
@@ -4976,10 +4967,10 @@ function GallerySceneRenderer({
         <span className="movement-hint__desktop">
           {visitor
             ? viewMode === "walk"
-              ? "W/S move · A/D strafe · Q/R or ↑↓ look · ←→ turn · Drag to look"
+              ? `${VISITOR_KEYBOARD_HINT} · Drag to look`
               : "Dollhouse overview · Walls fade as you orbit · Scroll or pinch to zoom"
             : editorMode === "walk"
-              ? "Walk preview · W/S move · A/D strafe · Q/R or ↑↓ look · Click floor to move"
+              ? `Walk preview · ${VISITOR_KEYBOARD_HINT} · Click floor to move`
               : selectedDecorId
                 ? "Drag object · Click floor to place · Camera stays here"
                 : selectedId
@@ -5116,7 +5107,6 @@ export function DannyDemoScene({
     onViewModeChange,
   });
   const [sceneReady, setSceneReady] = useState(false);
-  const [tourActive, setTourActive] = useState(false);
   const [tourState, setTourState] = useState<VisitorTourState>(IDLE_VISITOR_TOUR);
   const [smartViewLabel, setSmartViewLabel] = useState("Authored views");
   useEffect(() => {
@@ -5185,7 +5175,6 @@ export function DannyDemoScene({
     element.dataset.lightingPreset = "pitch-neutral-v3";
     element.dataset.toneMappingExposure =
       renderer.toneMappingExposure.toFixed(2);
-    element.style.setProperty("--danny-tour-progress", "0");
     element.appendChild(renderer.domElement);
 
     const roomEnvironment = new RoomEnvironment();
@@ -5408,7 +5397,6 @@ export function DannyDemoScene({
       element.dataset.guidedTour = playing ? "playing" : "idle";
       element.dataset.lastTourResult = result;
       if (!destroyed) {
-        setTourActive(playing);
         if (!playing) setTourState(IDLE_VISITOR_TOUR);
       }
     };
@@ -5445,8 +5433,6 @@ export function DannyDemoScene({
         walkState.fov = camera.fov;
       }
       setGuidedTourState(false, result);
-      if (result !== "completed")
-        element.style.setProperty("--danny-tour-progress", "0");
       resumeInteraction();
     };
     const progressForDannyPose = (poseIndex: number) => {
@@ -5667,7 +5653,6 @@ export function DannyDemoScene({
         walkState.fov = camera.fov;
         element.dataset.smartViewLabel = featured.label;
         element.dataset.lastTourResult = "reduced-instant";
-        element.style.setProperty("--danny-tour-progress", "1");
         setSmartViewLabel(featured.label);
         setGuidedTourState(false, "reduced-instant");
         resumeInteraction();
@@ -5695,7 +5680,6 @@ export function DannyDemoScene({
         segment: -1,
         lastUiUpdate: 0,
       };
-      element.style.setProperty("--danny-tour-progress", "0");
       setGuidedTourState(true);
       publishDannyTourState("playing", 0, 0);
     };
@@ -6466,7 +6450,6 @@ export function DannyDemoScene({
         camera.updateProjectionMatrix();
         activeTour = null;
         setGuidedTourState(false, "reduced-instant");
-        element.style.setProperty("--danny-tour-progress", "1");
         resumeInteraction();
       }
       modeTransition?.finish();
@@ -6496,7 +6479,7 @@ export function DannyDemoScene({
       previousFrame = now;
       intro?.update();
       if (!reducedMotion.matches) mixer?.update(delta);
-      if (activeTour) {
+      if (activeTour && activeTour.pausedAt === undefined) {
         const raw = Math.min(
           1,
           (now - activeTour.startedAt) / activeTour.duration,
@@ -6528,7 +6511,6 @@ export function DannyDemoScene({
         );
         camera.fov = 58 + Math.sin(local * Math.PI) * 1.25;
         camera.updateProjectionMatrix();
-        element.style.setProperty("--danny-tour-progress", String(raw));
         if (activeTour.segment !== segment || now - activeTour.lastUiUpdate > 120) {
           activeTour.segment = segment;
           activeTour.lastUiUpdate = now;
@@ -6624,7 +6606,7 @@ export function DannyDemoScene({
         tour={tourState}
         tourAvailable={sceneReady && viewMode === "walk"}
         onStartOrSkipTour={() =>
-          tourActive
+          tourState.status !== "idle"
             ? modeRuntime.current?.skipGuidedTour()
             : modeRuntime.current?.startGuidedTour()
         }
@@ -6642,7 +6624,7 @@ export function DannyDemoScene({
       <div className="scene-hint">
         <span className="movement-hint__desktop">
           {viewMode === "walk"
-            ? "Danny Hirsch Arts · W/S move · A/D strafe · Q/R or ↑↓ look · ←→ turn"
+            ? `Danny Hirsch Arts · ${VISITOR_KEYBOARD_HINT}`
             : "Danny Hirsch Arts · Open-roof dollhouse overview"}
         </span>
         <span className="movement-hint__mobile">

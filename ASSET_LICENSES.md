@@ -25,15 +25,7 @@ The three images in `public/assets/templates/` are AURA-specific concept-directi
 
 ## Material images
 
-The original material images below do not have source and license records committed alongside them. They are retained as legacy files, but must not be used by the runtime or redistributed as licensed AURA assets:
-
-- `public/assets/materials/american-walnut-v1.webp`
-- `public/assets/materials/carrara-marble.webp`
-- `public/assets/materials/nero-marquina-v1.webp`
-- `public/assets/materials/roman-travertine.webp`
-- `public/assets/materials/smoked-oak-v1.webp`
-
-They have been replaced in the runtime by five new `aura-*-v2.webp` base-color textures generated specifically for AURA. Their generation record, exact material requests, processing details, and checksums are committed in [`public/assets/materials/README.md`](./public/assets/materials/README.md). The generated files are albedo only; no PBR map is implied.
+Unlicensed legacy material images and superseded generated variants were removed from the repository. The runtime uses only the AURA-generated base-color textures documented with generation records and checksums in [`public/assets/materials/README.md`](./public/assets/materials/README.md). The generated files are albedo only; no PBR map is implied.
 
 ## Fonts
 

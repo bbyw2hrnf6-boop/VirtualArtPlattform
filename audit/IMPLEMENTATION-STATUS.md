@@ -4,7 +4,10 @@ Stand: 11. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapsh
 
 ## Verifiziertes Ergebnis
 
-- `npm run check`: grün; 75 Tests bestehen.
+- `npm run check`: grün; 80 Tests bestehen.
+- Der Emil Scroll beginnt nun direkt mit `01 · Blueprint`, baut ausschließlich DannyHirschArts in sechs synchronisierten Kapiteln auf und endet in einer scharfen begehbaren Live-Szene. Ein geglätteter, richtungsstabiler Playhead mit Fortschrittslimit verhindert Sprünge bei aggressivem Scrollen; die alte statische Posterphase bleibt nur als Lade-/Fehlerfallback.
+- Q/E und Pfeil hoch/runter bilden einen gemeinsamen getesteten Keyboard-Vertrag für Landing, Builder, veröffentlichte Räume und Danny. Alte Q/R-Hinweise und die separate Danny-Tour-Aktivitätsvariable wurden entfernt; die gemeinsame `VisitorControls`-Komponente bleibt die einzige Tour-Oberfläche.
+- Zwölf nach Referenz- und Hashprüfung ungenutzte Legacy-/Zwischenassets wurden entfernt. Lizenz- und Asset-Dokumentation sowie die bestehende Browser-QA verwenden jetzt die aktuellen gemeinsamen Selektoren.
 - Ein gemeinsames Visitor-Control-System vereinheitlicht Danny, öffentliche Räume und Builder Walk Preview. Guided Tours besitzen nun denselben Playback-Vertrag; prozedurale Räume nutzen generierte Artwork-Stops, Danny weiterhin authored Routen.
 - Mehrere lokale Projekte pro Template, Legacy-Migration und ein expliziter Publish-State verhindern das Überschreiben einzelner Template-Slots und den früheren widersprüchlichen Post-Publish-Zustand.
 - Die P0-Sichtprüfung wurde erneut bei exakt 1440 × 1000 und 390 × 844 durchgeführt. Landing/Emil Scroll, Picker, alle drei Templates, Danny, ein bestehender veröffentlichter Raum, Arrange, Walk Preview, Walk, Overview, Guided Tour und Publish Review wurden im Browser geprüft.
@@ -70,6 +73,7 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 ## Bewusst verbleibende technische Grenzen
 
+- Ein frischer Safari-Load eines älteren veröffentlichten Firestore-Raums beendete im lokalen Production-Preview den WebContent-Prozess nach dem Metadaten-Load; derselbe Raum und die gemeinsame Tour-Oberfläche liefen in Chromium. Vor P1 muss geprüft werden, ob die alten unkomprimierten Artwork-Data-URLs Safaris Textur-/Speicherbudget überschreiten.
 - Die Builder-Räume bleiben derzeit prozedural. Der Vertrag ist real, die Migration noch nicht.
 - Kollision ist swept AABB, kein Navmesh-Pathfinding. Click-to-walk lehnt blockierte Direktziele ab, plant aber keinen Weg um mehrere Hindernisse.
 - Die Materialbibliothek verwendet dokumentierte Albedo-Texturen und physikalische Materialparameter, aber noch keine scanbasierten Normal-/Roughness-/AO-Sets.

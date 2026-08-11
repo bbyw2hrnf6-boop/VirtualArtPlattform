@@ -488,31 +488,31 @@ await waitFor(
   16000,
 );
 await waitFor(
-  `document.querySelector('[data-danny-smart-view]') && !document.querySelector('[data-danny-smart-view]').disabled`,
+  `document.querySelector('[data-visitor-smart-view]') && !document.querySelector('[data-visitor-smart-view]').disabled`,
   5000,
 );
-await evaluate(`document.querySelector('[data-danny-smart-view]')?.click()`);
+await evaluate(`document.querySelector('[data-visitor-smart-view]')?.click()`);
 await waitFor(
   `document.querySelector('.gallery-scene')?.dataset.smartView && document.querySelector('.gallery-scene')?.dataset.smartView !== 'reset'`,
   3000,
 );
-await evaluate(`document.querySelector('[data-danny-tour-control]')?.click()`);
+await evaluate(`document.querySelector('[data-visitor-tour-control]')?.click()`);
 await waitFor(
-  `document.querySelector('[data-danny-tour-control]')?.getAttribute('aria-pressed') === 'true'`,
+  `document.querySelector('[data-visitor-tour-control]')?.getAttribute('aria-pressed') === 'true'`,
   2000,
 );
 const tourActive = await evaluate(
-  `document.querySelector('[data-danny-tour-control]')?.innerText`,
+  `document.querySelector('[data-visitor-tour-control]')?.innerText`,
 );
-await evaluate(`document.querySelector('[data-danny-tour-control]')?.click()`);
+await evaluate(`document.querySelector('[data-visitor-tour-control]')?.click()`);
 await waitFor(
-  `document.querySelector('[data-danny-tour-control]')?.getAttribute('aria-pressed') === 'false'`,
+  `document.querySelector('[data-visitor-tour-control]')?.getAttribute('aria-pressed') === 'false'`,
   2000,
 );
-await evaluate(`document.querySelector('[data-danny-reset-view]')?.click()`);
+await evaluate(`document.querySelector('[data-visitor-reset-view]')?.click()`);
 await wait(180);
 report.dannyControls = await evaluate(`({
-  controls: document.querySelectorAll('[data-danny-controls] button').length,
+  controls: document.querySelectorAll('[data-visitor-controls] button').length,
   anchors: Number(document.querySelector('.gallery-scene')?.dataset.viewAnchors),
   smartViews: Number(document.querySelector('.gallery-scene')?.dataset.smartViewCount),
   routes: Number(document.querySelector('.gallery-scene')?.dataset.routeWaypoints),
@@ -522,7 +522,7 @@ report.dannyControls = await evaluate(`({
 })`);
 check(
   "Danny demo exposes guided tour, smart views, routes and reset on one canvas",
-  report.dannyControls.controls === 3 &&
+  report.dannyControls.controls >= 6 &&
     report.dannyControls.anchors >= 14 &&
     report.dannyControls.smartViews >= 14 &&
     report.dannyControls.routes >= 8 &&

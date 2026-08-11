@@ -76,6 +76,7 @@ export function VisitorControls<TMode extends string>({
       <div className="visitor-controls__actions" role="group" aria-label="Camera and tour controls">
         <button
           type="button"
+          data-visitor-tour-control
           className={`visitor-controls__tour${tourRunning ? " is-active" : ""}`}
           disabled={!tourAvailable && !tourRunning}
           aria-pressed={tourRunning}
@@ -91,11 +92,16 @@ export function VisitorControls<TMode extends string>({
           </small>
           <i aria-hidden="true" />
         </button>
-        <button type="button" disabled={!tourAvailable || tourRunning} onClick={onSmartView}>
+        <button
+          type="button"
+          data-visitor-smart-view
+          disabled={!tourAvailable || tourRunning}
+          onClick={onSmartView}
+        >
           <span>Smart view</span>
           <small>{smartViewLabel}</small>
         </button>
-        <button type="button" onClick={onResetView}>
+        <button type="button" data-visitor-reset-view onClick={onResetView}>
           <span>Reset view</span>
           <small>Return to start</small>
         </button>
