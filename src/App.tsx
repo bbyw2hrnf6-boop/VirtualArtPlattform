@@ -62,6 +62,7 @@ import {
   galleryRepository,
   type GalleryRecord,
 } from "./services/galleryRepository";
+import { galleryShareUrl } from "./services/galleryShareUrl";
 
 const GalleryScene = lazy(() =>
   import("./features/gallery/GalleryScene").then((module) => ({
@@ -1015,8 +1016,6 @@ function Studio({
   >("checking");
   const [toolSheet, setToolSheet] = useState<"peek" | "half" | "full">("half");
   const [editorDirectoryOpen, setEditorDirectoryOpen] = useState(false);
-  const [successDirectoryOpen, setSuccessDirectoryOpen] = useState(false);
-  const [successViewMode, setSuccessViewMode] = useState<ViewMode>("walk");
   const wallFocusToken = useRef(0);
   const decorInsertion = useRef({ x: 0, z: 1 });
   const saveRevision = useRef(0);
@@ -1024,7 +1023,6 @@ function Studio({
   const publishAttemptInFlight = useRef(false);
   const publishButton = useRef<HTMLButtonElement>(null);
   const editorDirectoryButton = useRef<HTMLButtonElement>(null);
-  const successDirectoryButton = useRef<HTMLButtonElement>(null);
   const previousToolSheet = useRef<"peek" | "half" | "full">("half");
   const sceneCapture = useRef<GallerySceneCapture | null>(null);
   const selected = draft.artworks.find((item) => item.id === selectedId);
@@ -1690,80 +1688,93 @@ function Studio({
   };
 
   if (published) {
-    const url = `${location.href.split("#")[0]}#/g/${published.id}`;
+    const url = galleryShareUrl(published.id, window.location.href);
+    const expiry = new Intl.DateTimeFormat(undefined, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(published.expiresAt));
+    const coverSrc = published.coverSrc ?? publishCover;
     return (
       <main className="publish-success">
-        <div>
+        <section
+          className="publish-success__panel"
+          aria-labelledby="publish-success-title"
+        >
           <Logo />
-          <p className="eyebrow">Gallery published · Live for 10 days</p>
-          <h1>
-            Your space is
-            <br />
-            <em>ready to share.</em>
-          </h1>
-          <p>
-            Anyone with this link can enter your exhibition. It also appears in
-            Discover for ten days.
-          </p>
-          <div className="share-field">
-            <input readOnly value={url} />
-            <button
-              onClick={() => {
-                const copy =
-                  navigator.clipboard?.writeText(url) ?? Promise.reject();
-                void copy
-                  .then(() => {
-                    setCopied(true);
-                    window.setTimeout(() => setCopied(false), 1800);
-                  })
-                  .catch(() => window.prompt("Copy your gallery link:", url));
-              }}
-            >
-              {copied ? "Copied ✓" : "Copy link"}
-            </button>
+          <div className="publish-success__copy">
+            <p className="eyebrow">Published successfully</p>
+            <h1 id="publish-success-title">
+              Your space is
+              <br />
+              <em>ready to share.</em>
+            </h1>
+            <p>
+              Anyone with this link can enter your exhibition. It remains in
+              Discover until {expiry}.
+            </p>
+            <div className="share-field">
+              <input
+                aria-label="Shareable gallery URL"
+                readOnly
+                spellCheck={false}
+                value={url}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const copy =
+                    navigator.clipboard?.writeText(url) ?? Promise.reject();
+                  void copy
+                    .then(() => {
+                      setCopied(true);
+                      window.setTimeout(() => setCopied(false), 1800);
+                    })
+                    .catch(() => window.prompt("Copy your gallery link:", url));
+                }}
+              >
+                {copied ? "Copied ✓" : "Copy link"}
+              </button>
+            </div>
+            <p className="publish-success__copy-status" aria-live="polite">
+              {copied ? "Gallery link copied to the clipboard." : ""}
+            </p>
+            <div className="success-actions">
+              <a className="button button--light" href={url}>
+                Enter the room <span aria-hidden="true">↗</span>
+              </a>
+              <button className="text-link" onClick={() => navigate("/")}>
+                View in Discover
+              </button>
+              <button
+                className="text-link"
+                onClick={() => {
+                  setPublished(undefined);
+                  transitionPublish({ type: "RESET" });
+                }}
+              >
+                Back to editor
+              </button>
+            </div>
           </div>
-          <div className="success-actions">
-            <button
-              className="button button--light"
-              onClick={() => navigate(`/g/${published.id}`)}
-            >
-              Open gallery ↗
-            </button>
-            <button className="text-link" onClick={() => navigate("/")}>
-              View in Discover
-            </button>
-            <button
-              className="text-link"
-              onClick={() => {
-                setPublished(undefined);
-                transitionPublish({ type: "RESET" });
-              }}
-            >
-              Back to editor
-            </button>
+        </section>
+        <section
+          className="publish-success__preview"
+          aria-label="Published gallery cover"
+        >
+          {coverSrc ? (
+            <img src={coverSrc} alt={`Published view of ${published.title}`} />
+          ) : (
+            <div className="publish-success__preview-empty" aria-hidden="true" />
+          )}
+          <span className="publish-success__preview-shade" aria-hidden="true" />
+          <div className="publish-success__preview-caption">
+            <p className="eyebrow">Now live</p>
+            <strong>{published.title}</strong>
+            <span>by {published.artist}</span>
           </div>
-        </div>
-        <GalleryScene
-          draft={published}
-          visitor
-          viewMode={successViewMode}
-          onViewModeChange={setSuccessViewMode}
-          artworkCount={editorDirectoryArtworks.length}
-          artworkDirectoryExpanded={successDirectoryOpen}
-          artworkButtonRef={successDirectoryButton}
-          onOpenArtworkDirectory={() => setSuccessDirectoryOpen(true)}
-        />
-        {successDirectoryOpen && (
-          <ArtworkDirectory
-            exhibitionTitle={published.title}
-            artist={published.artist}
-            artworks={editorDirectoryArtworks}
-            sourceNote="This is the visitor artwork directory for the published exhibition."
-            unavailable={false}
-            returnFocus={successDirectoryButton}
-            onClose={() => setSuccessDirectoryOpen(false)}
-          />
-        )}
+        </section>
       </main>
     );
   }
