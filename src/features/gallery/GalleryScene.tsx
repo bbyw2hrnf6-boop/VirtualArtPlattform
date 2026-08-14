@@ -2088,6 +2088,159 @@ function updateRoomSurface(
   }
 }
 
+type EnvironmentCard = {
+  position: [number, number, number];
+  scale: [number, number];
+  rotation: [number, number, number];
+  color: [number, number, number];
+};
+
+function createGalleryEnvironment(
+  renderer: THREE.WebGLRenderer,
+  templateId: GalleryDraft["templateId"],
+) {
+  const environmentScene = new THREE.Scene();
+  environmentScene.background = new THREE.Color(
+    templateId === "nocturne" ? "#050605" : "#161713",
+  );
+  const geometry = new THREE.PlaneGeometry(1, 1);
+  const shared: EnvironmentCard[] = [
+    {
+      position: [-4.2, 3.5, -0.8],
+      scale: [5.2, 2.5],
+      rotation: [0, Math.PI / 2, 0],
+      color: [5.6, 4.5, 3.2],
+    },
+    {
+      position: [4.1, 2.9, 1.2],
+      scale: [4.1, 2.2],
+      rotation: [0, -Math.PI / 2, 0],
+      color: [2.1, 2.8, 4.2],
+    },
+    {
+      position: [0, 5.2, -2.8],
+      scale: [6.4, 2.5],
+      rotation: [Math.PI / 2, 0, 0],
+      color: [4.8, 4.5, 3.9],
+    },
+    {
+      position: [0, 1.25, 4.6],
+      scale: [5.2, 2.2],
+      rotation: [-Math.PI / 2, 0, 0],
+      color: [0.9, 1, 1.25],
+    },
+  ];
+  const templateAccent: EnvironmentCard =
+    templateId === "nocturne"
+      ? {
+          position: [0.8, 2.4, -4.4],
+          scale: [2.6, 1.25],
+          rotation: [Math.PI / 2, 0, 0],
+          color: [5.8, 2.5, 0.9],
+        }
+      : templateId === "pavilion"
+        ? {
+            position: [-1.4, 4.8, 3.2],
+            scale: [5.8, 1.8],
+            rotation: [-Math.PI / 2, 0, 0],
+            color: [3.8, 3.25, 2.4],
+          }
+        : {
+            position: [1.1, 4.6, -3.5],
+            scale: [5.6, 1.9],
+            rotation: [Math.PI / 2, 0, 0],
+            color: [4.2, 5, 5.8],
+          };
+  [...shared, templateAccent].forEach((cardData) => {
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setRGB(...cardData.color),
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const card = new THREE.Mesh(geometry, material);
+    card.position.set(...cardData.position);
+    card.scale.set(...cardData.scale, 1);
+    card.rotation.set(...cardData.rotation);
+    environmentScene.add(card);
+  });
+  const generator = new THREE.PMREMGenerator(renderer);
+  generator.compileCubemapShader();
+  const target = generator.fromScene(environmentScene, 0.07, 0.1, 60);
+  generator.dispose();
+  environmentScene.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
+    materials.forEach((material) => material.dispose());
+  });
+  geometry.dispose();
+  return target;
+}
+
+function captureRoomEnvironment(
+  renderer: THREE.WebGLRenderer,
+  scene: THREE.Scene,
+  baseEnvironment: THREE.Texture,
+  position: THREE.Vector3,
+  far: number,
+) {
+  const previousEnvironment = scene.environment;
+  const cubeTarget = new THREE.WebGLCubeRenderTarget(128, {
+    type: THREE.HalfFloatType,
+    generateMipmaps: true,
+    minFilter: THREE.LinearMipmapLinearFilter,
+  });
+  const probe = new THREE.CubeCamera(0.2, far, cubeTarget);
+  probe.position.copy(position);
+  scene.environment = baseEnvironment;
+  scene.add(probe);
+  try {
+    probe.update(renderer, scene);
+    const generator = new THREE.PMREMGenerator(renderer);
+    const target = generator.fromCubemap(cubeTarget.texture);
+    generator.dispose();
+    return target;
+  } finally {
+    scene.remove(probe);
+    scene.environment = previousEnvironment;
+    cubeTarget.dispose();
+  }
+}
+
+function roomReflectionSignature(draft: GalleryDraft) {
+  return [
+    draft.wall,
+    draft.floor,
+    draft.ceiling ?? "gallery",
+    draft.lighting,
+    ...draft.artworks.map((artwork) =>
+      [
+        artwork.id,
+        artwork.src.length,
+        artwork.wall,
+        artwork.x,
+        artwork.y,
+        artwork.scale,
+        artwork.hidden ? 1 : 0,
+        artwork.frame ?? "black",
+      ].join(":"),
+    ),
+    ...draft.decor.map((item) =>
+      [
+        item.id,
+        item.type,
+        item.x,
+        item.z,
+        item.rotation,
+        item.scale,
+        item.potColor ?? "light",
+      ].join(":"),
+    ),
+  ].join("|");
+}
+
 function addLighting(
   scene: THREE.Scene,
   draft: GalleryDraft,
@@ -2099,21 +2252,47 @@ function addLighting(
 ) {
   const settings = {
     daylight: {
-      hemi: 1.1,
-      ambient: 0.5,
-      key: 2.25,
-      spot: 38,
+      hemi: 0.58,
+      ambient: 0.18,
+      key: 3.15,
+      spot: 46,
+      bounce: 2.4,
       color: "#fff8e9",
     },
-    museum: { hemi: 0.48, ambient: 0.44, key: 2.1, spot: 58, color: "#ffe6bd" },
+    museum: {
+      hemi: 0.34,
+      ambient: 0.13,
+      key: 2.7,
+      spot: 72,
+      bounce: 1.65,
+      color: "#ffe6bd",
+    },
     evening: {
-      hemi: 0.38,
-      ambient: 0.34,
-      key: 1.85,
-      spot: 48,
+      hemi: 0.22,
+      ambient: 0.09,
+      key: 2.25,
+      spot: 64,
+      bounce: 1.2,
       color: "#ffc987",
     },
   }[draft.lighting];
+  const templateTuning = {
+    "white-cube": { hemi: 1, ambient: 1, key: 1, spot: 1, bounce: 1 },
+    nocturne: {
+      hemi: 0.58,
+      ambient: 0.62,
+      key: 0.78,
+      spot: 1.18,
+      bounce: 0.72,
+    },
+    pavilion: {
+      hemi: 0.9,
+      ambient: 0.86,
+      key: 1.12,
+      spot: 1,
+      bounce: 1.14,
+    },
+  }[draft.templateId];
   // The environment stays neutral; only this room-owned rig changes presets.
   scene.background = new THREE.Color(
     draft.templateId === "nocturne"
@@ -2125,24 +2304,64 @@ function addLighting(
   const rig = new THREE.Group();
   rig.name = `room-lighting-${draft.templateId}-${draft.lighting}`;
   scene.add(rig);
+  const hemisphereGround =
+    draft.templateId === "nocturne"
+      ? "#070807"
+      : draft.templateId === "pavilion"
+        ? "#4a453e"
+        : "#77746b";
   rig.add(
-    new THREE.AmbientLight("#fffdf8", settings.ambient),
-    new THREE.HemisphereLight("#f4f2ea", "#d8d5cb", settings.hemi),
+    new THREE.AmbientLight(
+      "#fffdf8",
+      settings.ambient * templateTuning.ambient,
+    ),
+    new THREE.HemisphereLight(
+      "#f4f2ea",
+      hemisphereGround,
+      settings.hemi * templateTuning.hemi,
+    ),
   );
-  const main = new THREE.DirectionalLight(settings.color, settings.key);
-  main.position.set(0, h + 0.8, 0);
+  const main = new THREE.DirectionalLight(
+    settings.color,
+    settings.key * templateTuning.key,
+  );
+  main.position.set(-w * 0.28, h + 3.2, d * 0.22);
+  main.target.position.set(w * 0.05, 0.35, -d * 0.08);
   main.castShadow = true;
   main.shadow.mapSize.set(shadowMapSize, shadowMapSize);
-  main.shadow.bias = 0.00012;
-  main.shadow.normalBias = 0.025;
+  main.shadow.bias = -0.00018;
+  main.shadow.normalBias = 0.035;
+  main.shadow.radius = shadowMapSize >= 1024 ? 3 : 1.5;
   const shadowExtent = Math.max(w, d) * 0.52;
   main.shadow.camera.left = -shadowExtent;
   main.shadow.camera.right = shadowExtent;
   main.shadow.camera.top = shadowExtent;
   main.shadow.camera.bottom = -shadowExtent;
-  main.shadow.camera.far = h * 3;
+  main.shadow.camera.near = 0.5;
+  main.shadow.camera.far = Math.max(h * 4, 24);
   main.shadow.camera.updateProjectionMatrix();
-  rig.add(main);
+  rig.add(main, main.target);
+
+  const bounceStrength = settings.bounce * templateTuning.bounce;
+  const bounceLights = [
+    new THREE.RectAreaLight(
+      draft.lighting === "evening" ? "#ffd2a4" : "#edf5ff",
+      bounceStrength,
+      Math.min(7, d * 0.42),
+      Math.min(3.4, h * 0.72),
+    ),
+    new THREE.RectAreaLight(
+      draft.lighting === "daylight" ? "#fff2d8" : "#e7ddcf",
+      bounceStrength * 0.62,
+      Math.min(6, d * 0.34),
+      Math.min(3, h * 0.62),
+    ),
+  ];
+  bounceLights[0].position.set(-w * 0.43, h * 0.56, -d * 0.12);
+  bounceLights[0].lookAt(0, h * 0.34, 0);
+  bounceLights[1].position.set(w * 0.4, h * 0.48, d * 0.17);
+  bounceLights[1].lookAt(0, h * 0.3, -d * 0.08);
+  rig.add(...bounceLights);
 
   const artworkTargets = draft.artworks
     .filter((artwork) => !artwork.hidden)
@@ -2196,7 +2415,8 @@ function addLighting(
     spot: THREE.SpotLight;
     target: THREE.Object3D;
   }> = [];
-  lightTargets.forEach(({ artworkId, source, target }) => {
+  const shadowBudget = shadowMapSize >= 2048 ? 3 : shadowMapSize >= 1024 ? 2 : 1;
+  lightTargets.forEach(({ artworkId, source, target }, index) => {
     const direction = target.clone().sub(source).normalize();
     const mount = new THREE.Mesh(
       new THREE.CylinderGeometry(0.13, 0.13, 0.07, 24),
@@ -2230,7 +2450,7 @@ function addLighting(
     });
     const spot = new THREE.SpotLight(
       settings.color,
-      settings.spot,
+      settings.spot * templateTuning.spot,
       Math.max(12, h * 1.8),
       0.33,
       0.72,
@@ -2238,7 +2458,16 @@ function addLighting(
     );
     spot.position.copy(bulb.position);
     spot.target.position.copy(target);
-    spot.castShadow = false;
+    spot.castShadow = index < shadowBudget;
+    if (spot.castShadow) {
+      const spotShadowSize = Math.min(1024, shadowMapSize);
+      spot.shadow.mapSize.set(spotShadowSize, spotShadowSize);
+      spot.shadow.bias = -0.0003;
+      spot.shadow.normalBias = 0.025;
+      spot.shadow.radius = shadowMapSize >= 1024 ? 3 : 1;
+      spot.shadow.camera.near = 0.2;
+      spot.shadow.camera.far = Math.max(12, h * 1.8);
+    }
     rig.add(mount, stem, joint, head, bulb, spot, spot.target);
     installations.push({
       artworkId,
@@ -3228,7 +3457,7 @@ function GallerySceneRenderer({
     reducedMotion.addEventListener("change", updateMotionPreference);
     renderer.setPixelRatio(quality.dpr);
     renderer.shadowMap.enabled = quality.shadows;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure =
@@ -3260,13 +3489,18 @@ function GallerySceneRenderer({
     const focusCanvas = () =>
       renderer.domElement.focus({ preventScroll: true });
     renderer.domElement.addEventListener("pointerdown", focusCanvas);
-    const roomEnvironment = new RoomEnvironment();
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    const environment = pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
-    roomEnvironment.dispose();
-    pmremGenerator.dispose();
-    scene.environment = environment;
-    scene.environmentIntensity = quality.tier === "low" ? 0.56 : 0.7;
+    const baseEnvironmentTarget = createGalleryEnvironment(
+      renderer,
+      currentDraft.templateId,
+    );
+    const baseEnvironment = baseEnvironmentTarget.texture;
+    scene.environment = baseEnvironment;
+    scene.environmentIntensity =
+      quality.tier === "low"
+        ? 0.56
+        : currentDraft.templateId === "nocturne"
+          ? 0.66
+          : 0.74;
     const controls = new OrbitControls(camera, renderer.domElement);
     const largestDimension = Math.max(templateW, templateD);
     controls.enableDamping = true;
@@ -3483,6 +3717,110 @@ function GallerySceneRenderer({
       element.dataset.roofPreference = editorCutawayOpen ? "open" : "ceiling";
     };
     applyCutawayMode();
+    let reflectionEnvironmentTarget: THREE.WebGLRenderTarget | null = null;
+    let reflectionTimer = 0;
+    let reflectionFrame = 0;
+    const bakeRoomReflection = () => {
+      reflectionFrame = 0;
+      if (disposed || quality.tier === "low") return;
+      const visibility = new Map<THREE.Object3D, boolean>();
+      const materialStates = new Map<
+        THREE.Material,
+        {
+          transparent: boolean;
+          opacity: number;
+          depthWrite: boolean;
+          side: THREE.Side;
+        }
+      >();
+      const rememberVisibility = (object: THREE.Object3D, visible: boolean) => {
+        if (!visibility.has(object)) visibility.set(object, object.visible);
+        object.visible = visible;
+      };
+      const closeSurface = (mesh: THREE.Mesh) => {
+        const materials = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material];
+        materials.forEach((material) => {
+          if (!materialStates.has(material))
+            materialStates.set(material, {
+              transparent: material.transparent,
+              opacity: material.opacity,
+              depthWrite: material.depthWrite,
+              side: material.side,
+            });
+          material.transparent = false;
+          material.opacity = 1;
+          material.depthWrite = true;
+          material.side = THREE.FrontSide;
+          material.needsUpdate = true;
+        });
+      };
+      [roof, ceilingPlane, ceilingDetails].forEach((object) =>
+        rememberVisibility(object, true),
+      );
+      exteriorWalls.forEach(closeSurface);
+      architecture.traverse((object) => {
+        if (object.userData.hideInCutaway) rememberVisibility(object, true);
+        if (object.userData.roomPartition && (object as THREE.Mesh).isMesh)
+          closeSurface(object as THREE.Mesh);
+      });
+      lighting.rig.traverse((object) => {
+        if (object.userData.hideInCutaway) rememberVisibility(object, true);
+      });
+      scene.traverse((object) => {
+        if (
+          object === walkMarker ||
+          object.name === "decor-selection-marker" ||
+          object.name === "artwork-selection-marker"
+        )
+          rememberVisibility(object, false);
+      });
+      let nextTarget: THREE.WebGLRenderTarget | null = null;
+      try {
+        nextTarget = captureRoomEnvironment(
+          renderer,
+          scene,
+          baseEnvironment,
+          new THREE.Vector3(0, h * 0.48, 0),
+          Math.max(w, d) * 1.8,
+        );
+      } catch {
+        element.dataset.reflections = "light-card-pmrem";
+      } finally {
+        visibility.forEach((visible, object) => {
+          object.visible = visible;
+        });
+        materialStates.forEach((state, material) => {
+          material.transparent = state.transparent;
+          material.opacity = state.opacity;
+          material.depthWrite = state.depthWrite;
+          material.side = state.side;
+          material.needsUpdate = true;
+        });
+      }
+      if (!nextTarget) return;
+      const previous = reflectionEnvironmentTarget;
+      reflectionEnvironmentTarget = nextTarget;
+      scene.environment = nextTarget.texture;
+      previous?.dispose();
+      renderer.shadowMap.needsUpdate = true;
+      element.dataset.reflections = "room-probe";
+    };
+    const scheduleRoomReflection = () => {
+      if (quality.tier === "low") {
+        element.dataset.reflections = "light-card-pmrem";
+        return;
+      }
+      window.clearTimeout(reflectionTimer);
+      if (reflectionFrame) cancelAnimationFrame(reflectionFrame);
+      element.dataset.reflections = "room-probe-pending";
+      reflectionTimer = window.setTimeout(() => {
+        reflectionTimer = 0;
+        reflectionFrame = requestAnimationFrame(bakeRoomReflection);
+      }, 420);
+    };
+    scheduleRoomReflection();
     let modeTransition: ModeTransition | null = null;
     let orbitAnimation: {
       start: number;
@@ -4210,6 +4548,8 @@ function GallerySceneRenderer({
       nextSelectedId?: string,
       nextSelectedDecorId?: string,
     ) => {
+      const reflectionChanged =
+        roomReflectionSignature(currentDraft) !== roomReflectionSignature(next);
       const previousCollisionKey = currentDraft.decor
         .map(
           (item) =>
@@ -4323,6 +4663,7 @@ function GallerySceneRenderer({
       currentSelectedId = nextSelectedId;
       currentSelectedDecorId = nextSelectedDecorId;
       if (previousCollisionKey !== nextCollisionKey) rebuildCollision();
+      if (reflectionChanged) scheduleRoomReflection();
       element.dataset.ceiling = next.ceiling ?? "gallery";
       element.dataset.artLights = String(lighting.count);
       element.dataset.lightScope = "room";
@@ -4890,7 +5231,10 @@ function GallerySceneRenderer({
       navigation.dispose();
       controls.dispose();
       status.remove();
-      environment.dispose();
+      window.clearTimeout(reflectionTimer);
+      if (reflectionFrame) cancelAnimationFrame(reflectionFrame);
+      reflectionEnvironmentTarget?.dispose();
+      baseEnvironmentTarget.dispose();
       disposeObjectTree(scene);
       renderer.dispose();
       renderer.forceContextLoss();
@@ -5286,7 +5630,7 @@ export function DannyDemoScene({
     renderer.toneMappingExposure =
       quality.tier === "low" ? 1.04 : quality.tier === "high" ? 0.96 : 1;
     renderer.shadowMap.enabled = quality.tier !== "low";
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     configureSceneCanvas(
       renderer.domElement,
       "Danny Hirsch virtual exhibition. Focus this view to use keyboard movement.",
