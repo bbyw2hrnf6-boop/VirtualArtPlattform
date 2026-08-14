@@ -7,11 +7,14 @@ import {
 describe('gallery publishing errors', () => {
   it.each([
     ['permission-denied', 'configuration', 'publish them there manually'],
+    ['storage/unauthorized', 'configuration', 'storage.rules'],
+    ['storage/bucket-not-found', 'configuration', 'Storage bucket'],
     ['failed-precondition', 'configuration', 'Firestore indexes'],
     ['auth/operation-not-allowed', 'authentication-disabled', 'Enable Anonymous Authentication'],
     ['auth/configuration-not-found', 'authentication-disabled', 'Enable Anonymous Authentication'],
     ['auth/unauthorized-domain', 'unauthorized-domain', 'Authorized domains'],
     ['resource-exhausted', 'quota', 'quota'],
+    ['storage/quota-exceeded', 'quota', 'quota'],
     ['unavailable', 'unavailable', 'cannot reach Firebase']
   ])('maps %s to an actionable error', (firebaseCode, expectedCode, copy) => {
     const result = normalizeGalleryPublishingError({ code: firebaseCode }, 'test-project');

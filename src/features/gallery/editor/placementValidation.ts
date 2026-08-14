@@ -1,10 +1,12 @@
 import { getTemplate, type GalleryTemplate } from "../templates";
-import type {
-  Artwork,
-  DecorId,
-  DecorPlacement,
-  GalleryDraft,
-  WallId,
+import {
+  FORUM_INTERIOR_WALLS,
+  isShortGalleryWall,
+  type Artwork,
+  type DecorId,
+  type DecorPlacement,
+  type GalleryDraft,
+  type WallId,
 } from "../types";
 
 const ARTWORK_HEIGHT_METRES = 1.5;
@@ -92,7 +94,7 @@ const snapWithinGridBounds = (
 
 export function galleryWalls(templateId: GalleryDraft["templateId"]): WallId[] {
   return templateId === "pavilion"
-    ? ["north", "south", "west", "east", "divider-front", "divider-back"]
+    ? ["north", "south", "west", "east", "divider-front", "divider-back", ...FORUM_INTERIOR_WALLS]
     : ["north", "south", "west", "east"];
 }
 
@@ -103,12 +105,12 @@ export function artworkSize(artwork: Pick<Artwork, "aspect" | "scale">) {
 
 function wallDimensions(template: GalleryTemplate, wall: WallId) {
   return {
-    width: wall.startsWith("divider")
-      ? (template.dividerWidth ?? 6.2)
+    width: isShortGalleryWall(wall)
+      ? wall.startsWith("divider") ? (template.dividerWidth ?? 6.2) : template.dimensions[0] / 4
       : wall === "north" || wall === "south"
         ? template.dimensions[0]
         : template.dimensions[1],
-    height: wall.startsWith("divider")
+    height: isShortGalleryWall(wall)
       ? Math.min(4.55, template.height - 0.75)
       : template.height,
   };

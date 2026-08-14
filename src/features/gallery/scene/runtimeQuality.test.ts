@@ -28,6 +28,31 @@ describe('planar gallery collision', () => {
     expect(collision.canReach(new THREE.Vector3(1, 1.75, 1), new THREE.Vector3(1, 1.75, -1))).toBe(true);
   });
 
+  it('routes click-to-walk around a partition when a safe path exists', () => {
+    const collision = createPlanarCollisionSystem(
+      [obstacle],
+      0,
+      { minX: -2, maxX: 2, minZ: -2, maxZ: 2 },
+    );
+    const path = collision.findPath(
+      new THREE.Vector3(0, 1.75, 1),
+      new THREE.Vector3(0, 1.75, -1),
+    );
+    expect(path).not.toBeNull();
+    expect(path!.length).toBeGreaterThan(1);
+    expect(path!.at(-1)).toEqual(new THREE.Vector3(0, 1.75, -1));
+  });
+
+  it('rejects unreachable and out-of-bounds walk targets', () => {
+    const collision = createPlanarCollisionSystem(
+      [obstacle],
+      0,
+      { minX: -1, maxX: 1, minZ: -1, maxZ: 1 },
+    );
+    expect(collision.findPath(new THREE.Vector3(0, 1.75, 1), new THREE.Vector3(0, 1.75, 0))).toBeNull();
+    expect(collision.findPath(new THREE.Vector3(0, 1.75, 1), new THREE.Vector3(2, 1.75, 0))).toBeNull();
+  });
+
   it('turns Blender-authored empty collider nodes into world-space footprints', () => {
     const collider = new THREE.Object3D(); collider.name = 'COLLIDER_Test'; collider.position.set(3, 1, -2); collider.userData.half_extents = [1.5, 1, .25];
     const boxes = planarCollidersFromAuthoredNodes([collider]);

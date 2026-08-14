@@ -5,7 +5,7 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import type { DecorPlacement, GalleryDraft, WallId } from "./types";
+import { isShortGalleryWall, type DecorPlacement, type GalleryDraft, type WallId } from "./types";
 import { getTemplate } from "./templates";
 import {
   createAdaptiveDpr,
@@ -108,6 +108,14 @@ const WALLS: Record<
     position: (x, y) => [x, y, PAVILION_DIVIDER_Z - 0.13],
     rotation: [0, Math.PI, 0],
   },
+  "north-cross-west": { position: (x, y, w, d) => [-w * .375 + x, y, -d * .2 + .175], rotation: [0, 0, 0] },
+  "north-room-west": { position: (x, y, w, d) => [-w * .375 + x, y, -d * .2 - .175], rotation: [0, Math.PI, 0] },
+  "north-cross-east": { position: (x, y, w, d) => [w * .375 + x, y, -d * .2 + .175], rotation: [0, 0, 0] },
+  "north-room-east": { position: (x, y, w, d) => [w * .375 + x, y, -d * .2 - .175], rotation: [0, Math.PI, 0] },
+  "south-cross-west": { position: (x, y, w, d) => [-w * .375 + x, y, d * .2 - .175], rotation: [0, Math.PI, 0] },
+  "south-room-west": { position: (x, y, w, d) => [-w * .375 + x, y, d * .2 + .175], rotation: [0, 0, 0] },
+  "south-cross-east": { position: (x, y, w, d) => [w * .375 + x, y, d * .2 - .175], rotation: [0, Math.PI, 0] },
+  "south-room-east": { position: (x, y, w, d) => [w * .375 + x, y, d * .2 + .175], rotation: [0, 0, 0] },
 };
 const wallColors = {
   chalk: "#dfdcd4",
@@ -365,6 +373,59 @@ function createSurfaceTexture(kind: SurfaceKind, base: string) {
     texture.repeat.set(3, 2.5);
   else texture.repeat.set(4, 3);
   return texture;
+}
+
+function createSurfaceDetailMaps(kind: SurfaceKind) {
+  const size = 256;
+  const heightCanvas = document.createElement("canvas");
+  const roughnessCanvas = document.createElement("canvas");
+  heightCanvas.width = heightCanvas.height = size;
+  roughnessCanvas.width = roughnessCanvas.height = size;
+  const height = heightCanvas.getContext("2d");
+  const roughness = roughnessCanvas.getContext("2d");
+  if (!height || !roughness)
+    throw new Error("Surface detail maps could not be created.");
+  const wood = ["oak", "walnut", "dark-oak", "oak-slats", "black-slats"].includes(kind);
+  const stone = ["travertine", "limestone", "slate", "dark-stone", "travertine-floor"].includes(kind);
+  const marble = ["marble", "black-marble", "marble-wall"].includes(kind);
+  const textile = kind === "linen";
+  let seed = kind.split("").reduce((total, letter) => total * 31 + letter.charCodeAt(0), 97) >>> 0;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const image = height.createImageData(size, size);
+  const roughnessImage = roughness.createImageData(size, size);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const index = (y * size + x) * 4;
+      const wave = wood
+        ? Math.sin(y * .19 + Math.sin(x * .035) * 2.4) * 18
+        : textile
+          ? ((x % 5 === 0 ? 11 : 0) + (y % 5 === 0 ? 11 : 0))
+          : stone
+            ? Math.sin(x * .07) * 5 + Math.cos(y * .09) * 5
+            : marble
+              ? Math.sin((x + y * .42) * .055) * 8
+              : Math.sin(x * .032) * 3 + Math.cos(y * .041) * 3;
+      const grain = (random() - .5) * (stone ? 28 : wood ? 18 : 14);
+      const heightValue = Math.max(0, Math.min(255, 128 + wave + grain));
+      const roughBase = marble ? 205 : wood ? 218 : stone ? 234 : textile ? 242 : 228;
+      const roughValue = Math.max(24, Math.min(245, roughBase + grain * .7 - wave * .25));
+      image.data.set([heightValue, heightValue, heightValue, 255], index);
+      roughnessImage.data.set([roughValue, roughValue, roughValue, 255], index);
+    }
+  }
+  height.putImageData(image, 0, 0);
+  roughness.putImageData(roughnessImage, 0, 0);
+  const bumpMap = new THREE.CanvasTexture(heightCanvas);
+  const roughnessMap = new THREE.CanvasTexture(roughnessCanvas);
+  [bumpMap, roughnessMap].forEach((texture) => {
+    texture.colorSpace = THREE.NoColorSpace;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = 2;
+  });
+  return { bumpMap, roughnessMap };
 }
 
 function showSceneError(
@@ -1318,6 +1379,18 @@ function buildRoom(
   floorTexture.repeat.multiplyScalar(roomTextureScale);
   wallTexture.repeat.multiplyScalar(Math.max(1, w / 25));
   ceilingTexture.repeat.multiplyScalar(Math.max(1, Math.max(w, d) / 24));
+  const wallDetails = createSurfaceDetailMaps(draft.wall);
+  const floorDetails = createSurfaceDetailMaps(draft.floor);
+  const ceilingDetailsMaps = createSurfaceDetailMaps(ceilingProfiles.surface);
+  [wallDetails.bumpMap, wallDetails.roughnessMap].forEach((texture) =>
+    texture.repeat.copy(wallTexture.repeat),
+  );
+  [floorDetails.bumpMap, floorDetails.roughnessMap].forEach((texture) =>
+    texture.repeat.copy(floorTexture.repeat),
+  );
+  [ceilingDetailsMaps.bumpMap, ceilingDetailsMaps.roughnessMap].forEach((texture) =>
+    texture.repeat.copy(ceilingTexture.repeat),
+  );
   const wallProfile = {
     chalk: { color: "#ffffff", bump: 0.009, roughness: 0.82, clearcoat: 0.025 },
     warm: { color: "#ffffff", bump: 0.015, roughness: 0.86, clearcoat: 0.015 },
@@ -1335,6 +1408,9 @@ function buildRoom(
   const wall = new THREE.MeshPhysicalMaterial({
     color: wallProfile.color,
     map: wallTexture,
+    bumpMap: wallDetails.bumpMap,
+    bumpScale: wallProfile.bump,
+    roughnessMap: wallDetails.roughnessMap,
     roughness: wallProfile.roughness,
     clearcoat: wallProfile.clearcoat,
     clearcoatRoughness: 0.76,
@@ -1344,6 +1420,9 @@ function buildRoom(
   const ceiling = new THREE.MeshPhysicalMaterial({
     color: ceilingProfiles.color,
     map: ceilingTexture,
+    bumpMap: ceilingDetailsMaps.bumpMap,
+    bumpScale: ceilingProfiles.bump,
+    roughnessMap: ceilingDetailsMaps.roughnessMap,
     roughness: ceilingProfiles.roughness,
     envMapIntensity: 0.18,
     emissive: ceilingProfiles.emissive,
@@ -1361,6 +1440,9 @@ function buildRoom(
   const floor = new THREE.MeshPhysicalMaterial({
     color: draft.templateId === "pavilion" ? "#d0cbc1" : "#f2efe7",
     map: floorTexture,
+    bumpMap: floorDetails.bumpMap,
+    bumpScale: isMarble ? .008 : isWood ? .022 : isSlate ? .035 : .018,
+    roughnessMap: floorDetails.roughnessMap,
     roughness: isMarble
       ? draft.templateId === "pavilion"
         ? 0.42
@@ -1678,6 +1760,24 @@ function buildRoom(
     };
     addDividerSurface("divider-front", PAVILION_DIVIDER_Z + 0.175, 0);
     addDividerSurface("divider-back", PAVILION_DIVIDER_Z - 0.175, Math.PI);
+    const addCrossSurface = (wallId: WallId, x: number, z: number, rotationY: number) => {
+      const surface = new THREE.Mesh(
+        new THREE.PlaneGeometry(w / 4, partitionHeight),
+        raycastMaterial,
+      );
+      surface.position.set(x, partitionHeight / 2, z);
+      surface.rotation.y = rotationY;
+      surface.userData.wallId = wallId;
+      scene.add(surface);
+      wallSurfaces.push(surface);
+    };
+    [-1, 1].forEach((xSide) => {
+      const x = xSide * w * .375;
+      addCrossSurface(xSide < 0 ? "north-cross-west" : "north-cross-east", x, -crossGalleryZ + .175, 0);
+      addCrossSurface(xSide < 0 ? "north-room-west" : "north-room-east", x, -crossGalleryZ - .175, Math.PI);
+      addCrossSurface(xSide < 0 ? "south-cross-west" : "south-cross-east", x, crossGalleryZ - .175, Math.PI);
+      addCrossSurface(xSide < 0 ? "south-room-west" : "south-room-east", x, crossGalleryZ + .175, 0);
+    });
     const skylightWidth = 10.5;
     const skylightDepth = 6.5;
     const skyGlass = new THREE.MeshPhysicalMaterial({
@@ -1815,14 +1915,17 @@ function roomSurfaceMaterials(scene: THREE.Scene, role: RoomSurfaceRole) {
 function replaceRoomSurfaceTexture(
   materials: Set<THREE.MeshPhysicalMaterial>,
   texture: THREE.Texture,
+  details: { bumpMap: THREE.Texture; roughnessMap: THREE.Texture },
 ) {
   const previous = new Set<THREE.Texture>();
   materials.forEach((material) => {
     if (material.map && material.map !== texture) previous.add(material.map);
+    if (material.bumpMap && material.bumpMap !== details.bumpMap) previous.add(material.bumpMap);
+    if (material.roughnessMap && material.roughnessMap !== details.roughnessMap) previous.add(material.roughnessMap);
     material.map = texture;
-    material.bumpMap = null;
+    material.bumpMap = details.bumpMap;
     material.normalMap = null;
-    material.roughnessMap = null;
+    material.roughnessMap = details.roughnessMap;
     material.needsUpdate = true;
   });
   previous.forEach((item) => item.dispose());
@@ -1840,7 +1943,9 @@ function updateRoomSurface(
   if (role === "wall") {
     const texture = createSurfaceTexture(draft.wall, wallColors[draft.wall]);
     texture.repeat.multiplyScalar(Math.max(1, w / 25));
-    replaceRoomSurfaceTexture(materials, texture);
+    const details = createSurfaceDetailMaps(draft.wall);
+    [details.bumpMap, details.roughnessMap].forEach((item) => item.repeat.copy(texture.repeat));
+    replaceRoomSurfaceTexture(materials, texture, details);
     const profile = {
       chalk: { color: "#ffffff", roughness: 0.84, clearcoat: 0.015 },
       warm: { color: "#ffffff", roughness: 0.88, clearcoat: 0.01 },
@@ -1858,6 +1963,12 @@ function updateRoomSurface(
     materials.forEach((material) => {
       material.color.set(profile.color);
       material.roughness = profile.roughness;
+      material.bumpScale = {
+        chalk: .009, warm: .015, travertine: .02, linen: .024,
+        charcoal: .008, microcement: .012, limestone: .022,
+        "oak-slats": .016, "light-concrete": .01, "black-slats": .016,
+        "marble-wall": .006, "dark-stone": .02,
+      }[draft.wall];
       material.clearcoat = profile.clearcoat;
       material.envMapIntensity = 0.2;
       material.emissive.set("#000000");
@@ -1868,7 +1979,9 @@ function updateRoomSurface(
   if (role === "floor") {
     const texture = createSurfaceTexture(draft.floor, floorColors[draft.floor]);
     texture.repeat.multiplyScalar(Math.max(1, Math.max(w, d) / 18));
-    replaceRoomSurfaceTexture(materials, texture);
+    const details = createSurfaceDetailMaps(draft.floor);
+    [details.bumpMap, details.roughnessMap].forEach((item) => item.repeat.copy(texture.repeat));
+    replaceRoomSurfaceTexture(materials, texture, details);
     const marble = draft.floor === "marble" || draft.floor === "black-marble";
     const wood =
       draft.floor === "oak" ||
@@ -1887,6 +2000,7 @@ function updateRoomSurface(
             : polishedConcrete
               ? 0.52
               : 0.82;
+      material.bumpScale = marble ? .008 : wood ? .022 : slate ? .035 : .018;
       material.metalness = marble ? 0.02 : 0.005;
       material.clearcoat = marble
         ? 0.44
@@ -1942,10 +2056,13 @@ function updateRoomSurface(
   }[finish];
   const texture = createSurfaceTexture(profile.surface, profile.color);
   texture.repeat.multiplyScalar(Math.max(1, Math.max(w, d) / 24));
-  replaceRoomSurfaceTexture(materials, texture);
+  const details = createSurfaceDetailMaps(profile.surface);
+  [details.bumpMap, details.roughnessMap].forEach((item) => item.repeat.copy(texture.repeat));
+  replaceRoomSurfaceTexture(materials, texture, details);
   materials.forEach((material) => {
     material.color.set(profile.color);
     material.roughness = profile.roughness;
+    material.bumpScale = finish === "vaulted" ? .018 : finish === "warm" ? .01 : .006;
     material.envMapIntensity = 0.16;
     material.emissive.set(profile.emissive);
     material.emissiveIntensity = profile.glow;
@@ -1954,20 +2071,20 @@ function updateRoomSurface(
     object.name.startsWith("ceiling-design-"),
   );
   if (ceilingPlane) ceilingPlane.name = `ceiling-design-${finish}`;
-  const details = scene.children.find((object) =>
+  const ceilingGroup = scene.children.find((object) =>
     object.name.startsWith("room-ceiling-"),
   );
-  if (details instanceof THREE.Group) {
-    const visible = details.visible;
+  if (ceilingGroup instanceof THREE.Group) {
+    const visible = ceilingGroup.visible;
     rebuildCeilingDetails(
-      details,
+      ceilingGroup,
       finish,
       draft.templateId,
       w,
       d,
       getTemplate(draft.templateId).height,
     );
-    details.visible = visible;
+    ceilingGroup.visible = visible;
   }
 }
 
@@ -2186,13 +2303,13 @@ function createFirstPersonWalk(
   canvas: HTMLCanvasElement,
   bounds: () => Bounds,
   collision?: WalkCollision,
-  canMoveTo?: (from: THREE.Vector3, to: THREE.Vector3) => boolean,
+  findPath?: (from: THREE.Vector3, to: THREE.Vector3) => THREE.Vector3[] | null,
   onUserIntent?: () => void,
   onEscape?: () => void,
 ) {
   const keys = new Set<string>();
   let enabled = true;
-  let destination: THREE.Vector3 | null = null;
+  let destinations: THREE.Vector3[] = [];
   let blockedFrames = 0;
   const keyDown = (event: KeyboardEvent) => {
     if (event.code === "Escape") {
@@ -2205,7 +2322,7 @@ function createFirstPersonWalk(
         onUserIntent?.();
         return;
       }
-      destination = null;
+      destinations = [];
       keys.add(event.code);
       onUserIntent?.();
       event.preventDefault();
@@ -2361,12 +2478,12 @@ function createFirstPersonWalk(
     if (keys.has("KeyD")) desired.add(right);
     if (keys.has("KeyA")) desired.sub(right);
     if (desired.lengthSq()) desired.normalize().multiplyScalar(2.75);
-    else if (destination) {
-      desired.subVectors(destination, camera.position);
+    else if (destinations.length) {
+      desired.subVectors(destinations[0], camera.position);
       desired.y = 0;
       const distance = desired.length();
       if (distance < 0.14) {
-        destination = null;
+        destinations.shift();
         desired.set(0, 0, 0);
       } else
         desired
@@ -2390,13 +2507,13 @@ function createFirstPersonWalk(
     camera.position.y = eyeHeight;
     const moved = collision?.(camera.position, previous);
     if (
-      destination &&
+      destinations.length &&
       moved === false &&
       camera.position.distanceToSquared(previous) < 1e-7
     ) {
       blockedFrames += 1;
       if (blockedFrames > 8) {
-        destination = null;
+        destinations = [];
         velocity.set(0, 0, 0);
       }
     } else blockedFrames = 0;
@@ -2415,8 +2532,9 @@ function createFirstPersonWalk(
       current.maxZ,
     );
     candidate.y = eyeHeight;
-    if (canMoveTo && !canMoveTo(camera.position, candidate)) return false;
-    destination = candidate;
+    const path = findPath ? findPath(camera.position, candidate) : [candidate];
+    if (!path?.length) return false;
+    destinations = path;
     blockedFrames = 0;
     return true;
   };
@@ -2424,7 +2542,7 @@ function createFirstPersonWalk(
     enabled = value;
     keys.clear();
     velocity.set(0, 0, 0);
-    if (!value) destination = null;
+    if (!value) destinations = [];
   };
   const consumeClick = () => {
     const isClick = !dragged && enabled;
@@ -2446,7 +2564,7 @@ function createFirstPersonWalk(
     setEnabled,
     syncFromCamera,
     consumeClick,
-    hasDestination: () => destination !== null,
+    hasDestination: () => destinations.length > 0,
     dispose: () => {
       canvas.removeEventListener("keydown", keyDown);
       canvas.removeEventListener("keyup", keyUp);
@@ -3235,6 +3353,8 @@ function GallerySceneRenderer({
           [architecture, ...decorById.values()],
           VISITOR_EYE_HEIGHT,
         ),
+        .36,
+        roomBounds,
       );
     };
     let onWalkIntent = () => undefined;
@@ -3244,7 +3364,7 @@ function GallerySceneRenderer({
       renderer.domElement,
       () => roomBounds,
       (next, previous) => collision.resolve(next, previous),
-      (from, to) => collision.canReach(from, to),
+      (from, to) => collision.findPath(from, to),
       () => onWalkIntent(),
       () => onWalkEscape(),
     );
@@ -3386,6 +3506,14 @@ function GallerySceneRenderer({
       east: new THREE.Vector3(-1, 0, 0),
       "divider-front": new THREE.Vector3(0, 0, 1),
       "divider-back": new THREE.Vector3(0, 0, -1),
+      "north-cross-west": new THREE.Vector3(0, 0, 1),
+      "north-room-west": new THREE.Vector3(0, 0, -1),
+      "north-cross-east": new THREE.Vector3(0, 0, 1),
+      "north-room-east": new THREE.Vector3(0, 0, -1),
+      "south-cross-west": new THREE.Vector3(0, 0, -1),
+      "south-room-west": new THREE.Vector3(0, 0, 1),
+      "south-cross-east": new THREE.Vector3(0, 0, -1),
+      "south-room-east": new THREE.Vector3(0, 0, 1),
     };
     const setWalkPoseForSelected = () => {
       if (initial.visitor) return false;
@@ -3783,8 +3911,8 @@ function GallerySceneRenderer({
       const wallId = wallHit.object.userData.wallId as WallId;
       const height = 1.5 * artwork.scale;
       const width = height * artwork.aspect;
-      const availableWidth = wallId.startsWith("divider")
-        ? dividerWidth
+      const availableWidth = isShortGalleryWall(wallId)
+        ? wallId.startsWith("divider") ? dividerWidth : w / 4
         : wallId === "north" || wallId === "south"
           ? w
           : d;
@@ -3793,7 +3921,7 @@ function GallerySceneRenderer({
           ? wallHit.point.z
           : wallHit.point.x;
       const maxX = Math.max(0.15, availableWidth / 2 - width / 2 - 0.12);
-      const wallHeight = wallId.startsWith("divider") ? h - 0.75 : h;
+      const wallHeight = isShortGalleryWall(wallId) ? h - 0.75 : h;
       return {
         wall: wallId,
         x: THREE.MathUtils.clamp(horizontal, -maxX, maxX),
@@ -5223,7 +5351,7 @@ export function DannyDemoScene({
       renderer.domElement,
       () => bounds,
       (next, previous) => collision.resolve(next, previous),
-      (from, to) => collision.canReach(from, to),
+      (from, to) => collision.findPath(from, to),
       () => onDannyWalkIntent(),
       () => onDannyWalkEscape(),
     );
@@ -6117,9 +6245,6 @@ export function DannyDemoScene({
           artworkHitObjects.push(hitTarget);
         });
 
-        collision = createPlanarCollisionSystem(
-          planarCollidersFromAuthoredNodes(colliderNodes),
-        );
         const start =
           gltf.scene.getObjectByName("Walk_Start") ??
           gltf.scene.getObjectByName("VIEW_Entrance");
@@ -6137,6 +6262,11 @@ export function DannyDemoScene({
             maxZ: Math.max(a.z, b.z) - 0.35,
           };
         }
+        collision = createPlanarCollisionSystem(
+          planarCollidersFromAuthoredNodes(colliderNodes),
+          .36,
+          bounds,
+        );
         if (start) {
           walkState.position.copy(start.getWorldPosition(new THREE.Vector3()));
           walkState.position.y = Number(

@@ -2,7 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isValidGalleryCreate() {
+    function isValidGalleryCreate(galleryId) {
       let data = request.resource.data;
       // Detailed artwork/decor validation happens in the client before this
       // immutable publication write. Unrolling validation for all 14 artworks
@@ -12,12 +12,12 @@ service cloud.firestore {
         && data.ownerId == request.auth.uid
         && data.keys().hasAll([
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
-          'lighting', 'decor', 'artworks', 'coverSrc', 'ownerId',
+          'lighting', 'decor', 'artworks', 'ownerId',
           'publishedAt', 'expiresAt', 'schemaVersion'
         ])
         && data.keys().hasOnly([
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
-          'lighting', 'decor', 'artworks', 'coverSrc', 'ownerId',
+          'lighting', 'decor', 'artworks', 'coverSrc', 'coverPath', 'ownerId',
           'publishedAt', 'expiresAt', 'schemaVersion'
         ])
         && data.title is string
@@ -45,9 +45,13 @@ service cloud.firestore {
           || (data.templateId != 'pavilion' && data.artworks.size() <= 8))
         && data.decor is list
         && data.decor.size() <= 8
-        && data.coverSrc is string
-        && data.coverSrc.size() > 0
-        && data.coverSrc.size() < 400000
+        && ((data.schemaVersion == 1
+            && data.coverSrc is string
+            && data.coverSrc.size() > 0
+            && data.coverSrc.size() < 400000)
+          || (data.schemaVersion == 2
+            && data.coverPath is string
+            && data.coverPath == 'published/' + request.auth.uid + '/' + galleryId + '/cover.webp'))
         && data.ownerId is string
         && data.ownerId.size() > 0
         && data.ownerId.size() <= 128
@@ -55,15 +59,16 @@ service cloud.firestore {
         && data.expiresAt is timestamp
         && data.expiresAt > request.time
         && data.expiresAt < request.time + duration.value(11, 'd')
-        && data.schemaVersion == 1;
+        && data.schemaVersion in [1, 2];
     }
+
 
     match /galleries/{galleryId} {
       // Create validation guarantees a timestamp. Keeping the read predicate
       // to the same inequality used by the client lets Firestore prove that
       // collection queries cannot return expired documents.
       allow read: if resource.data.expiresAt > request.time;
-      allow create: if isValidGalleryCreate();
+      allow create: if isValidGalleryCreate(galleryId);
       allow update: if false;
       allow delete: if request.auth != null
         && resource.data.ownerId == request.auth.uid;

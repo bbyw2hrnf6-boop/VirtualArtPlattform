@@ -3,8 +3,10 @@ import type { Artwork, GalleryDraft } from '../features/gallery/types';
 import {
   GalleryRepositoryDataError,
   prepareGalleryDraftForPublication,
+  parseGalleryDocument,
   validateGalleryDraft
 } from './galleryValidation';
+import { Timestamp } from 'firebase/firestore';
 
 const image = 'data:image/webp;base64,YQ==';
 
@@ -77,6 +79,46 @@ describe('gallery publication payload', () => {
   it('rejects unsupported public frame values', () => {
     const invalid = draft([artwork()]) as unknown as { artworks: Array<Record<string, unknown>> };
     invalid.artworks[0].frame = 'gold';
+    expect(() => validateGalleryDraft(invalid)).toThrow(GalleryRepositoryDataError);
+  });
+
+  it('accepts Storage-backed schema v2 galleries without embedded image data', () => {
+    const published = new Date('2026-08-12T12:00:00.000Z');
+    const expires = new Date('2026-08-22T12:00:00.000Z');
+    const value = {
+      ...draft([artwork({
+        src: '',
+        storagePath: 'published/owner_1/room-1/artworks/1.webp',
+      })]),
+      ownerId: 'owner_1',
+      coverPath: 'published/owner_1/room-1/cover.webp',
+      publishedAt: Timestamp.fromDate(published),
+      expiresAt: Timestamp.fromDate(expires),
+      schemaVersion: 2,
+    };
+    const parsed = parseGalleryDocument('room-1', value);
+    expect(parsed.coverPath).toBe(value.coverPath);
+    expect(parsed.artworks[0].storagePath).toBe(value.artworks[0].storagePath);
+  });
+
+  it('keeps legacy Firestore image publications readable', () => {
+    const published = new Date('2026-08-12T12:00:00.000Z');
+    const expires = new Date('2026-08-22T12:00:00.000Z');
+    const parsed = parseGalleryDocument('legacy-room', {
+      ...draft([artwork({ src: '', assetId: 'legacy-asset' })]),
+      ownerId: 'owner_1',
+      coverSrc: image,
+      publishedAt: Timestamp.fromDate(published),
+      expiresAt: Timestamp.fromDate(expires),
+      schemaVersion: 1,
+    });
+    expect(parsed.coverSrc).toBe(image);
+    expect(parsed.artworks[0].assetId).toBe('legacy-asset');
+  });
+
+  it('rejects malformed Storage paths', () => {
+    const invalid = draft([artwork({ src: '' })]) as unknown as { artworks: Array<Record<string, unknown>> };
+    invalid.artworks[0].storagePath = 'published/../room/artworks/1.webp';
     expect(() => validateGalleryDraft(invalid)).toThrow(GalleryRepositoryDataError);
   });
 });

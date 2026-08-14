@@ -1,24 +1,26 @@
 import { Timestamp } from 'firebase/firestore';
 import { getTemplate } from '../features/gallery/templates';
-import type {
-  Artwork,
-  ArtworkFrame,
-  CeilingFinish,
-  DecorId,
-  DecorPlacement,
-  FloorFinish,
-  GalleryDraft,
-  LightingPreset,
-  PlantPotFinish,
-  TemplateId,
-  WallFinish,
-  WallId
+import {
+  FORUM_INTERIOR_WALLS,
+  isShortGalleryWall,
+  type Artwork,
+  type ArtworkFrame,
+  type CeilingFinish,
+  type DecorId,
+  type DecorPlacement,
+  type FloorFinish,
+  type GalleryDraft,
+  type LightingPreset,
+  type PlantPotFinish,
+  type TemplateId,
+  type WallFinish,
+  type WallId,
 } from '../features/gallery/types';
 
 type UnknownRecord = Record<string, unknown>;
 
 const TEMPLATE_IDS = ['white-cube', 'nocturne', 'pavilion'] as const satisfies readonly TemplateId[];
-const WALL_IDS = ['north', 'south', 'west', 'east', 'divider-front', 'divider-back'] as const satisfies readonly WallId[];
+const WALL_IDS = ['north', 'south', 'west', 'east', 'divider-front', 'divider-back', ...FORUM_INTERIOR_WALLS] as const satisfies readonly WallId[];
 const WALL_FINISHES = ['chalk', 'warm', 'travertine', 'linen', 'charcoal', 'microcement', 'limestone', 'oak-slats', 'light-concrete', 'black-slats', 'marble-wall', 'dark-stone'] as const satisfies readonly WallFinish[];
 const FLOOR_FINISHES = ['concrete', 'oak', 'terrazzo', 'marble', 'black-marble', 'walnut', 'dark-oak', 'microcement', 'slate', 'dark-concrete', 'travertine-floor'] as const satisfies readonly FloorFinish[];
 const CEILING_FINISHES = ['gallery', 'warm', 'dark', 'skylight', 'vaulted'] as const satisfies readonly CeilingFinish[];
@@ -28,7 +30,9 @@ const DECOR_IDS = ['olive', 'monstera', 'arc-lamp', 'pedestal', 'gallery-bench',
 const ARTWORK_FRAMES = ['black', 'white', 'oak', 'none'] as const satisfies readonly ArtworkFrame[];
 
 const MAX_ARTWORK_SOURCE_LENGTH = 779_999;
-const MAX_COVER_SOURCE_LENGTH = 399_999;
+// New covers are uploaded to Storage rather than embedded in Firestore. The
+// source is still bounded before upload so canvas captures cannot spike memory.
+const MAX_COVER_SOURCE_LENGTH = 1_333_000;
 // Existing MVP publications predate the cover limit. Firestore documents are
 // already capped at 1 MiB, so accepting a bounded legacy cover keeps old share
 // links working without weakening validation for new writes.
@@ -53,6 +57,7 @@ export interface ParsedGalleryDocument extends GalleryDraft {
   expiresAt: string;
   ownerId?: string;
   coverSrc?: string;
+  coverPath?: string;
 }
 
 export interface ParsedArtworkAsset {
@@ -128,8 +133,21 @@ function optionalImageSource(value: unknown, recordId: string, field: string, ma
   return value === undefined ? undefined : imageSource(value, recordId, field, maximum, true);
 }
 
-function validateSchemaVersion(value: unknown, recordId: string): void {
-  if (value !== undefined && value !== 1) invalid(recordId, 'schemaVersion', 'expected schema version 1');
+function validateSchemaVersion(value: unknown, recordId: string): 1 | 2 {
+  if (value === undefined || value === 1) return 1;
+  if (value === 2) return 2;
+  invalid(recordId, 'schemaVersion', 'expected schema version 1 or 2');
+}
+
+function storagePath(value: unknown, recordId: string, field: string): string {
+  const path = stringValue(value, recordId, field, 320, 1);
+  if (!/^published\/[a-zA-Z0-9_-]{1,128}\/[a-zA-Z0-9_-]{1,128}\/(?:cover[.]webp|artworks\/(?:[1-9]|1[0-4])[.]webp)$/.test(path))
+    invalid(recordId, field, 'expected an owned gallery Storage path');
+  return path;
+}
+
+function optionalStoragePath(value: unknown, recordId: string, field: string): string | undefined {
+  return value === undefined ? undefined : storagePath(value, recordId, field);
 }
 
 function availableWalls(templateId: TemplateId): readonly WallId[] {
@@ -146,16 +164,18 @@ function parseArtwork(value: unknown, index: number, templateId: TemplateId, rec
   const item = recordValue(value, recordId, field);
   const template = getTemplate(templateId);
   const wall = enumValue(item.wall, availableWalls(templateId), recordId, `${field}.wall`);
-  const wallWidth = wall.startsWith('divider')
-    ? (template.dividerWidth ?? 6.2)
+  const wallWidth = isShortGalleryWall(wall)
+    ? wall.startsWith('divider') ? (template.dividerWidth ?? 6.2) : template.dimensions[0] / 4
     : wall === 'north' || wall === 'south' ? template.dimensions[0] : template.dimensions[1];
   const src = imageSource(item.src, recordId, `${field}.src`, MAX_ARTWORK_SOURCE_LENGTH, !requireSource);
   const assetId = optionalString(item.assetId, recordId, `${field}.assetId`, 100);
-  if (!src && !assetId) invalid(recordId, field, 'expected either an embedded source or an asset reference');
+  const storagePathValue = optionalStoragePath(item.storagePath, recordId, `${field}.storagePath`);
+  if (!src && !assetId && !storagePathValue) invalid(recordId, field, 'expected an embedded source or asset reference');
 
   return {
     id: stringValue(item.id, recordId, `${field}.id`, 100, 1),
     ...(assetId ? { assetId } : {}),
+    ...(storagePathValue ? { storagePath: storagePathValue } : {}),
     title: stringValue(item.title, recordId, `${field}.title`, 80),
     ...(item.year !== undefined ? { year: stringValue(item.year, recordId, `${field}.year`, 12) } : {}),
     ...(item.description !== undefined ? { description: stringValue(item.description, recordId, `${field}.description`, 240) } : {}),
@@ -242,7 +262,7 @@ export function validateGalleryCoverSource(value: unknown, recordId = 'publicati
 
 export function parseGalleryDocument(recordId: string, value: unknown): ParsedGalleryDocument {
   const data = recordValue(value, recordId, 'gallery');
-  validateSchemaVersion(data.schemaVersion, recordId);
+  const schemaVersion = validateSchemaVersion(data.schemaVersion, recordId);
   const draft = validateGalleryDraft(data, { recordId });
   const published = timestampValue(data.publishedAt, recordId, 'publishedAt');
   const expires = timestampValue(data.expiresAt, recordId, 'expiresAt');
@@ -250,12 +270,16 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
   if (expires.getTime() - published.getTime() > 12 * 86_400_000) invalid(recordId, 'expiresAt', 'expected a maximum twelve-day publication window');
   const ownerId = optionalString(data.ownerId, recordId, 'ownerId', 128);
   const coverSrc = optionalImageSource(data.coverSrc, recordId, 'coverSrc', MAX_LEGACY_COVER_SOURCE_LENGTH);
+  const coverPath = optionalStoragePath(data.coverPath, recordId, 'coverPath');
+  if (schemaVersion === 2 && (!coverPath || !ownerId))
+    invalid(recordId, 'coverPath', 'expected an owned Storage cover in schema version 2');
   return {
     ...draft,
     publishedAt: published.toISOString(),
     expiresAt: expires.toISOString(),
     ...(ownerId ? { ownerId } : {}),
-    ...(coverSrc ? { coverSrc } : {})
+    ...(coverSrc ? { coverSrc } : {}),
+    ...(coverPath ? { coverPath } : {})
   };
 }
 
@@ -265,7 +289,8 @@ export function parseArtworkAsset(
   expected: { galleryId: string; ownerId?: string; index: number; expiresAt: string }
 ): ParsedArtworkAsset {
   const data = recordValue(value, assetId, 'asset');
-  validateSchemaVersion(data.schemaVersion, assetId);
+  if (validateSchemaVersion(data.schemaVersion, assetId) !== 1)
+    invalid(assetId, 'schemaVersion', 'expected legacy artwork schema version 1');
   const galleryId = stringValue(data.galleryId, assetId, 'galleryId', 100, 1);
   const ownerId = stringValue(data.ownerId, assetId, 'ownerId', 128, 1);
   const index = integerValue(data.index, assetId, 'index', 0, 13);

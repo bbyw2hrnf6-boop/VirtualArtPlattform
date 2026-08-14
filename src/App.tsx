@@ -24,6 +24,7 @@ import {
   type GalleryDraft,
   type TemplateId,
   type WallId,
+  isShortGalleryWall,
 } from "./features/gallery/types";
 import { createGalleryDraft } from "./features/gallery/editor/draftDefaults";
 import { createDemoCollectionDraft } from "./features/gallery/editor/demoCollection";
@@ -946,6 +947,14 @@ const WALL_LABELS: Record<WallId, string> = {
   east: "Right wall",
   "divider-front": "Feature wall A",
   "divider-back": "Feature wall B",
+  "north-cross-west": "North-west · Cross gallery",
+  "north-room-west": "North-west · Room side",
+  "north-cross-east": "North-east · Cross gallery",
+  "north-room-east": "North-east · Room side",
+  "south-cross-west": "South-west · Cross gallery",
+  "south-room-west": "South-west · Room side",
+  "south-cross-east": "South-east · Cross gallery",
+  "south-room-east": "South-east · Room side",
 };
 const PAVILION_WALL_LABELS: Record<WallId, string> = {
   north: "North gallery",
@@ -954,6 +963,14 @@ const PAVILION_WALL_LABELS: Record<WallId, string> = {
   east: "East wing",
   "divider-front": "Feature wall A",
   "divider-back": "Feature wall B",
+  "north-cross-west": "North-west · Cross gallery",
+  "north-room-west": "North-west · Room side",
+  "north-cross-east": "North-east · Cross gallery",
+  "north-room-east": "North-east · Room side",
+  "south-cross-west": "South-west · Cross gallery",
+  "south-room-west": "South-west · Room side",
+  "south-cross-east": "South-east · Cross gallery",
+  "south-room-east": "South-east · Room side",
 };
 const wallLabel = (templateId: TemplateId, wall: WallId) =>
   templateId === "pavilion" ? PAVILION_WALL_LABELS[wall] : WALL_LABELS[wall];
@@ -1034,8 +1051,8 @@ function Studio({
   const decorLimitX = roomDimensions[0] / 2 - 0.5;
   const decorLimitZ = roomDimensions[1] / 2 - 0.5;
   const wallLimit = (wall: WallId) =>
-    wall.startsWith("divider")
-      ? (roomTemplate.dividerWidth ?? 6.2) / 2 - 0.55
+    isShortGalleryWall(wall)
+      ? (wall.startsWith("divider") ? (roomTemplate.dividerWidth ?? 6.2) : roomTemplate.dimensions[0] / 4) / 2 - 0.55
       : wall === "north" || wall === "south"
         ? roomDimensions[0] / 2 - 0.8
         : roomDimensions[1] / 2 - 0.8;
@@ -2082,6 +2099,11 @@ function Studio({
                       <>
                         <option value="divider-front">Feature wall A</option>
                         <option value="divider-back">Feature wall B</option>
+                        {availableWalls(draft.templateId)
+                          .filter((wall) => !["north", "south", "west", "east", "divider-front", "divider-back"].includes(wall))
+                          .map((wall) => (
+                            <option key={wall} value={wall}>{wallLabel(draft.templateId, wall)}</option>
+                          ))}
                       </>
                     )}
                   </select>
@@ -2103,7 +2125,7 @@ function Studio({
                   max={Math.max(
                     3.6,
                     roomTemplate.height -
-                      (selected.wall.startsWith("divider") ? 1.25 : 0.75),
+                      (isShortGalleryWall(selected.wall) ? 1.25 : 0.75),
                   )}
                   step={PLACEMENT_GRID_STEP_METRES}
                   value={selected.y}

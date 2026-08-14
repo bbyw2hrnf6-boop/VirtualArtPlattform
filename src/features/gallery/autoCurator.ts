@@ -1,14 +1,16 @@
 import type { GalleryTemplate } from "./templates";
-import type {
-  Artwork,
-  CeilingFinish,
-  DecorId,
-  DecorPlacement,
-  FloorFinish,
-  GalleryDraft,
-  LightingPreset,
-  WallFinish,
-  WallId,
+import {
+  FORUM_INTERIOR_WALLS,
+  isShortGalleryWall,
+  type Artwork,
+  type CeilingFinish,
+  type DecorId,
+  type DecorPlacement,
+  type FloorFinish,
+  type GalleryDraft,
+  type LightingPreset,
+  type WallFinish,
+  type WallId,
 } from "./types";
 import {
   DEFAULT_ARTWORK_EYE_LINE_METRES,
@@ -298,7 +300,8 @@ function chooseAtmosphere(
 }
 
 function wallWidth(wall: WallId, template: GalleryTemplate) {
-  if (wall.startsWith("divider")) return template.dividerWidth ?? 6.2;
+  if (isShortGalleryWall(wall))
+    return wall.startsWith("divider") ? (template.dividerWidth ?? 6.2) : template.dimensions[0] / 4;
   return wall === "north" || wall === "south"
     ? template.dimensions[0]
     : template.dimensions[1];
@@ -311,7 +314,7 @@ function curateArtworkPlacement(
 ): Artwork[] {
   const walls: WallId[] =
     template.id === "pavilion"
-      ? ["north", "south", "west", "east", "divider-front", "divider-back"]
+      ? ["north", "south", "west", "east", "divider-front", "divider-back", ...FORUM_INTERIOR_WALLS]
       : ["north", "south", "west", "east"];
   const groups = new Map<WallId, number[]>(walls.map((wall) => [wall, []]));
   const loads = new Map<WallId, number>(walls.map((wall) => [wall, 0]));
@@ -375,7 +378,7 @@ function curateArtworkPlacement(
       const width = widths[position];
       const artwork = placements[artworkIndex];
       const artHeight = 1.5 * scale;
-      const wallHeight = wall.startsWith("divider")
+      const wallHeight = isShortGalleryWall(wall)
         ? template.height - 0.65
         : template.height;
       artwork.wall = wall;

@@ -20,4 +20,5 @@ jobs:
       - name: Delete galleries older than ten days
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_STORAGE_BUCKET: virtualartplattform.firebasestorage.app
         run: node scripts/cleanup-expired.mjs

@@ -90,6 +90,25 @@ describe("artwork placement", () => {
     ]);
     expect(galleryWalls("pavilion")).toContain("divider-front");
     expect(galleryWalls("pavilion")).toContain("divider-back");
+    expect(galleryWalls("pavilion")).toContain("north-cross-west");
+    expect(galleryWalls("pavilion")).toContain("south-room-east");
+    expect(new Set(galleryWalls("pavilion")).size).toBe(14);
+  });
+
+  it("validates artwork on a Grand Forum interior wall", () => {
+    const item = artwork("interior", {
+      wall: "north-cross-west",
+      x: 0,
+      y: DEFAULT_ARTWORK_EYE_LINE_METRES,
+      scale: .8,
+    });
+    expect(validateArtworkPlacement(draft("pavilion", [item]), item)).toBeNull();
+    expect(
+      validateArtworkPlacement(
+        draft("pavilion"),
+        artwork("outside", { wall: "north-cross-west", x: 5.2 }),
+      )?.code,
+    ).toBe("out-of-bounds");
   });
 
   it("rejects invalid numbers, unavailable walls, and unsafe scales", () => {

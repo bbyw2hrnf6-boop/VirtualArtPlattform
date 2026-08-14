@@ -1,10 +1,10 @@
 # AURA – Umsetzungsstatus nach dem Audit
 
-Stand: 11. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
+Stand: 12. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
 
 ## Verifiziertes Ergebnis
 
-- `npm run check`: grün; 80 Tests bestehen.
+- `npm run check`: grün; 94 Tests bestehen.
 - Der Emil Scroll beginnt nun direkt mit `01 · Blueprint`, baut ausschließlich DannyHirschArts in sechs synchronisierten Kapiteln auf und endet in einer scharfen begehbaren Live-Szene. Ein geglätteter, richtungsstabiler Playhead mit Fortschrittslimit verhindert Sprünge bei aggressivem Scrollen; die alte statische Posterphase bleibt nur als Lade-/Fehlerfallback.
 - Q/E und Pfeil hoch/runter bilden einen gemeinsamen getesteten Keyboard-Vertrag für Landing, Builder, veröffentlichte Räume und Danny. Alte Q/R-Hinweise und die separate Danny-Tour-Aktivitätsvariable wurden entfernt; die gemeinsame `VisitorControls`-Komponente bleibt die einzige Tour-Oberfläche.
 - Zwölf nach Referenz- und Hashprüfung ungenutzte Legacy-/Zwischenassets wurden entfernt. Lizenz- und Asset-Dokumentation sowie die bestehende Browser-QA verwenden jetzt die aktuellen gemeinsamen Selektoren.
@@ -24,6 +24,15 @@ Stand: 11. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapsh
 Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser-qa.md`](./final/browser-qa.md), `browser-qa.json`, `audit-closure-qa.json`, `scroll-story-pipe-qa.json`, `lighthouse-home.json` und `lighthouse-demo.json`.
 
 ## Umgesetzt
+
+### P1 · Storage, Navigation und Raumtiefe
+
+- Neue Veröffentlichungen verwenden Schema v2: Firestore hält Raum/Metadaten und sichere Objektpfade; Firebase Storage hält Cover und Kunstbilder. Schema-v1-Räume bleiben lesbar.
+- Uploads sind owner-scoped, größen-/MIME-validiert, auf drei Transfers begrenzt und werden bei Teilfehlern zurückgerollt. Cleanup entfernt Storage-Dateien vor dem Firestore-Manifest.
+- Storage-Dateien werden als begrenzte Blob-URLs geladen und aus einem kleinen Cache freigegeben. Neue Räume landen nicht mehr als große Base64-Strings im Safari-JavaScript-Heap.
+- Click-to-walk plant einen kollisionsfreien Weg um Partitionen, statt verdeckte erreichbare Ziele nur abzulehnen.
+- Grand Forum besitzt acht zusätzliche beidseitige Innenflächen. Editor, Curator, Placement, Publish-Validierung, Kamera und Runtime teilen denselben Wandvertrag.
+- Räume verwenden ergänzende prozedurale Height-/Roughness-Maps für Materialtiefe, ohne Albedo fälschlich als PBR-Map zu recyceln.
 
 ### Glaubwürdigkeit und Homepage
 
@@ -64,8 +73,8 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 | Punkt | Warum nicht lokal abschließbar | Nächster Schritt |
 |---|---|---|
-| Live Discover / Publish | Ein bestehender veröffentlichter Raum wurde read-only geladen; Firestore-Regeln bleiben bewusst ein manueller Firebase-Console-Schritt und Live-Writes waren in dieser Abnahme verboten. | Aktuelle `firestore.rules` manuell veröffentlichen und einen neuen anonymen Save→Publish→Private Window→Discover-Durchlauf live testen. |
-| Private, unlisted, permanent, Revisionen | Erfordert Zugriffsmodell, Accounts, Storage, Rate Limits, Moderation und Tarifentscheidung. | Pilot-Backend und Rollenmodell definieren; erst danach UI aktivieren. Die aktuelle UI behauptet diese Funktionen nicht. |
+| Live Discover / Publish | Firestore- und Storage-Regeln bleiben bewusst manuelle Firebase-Console-Schritte; Live-Writes waren in dieser Abnahme verboten. | Aktuelle `firestore.rules` und `storage.rules` manuell veröffentlichen und einen neuen anonymen Save→Publish→Private Window→Discover-Durchlauf live testen. |
+| Private, unlisted, permanent, Revisionen | Erfordert Zugriffsmodell, Accounts, dauerhafte Medienregeln, Rate Limits, Moderation und Tarifentscheidung. | Pilot-Backend und Rollenmodell definieren; erst danach UI aktivieren. Die aktuelle UI behauptet diese Funktionen nicht. |
 | Vollständige Rechtstexte | Controller, Kontakt, Sitz, Rechtsgrundlage, Auftragsverarbeitung und Vertragsbedingungen fehlen als Eingaben. | Mit realen Betreiberangaben Privacy, Terms, Content Rights und Pilotvertrag juristisch erstellen. |
 | Dynamische Social Cards / eigener Slug / Custom Domain | Hash-Routing und GitHub Pages können Galerie-spezifische Server-Metadaten nicht erzeugen. | Hosting/Edge-Rendering und Domain auswählen; OG-Route serverseitig aus Gallery-Metadaten erzeugen. |
 | Drei Builder-Räume als Blender-GLB | Der Runtime-Wechsel braucht finale Blender-Dateien, UV/PBR-QA, Export und Regression gegen alle Editor-Surfaces. | Bestehenden Exportvertrag pro Raum erfüllen und pro Template schrittweise hinter Feature Flags migrieren. |
@@ -73,11 +82,11 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 ## Bewusst verbleibende technische Grenzen
 
-- Ein frischer Safari-Load eines älteren veröffentlichten Firestore-Raums beendete im lokalen Production-Preview den WebContent-Prozess nach dem Metadaten-Load; derselbe Raum und die gemeinsame Tour-Oberfläche liefen in Chromium. Vor P1 muss geprüft werden, ob die alten unkomprimierten Artwork-Data-URLs Safaris Textur-/Speicherbudget überschreiten.
+- Alte schema-v1-Räume enthalten weiterhin große Firestore-Data-URLs und können auf Safari das frühere Speicherproblem behalten. Neue schema-v2-Räume umgehen diesen Pfad; Live-Altdaten wurden nicht automatisch migriert.
 - Die Builder-Räume bleiben derzeit prozedural. Der Vertrag ist real, die Migration noch nicht.
-- Kollision ist swept AABB, kein Navmesh-Pathfinding. Click-to-walk lehnt blockierte Direktziele ab, plant aber keinen Weg um mehrere Hindernisse.
-- Die Materialbibliothek verwendet dokumentierte Albedo-Texturen und physikalische Materialparameter, aber noch keine scanbasierten Normal-/Roughness-/AO-Sets.
-- Der Grand Forum Builder adressiert aktuell Außenwände und den zentralen zweiseitigen Divider; zusätzliche interne Partition-Surfaces benötigen eine Domain-/Exportmigration.
+- Kollision ist swept AABB mit einem kleinen Visibility-Graphen für prozedurale Räume, kein Navmesh. Komplexe oder dynamische Hindernisfelder bleiben deshalb eine spätere Ausbaustufe.
+- Die Materialbibliothek verwendet dokumentierte Albedo-Texturen, physikalische Parameter und prozedurale Height-/Roughness-Details, aber noch keine scanbasierten Normal-/Roughness-/AO-Sets.
+- Der Grand Forum Builder adressiert Außenwände, den zentralen zweiseitigen Divider und acht beidseitige Innenflächen. Eine spätere Blender-GLB-Migration muss dieselben Surface-IDs erhalten.
 - Progressive Shell/Artwork/Decor-Streaming, KTX2 und echte LOD-Stufen bleiben spätere Optimierungen; die jetzige Mobile-Variante erfüllt jedoch das Performancebudget.
 
 ## Pitch-Gate

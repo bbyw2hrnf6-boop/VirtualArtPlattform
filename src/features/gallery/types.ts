@@ -5,7 +5,29 @@ export type WallId =
   | "west"
   | "east"
   | "divider-front"
-  | "divider-back";
+  | "divider-back"
+  | "north-cross-west"
+  | "north-room-west"
+  | "north-cross-east"
+  | "north-room-east"
+  | "south-cross-west"
+  | "south-room-west"
+  | "south-cross-east"
+  | "south-room-east";
+
+export const FORUM_INTERIOR_WALLS = [
+  "north-cross-west",
+  "north-room-west",
+  "north-cross-east",
+  "north-room-east",
+  "south-cross-west",
+  "south-room-west",
+  "south-cross-east",
+  "south-room-east",
+] as const satisfies readonly WallId[];
+
+export const isShortGalleryWall = (wall: WallId) =>
+  wall.startsWith("divider") || FORUM_INTERIOR_WALLS.includes(wall as (typeof FORUM_INTERIOR_WALLS)[number]);
 export type WallFinish =
   | "chalk"
   | "warm"
@@ -62,6 +84,7 @@ export interface DecorPlacement {
 export interface Artwork {
   id: string;
   assetId?: string;
+  storagePath?: string;
   title: string;
   year?: string;
   description?: string;

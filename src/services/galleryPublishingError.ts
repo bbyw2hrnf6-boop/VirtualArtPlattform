@@ -36,6 +36,20 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
       error
     );
   }
+  if (code === 'storage/unauthorized') {
+    return new GalleryPublishingError(
+      'configuration',
+      `Firebase Storage rejected the authenticated image upload in “${projectId}”. Create the Storage bucket and publish the repository's storage.rules manually, then retry. Your room is still saved locally.`,
+      error
+    );
+  }
+  if (code === 'storage/bucket-not-found' || code === 'storage/no-default-bucket' || code === 'storage/project-not-found') {
+    return new GalleryPublishingError(
+      'configuration',
+      `Firebase Storage is not ready for “${projectId}”. Confirm the Blaze plan and create the default Storage bucket, then retry. Your room is still saved locally.`,
+      error
+    );
+  }
   if (code === 'failed-precondition' || code === 'firestore/failed-precondition') {
     return new GalleryPublishingError(
       'configuration',
@@ -65,6 +79,7 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
     code === 'resource-exhausted'
     || code === 'firestore/resource-exhausted'
     || code === 'auth/too-many-requests'
+    || code === 'storage/quota-exceeded'
   ) {
     return new GalleryPublishingError(
       'quota',
@@ -76,6 +91,8 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
     code === 'unavailable'
     || code === 'firestore/unavailable'
     || code === 'auth/network-request-failed'
+    || code === 'storage/retry-limit-exceeded'
+    || code === 'storage/unknown'
   ) {
     return new GalleryPublishingError(
       'unavailable',

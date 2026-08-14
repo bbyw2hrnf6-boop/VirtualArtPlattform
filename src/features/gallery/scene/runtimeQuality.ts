@@ -13,6 +13,7 @@ export type PlanarCollider = {
 export type PlanarCollisionSystem = {
   resolve: (next: THREE.Vector3, previous: THREE.Vector3) => boolean;
   canReach: (from: THREE.Vector3, to: THREE.Vector3) => boolean;
+  findPath: (from: THREE.Vector3, to: THREE.Vector3) => THREE.Vector3[] | null;
 };
 
 export type RenderQuality = {
@@ -44,11 +45,21 @@ function contains(box: PlanarCollider, point: THREE.Vector3) {
   return point.x >= box.minX && point.x <= box.maxX && point.z >= box.minZ && point.z <= box.maxZ;
 }
 
-export function createPlanarCollisionSystem(rawColliders: PlanarCollider[], radius = .36): PlanarCollisionSystem {
+export function createPlanarCollisionSystem(
+  rawColliders: PlanarCollider[],
+  radius = .36,
+  bounds?: SceneBounds,
+): PlanarCollisionSystem {
   const colliders = rawColliders
     .filter((box) => Number.isFinite(box.minX + box.maxX + box.minZ + box.maxZ))
     .map((box) => ({ ...box, minX: box.minX - radius, maxX: box.maxX + radius, minZ: box.minZ - radius, maxZ: box.maxZ + radius }));
   const isFree = (point: THREE.Vector3) => !colliders.some((box) => contains(box, point));
+  const segmentIsFree = (from: THREE.Vector3, to: THREE.Vector3) =>
+    !colliders.some((box) => !contains(box, from) && segmentIntersectsBox(from, to, box));
+  const withinBounds = (point: THREE.Vector3) => !bounds || (
+    point.x >= bounds.minX && point.x <= bounds.maxX
+    && point.z >= bounds.minZ && point.z <= bounds.maxZ
+  );
   return {
     resolve(next, previous) {
       if (isFree(next)) return true;
@@ -65,7 +76,51 @@ export function createPlanarCollisionSystem(rawColliders: PlanarCollider[], radi
       return next.distanceToSquared(previous) > 1e-8;
     },
     canReach(from, to) {
-      return !colliders.some((box) => !contains(box, from) && segmentIntersectsBox(from, to, box));
+      return withinBounds(to) && segmentIsFree(from, to);
+    },
+    findPath(from, to) {
+      if (!withinBounds(to) || !isFree(to)) return null;
+      if (segmentIsFree(from, to)) return [to.clone()];
+      const y = from.y;
+      const clearance = .045;
+      const nodes = [from.clone(), to.clone()];
+      colliders.forEach((box) => {
+        [
+          [box.minX - clearance, box.minZ - clearance],
+          [box.minX - clearance, box.maxZ + clearance],
+          [box.maxX + clearance, box.minZ - clearance],
+          [box.maxX + clearance, box.maxZ + clearance],
+        ].forEach(([x, z]) => {
+          const point = new THREE.Vector3(x, y, z);
+          if (withinBounds(point) && isFree(point)) nodes.push(point);
+        });
+      });
+      const distance = new Array<number>(nodes.length).fill(Infinity);
+      const previous = new Array<number>(nodes.length).fill(-1);
+      const visited = new Set<number>();
+      distance[0] = 0;
+      while (visited.size < nodes.length) {
+        let current = -1;
+        for (let index = 0; index < nodes.length; index += 1)
+          if (!visited.has(index) && (current < 0 || distance[index] < distance[current]))
+            current = index;
+        if (current < 0 || !Number.isFinite(distance[current])) break;
+        if (current === 1) break;
+        visited.add(current);
+        for (let next = 0; next < nodes.length; next += 1) {
+          if (visited.has(next) || next === current || !segmentIsFree(nodes[current], nodes[next]))
+            continue;
+          const candidate = distance[current] + nodes[current].distanceTo(nodes[next]);
+          if (candidate < distance[next]) {
+            distance[next] = candidate;
+            previous[next] = current;
+          }
+        }
+      }
+      if (previous[1] < 0) return null;
+      const path: THREE.Vector3[] = [];
+      for (let index = 1; index > 0; index = previous[index]) path.unshift(nodes[index].clone());
+      return path;
     }
   };
 }

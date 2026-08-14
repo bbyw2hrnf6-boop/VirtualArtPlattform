@@ -6,6 +6,7 @@ export interface GalleryRecord extends GalleryDraft {
   expiresAt: string;
   ownerId?: string;
   coverSrc?: string;
+  coverPath?: string;
 }
 
 export interface GalleryRepository {
