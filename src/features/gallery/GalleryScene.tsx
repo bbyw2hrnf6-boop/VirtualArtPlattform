@@ -1826,7 +1826,7 @@ function buildRoom(
       });
       const daylight = new THREE.RectAreaLight(
         zone > 0 ? "#fff3da" : "#e4efff",
-        2.25,
+        1.75,
         skylightWidth * 0.8,
         skylightDepth * 0.8,
       );
@@ -2165,7 +2165,7 @@ function createGalleryEnvironment(
   });
   const generator = new THREE.PMREMGenerator(renderer);
   generator.compileCubemapShader();
-  const target = generator.fromScene(environmentScene, 0.07, 0.1, 60);
+  const target = generator.fromScene(environmentScene, 0.04, 0.1, 60);
   generator.dispose();
   environmentScene.traverse((object) => {
     const mesh = object as THREE.Mesh;
@@ -2286,11 +2286,11 @@ function addLighting(
       bounce: 0.72,
     },
     pavilion: {
-      hemi: 0.9,
-      ambient: 0.86,
-      key: 1.12,
+      hemi: 0.7,
+      ambient: 0.64,
+      key: 0.96,
       spot: 1,
-      bounce: 1.14,
+      bounce: 0.72,
     },
   }[draft.templateId];
   // The environment stays neutral; only this room-owned rig changes presets.
@@ -3457,7 +3457,7 @@ function GallerySceneRenderer({
     reducedMotion.addEventListener("change", updateMotionPreference);
     renderer.setPixelRatio(quality.dpr);
     renderer.shadowMap.enabled = quality.shadows;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure =
@@ -3465,7 +3465,7 @@ function GallerySceneRenderer({
         ? 0.82
         : currentDraft.templateId === "nocturne"
           ? 0.78
-          : 0.84;
+          : 0.76;
     configureSceneCanvas(
       renderer.domElement,
       initial.visitor
@@ -3496,11 +3496,17 @@ function GallerySceneRenderer({
     const baseEnvironment = baseEnvironmentTarget.texture;
     scene.environment = baseEnvironment;
     scene.environmentIntensity =
-      quality.tier === "low"
-        ? 0.56
-        : currentDraft.templateId === "nocturne"
-          ? 0.66
-          : 0.74;
+      currentDraft.templateId === "nocturne"
+        ? quality.tier === "low"
+          ? 0.54
+          : 0.66
+        : currentDraft.templateId === "pavilion"
+          ? quality.tier === "low"
+            ? 0.48
+            : 0.62
+          : quality.tier === "low"
+            ? 0.52
+            : 0.72;
     const controls = new OrbitControls(camera, renderer.domElement);
     const largestDimension = Math.max(templateW, templateD);
     controls.enableDamping = true;
@@ -5013,7 +5019,13 @@ function GallerySceneRenderer({
     observer.observe(element);
     resize();
     const adaptiveDpr = createAdaptiveDpr(renderer, quality, () => {
-      renderer.shadowMap.enabled = false;
+      // Preserve the room's directional contact shadow when performance drops.
+      // Removing every shadow made the procedural rooms look flat precisely on
+      // the devices that already receive the lowest material/reflection budget.
+      lighting.installations.forEach((installation, index) => {
+        installation.spot.castShadow = index === 0;
+      });
+      renderer.shadowMap.needsUpdate = true;
       element.dataset.quality = "low";
     });
     const cameraDirection = new THREE.Vector3();
@@ -5630,7 +5642,7 @@ export function DannyDemoScene({
     renderer.toneMappingExposure =
       quality.tier === "low" ? 1.04 : quality.tier === "high" ? 0.96 : 1;
     renderer.shadowMap.enabled = quality.tier !== "low";
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     configureSceneCanvas(
       renderer.domElement,
       "Danny Hirsch virtual exhibition. Focus this view to use keyboard movement.",
