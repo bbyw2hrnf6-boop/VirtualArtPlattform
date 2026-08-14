@@ -86,5 +86,19 @@ service firebase.storage {
       allow delete: if signedIn() && request.auth.uid == ownerId;
       allow update: if false;
     }
+
+    match /profiles/{ownerId}/avatar.webp {
+      allow read: if signedIn() && request.auth.uid == ownerId;
+      allow create, update: if verifiedAccount()
+        && request.auth.uid == ownerId
+        && request.resource != null
+        && request.resource.size > 0
+        && request.resource.size < 512 * 1024
+        && request.resource.contentType.matches('image/(avif|jpeg|png|webp)')
+        && request.resource.metadata.ownerId == ownerId
+        && request.resource.metadata.kind == 'avatar'
+        && request.resource.metadata.schemaVersion == '1';
+      allow delete: if signedIn() && request.auth.uid == ownerId;
+    }
   }
 }

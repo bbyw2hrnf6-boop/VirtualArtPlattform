@@ -3,6 +3,10 @@ import type { AccountSession } from "../../services/accountTypes";
 import { galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
 import { galleryShareUrl } from "../../services/galleryShareUrl";
 import { visibilityLabel } from "../../services/galleryAccess";
+import {
+  createGalleryProjectId,
+  saveGalleryDraft,
+} from "../../services/draftStorage";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { GalleryAccessManager } from "./GalleryAccessManager";
 import "./accountDialog.css";
@@ -13,31 +17,51 @@ function AccountRooms({ session }: { session: AccountSession }) {
   const [rooms, setRooms] = useState<GalleryRecord[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [removingId, setRemovingId] = useState<string>();
+  const [editingId, setEditingId] = useState<string>();
   const [error, setError] = useState<string>();
   const [accessRoom, setAccessRoom] = useState<GalleryRecord>();
-  useEffect(() => {
-    let active = true;
-    void galleryRepository
+  const loadRooms = useCallback(async () => {
+    setStatus("loading");
+    setError(undefined);
+    try {
+      const next = await galleryRepository
       .mine()
-      .then((next) => {
-        if (!active) return;
-        setRooms(next);
-        setStatus("ready");
-      })
-      .catch(() => {
-        if (active) setStatus("error");
-      });
-    return () => {
-      active = false;
-    };
-  }, [session.uid]);
+      setRooms(next);
+      setStatus("ready");
+    } catch (caught) {
+      console.error("Account rooms unavailable", caught);
+      setStatus("error");
+    }
+  }, []);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => void loadRooms());
+    return () => cancelAnimationFrame(frame);
+  }, [loadRooms, session.uid]);
+  const editRoom = async (room: GalleryRecord) => {
+    setEditingId(room.id);
+    setError(undefined);
+    try {
+      const draft = await galleryRepository.editableDraft(room.id);
+      const projectId = createGalleryProjectId(draft.templateId);
+      await saveGalleryDraft(projectId, draft, 1);
+      window.location.assign(`#/create/${draft.templateId}/${projectId}`);
+    } catch (caught) {
+      console.error("Published room could not be copied to a draft", caught);
+      setError("This room could not be prepared for editing. Check its image access and retry.");
+    } finally {
+      setEditingId(undefined);
+    }
+  };
   return (
     <section className="account-rooms" aria-labelledby="account-rooms-title">
       <div><h3 id="account-rooms-title">My live rooms</h3><span>{rooms.length}</span></div>
       {status === "loading" ? (
         <p>Loading rooms…</p>
       ) : status === "error" ? (
-        <p>Rooms could not be loaded. Check the current Firestore rules and indexes.</p>
+        <div className="account-rooms__empty">
+          <p>Rooms could not be loaded. Your publications remain stored.</p>
+          <button type="button" onClick={() => void loadRooms()}>Retry</button>
+        </div>
       ) : rooms.length ? (
         <ul>
           {rooms.map((room) => (
@@ -47,6 +71,13 @@ function AccountRooms({ session }: { session: AccountSession }) {
                 <span><strong>{room.title}</strong>{visibilityLabel[room.visibility]} · until {new Date(room.expiresAt).toLocaleDateString()}</span>
                 <b aria-hidden="true">↗</b>
               </a>
+              <button
+                type="button"
+                disabled={editingId === room.id}
+                aria-label={`Edit a copy of ${room.title}`}
+                title="Creates a private local draft. The current live link stays unchanged."
+                onClick={() => void editRoom(room)}
+              >{editingId === room.id ? "…" : "Edit copy"}</button>
               <button
                 type="button"
                 aria-label={`Manage access for ${room.title}`}
@@ -76,6 +107,9 @@ function AccountRooms({ session }: { session: AccountSession }) {
       ) : (
         <p>Rooms published with this account will appear here.</p>
       )}
+      {rooms.length > 0 && (
+        <p className="account-rooms__hint">Edit copy keeps the current live room safe and opens a new versioned local draft.</p>
+      )}
       {accessRoom && (
         <GalleryAccessManager
           key={accessRoom.id}
@@ -86,6 +120,69 @@ function AccountRooms({ session }: { session: AccountSession }) {
       )}
       {error && <p className="account-rooms__error" role="alert">{error}</p>}
     </section>
+  );
+}
+
+function AccountProfileSettings({
+  account,
+  busy,
+  onSave,
+  onResetPassword,
+}: {
+  account: AccountSession;
+  busy: boolean;
+  onSave: (input: {
+    displayName: string;
+    nickname: string;
+    avatar?: File;
+    removeAvatar?: boolean;
+  }) => void;
+  onResetPassword: () => void;
+}) {
+  const [displayName, setDisplayName] = useState(account.displayName ?? "");
+  const [nickname, setNickname] = useState(account.nickname ?? "");
+  const [avatar, setAvatar] = useState<File>();
+  const [removeAvatar, setRemoveAvatar] = useState(false);
+  return (
+    <form className="account-profile" onSubmit={(event) => {
+      event.preventDefault();
+      onSave({
+        displayName,
+        nickname,
+        ...(avatar ? { avatar } : {}),
+        removeAvatar,
+      });
+    }}>
+      <div className="account-profile__avatar">
+        <div className="account-avatar account-avatar--large" aria-hidden="true">
+          {account.avatarSrc && !removeAvatar
+            ? <img src={account.avatarSrc} alt="" />
+            : <span>{(nickname || displayName || account.email || "A").slice(0, 1).toUpperCase()}</span>}
+        </div>
+        <div>
+          <label className="account-profile__upload">Choose image
+            <input type="file" accept="image/avif,image/jpeg,image/png,image/webp" onChange={(event) => {
+              const next = event.target.files?.[0];
+              setAvatar(next);
+              if (next) setRemoveAvatar(false);
+            }} />
+          </label>
+          {avatar && <small>{avatar.name}</small>}
+          {(account.avatarSrc || avatar) && (
+            <button type="button" className="account-profile__remove" onClick={() => {
+              setAvatar(undefined);
+              setRemoveAvatar(true);
+            }}>Remove image</button>
+          )}
+        </div>
+      </div>
+      <label>Full name<input maxLength={60} required autoComplete="name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
+      <label>Nickname<input maxLength={32} autoComplete="nickname" placeholder="artist-name" value={nickname} onChange={(event) => setNickname(event.target.value)} /><small>Letters, numbers, dots, dashes, or underscores.</small></label>
+      <button className="account-primary" disabled={busy}>{busy ? "Saving…" : "Save profile"}</button>
+      {account.email && (
+        <button type="button" className="account-reset" disabled={busy} onClick={onResetPassword}>Send password reset email</button>
+      )}
+    </form>
   );
 }
 
@@ -102,6 +199,7 @@ export function AccountDialog({
   const [service, setService] = useState<AccountModule>();
   const [session, setSession] = useState<AccountSession | null>(null);
   const [mode, setMode] = useState<"signin" | "create">("create");
+  const [section, setSection] = useState<"rooms" | "profile">("rooms");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -120,11 +218,25 @@ export function AccountDialog({
         if (!active) return;
         setSession(next);
         onSessionChange?.(next);
+        if (next && !next.isAnonymous) {
+          void module.hydrateAccountSession(next).then((hydrated) => {
+            if (!active || !hydrated) return;
+            setSession(hydrated);
+            onSessionChange?.(hydrated);
+          }).catch((caught) => console.warn("Account profile unavailable.", caught));
+        }
       });
       void module.currentAccountSession().then((next) => {
         if (!active) return;
         setSession(next);
         onSessionChange?.(next);
+        if (next && !next.isAnonymous) {
+          void module.hydrateAccountSession(next).then((hydrated) => {
+            if (!active || !hydrated) return;
+            setSession(hydrated);
+            onSessionChange?.(hydrated);
+          }).catch((caught) => console.warn("Account profile unavailable.", caught));
+        }
       });
     });
     return () => {
@@ -173,13 +285,43 @@ export function AccountDialog({
           <>
             <h2 id="account-dialog-title">Your rooms.<br /><em>One identity.</em></h2>
             <div className="account-identity">
-              <strong>{account.displayName || account.email}</strong>
-              <span>{account.email}</span>
-              <i className={account.emailVerified ? "is-verified" : ""}>
-                {account.emailVerified ? "Verified account" : "Email verification required"}
-              </i>
+              <div className="account-avatar" aria-hidden="true">
+                {account.avatarSrc
+                  ? <img src={account.avatarSrc} alt="" />
+                  : <span>{(account.nickname || account.displayName || account.email || "A").slice(0, 1).toUpperCase()}</span>}
+              </div>
+              <div>
+                <strong>{account.displayName || account.email}</strong>
+                {account.nickname && <small>@{account.nickname}</small>}
+                <span>{account.email}</span>
+                <i className={account.emailVerified ? "is-verified" : ""}>
+                  {account.emailVerified ? "Verified account" : "Email verification required"}
+                </i>
+              </div>
             </div>
-            {account.emailVerified && <AccountRooms session={account} />}
+            <div className="account-tabs account-tabs--settings" role="tablist" aria-label="Account settings">
+              <button role="tab" aria-selected={section === "rooms"} onClick={() => setSection("rooms")}>Rooms</button>
+              <button role="tab" aria-selected={section === "profile"} onClick={() => setSection("profile")}>Profile &amp; settings</button>
+            </div>
+            {account.emailVerified && section === "rooms" && <AccountRooms session={account} />}
+            {account.emailVerified && section === "profile" && (
+              <AccountProfileSettings
+                key={`${account.uid}:${account.displayName ?? ""}:${account.nickname ?? ""}:${account.avatarSrc ?? ""}`}
+                account={account}
+                busy={busy}
+                onSave={(input) => void run(async () => {
+                  const next = await service?.saveAccountProfile({
+                    ...input,
+                  });
+                  setMessage("Profile saved.");
+                  return next;
+                })}
+                onResetPassword={() => void run(async () => {
+                    await service?.requestPasswordReset(account.email!);
+                    setMessage("Password reset email sent.");
+                  })}
+              />
+            )}
             {!account.emailVerified && (
               <div className="account-verification">
                 <p>Verify your email before publishing private rooms or joining a team.</p>
@@ -194,7 +336,7 @@ export function AccountDialog({
                 })} disabled={busy}>I verified</button>
               </div>
             )}
-            <p className="account-note">Account rooms can use public, unlisted, or private access during the preview. Billing is not active.</p>
+            <p className="account-note">Public rooms appear in Discover. Unlisted and private rooms stay in My rooms. Billing is not active.</p>
             <button className="account-secondary" onClick={() => void run(async () => {
               await service?.signOutAccount();
               setSession(null);
@@ -276,14 +418,48 @@ export function AccountButton({
     },
     [onSessionChange],
   );
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: () => void = () => undefined;
+    void import("../../services/accountService").then((service) => {
+      if (!active) return;
+      const sync = (next: AccountSession | null) => {
+        if (!active) return;
+        handleSessionChange(next);
+        if (next && !next.isAnonymous) {
+          void service.hydrateAccountSession(next).then((hydrated) => {
+            if (active) handleSessionChange(hydrated);
+          }).catch((caught) => console.warn("Account profile unavailable.", caught));
+        }
+      };
+      unsubscribe = service.subscribeAccount(sync);
+      void service.currentAccountSession().then(sync);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [handleSessionChange]);
+  const signedIn = Boolean(session && !session.isAnonymous);
+  const accountLabel = signedIn
+    ? session?.nickname || session?.displayName?.split(" ")[0] || "Account"
+    : "Account";
   return (
     <>
       <button
         type="button"
-        className={`account-entry ${light ? "account-entry--light" : ""}`}
+        className={`account-entry ${light ? "account-entry--light" : ""} ${signedIn ? "is-signed-in" : ""}`}
         onClick={() => setOpen(true)}
+        title={signedIn ? `Signed in as ${session?.email || accountLabel}` : "Open account"}
       >
-        {session && !session.isAnonymous ? session.displayName?.split(" ")[0] || "Account" : "Account"}
+        {signedIn && (
+          <span className="account-entry__avatar" aria-hidden="true">
+            {session?.avatarSrc
+              ? <img src={session.avatarSrc} alt="" />
+              : (accountLabel.slice(0, 1).toUpperCase())}
+          </span>
+        )}
+        <span>{accountLabel}</span>
       </button>
       <AccountDialog
         open={open}

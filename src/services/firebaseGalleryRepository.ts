@@ -481,10 +481,21 @@ class FirebaseGalleryRepository implements GalleryRepository {
       orderBy("expiresAt", "desc"),
       limit(12),
     );
-    const snapshots = await Promise.all([
+    const snapshotResults = await Promise.allSettled([
       getDocs(publicActive),
       getDocs(legacyActive),
     ]);
+    const snapshots = snapshotResults.flatMap((result) => {
+      if (result.status === "fulfilled") return [result.value];
+      console.warn("One Discover query was unavailable.", result.reason);
+      return [];
+    });
+    if (!snapshots.length) {
+      const failure = snapshotResults.find(
+        (result): result is PromiseRejectedResult => result.status === "rejected",
+      );
+      throw failure?.reason ?? new Error("Discover is unavailable.");
+    }
     const items = Array.from(
       new Map(
         snapshots.flatMap((snapshot) => snapshot.docs).map((item) => [item.id, item]),
@@ -502,8 +513,10 @@ class FirebaseGalleryRepository implements GalleryRepository {
             new Date(record.expiresAt).getTime() <= Date.now()
           )
             return null;
-          const coverSrc = record.coverPath
-            ? await storageObjectUrl(
+          let coverSrc = record.coverSrc;
+          if (record.coverPath) {
+            try {
+              coverSrc = await storageObjectUrl(
                 validateStoragePathOwnership(
                   record.coverPath,
                   record.ownerId,
@@ -511,11 +524,15 @@ class FirebaseGalleryRepository implements GalleryRepository {
                   "coverPath",
                 ),
                 MAX_COVER_DOWNLOAD_BYTES,
-              )
-            : record.coverSrc;
+              );
+            } catch (error) {
+              // A missing or inaccessible cover must not hide an otherwise
+              // valid exhibition from Discover. The card has a room fallback.
+              console.warn("Discover cover unavailable.", record.id, error);
+            }
+          }
           return { ...record, ...(coverSrc ? { coverSrc } : {}) };
         } catch (error) {
-          if (!(error instanceof GalleryRepositoryDataError)) throw error;
           console.warn("Skipping invalid Discover gallery.", error);
           return null;
         }
@@ -536,12 +553,12 @@ class FirebaseGalleryRepository implements GalleryRepository {
     const owner = await this.authenticatedUser();
     if (owner.isAnonymous)
       throw new Error("Sign in to see rooms saved to your account.");
-    const safelyActiveAt = Timestamp.fromMillis(Date.now() + 60_000);
+    // Owner-only listing does not need a composite index. Filtering expiry in
+    // the client also lets the account screen survive while an index is being
+    // created and avoids coupling the whole list to one Storage cover.
     const owned = query(
       collection(firebaseDb, "galleries"),
       where("ownerId", "==", owner.uid),
-      where("expiresAt", ">", safelyActiveAt),
-      orderBy("expiresAt", "desc"),
       limit(30),
     );
     const records = await mapWithConcurrency(
@@ -549,8 +566,10 @@ class FirebaseGalleryRepository implements GalleryRepository {
       DISCOVER_COVER_CONCURRENCY,
       async (item) => {
         const record = fromFirestore(item.id, item.data());
-        const coverSrc = record.coverPath
-          ? await storageObjectUrl(
+        let coverSrc = record.coverSrc;
+        if (record.coverPath) {
+          try {
+            coverSrc = await storageObjectUrl(
               validateStoragePathOwnership(
                 record.coverPath,
                 record.ownerId,
@@ -558,15 +577,59 @@ class FirebaseGalleryRepository implements GalleryRepository {
                 "coverPath",
               ),
               MAX_COVER_DOWNLOAD_BYTES,
-            )
-          : record.coverSrc;
+            );
+          } catch (error) {
+            console.warn("Account room cover unavailable.", record.id, error);
+          }
+        }
         return { ...record, ...(coverSrc ? { coverSrc } : {}) };
       },
     );
-    return records.sort(
-      (a, b) =>
-        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+    const activeAt = Date.now() + 60_000;
+    return records
+      .filter((record) => new Date(record.expiresAt).getTime() > activeAt)
+      .sort(
+        (a, b) =>
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+      );
+  }
+
+  async editableDraft(id: string): Promise<GalleryDraft> {
+    const owner = await this.authenticatedUser();
+    const gallery = await this.find(id);
+    if (!gallery) throw new Error("This room no longer exists.");
+    if (gallery.ownerId !== owner.uid)
+      throw new Error("Only the room owner can edit this publication.");
+    const artworks = await mapWithConcurrency(
+      gallery.artworks,
+      ARTWORK_DOWNLOAD_CONCURRENCY,
+      async (artwork) => {
+        const editable = { ...artwork };
+        delete editable.assetId;
+        delete editable.storagePath;
+        return {
+          ...editable,
+          src: /^blob:/i.test(artwork.src)
+            ? await fetch(artwork.src).then(async (response) => {
+                if (!response.ok)
+                  throw new Error(`“${artwork.title}” could not be prepared for editing.`);
+                return blobAsDataUrl(await response.blob());
+              })
+            : artwork.src,
+        };
+      },
     );
+    return {
+      title: gallery.title,
+      artist: gallery.artist,
+      templateId: gallery.templateId,
+      wall: gallery.wall,
+      floor: gallery.floor,
+      ceiling: gallery.ceiling,
+      lighting: gallery.lighting,
+      decor: gallery.decor.map((item) => ({ ...item })),
+      artworks,
+    };
   }
 
   private async ownedGallery(id: string) {

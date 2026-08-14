@@ -13,12 +13,34 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  updateProfile,
   type User,
 } from "firebase/auth";
-import { firebaseAuth } from "./firebase";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
+import {
+  deleteObject,
+  getBlob,
+  ref,
+  uploadBytes,
+} from "firebase/storage";
+import { firebaseAuth, firebaseDb, firebaseStorage } from "./firebase";
 import type { AccountSession } from "./accountTypes";
 
 let persistenceReady: Promise<void> | undefined;
+const avatarObjectUrls = new Map<string, string>();
+const MAX_AVATAR_BYTES = 512 * 1024;
+
+type AccountProfileInput = {
+  displayName: string;
+  nickname: string;
+  avatar?: File;
+  removeAvatar?: boolean;
+};
 
 function ensurePersistence() {
   persistenceReady ??= setPersistence(firebaseAuth, browserLocalPersistence);
@@ -35,6 +57,145 @@ function sessionFromUser(user: User | null): AccountSession | null {
     emailVerified: user.emailVerified,
     providers: user.providerData.map((provider) => provider.providerId),
   };
+}
+
+function profileString(value: unknown, maximum: number) {
+  return typeof value === "string" ? value.trim().slice(0, maximum) : "";
+}
+
+async function avatarSource(path: string) {
+  const cached = avatarObjectUrls.get(path);
+  if (cached) return cached;
+  const blob = await getBlob(ref(firebaseStorage, path), MAX_AVATAR_BYTES);
+  const source = URL.createObjectURL(blob);
+  avatarObjectUrls.set(path, source);
+  return source;
+}
+
+export async function hydrateAccountSession(
+  session: AccountSession | null,
+): Promise<AccountSession | null> {
+  if (!session || session.isAnonymous) return session;
+  const snapshot = await getDoc(doc(firebaseDb, "profiles", session.uid));
+  if (!snapshot.exists()) return session;
+  const data = snapshot.data();
+  const displayName = profileString(data.displayName, 60);
+  const nickname = profileString(data.nickname, 32);
+  const avatarPath = profileString(data.avatarPath, 180);
+  let avatarSrc: string | undefined;
+  if (avatarPath) {
+    try {
+      avatarSrc = await avatarSource(avatarPath);
+    } catch (error) {
+      console.warn("Account avatar unavailable.", error);
+    }
+  }
+  return {
+    ...session,
+    ...(displayName ? { displayName } : {}),
+    ...(nickname ? { nickname } : {}),
+    ...(avatarPath ? { avatarPath } : {}),
+    ...(avatarSrc ? { avatarSrc } : {}),
+  };
+}
+
+export function normalizeAccountProfile(input: Pick<AccountProfileInput, "displayName" | "nickname">) {
+  const displayName = input.displayName.trim().replace(/\s+/g, " ");
+  const nickname = input.nickname.trim();
+  if (!displayName || displayName.length > 60)
+    throw new Error("Use a profile name between 1 and 60 characters.");
+  if (
+    nickname.length > 32 ||
+    (nickname && !/^[A-Za-z0-9._-]+$/.test(nickname))
+  )
+    throw new Error("Nickname may use letters, numbers, dots, dashes, and underscores.");
+  return { displayName, nickname };
+}
+
+async function prepareAvatar(file: File) {
+  if (!file.type.startsWith("image/") || file.size > 10 * 1024 * 1024)
+    throw new Error("Choose a JPG, PNG, WebP, or AVIF image under 10 MB.");
+  const source = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = source;
+    await image.decode();
+    const edge = Math.min(image.naturalWidth, image.naturalHeight);
+    if (!edge) throw new Error("The profile image could not be read.");
+    const size = Math.min(512, edge);
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("The profile image could not be prepared.");
+    context.drawImage(
+      image,
+      Math.round((image.naturalWidth - edge) / 2),
+      Math.round((image.naturalHeight - edge) / 2),
+      edge,
+      edge,
+      0,
+      0,
+      size,
+      size,
+    );
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/webp", 0.82),
+    );
+    if (!blob || blob.size > MAX_AVATAR_BYTES)
+      throw new Error("The profile image could not be compressed enough.");
+    return blob;
+  } finally {
+    URL.revokeObjectURL(source);
+  }
+}
+
+export async function saveAccountProfile(input: AccountProfileInput) {
+  await ensurePersistence();
+  await firebaseAuth.authStateReady();
+  const user = firebaseAuth.currentUser;
+  if (!user || user.isAnonymous || !user.emailVerified)
+    throw new Error("Use a verified account to update your profile.");
+  const profile = normalizeAccountProfile(input);
+  const avatarPath = `profiles/${user.uid}/avatar.webp`;
+  const existing = await getDoc(doc(firebaseDb, "profiles", user.uid));
+  const existingAvatar = profileString(existing.data()?.avatarPath, 180);
+  let keepAvatar = Boolean(existingAvatar);
+  if (input.avatar) {
+    const avatar = await prepareAvatar(input.avatar);
+    await uploadBytes(ref(firebaseStorage, avatarPath), avatar, {
+      contentType: "image/webp",
+      customMetadata: { ownerId: user.uid, kind: "avatar", schemaVersion: "1" },
+    });
+    keepAvatar = true;
+  } else if (input.removeAvatar && existingAvatar) {
+    await deleteObject(ref(firebaseStorage, existingAvatar)).catch((error) => {
+      if (
+        !(
+          typeof error === "object" &&
+          error &&
+          "code" in error &&
+          String(error.code).includes("object-not-found")
+        )
+      )
+        throw error;
+    });
+    keepAvatar = false;
+  }
+  const cached = avatarObjectUrls.get(avatarPath);
+  if (cached) URL.revokeObjectURL(cached);
+  avatarObjectUrls.delete(avatarPath);
+  await setDoc(doc(firebaseDb, "profiles", user.uid), {
+    uid: user.uid,
+    displayName: profile.displayName,
+    nickname: profile.nickname,
+    ...(keepAvatar ? { avatarPath } : {}),
+    schemaVersion: 1,
+    updatedAt: serverTimestamp(),
+  });
+  await updateProfile(user, { displayName: profile.displayName });
+  await user.getIdToken(true);
+  return hydrateAccountSession(sessionFromUser(user));
 }
 
 export async function currentAccountSession() {

@@ -36,6 +36,7 @@ export interface GalleryRepository {
     options?: GalleryPublishOptions,
   ): Promise<GalleryRecord>;
   find(id: string): Promise<GalleryRecord | null>;
+  editableDraft(id: string): Promise<GalleryDraft>;
   discover(): Promise<GalleryRecord[]>;
   mine(): Promise<GalleryRecord[]>;
   currentUserId(): Promise<string | null>;
@@ -63,6 +64,7 @@ function loadRepository(): Promise<GalleryRepository> {
 export const galleryRepository: GalleryRepository = {
   async publish(draft, roomCoverSource, options) { return (await loadRepository()).publish(draft, roomCoverSource, options); },
   async find(id) { return (await loadRepository()).find(id); },
+  async editableDraft(id) { return (await loadRepository()).editableDraft(id); },
   async discover() { return (await loadRepository()).discover(); },
   async mine() { return (await loadRepository()).mine(); },
   async currentUserId() { return (await loadRepository()).currentUserId(); },

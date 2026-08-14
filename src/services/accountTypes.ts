@@ -2,6 +2,9 @@ export type AccountSession = {
   uid: string;
   email?: string;
   displayName?: string;
+  nickname?: string;
+  avatarSrc?: string;
+  avatarPath?: string;
   isAnonymous: boolean;
   emailVerified: boolean;
   providers: string[];
