@@ -46,6 +46,7 @@ import {
 const MAX_ARTWORK_DOWNLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_COVER_DOWNLOAD_BYTES = 1024 * 1024;
 const MAX_CACHED_OBJECT_URLS = 64;
+const ARTWORK_DOWNLOAD_CONCURRENCY = 6;
 const objectUrls = new Map<string, Promise<string>>();
 
 const slugify = (value: string) =>
@@ -360,45 +361,51 @@ class FirebaseGalleryRepository implements GalleryRepository {
     if (!snapshot.exists()) return null;
     const record = fromFirestore(snapshot.id, snapshot.data());
     if (new Date(record.expiresAt).getTime() <= Date.now()) return null;
-    const artworks = await mapWithConcurrency(record.artworks, 3, async (artwork, index) => {
-      if (artwork.storagePath) {
-        validateStoragePathOwnership(
-          artwork.storagePath,
-          record.ownerId,
-          record.id,
-          `artworks[${index}].storagePath`,
+    const artworks = await mapWithConcurrency(
+      record.artworks,
+      ARTWORK_DOWNLOAD_CONCURRENCY,
+      async (artwork, index) => {
+        if (artwork.storagePath) {
+          validateStoragePathOwnership(
+            artwork.storagePath,
+            record.ownerId,
+            record.id,
+            `artworks[${index}].storagePath`,
+          );
+          return {
+            ...artwork,
+            src: await storageObjectUrl(
+              artwork.storagePath,
+              MAX_ARTWORK_DOWNLOAD_BYTES,
+            ),
+          };
+        }
+        if (!artwork.assetId) return artwork;
+        const asset = await getDoc(
+          doc(firebaseDb, "galleryArtworks", artwork.assetId),
         );
-        return {
-          ...artwork,
-          src: await storageObjectUrl(artwork.storagePath, MAX_ARTWORK_DOWNLOAD_BYTES),
-        };
-      }
-      if (!artwork.assetId) return artwork;
-      const asset = await getDoc(doc(firebaseDb, "galleryArtworks", artwork.assetId));
-      if (!asset.exists())
-        throw new GalleryRepositoryDataError(
-          artwork.assetId,
-          "asset",
-          "referenced artwork document is missing",
-        );
-      const parsed = parseArtworkAsset(artwork.assetId, asset.data(), {
-        galleryId: record.id,
-        ownerId: record.ownerId,
-        index,
-        expiresAt: record.expiresAt,
-      });
-      if (new Date(parsed.expiresAt).getTime() <= Date.now())
-        return { ...artwork, src: "" };
-      return { ...artwork, src: parsed.src };
-    });
+        if (!asset.exists())
+          throw new GalleryRepositoryDataError(
+            artwork.assetId,
+            "asset",
+            "referenced artwork document is missing",
+          );
+        const parsed = parseArtworkAsset(artwork.assetId, asset.data(), {
+          galleryId: record.id,
+          ownerId: record.ownerId,
+          index,
+          expiresAt: record.expiresAt,
+        });
+        if (new Date(parsed.expiresAt).getTime() <= Date.now())
+          return { ...artwork, src: "" };
+        return { ...artwork, src: parsed.src };
+      },
+    );
     if (artworks.some((artwork) => !artwork.src)) return null;
-    const coverSrc = record.coverPath
-      ? await storageObjectUrl(
-          validateStoragePathOwnership(record.coverPath, record.ownerId, record.id, "coverPath"),
-          MAX_COVER_DOWNLOAD_BYTES,
-        )
-      : record.coverSrc;
-    return { ...record, artworks, ...(coverSrc ? { coverSrc } : {}) };
+    // The public viewer renders the room itself and never consumes its Discover
+    // cover. Avoid delaying the first usable frame with a separate cover download.
+    // Legacy records keep their already-embedded coverSrc through `record`.
+    return { ...record, artworks };
   }
 
   async discover(): Promise<GalleryRecord[]> {

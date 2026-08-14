@@ -3726,6 +3726,23 @@ function GallerySceneRenderer({
     let reflectionEnvironmentTarget: THREE.WebGLRenderTarget | null = null;
     let reflectionTimer = 0;
     let reflectionFrame = 0;
+    let reflectionIdle = 0;
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions,
+      ) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const cancelScheduledRoomReflection = () => {
+      window.clearTimeout(reflectionTimer);
+      reflectionTimer = 0;
+      if (reflectionFrame) cancelAnimationFrame(reflectionFrame);
+      reflectionFrame = 0;
+      if (reflectionIdle && idleWindow.cancelIdleCallback)
+        idleWindow.cancelIdleCallback(reflectionIdle);
+      reflectionIdle = 0;
+    };
     const bakeRoomReflection = () => {
       reflectionFrame = 0;
       if (disposed || quality.tier === "low") return;
@@ -3818,13 +3835,20 @@ function GallerySceneRenderer({
         element.dataset.reflections = "light-card-pmrem";
         return;
       }
-      window.clearTimeout(reflectionTimer);
-      if (reflectionFrame) cancelAnimationFrame(reflectionFrame);
+      cancelScheduledRoomReflection();
       element.dataset.reflections = "room-probe-pending";
       reflectionTimer = window.setTimeout(() => {
         reflectionTimer = 0;
-        reflectionFrame = requestAnimationFrame(bakeRoomReflection);
-      }, 420);
+        const queueBake = () => {
+          reflectionIdle = 0;
+          reflectionFrame = requestAnimationFrame(bakeRoomReflection);
+        };
+        if (idleWindow.requestIdleCallback)
+          reflectionIdle = idleWindow.requestIdleCallback(queueBake, {
+            timeout: 1_200,
+          });
+        else queueBake();
+      }, 650);
     };
     scheduleRoomReflection();
     let modeTransition: ModeTransition | null = null;
@@ -5033,7 +5057,10 @@ function GallerySceneRenderer({
     const artworkPosition = new THREE.Vector3();
     const insertionDirection = new THREE.Vector3();
     const insertionPoint = new THREE.Vector3();
+    const insertionHorizontal = new THREE.Vector3();
+    const editorCameraOffset = new THREE.Vector3();
     let placementFrame = 0;
+    let lastDiagnosticsAt = Number.NEGATIVE_INFINITY;
     const animate = (now = performance.now()) => {
       intro?.update();
       if (activeGuidedTour && activeGuidedTour.pausedAt === undefined) {
@@ -5124,8 +5151,8 @@ function GallerySceneRenderer({
         }
       }
       if (editorZoomDistance !== null) {
-        const offset = camera.position.clone().sub(controls.target);
-        const distance = offset.length();
+        editorCameraOffset.copy(camera.position).sub(controls.target);
+        const distance = editorCameraOffset.length();
         const nextDistance = THREE.MathUtils.lerp(
           distance,
           editorZoomDistance,
@@ -5134,7 +5161,7 @@ function GallerySceneRenderer({
         if (distance > 0.0001)
           camera.position
             .copy(controls.target)
-            .add(offset.multiplyScalar(nextDistance / distance));
+            .add(editorCameraOffset.multiplyScalar(nextDistance / distance));
         if (Math.abs(nextDistance - editorZoomDistance) < 0.004)
           editorZoomDistance = null;
       }
@@ -5158,9 +5185,10 @@ function GallerySceneRenderer({
           placementFrame++ % 18 === 0
         ) {
           camera.getWorldDirection(insertionDirection);
-          const horizontal = insertionDirection.clone().setY(0);
-          if (horizontal.lengthSq() < 0.001) horizontal.set(0, 0, -1);
-          horizontal.normalize();
+          insertionHorizontal.copy(insertionDirection).setY(0);
+          if (insertionHorizontal.lengthSq() < 0.001)
+            insertionHorizontal.set(0, 0, -1);
+          insertionHorizontal.normalize();
           const floorDistance =
             insertionDirection.y < -0.08
               ? THREE.MathUtils.clamp(
@@ -5171,7 +5199,7 @@ function GallerySceneRenderer({
               : 3.2;
           insertionPoint
             .copy(camera.position)
-            .addScaledVector(horizontal, floorDistance);
+            .addScaledVector(insertionHorizontal, floorDistance);
           latest.current.onViewPlacementChange(
             THREE.MathUtils.clamp(
               insertionPoint.x,
@@ -5208,19 +5236,24 @@ function GallerySceneRenderer({
           latest.current.onArtworkFocus?.(null);
         }
       }
-      element.dataset.cameraPosition = camera.position
-        .toArray()
-        .map((value) => value.toFixed(3))
-        .join(",");
-      element.dataset.cameraYaw = camera.rotation.y.toFixed(3);
-      if (mode === "arrange" || mode === "overview")
-        element.dataset.cameraTarget = controls.target
+      // These attributes are observability hooks, not rendering inputs. Updating
+      // them at 60 fps created strings, DOM mutations and avoidable GC pauses.
+      if (now - lastDiagnosticsAt >= 120) {
+        lastDiagnosticsAt = now;
+        element.dataset.cameraPosition = camera.position
           .toArray()
           .map((value) => value.toFixed(3))
           .join(",");
-      else delete element.dataset.cameraTarget;
-      element.dataset.intro =
-        intro && !intro.isComplete() ? "active" : "complete";
+        element.dataset.cameraYaw = camera.rotation.y.toFixed(3);
+        if (mode === "arrange" || mode === "overview")
+          element.dataset.cameraTarget = controls.target
+            .toArray()
+            .map((value) => value.toFixed(3))
+            .join(",");
+        else delete element.dataset.cameraTarget;
+        element.dataset.intro =
+          intro && !intro.isComplete() ? "active" : "complete";
+      }
       adaptiveDpr.update(now);
       renderer.render(scene, camera);
       frame = requestAnimationFrame(animate);
@@ -5243,8 +5276,7 @@ function GallerySceneRenderer({
       navigation.dispose();
       controls.dispose();
       status.remove();
-      window.clearTimeout(reflectionTimer);
-      if (reflectionFrame) cancelAnimationFrame(reflectionFrame);
+      cancelScheduledRoomReflection();
       reflectionEnvironmentTarget?.dispose();
       baseEnvironmentTarget.dispose();
       disposeObjectTree(scene);
