@@ -5,6 +5,8 @@ import { galleryShareUrl } from "../../services/galleryShareUrl";
 import { visibilityLabel } from "../../services/galleryAccess";
 import {
   createGalleryProjectId,
+  loadGalleryDraft,
+  publishedGalleryProjectId,
   saveGalleryDraft,
 } from "../../services/draftStorage";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
@@ -24,8 +26,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
     setStatus("loading");
     setError(undefined);
     try {
-      const next = await galleryRepository
-      .mine()
+      const next = await galleryRepository.mine();
       setRooms(next);
       setStatus("ready");
     } catch (caught) {
@@ -41,20 +42,44 @@ function AccountRooms({ session }: { session: AccountSession }) {
     setEditingId(room.id);
     setError(undefined);
     try {
-      const draft = await galleryRepository.editableDraft(room.id);
-      const projectId = createGalleryProjectId(draft.templateId);
-      await saveGalleryDraft(projectId, draft, 1);
-      window.location.assign(`#/create/${draft.templateId}/${projectId}`);
+      const editable = await galleryRepository.editableDraft(room.id);
+      const projectId = publishedGalleryProjectId(room.id);
+      const stored = await loadGalleryDraft(projectId);
+      if (!stored || stored.publication?.revision !== editable.target.revision) {
+        if (stored) {
+          await saveGalleryDraft(
+            createGalleryProjectId(stored.templateId),
+            stored.draft,
+            1,
+          );
+        }
+        await saveGalleryDraft(
+          projectId,
+          editable.draft,
+          (stored?.revision ?? 0) + 1,
+          editable.target,
+        );
+      } else if (stored.publication.role !== editable.target.role) {
+        await saveGalleryDraft(
+          projectId,
+          stored.draft,
+          stored.revision + 1,
+          editable.target,
+        );
+      }
+      window.location.assign(
+        `#/create/${editable.draft.templateId}/${projectId}`,
+      );
     } catch (caught) {
-      console.error("Published room could not be copied to a draft", caught);
-      setError("This room could not be prepared for editing. Check its image access and retry.");
+      console.error("Published room could not be opened for editing", caught);
+      setError("This room could not be opened for editing. Check your access and retry.");
     } finally {
       setEditingId(undefined);
     }
   };
   return (
     <section className="account-rooms" aria-labelledby="account-rooms-title">
-      <div><h3 id="account-rooms-title">My live rooms</h3><span>{rooms.length}</span></div>
+      <div><h3 id="account-rooms-title">My &amp; shared rooms</h3><span>{rooms.length}</span></div>
       {status === "loading" ? (
         <p>Loading rooms…</p>
       ) : status === "error" ? (
@@ -64,26 +89,27 @@ function AccountRooms({ session }: { session: AccountSession }) {
         </div>
       ) : rooms.length ? (
         <ul>
-          {rooms.map((room) => (
-            <li key={room.id}>
+          {rooms.map((room) => {
+            const role = room.effectiveRole ?? (room.ownerId === session.uid ? "owner" : "viewer");
+            return <li key={room.id} data-role={role}>
               <a href={galleryShareUrl(room.id, window.location.href)}>
                 {room.coverSrc && <img src={room.coverSrc} alt="" />}
-                <span><strong>{room.title}</strong>{visibilityLabel[room.visibility]} · until {new Date(room.expiresAt).toLocaleDateString()}</span>
+                <span><strong>{room.title}</strong>{visibilityLabel[room.visibility]} · {role} · until {new Date(room.expiresAt).toLocaleDateString()}</span>
                 <b aria-hidden="true">↗</b>
               </a>
-              <button
+              {(role === "owner" || role === "editor") && <button
                 type="button"
                 disabled={editingId === room.id}
-                aria-label={`Edit a copy of ${room.title}`}
-                title="Creates a private local draft. The current live link stays unchanged."
+                aria-label={`Edit ${room.title}`}
+                title="Updates this room under the same live link after review."
                 onClick={() => void editRoom(room)}
-              >{editingId === room.id ? "…" : "Edit copy"}</button>
-              <button
+              >{editingId === room.id ? "…" : "Edit"}</button>}
+              {role === "owner" && <button
                 type="button"
                 aria-label={`Manage access for ${room.title}`}
                 onClick={() => setAccessRoom((current) => current?.id === room.id ? undefined : room)}
-              >Access</button>
-              <button
+              >Access</button>}
+              {role === "owner" && <button
                 type="button"
                 disabled={removingId === room.id}
                 aria-label={`Delete ${room.title}`}
@@ -100,15 +126,15 @@ function AccountRooms({ session }: { session: AccountSession }) {
                     .catch(() => setError("The room could not be deleted. Retry after checking your connection."))
                     .finally(() => setRemovingId(undefined));
                 }}
-              >{removingId === room.id ? "…" : "Delete"}</button>
-            </li>
-          ))}
+              >{removingId === room.id ? "…" : "Delete"}</button>}
+            </li>;
+          })}
         </ul>
       ) : (
         <p>Rooms published with this account will appear here.</p>
       )}
       {rooms.length > 0 && (
-        <p className="account-rooms__hint">Edit copy keeps the current live room safe and opens a new versioned local draft.</p>
+        <p className="account-rooms__hint">Edit updates the same live URL after review. Owners manage access and deletion; Editors can update room content.</p>
       )}
       {accessRoom && (
         <GalleryAccessManager
@@ -128,6 +154,7 @@ function AccountProfileSettings({
   busy,
   onSave,
   onResetPassword,
+  onNewsletterChange,
 }: {
   account: AccountSession;
   busy: boolean;
@@ -138,11 +165,16 @@ function AccountProfileSettings({
     removeAvatar?: boolean;
   }) => void;
   onResetPassword: () => void;
+  onNewsletterChange: (subscribed: boolean) => Promise<boolean>;
 }) {
   const [displayName, setDisplayName] = useState(account.displayName ?? "");
   const [nickname, setNickname] = useState(account.nickname ?? "");
   const [avatar, setAvatar] = useState<File>();
   const [removeAvatar, setRemoveAvatar] = useState(false);
+  const [newsletterSubscribed, setNewsletterSubscribed] = useState(
+    Boolean(account.newsletterSubscribed),
+  );
+  const [newsletterBusy, setNewsletterBusy] = useState(false);
   return (
     <form className="account-profile" onSubmit={(event) => {
       event.preventDefault();
@@ -179,6 +211,21 @@ function AccountProfileSettings({
       <label>Full name<input maxLength={60} required autoComplete="name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
       <label>Nickname<input maxLength={32} autoComplete="nickname" placeholder="artist-name" value={nickname} onChange={(event) => setNickname(event.target.value)} /><small>Letters, numbers, dots, dashes, or underscores.</small></label>
       <button className="account-primary" disabled={busy}>{busy ? "Saving…" : "Save profile"}</button>
+      <label className="account-newsletter-setting">
+        <input
+          type="checkbox"
+          checked={newsletterSubscribed}
+          disabled={busy || newsletterBusy}
+          onChange={(event) => {
+            const next = event.target.checked;
+            setNewsletterBusy(true);
+            void onNewsletterChange(next).then((saved) => {
+              if (saved) setNewsletterSubscribed(next);
+            }).finally(() => setNewsletterBusy(false));
+          }}
+        />
+        <span><strong>AURA Preview Letter</strong>Occasional product and roadmap notes. Unsubscribe here or from any email.</span>
+      </label>
       {account.email && (
         <button type="button" className="account-reset" disabled={busy} onClick={onResetPassword}>Send password reset email</button>
       )}
@@ -202,6 +249,8 @@ export function AccountDialog({
   const [section, setSection] = useState<"rooms" | "profile">("rooms");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
@@ -320,6 +369,32 @@ export function AccountDialog({
                     await service?.requestPasswordReset(account.email!);
                     setMessage("Password reset email sent.");
                   })}
+                onNewsletterChange={async (subscribed) => {
+                  if (!service || busy) return false;
+                  setBusy(true);
+                  setError(undefined);
+                  setMessage(undefined);
+                  try {
+                    const result = await service.setNewsletterPreference(
+                      subscribed,
+                      "account-settings",
+                    );
+                    const next = { ...account, newsletterSubscribed: subscribed };
+                    setSession(next);
+                    onSessionChange?.(next);
+                    setMessage(subscribed
+                      ? result.welcomeQueued
+                        ? "Subscribed. Your first AURA letter is queued."
+                        : "AURA letters enabled."
+                      : "Newsletter unsubscribed. Your account stays active.");
+                    return true;
+                  } catch (caught) {
+                    setError(service.accountErrorMessage(caught));
+                    return false;
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
               />
             )}
             {!account.emailVerified && (
@@ -327,7 +402,7 @@ export function AccountDialog({
                 <p>Verify your email before publishing private rooms or joining a team.</p>
                 <button onClick={() => void run(async () => {
                   await service?.resendAccountVerification();
-                  setMessage("Verification email sent.");
+                  setMessage("Verification email queued. Check your inbox shortly.");
                 })} disabled={busy}>Resend email</button>
                 <button onClick={() => void run(async () => {
                   const next = await service?.refreshAccount();
@@ -336,7 +411,7 @@ export function AccountDialog({
                 })} disabled={busy}>I verified</button>
               </div>
             )}
-            <p className="account-note">Public rooms appear in Discover. Unlisted and private rooms stay in My rooms. Billing is not active.</p>
+            <p className="account-note">AURA Light Preview is free now. Public rooms appear in Discover; unlisted and private rooms stay in My rooms. Paid plans and additional professional tools are coming later—billing is not active.</p>
             <button className="account-secondary" onClick={() => void run(async () => {
               await service?.signOutAccount();
               setSession(null);
@@ -352,11 +427,27 @@ export function AccountDialog({
               <button role="tab" aria-selected={mode === "create"} onClick={() => setMode("create")}>Create account</button>
               <button role="tab" aria-selected={mode === "signin"} onClick={() => setMode("signin")}>Sign in</button>
             </div>
+            <label className="account-newsletter-consent">
+              <input type="checkbox" checked={newsletterOptIn} onChange={(event) => setNewsletterOptIn(event.target.checked)} />
+              <span><strong>Send me the AURA Preview Letter.</strong>One welcome edition now, plus occasional honest product and roadmap updates. Optional. Unsubscribe anytime. <a href="#/data">Data notice</a>.</span>
+            </label>
             <button className="account-google" disabled={!service || busy} onClick={() => void run(async () => {
               const next = mode === "create"
                 ? await service?.createOrUpgradeGoogleAccount()
                 : await service?.signInGoogleAccount();
-              setMessage("Google account ready.");
+              if (newsletterOptIn && next) {
+                try {
+                  const result = await service?.setNewsletterPreference(
+                    true,
+                    mode === "create" ? "google-create" : "google-signin",
+                  );
+                  setMessage(result?.welcomeQueued
+                    ? "Google account ready. Your AURA letter is queued."
+                    : "Google account ready. AURA letters enabled.");
+                } catch {
+                  setMessage("Google account ready. Newsletter signup needs a retry in Profile & settings.");
+                }
+              } else setMessage("Google account ready.");
               return next;
             })}>Continue with Google</button>
             <div className="account-divider"><span>or use email</span></div>
@@ -364,12 +455,29 @@ export function AccountDialog({
               event.preventDefault();
               void run(async () => {
                 const next = mode === "create"
-                  ? await service?.createOrUpgradeEmailAccount(email, password)
+                  ? await service?.createOrUpgradeEmailAccount(email, password, displayName)
                   : await service?.signInEmailAccount(email, password);
-                setMessage(mode === "create" ? "Account created. Check your email to verify it." : "Signed in.");
+                if (newsletterOptIn && next) {
+                  try {
+                    const result = await service?.setNewsletterPreference(
+                      true,
+                      mode === "create" ? "email-create" : "email-signin",
+                    );
+                    setMessage(mode === "create"
+                      ? result?.welcomeQueued
+                        ? "Account created. Verification and AURA letter queued."
+                        : "Account created. Check your email to verify it."
+                      : "Signed in. AURA letters enabled.");
+                  } catch {
+                    setMessage(mode === "create"
+                      ? "Account created. Check your email to verify it. Newsletter signup needs a retry in Profile & settings."
+                      : "Signed in. Newsletter signup needs a retry in Profile & settings.");
+                  }
+                } else setMessage(mode === "create" ? "Account created. Check your email to verify it." : "Signed in.");
                 return next;
               });
             }}>
+              {mode === "create" && <label>Your name<input type="text" autoComplete="name" maxLength={60} required value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>}
               <label>Email<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
               <label>Password<input type="password" autoComplete={mode === "create" ? "new-password" : "current-password"} minLength={6} required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
               <button className="account-primary" disabled={!service || busy}>{busy ? "Working…" : mode === "create" ? "Create account" : "Sign in"}</button>

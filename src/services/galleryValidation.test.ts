@@ -118,11 +118,37 @@ describe('gallery publication payload', () => {
       visibility: 'private',
       retention: 'account-preview',
       accessVersion: 1,
+      revision: 2,
+      updatedAt: Timestamp.fromDate(new Date('2026-08-14T12:00:00.000Z')),
       schemaVersion: 3,
     });
     expect(parsed.visibility).toBe('private');
     expect(parsed.retention).toBe('account-preview');
     expect(parsed.accessVersion).toBe(1);
+    expect(parsed.revision).toBe(2);
+    expect(parsed.updatedAt).toBe('2026-08-14T12:00:00.000Z');
+  });
+
+  it('accepts immutable versioned Storage paths for in-place edits', () => {
+    const published = new Date('2026-08-12T12:00:00.000Z');
+    const parsed = parseGalleryDocument('edited-room', {
+      ...draft([artwork({
+        src: '',
+        storagePath: 'published/owner_1/edited-room/revisions/revision_2/artworks/1.webp',
+      })]),
+      ownerId: 'owner_1',
+      coverPath: 'published/owner_1/edited-room/revisions/revision_2/cover.webp',
+      publishedAt: Timestamp.fromDate(published),
+      updatedAt: Timestamp.fromDate(new Date('2026-08-13T12:00:00.000Z')),
+      expiresAt: Timestamp.fromDate(new Date('2027-08-12T12:00:00.000Z')),
+      visibility: 'unlisted',
+      retention: 'account-preview',
+      accessVersion: 1,
+      revision: 2,
+      schemaVersion: 3,
+    });
+    expect(parsed.revision).toBe(2);
+    expect(parsed.coverPath).toContain('/revisions/revision_2/');
   });
 
   it('rejects a private guest publication', () => {

@@ -6,6 +6,7 @@ import {
   deleteGalleryDraft,
   listGalleryDrafts,
   loadGalleryDraft,
+  publishedGalleryProjectId,
   saveGalleryDraft,
   type StoredGalleryDraft,
 } from "./draftStorage";
@@ -158,6 +159,32 @@ describe("versioned multi-project draft storage", () => {
     const second = createGalleryProjectId("pavilion");
     expect(first).toMatch(/^pavilion-[a-zA-Z0-9-]+$/);
     expect(second).not.toBe(first);
+  });
+
+  it("keeps a published-room target through later autosaves", async () => {
+    const publication = {
+      id: "room-1",
+      ownerId: "owner-1",
+      publishedAt: "2026-08-14T10:00:00.000Z",
+      expiresAt: "2027-08-14T10:00:00.000Z",
+      visibility: "private" as const,
+      retention: "account-preview" as const,
+      accessVersion: 1,
+      revision: 3,
+      role: "editor" as const,
+    };
+    await saveGalleryDraft("published-room-1", draft(), 1, publication);
+    await saveGalleryDraft("published-room-1", draft("white-cube", "Changed"), 2);
+    expect(await loadGalleryDraft("published-room-1")).toMatchObject({
+      revision: 2,
+      draft: { title: "Changed" },
+      publication,
+    });
+  });
+
+  it("creates a stable local project id for a published room", () => {
+    expect(publishedGalleryProjectId("room-1")).toBe("published-room-1");
+    expect(() => publishedGalleryProjectId("../room")).toThrow();
   });
 });
 

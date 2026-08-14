@@ -10,7 +10,8 @@
     "validate:glb": "node scripts/validate-glb-contract.mjs",
     "test": "vitest run",
     "lint": "eslint .",
-    "check": "npm run lint && npm test && npm run build"
+    "check": "npm run lint && npm test && npm run build",
+    "check:functions": "npm --prefix functions run check"
   },
   "engines": {
     "node": ">=22.13.0"

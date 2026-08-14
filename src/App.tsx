@@ -72,6 +72,7 @@ import type { AccountSession } from "./services/accountTypes";
 import { isVerifiedAccount } from "./services/accountTypes";
 import {
   visibilityLabel,
+  type GalleryEditTarget,
   type GalleryVisibility,
 } from "./services/galleryAccess";
 
@@ -90,9 +91,10 @@ const ScrollGalleryStory = lazy(() =>
     default: module.ScrollGalleryStory,
   })),
 );
+const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
 
 type Route = {
-  page: "home" | "create" | "demo" | "gallery" | "data";
+  page: "home" | "create" | "demo" | "gallery" | "data" | "auth-action";
   id?: string;
   template?: TemplateId;
   demoArt?: boolean;
@@ -236,6 +238,8 @@ const DANNY_ARTWORKS: DirectoryArtwork[] = [
   },
 ];
 const routeFromHash = (): Route => {
+  const actionMode = new URLSearchParams(location.search).get("mode");
+  if (actionMode) return { page: "auth-action" };
   const hash = location.hash.replace(/^#/, "");
   if (hash === "/create") return { page: "create" };
   const templateMatch =
@@ -267,6 +271,7 @@ function Header({ light = false }: { light?: boolean }) {
     <header className={`site-header ${light ? "site-header--light" : ""}`}>
       <Logo dark={light} />
       <nav>
+        <span className="preview-status">AURA Light Preview</span>
         <button onClick={() => navigate("/demo")}>Live demo</button>
         <AccountButton light={light} />
         <button onClick={() => navigate("/create")}>
@@ -736,6 +741,18 @@ function MvpDataNotice() {
             signed scope before confidential use.
           </p>
         </section>
+        <section>
+          <h2>Optional AURA letters</h2>
+          <p>
+            Newsletter consent is separate, optional, and unchecked by
+            default. If selected, AURA stores the account ID, email address,
+            consent time, source, and subscription status in Firestore. One
+            welcome edition is queued once per account; later product letters
+            require the subscription to remain active. Every letter includes
+            an unsubscribe link, and the preference can also be changed under
+            Profile &amp; settings without affecting rooms or account access.
+          </p>
+        </section>
         <div className="info-actions">
           <button
             className="button button--dark"
@@ -779,7 +796,7 @@ function TemplatePicker({
     <main className="picker">
       <Header light />
       <div className="picker-heading">
-        <p className="eyebrow">Create gallery · Step 1 of 3</p>
+        <p className="eyebrow">AURA Light Preview · Free now · Step 1 of 3</p>
         <h1>
           Choose your <em>space.</em>
         </h1>
@@ -843,7 +860,7 @@ function TemplatePicker({
                       type="button"
                       onClick={() => onChoose(template.id, project.projectId)}
                     >
-                      <span>{project.draft.title}</span>
+                      <span>{project.publication ? "Live · " : ""}{project.draft.title}</span>
                       <time dateTime={project.savedAt}>
                         {new Date(project.savedAt).toLocaleDateString()}
                       </time>
@@ -1021,6 +1038,7 @@ function Studio({
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedDecorId, setSelectedDecorId] = useState<string>();
   const [published, setPublished] = useState<GalleryRecord>();
+  const [editTarget, setEditTarget] = useState<GalleryEditTarget>();
   const [publishStatus, transitionPublish] = useReducer(
     publishStatusReducer,
     "idle",
@@ -1121,7 +1139,13 @@ function Studio({
         if (!active) return;
         if (stored) {
           saveRevision.current = stored.revision;
-          setRecoveryDraft(stored);
+          if (stored.publication) {
+            setEditTarget(stored.publication);
+            setPublishVisibility(stored.publication.visibility);
+            resetDraft(stored.draft);
+            setStorageReady(true);
+            setSaveStatus("saved");
+          } else setRecoveryDraft(stored);
         } else {
           setStorageReady(true);
           setSaveStatus("ready");
@@ -1136,7 +1160,7 @@ function Studio({
     return () => {
       active = false;
     };
-  }, [initialProjectId]);
+  }, [initialProjectId, resetDraft]);
 
   useEffect(() => {
     if (!storageReady || (!canUndo && !canRedo)) return;
@@ -1596,10 +1620,38 @@ function Studio({
         );
       }
       transitionPublish({ type: "WRITE" });
-      const publishedGallery = await galleryRepository.publish(
-        { ...draftRef.current, title, artist },
-        roomCoverSource,
-        { visibility: publishVisibility },
+      const finalDraft = { ...draftRef.current, title, artist };
+      const publishedGallery = editTarget
+        ? await galleryRepository.updatePublished(
+            editTarget,
+            finalDraft,
+            roomCoverSource,
+          )
+        : await galleryRepository.publish(
+            finalDraft,
+            roomCoverSource,
+            { visibility: publishVisibility },
+          );
+      const nextTarget: GalleryEditTarget = {
+        id: publishedGallery.id,
+        ownerId: publishedGallery.ownerId!,
+        publishedAt: publishedGallery.publishedAt,
+        expiresAt: publishedGallery.expiresAt,
+        visibility: publishedGallery.visibility,
+        retention: publishedGallery.retention,
+        accessVersion: publishedGallery.accessVersion,
+        revision: publishedGallery.revision,
+        role: publishedGallery.effectiveRole === "editor"
+          ? "editor"
+          : editTarget?.role ?? "owner",
+      };
+      setEditTarget(nextTarget);
+      setPublishVisibility(nextTarget.visibility);
+      await saveGalleryDraft(
+        initialProjectId,
+        finalDraft,
+        ++saveRevision.current,
+        nextTarget,
       );
       setPublished(publishedGallery);
       transitionPublish({ type: "SUCCEED" });
@@ -1732,6 +1784,7 @@ function Studio({
   };
 
   if (published) {
+    const wasUpdate = published.revision > 1;
     const url = galleryShareUrl(published.id, window.location.href);
     const expiry = new Intl.DateTimeFormat(undefined, {
       day: "numeric",
@@ -1747,11 +1800,11 @@ function Studio({
         >
           <Logo />
           <div className="publish-success__copy">
-            <p className="eyebrow">Published successfully</p>
+            <p className="eyebrow">{wasUpdate ? "Room updated" : "Published successfully"}</p>
             <h1 id="publish-success-title">
-              Your space is
+              {wasUpdate ? "Your changes are" : "Your space is"}
               <br />
-              <em>ready to share.</em>
+              <em>{wasUpdate ? "now live." : "ready to share."}</em>
             </h1>
             <p>
               {published.visibility === "public"
@@ -1788,9 +1841,9 @@ function Studio({
               {copied ? "Gallery link copied to the clipboard." : ""}
             </p>
             <p className="publish-access-label">
-              {visibilityLabel[published.visibility]} · {published.retention === "guest-10-days" ? "10-day guest room" : "Account preview"}
+              AURA Light Preview · {visibilityLabel[published.visibility]} · {published.retention === "guest-10-days" ? "10-day guest room" : "Account preview"}
             </p>
-            {isVerifiedAccount(accountSession) && (
+            {isVerifiedAccount(accountSession) && editTarget?.role === "owner" && (
               <GalleryAccessManager
                 galleryId={published.id}
                 ownerEmail={accountSession?.email}
@@ -1930,7 +1983,9 @@ function Studio({
               ? "Preparing…"
               : publishStatus === "publishing"
                 ? "Publishing…"
-                : "Review & publish"}{" "}
+                : editTarget
+                  ? "Review & update"
+                  : "Review & publish"}{" "}
             <span>↗</span>
           </button>
         </div>
@@ -2646,6 +2701,7 @@ function Studio({
           publishError={publishError}
           coverSrc={publishCover}
           visibility={publishVisibility}
+          editing={editTarget}
           accountEligible={isVerifiedAccount(accountSession)}
           onVisibilityChange={setPublishVisibility}
           onOpenAccount={() => {
@@ -2720,6 +2776,7 @@ function PublishReviewDialog({
   publishError,
   coverSrc,
   visibility,
+  editing,
   accountEligible,
   returnFocus,
   onClose,
@@ -2735,6 +2792,7 @@ function PublishReviewDialog({
   publishError?: string;
   coverSrc?: string;
   visibility: GalleryVisibility;
+  editing?: GalleryEditTarget;
   accountEligible: boolean;
   returnFocus: React.RefObject<HTMLElement | null>;
   onClose: () => void;
@@ -2766,7 +2824,7 @@ function PublishReviewDialog({
         >
           ×
         </button>
-        <p className="eyebrow">Pre-publish review</p>
+        <p className="eyebrow">{editing ? "Live update review" : "Pre-publish review"}</p>
         <h2 id="publish-review-title">Check the visitor experience.</h2>
         <p id="publish-review-summary">
           {blockers
@@ -2813,7 +2871,12 @@ function PublishReviewDialog({
             ))}
           </ul>
         )}
-        <fieldset className="publish-visibility">
+        {editing ? (
+          <div className="publish-edit-target">
+            <strong>Same room. Same share URL.</strong>
+            <span>{visibilityLabel[editing.visibility]} · Revision {editing.revision + 1} · Visibility and expiry stay unchanged.</span>
+          </div>
+        ) : <fieldset className="publish-visibility">
           <legend>Visibility and duration</legend>
           {(["public", "unlisted", "private"] as GalleryVisibility[]).map(
             (option) => {
@@ -2851,7 +2914,7 @@ function PublishReviewDialog({
               Sign in or create account
             </button>
           )}
-        </fieldset>
+        </fieldset>}
         {publishError && (
           <p className="publish-review-error" role="alert">
             {publishError}
@@ -2869,7 +2932,9 @@ function PublishReviewDialog({
                 ? "Publishing…"
                 : publishStatus === "error"
                   ? "Retry publishing"
-                  : `Publish ${visibilityLabel[visibility].toLowerCase()} gallery`}
+                  : editing
+                    ? "Update live gallery"
+                    : `Publish ${visibilityLabel[visibility].toLowerCase()} gallery`}
           </button>
           <button className="text-link" onClick={onClose} disabled={publishing}>
             Back to editor
@@ -3803,6 +3868,8 @@ export default function App() {
             ? "Threshold — Danny Hirsch Arts | AURA"
             : route.page === "data"
               ? "MVP data and rights | AURA"
+              : route.page === "auth-action"
+                ? "Account action | AURA"
               : "Virtual exhibition | AURA";
     if (previousRoute.current === routeKey) return;
     previousRoute.current = routeKey;
@@ -3831,6 +3898,7 @@ export default function App() {
       );
     if (route.page === "demo") return <Demo />;
     if (route.page === "data") return <MvpDataNotice />;
+    if (route.page === "auth-action") return <AuthActionPage />;
     if (route.page === "gallery" && route.id)
       return <PublishedGallery key={route.id} id={route.id} />;
     return <Landing />;

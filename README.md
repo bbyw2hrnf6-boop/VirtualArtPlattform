@@ -31,7 +31,9 @@ Live MVP: [bbyw2hrnf6-boop.github.io/VirtualArtPlattform](https://bbyw2hrnf6-boo
 - The Danny Hirsch reference offers an optional 45-second guided tour, authored Smart Views, Reset View, exact GLB artwork metadata, and an automatic artwork-directory fallback when WebGL is unavailable.
 - Discover keeps the Danny reference exhibition visible when the live community feed is empty or unavailable.
 - Guest publishing with public ten-day links; verified Email/Password or Google accounts with public, unlisted, or private account-preview rooms.
-- Owner, editor, and viewer ACL records. Private viewing is active; shared editor revision is prepared but not active yet.
+- Owner, Editor, and Viewer ACL records. Owners and Editors can update room content under the existing share URL; only Owners manage access and deletion.
+- A separate optional AURA Preview Letter opt-in for Email and Google accounts, with one welcome edition, account-level withdrawal, and one-click unsubscribe. Branded verification/newsletter delivery requires the documented Cloud Functions and SMTP extension setup.
+- Clear **AURA Light Preview** status throughout account, picker, publishing, and plan surfaces; future paid professional tools remain visibly planned and inactive.
 
 ## Requirements
 
@@ -72,6 +74,7 @@ npm run preview
 | `npm run build` | Type-check the app and create the production bundle in `dist/`. |
 | `npm run preview` | Serve `dist/` locally for production verification. |
 | `npm run check` | Run lint, all tests, type-checking, and the complete production build; this is the deployment quality gate. |
+| `npm run check:functions` | Test and type-check the trusted branded-email/newsletter Functions. |
 | `npm run validate:glb -- path/to/template.glb` | Validate a future template export against the documented AURA GLB contract. |
 
 The supported production path is `.github/workflows/deploy.yml`.
@@ -120,6 +123,7 @@ AURA uses hash-based routes, so refreshing a gallery does not require server-sid
 - `#/demo` — Danny Hirsch live demo
 - `#/g/{gallery-id}` — published gallery
 - `#/data` — factual MVP data and rights notice
+- `?mode={verifyEmail|resetPassword}&oobCode=…` — Firebase account action handler; query parameters precede the hash route
 
 The Vite production base is relative, allowing the built bundle to run from the `/VirtualArtPlattform/` repository path. Runtime assets also use relative URLs.
 
@@ -144,6 +148,10 @@ src/
 │   └── galleryValidation.ts        Runtime validation for public Firestore data
 └── styles/global.css               Application and responsive styling
 
+functions/
+├── src/index.ts                    Authenticated mail, consent, and unsubscribe endpoints
+└── src/emailTemplates.ts           Responsive AURA transactional and welcome emails
+
 public/assets/                      Runtime demo and material assets
 blender/templates/                  Editable concept/reference Blender files
 blender/EXPORT_CONTRACT.md          Blender-to-GLB node and metadata contract
@@ -163,13 +171,14 @@ The repository boundary in `galleryRepository.ts` keeps persistence separate fro
 1. Artwork is decoded in the browser, resized to at most 1200 px on its longest side, converted to WebP, and compressed until its data URL is below the configured 780,000-character limit.
    Same-origin artwork bundled with the fast sandbox is embedded before publication as well.
 2. Firebase restores the publisher's verified Email/Password or Google account, or signs a guest in anonymously.
-3. Artwork images and the room cover are uploaded to owner-scoped Firebase Storage objects. The schema-v3 Firestore gallery document stores metadata, layout, visibility, retention, and immutable object paths. Existing schema-v1/v2 rooms remain readable.
+3. Artwork images and the room cover are uploaded to immutable owner-scoped Firebase Storage objects. In-place edits create a new asset revision and atomically update the same schema-v3 gallery document, preserving its share URL. Existing schema-v1/v2 rooms remain readable.
    Hidden works and editor-only lock state are omitted from the public record; visitor-facing frame choices are preserved.
 4. Guest rooms receive a ten-day `expiresAt`; verified account rooms currently receive a 365-day account-preview window. Billing and permanent hosting are not active.
 5. Firestore and Storage rules enforce expiry and visibility. Discover queries only public rooms; unlisted rooms require the link; private rooms require the owner or an invited verified email.
 6. ACL documents store editor/viewer membership separately from the public gallery record. The scheduled cleanup Action removes expired assets, ACL records, and documents.
+7. Trusted Cloud Functions generate verification action links, persist optional newsletter consent, and queue branded messages into the official Trigger Email extension's protected `mail` collection. The welcome edition is idempotent per account; users may withdraw in Account settings or through a one-click link.
 
-Firebase Storage requires Blaze as of February 2026, although no-cost quotas still apply. See [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) for bucket setup, rules, CORS, cleanup, quotas, and verification.
+Firebase Storage requires Blaze as of February 2026, although no-cost quotas still apply. See [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) for bucket, rules, CORS, email delivery, Functions, consent, cleanup, quotas, and verification.
 
 ### Firebase web configuration
 
@@ -234,12 +243,12 @@ Use a current browser, enable hardware acceleration, and verify WebGL is availab
 
 - Guest galleries are public until expiry. Account rooms may be public, unlisted, or private; private preview access is not yet a contractual confidential-data service.
 - Publishing supports anonymous, Email/Password, and Google identities. Anonymous ownership is tied to the browser unless that identity is upgraded to an account before it is lost.
-- Published gallery records are immutable. Editing and republishing creates a new gallery and share link.
+- Published gallery identity, ownership, visibility, and expiry remain stable. Owners and Editors can revision content under the same link; concurrent stale edits are rejected without deleting the local draft.
 - The client-only anonymous write path has no application-level rate limiting, moderation, malware scanning, or App Check enforcement. Harden it before opening unrestricted public publishing.
 - Firestore Security Rules protect client requests, but they are not a substitute for abuse prevention or a trusted publishing backend.
 - Artwork and covers use Firebase Storage; room data and ACL records use Firestore. App Check, backend rate limiting, and moderation remain production gates.
 - The local AI Curator is heuristic assistance, not a generative model or professional curatorial guarantee.
-- Shared revision, multiplayer, chat, analytics, payments, sales, events, marketplace features, and community moderation are intentionally outside this MVP.
+- Simultaneous co-editing, a user-facing revision history, multiplayer, chat, analytics, payments, sales, events, marketplace features, and community moderation are intentionally outside this MVP.
 - This repository currently has no general code license. Do not infer permission for downstream reuse from public repository access.
 
 Review [ASSET_LICENSES.md](./ASSET_LICENSES.md) before reusing artwork, models, textures, fonts, or Blender files outside this AURA deployment.

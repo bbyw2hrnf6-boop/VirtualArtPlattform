@@ -62,6 +62,24 @@ const deleteStorageObject = async (path) => {
   if (!response.ok && response.status !== 404)
     throw new Error(`Storage delete failed for ${path}: ${response.status} ${await response.text()}`);
 };
+const listStorageObjects = async (prefix) => {
+  const paths = [];
+  let pageToken = '';
+  do {
+    const search = new URLSearchParams({ prefix, maxResults: '1000' });
+    if (pageToken) search.set('pageToken', pageToken);
+    const response = await fetch(
+      `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(storageBucket)}/o?${search}`,
+      { headers: { authorization: `Bearer ${accessToken}` } },
+    );
+    if (!response.ok)
+      throw new Error(`Storage list failed for ${prefix}: ${response.status} ${await response.text()}`);
+    const body = await response.json();
+    paths.push(...(body.items ?? []).map((item) => item.name).filter(Boolean));
+    pageToken = body.nextPageToken ?? '';
+  } while (pageToken);
+  return paths;
+};
 
 const fieldValue = (document, field) => document.fields?.[field]?.stringValue;
 const arrayValues = (document, field) => document.fields?.[field]?.arrayValue?.values ?? [];
@@ -108,7 +126,11 @@ async function deleteExpiredGalleries() {
     });
     if (!galleries.length) return { deleted, deletedObjects, deletedMembers };
     for (const gallery of galleries) {
-      const paths = storagePaths(gallery);
+      const galleryId = gallery.name.split('/').at(-1);
+      const ownerId = fieldValue(gallery, 'ownerId');
+      const paths = ownerId && galleryId
+        ? await listStorageObjects(`published/${ownerId}/${galleryId}/`)
+        : storagePaths(gallery);
       await withConcurrency(paths, deleteStorageObject);
       deletedObjects += paths.length;
       const members = await listCollectionDocuments(gallery.name, 'members');

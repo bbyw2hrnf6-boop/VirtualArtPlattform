@@ -87,8 +87,8 @@ export function GalleryAccessManager({
           <button disabled={status !== "ready"}>Add</button>
         </form>
         <p className="gallery-access__note">
-          Invited verified accounts can enter private rooms. Editor access is
-          reserved for the upcoming shared revision workflow.
+          Viewers can enter private rooms. Editors can also update room content
+          under the same live URL. Only the owner manages access and deletion.
         </p>
         {status === "loading" ? (
           <p className="gallery-access__status">Loading access…</p>

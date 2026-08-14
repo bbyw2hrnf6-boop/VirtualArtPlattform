@@ -67,6 +67,8 @@ export interface ParsedGalleryDocument extends GalleryDraft {
   visibility: GalleryVisibility;
   retention: GalleryRetention;
   accessVersion: number;
+  revision: number;
+  updatedAt: string;
 }
 
 export interface ParsedArtworkAsset {
@@ -151,7 +153,7 @@ function validateSchemaVersion(value: unknown, recordId: string): 1 | 2 | 3 {
 
 function storagePath(value: unknown, recordId: string, field: string): string {
   const path = stringValue(value, recordId, field, 320, 1);
-  if (!/^published\/[a-zA-Z0-9_-]{1,128}\/[a-zA-Z0-9_-]{1,128}\/(?:cover[.]webp|artworks\/(?:[1-9]|1[0-4])[.]webp)$/.test(path))
+  if (!/^published\/[a-zA-Z0-9_-]{1,128}\/[a-zA-Z0-9_-]{1,128}\/(?:(?:cover[.]webp|artworks\/(?:[1-9]|1[0-4])[.]webp)|revisions\/[a-zA-Z0-9_-]{1,128}\/(?:cover[.]webp|artworks\/(?:[1-9]|1[0-4])[.]webp))$/.test(path))
     invalid(recordId, field, 'expected an owned gallery Storage path');
   return path;
 }
@@ -286,6 +288,14 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
   const accessVersion = schemaVersion === 3
     ? integerValue(data.accessVersion, recordId, 'accessVersion', 1, 1)
     : 1;
+  const revision = data.revision === undefined
+    ? 1
+    : integerValue(data.revision, recordId, 'revision', 1, 1_000_000);
+  const updated = data.updatedAt === undefined
+    ? published
+    : timestampValue(data.updatedAt, recordId, 'updatedAt');
+  if (updated.getTime() < published.getTime())
+    invalid(recordId, 'updatedAt', 'expected a time at or after publication');
   const maximumDuration = retention === 'account-preview' ? 367 : 12;
   if (expires.getTime() - published.getTime() > maximumDuration * 86_400_000)
     invalid(recordId, 'expiresAt', `expected a maximum ${maximumDuration}-day publication window`);
@@ -306,6 +316,8 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
     visibility,
     retention,
     accessVersion,
+    revision,
+    updatedAt: updated.toISOString(),
   };
 }
 

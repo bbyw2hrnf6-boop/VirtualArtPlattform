@@ -12,6 +12,18 @@ export type GalleryMember = {
   addedAt: string;
 };
 
+export type GalleryEditTarget = {
+  id: string;
+  ownerId: string;
+  publishedAt: string;
+  expiresAt: string;
+  visibility: GalleryVisibility;
+  retention: GalleryRetention;
+  accessVersion: number;
+  revision: number;
+  role: Extract<GalleryRole, "owner" | "editor">;
+};
+
 export const visibilityLabel: Record<GalleryVisibility, string> = {
   public: "Public",
   unlisted: "Unlisted",

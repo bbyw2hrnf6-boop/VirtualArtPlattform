@@ -1,6 +1,7 @@
 import type { GalleryDraft } from '../features/gallery/types';
 import type {
   GalleryMember,
+  GalleryEditTarget,
   GalleryPublishOptions,
   GalleryRetention,
   GalleryRole,
@@ -18,7 +19,15 @@ export interface GalleryRecord extends GalleryDraft {
   visibility: GalleryVisibility;
   retention: GalleryRetention;
   accessVersion: number;
+  revision: number;
+  updatedAt: string;
+  effectiveRole?: GalleryRole;
 }
+
+export type EditableGalleryProject = {
+  draft: GalleryDraft;
+  target: GalleryEditTarget;
+};
 
 export class GalleryAccessDeniedError extends Error {
   readonly code = 'gallery-access-denied';
@@ -35,8 +44,13 @@ export interface GalleryRepository {
     roomCoverSource?: string,
     options?: GalleryPublishOptions,
   ): Promise<GalleryRecord>;
+  updatePublished(
+    target: GalleryEditTarget,
+    draft: GalleryDraft,
+    roomCoverSource?: string,
+  ): Promise<GalleryRecord>;
   find(id: string): Promise<GalleryRecord | null>;
-  editableDraft(id: string): Promise<GalleryDraft>;
+  editableDraft(id: string): Promise<EditableGalleryProject>;
   discover(): Promise<GalleryRecord[]>;
   mine(): Promise<GalleryRecord[]>;
   currentUserId(): Promise<string | null>;
@@ -63,6 +77,7 @@ function loadRepository(): Promise<GalleryRepository> {
  */
 export const galleryRepository: GalleryRepository = {
   async publish(draft, roomCoverSource, options) { return (await loadRepository()).publish(draft, roomCoverSource, options); },
+  async updatePublished(target, draft, roomCoverSource) { return (await loadRepository()).updatePublished(target, draft, roomCoverSource); },
   async find(id) { return (await loadRepository()).find(id); },
   async editableDraft(id) { return (await loadRepository()).editableDraft(id); },
   async discover() { return (await loadRepository()).discover(); },

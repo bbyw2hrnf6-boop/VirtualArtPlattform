@@ -28,6 +28,74 @@ The app targets project `virtualartplattform` and bucket `virtualartplattform.fi
    - `bbyw2hrnf6-boop.github.io`
    - any future custom domain
 
+### Branded account email and AURA Preview Letter
+
+The web app now requests a branded verification email from trusted Cloud
+Functions. Newsletter consent is separate, optional, unchecked by default, and
+stored server-side. One welcome edition is queued only on the first opt-in per
+account. Client code cannot write email jobs or consent records.
+
+Before deployment, choose a transactional email provider with SMTP support
+(for example Postmark, Mailgun, SendGrid, or another provider you control),
+verify the sending domain, and create a real sender address such as
+`hello@your-aura-domain.example`. Do not use a personal mailbox password.
+
+1. Install the official **Trigger Email from Firestore** extension:
+
+   ```bash
+   npx firebase-tools@latest ext:install firebase/firestore-send-email \
+     --project virtualartplattform
+   ```
+
+2. During extension setup use:
+   - Firestore collection: `mail`
+   - SMTP connection URI: the provider's TLS SMTP URI
+   - Default from address: a verified AURA sender
+   - Default reply-to: the public support address
+   - Users/templates collection: leave blank unless the extension explicitly requires a value
+3. Deploy the repository's Cloud Functions:
+
+   ```bash
+   npx firebase-tools@latest deploy --only functions \
+     --project virtualartplattform
+   ```
+
+4. Supply these prompted parameters with real public information:
+   - `AURA_PUBLIC_APP_URL`: `https://bbyw2hrnf6-boop.github.io/VirtualArtPlattform`
+   - `AURA_REPLY_TO`: the monitored support email
+   - `AURA_LEGAL_FOOTER`: legal sender name and full postal address
+5. In **Authentication → Templates → Email address verification**, set the
+   custom action URL to:
+   `https://bbyw2hrnf6-boop.github.io/VirtualArtPlattform/`
+   Firebase appends `mode`, `oobCode`, and continuation parameters. The AURA
+   route verifies the code and returns the visitor to the product.
+6. Set the fallback Firebase sender name to **AURA**, use the same reply-to,
+   and update the public-facing project name. The fallback is used only while
+   the branded function is unavailable.
+7. Publish the repository's current `firestore.rules` manually. No Storage-rule
+   change is needed for email delivery.
+
+The branded functions use the Admin SDK to create Firebase action links. Do
+not call the Firestore `mail` collection from the browser. Marketing consent
+must remain optional. Before sending recurring campaigns, replace the preview
+data notice with final operator details, privacy policy, imprint/terms where
+required, and obtain legal review for each target country.
+
+Live email acceptance test:
+
+1. Create a new Email/Password test account without ticking the letter box.
+   Confirm exactly one branded verification email and no welcome letter.
+2. Open the verification link and confirm the AURA result page completes the
+   action and returns to the account.
+3. Create another test account with the checkbox ticked. Confirm one
+   verification email and one AURA Preview Letter.
+4. Sign out and in again with the same account. Confirm no second welcome
+   edition is sent.
+5. Use the one-click unsubscribe link and confirm the Profile & settings toggle
+   is off after reloading the account.
+6. Repeat opt-in once through Google sign-in and check mobile rendering, spam
+   placement, sender alignment (SPF/DKIM/DMARC), and reply handling.
+
 ## 3. Blaze and Storage bucket
 
 1. Open **Usage and billing → Details & settings**.
@@ -59,7 +127,12 @@ Indexes:
 2. Create `galleries`: `visibility` ascending, `expiresAt` descending.
 3. Create `galleries`: `schemaVersion` ascending, `expiresAt` descending.
 4. Create `galleries`: `ownerId` ascending, `expiresAt` descending.
-5. Wait until all three indexes show **Enabled**. Alternatively deploy only `firestore:indexes` with the CLI.
+5. Deploy the collection-group `members.email` index from `firestore.indexes.json`; it lets invited Editors and Viewers find shared rooms in Account.
+6. Wait until all indexes show **Enabled**. The exact repository set can be deployed without rules or data changes:
+
+   ```bash
+   npx firebase-tools@latest deploy --only firestore:indexes --project virtualartplattform
+   ```
 
 Storage rules read the matching Firestore gallery and ACL before returning an
 image. The first Firebase Console publish may ask to enable cross-service
@@ -87,8 +160,8 @@ Add any future custom origin to `storage.cors.json`, then rerun the last command
 
 ## 6. Security contract
 
-- Upload requires Firebase Authentication and an owner-scoped path.
-- New objects are immutable.
+- Upload requires Firebase Authentication and an owner-scoped path. New-room uploads require the owner; revision uploads also allow a current Editor.
+- Storage objects remain immutable. Live edits create a new asset revision and atomically move the existing gallery manifest to it.
 - Covers are below 1 MiB; artworks below 2 MiB.
 - Only supported image MIME types are accepted.
 - Guests can create only public ten-day publications.
@@ -96,7 +169,7 @@ Add any future custom origin to `storage.cors.json`, then rerun the last command
 - Unlisted rooms are readable by direct link but omitted from Discover.
 - Private room metadata and images require the owner or an invited verified email.
 - Owner, editor, and viewer roles are stored in a gallery member subcollection; the owner is implicit.
-- Firestore publications are immutable; only the owner may delete.
+- Owners and Editors may update content under the same gallery ID/share URL. Visibility, owner, expiry, and access settings stay unchanged during content updates. Only the owner may manage access or delete.
 - White Cube and Nocturne accept up to eight works; Grand Forum accepts fourteen.
 - Local drafts remain in IndexedDB and never require Firebase.
 
@@ -122,6 +195,8 @@ Do not enable Firestore TTL as a replacement without redesigning cleanup: Firest
 10. Publish one unlisted and one private room. Confirm unlisted is absent from Discover.
 11. Invite a second verified email as Viewer, confirm it can enter the private room, and confirm an uninvited account cannot.
 12. Run **GitHub Actions → Clean up expired galleries → Run workflow** and confirm zero or more successful deletions.
+13. Open one owned room from Account, edit and update it, and confirm the original share URL now shows the revision.
+14. Invite a second account as Editor and confirm it can update that same room but cannot manage access or delete it. Confirm a Viewer cannot edit.
 
 ## Optional: migrate still-active legacy rooms
 

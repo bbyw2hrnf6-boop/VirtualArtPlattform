@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   galleryArtworkPath,
   galleryCoverPath,
+  galleryRevisionArtworkPath,
+  galleryRevisionCoverPath,
   isOwnedGalleryStoragePath,
 } from "./galleryStoragePaths";
 
@@ -24,5 +26,23 @@ describe("gallery storage paths", () => {
     const path = galleryArtworkPath("owner", "room", 0);
     expect(isOwnedGalleryStoragePath(path, "owner", "room")).toBe(true);
     expect(isOwnedGalleryStoragePath(path, "other", "room")).toBe(false);
+  });
+
+  it("creates unique immutable paths for published revisions", () => {
+    const cover = galleryRevisionCoverPath("owner", "room", "revision-2");
+    const artwork = galleryRevisionArtworkPath(
+      "owner",
+      "room",
+      "revision-2",
+      13,
+    );
+    expect(cover).toBe(
+      "published/owner/room/revisions/revision-2/cover.webp",
+    );
+    expect(artwork).toBe(
+      "published/owner/room/revisions/revision-2/artworks/14.webp",
+    );
+    expect(isOwnedGalleryStoragePath(cover, "owner", "room")).toBe(true);
+    expect(isOwnedGalleryStoragePath(artwork, "owner", "room")).toBe(true);
   });
 });

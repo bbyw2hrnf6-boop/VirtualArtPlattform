@@ -5,6 +5,7 @@ export type AccountSession = {
   nickname?: string;
   avatarSrc?: string;
   avatarPath?: string;
+  newsletterSubscribed?: boolean;
   isAnonymous: boolean;
   emailVerified: boolean;
   providers: string[];

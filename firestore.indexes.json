@@ -26,6 +26,13 @@
     }
   ],
   "fieldOverrides": [
+    {
+      "collectionGroup": "members",
+      "fieldPath": "email",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
     { "collectionGroup": "galleries", "fieldPath": "coverSrc", "indexes": [] },
     { "collectionGroup": "galleries", "fieldPath": "artworks", "indexes": [] },
     { "collectionGroup": "galleries", "fieldPath": "decor", "indexes": [] },

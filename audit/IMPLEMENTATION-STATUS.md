@@ -4,7 +4,7 @@ Stand: 14. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapsh
 
 ## Verifiziertes Ergebnis
 
-- `npm run check`: grün; 97 Tests bestehen.
+- `npm run check`: grün; 106 Tests bestehen. Das zusätzliche Functions-Gate besteht 3 Template-/Sicherheitschecks und den TypeScript-Build.
 - Der Emil Scroll beginnt nun direkt mit `01 · Blueprint`, baut ausschließlich DannyHirschArts in sechs synchronisierten Kapiteln auf und endet in einer scharfen begehbaren Live-Szene. Ein geglätteter, richtungsstabiler Playhead mit Fortschrittslimit verhindert Sprünge bei aggressivem Scrollen; die alte statische Posterphase bleibt nur als Lade-/Fehlerfallback.
 - Q/E und Pfeil hoch/runter bilden einen gemeinsamen getesteten Keyboard-Vertrag für Landing, Builder, veröffentlichte Räume und Danny. Alte Q/R-Hinweise und die separate Danny-Tour-Aktivitätsvariable wurden entfernt; die gemeinsame `VisitorControls`-Komponente bleibt die einzige Tour-Oberfläche.
 - Zwölf nach Referenz- und Hashprüfung ungenutzte Legacy-/Zwischenassets wurden entfernt. Lizenz- und Asset-Dokumentation sowie die bestehende Browser-QA verwenden jetzt die aktuellen gemeinsamen Selektoren.
@@ -29,11 +29,14 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 - Email/Password und Google ergänzen den anonymen Gastzugang. Ein Gast kann seine aktuelle anonyme Firebase-Identität durch Verknüpfen erhalten; Email-Verifikation ist Voraussetzung für erweiterten Zugriff.
 - Schema v3 unterscheidet Public, Unlisted und Private. Gäste bleiben auf öffentliche zehn Tage begrenzt; verifizierte Accounts nutzen aktuell einen ausdrücklich als Vorschau bezeichneten 365-Tage-Zeitraum. Billing ist nicht aktiv.
-- ACL-Dokumente liegen getrennt unter `galleries/{id}/members/{email}`. Owner ist implizit; Editor und Viewer werden gespeichert. Beide dürfen private Räume betreten, der Editor-Revisionsworkflow bleibt ehrlich als spätere Funktion gekennzeichnet.
+- ACL-Dokumente liegen getrennt unter `galleries/{id}/members/{email}`. Owner ist implizit; Editor und Viewer werden gespeichert. Beide dürfen private Räume betreten; Owner und Editor können Inhalte versionsbasiert unter derselben Raum-ID aktualisieren. Nur der Owner verwaltet Zugriff und Löschung.
 - Discover fragt ausschließlich aktive öffentliche Räume ab. Unlisted bleibt nur per Link auffindbar; Private benötigt Owner oder eingeladene verifizierte Email. Dieselbe Entscheidung schützt Firestore-Metadaten und Storage-Bilder.
 - Publish Review, Erfolgsseite, Share-Link, private Sign-in-Tür, Zugriffsverwaltung, Datenhinweis, FAQ und vorbereitete deaktivierte Bezahlmodelle verwenden denselben Vertrag.
-- Der Account-Dialog listet eigene aktive Public-, Unlisted- und Private-Räume, damit nicht gelistete Links später wieder erreichbar bleiben.
-- Cleanup entfernt nach Ablauf jetzt auch ACL-Unterkollektionen. Firebase-Regeln, drei Composite-Indexes und Setup-Dokumentation wurden lokal aktualisiert; die Live-Veröffentlichung bleibt manuell.
+- Der Account-Dialog listet eigene und freigegebene aktive Räume samt Rolle. „Edit Copy“ wurde durch „Edit“ ersetzt; nach Review wechselt das Manifest atomar auf unveränderliche Revision-Assets, während Share-URL, Sichtbarkeit, Laufzeit und ACL erhalten bleiben. Veraltete parallele Saves werden abgelehnt, der lokale Draft bleibt erhalten.
+- Cleanup entfernt nach Ablauf sämtliche Asset-Revisionen und ACL-Unterkollektionen. Firebase-Regeln, drei Composite-Indexes, ein Collection-Group-Index und Setup-Dokumentation wurden lokal aktualisiert; die Live-Veröffentlichung bleibt manuell.
+- Kontoerstellung über Email und Google bietet eine getrennte, freiwillige und standardmäßig deaktivierte Zustimmung zum **AURA Preview Letter**. Eine geschützte Callable Function speichert den Status, versendet die erste Edition pro UID höchstens einmal und unterstützt Abmeldung in den Account-Einstellungen sowie über einen einmalig nutzbaren Link.
+- Email-Verifikation verwendet eine responsive AURA-Vorlage mit Produkt-, Kontakt- und Datenhinweisen. Der eigene Action-Handler verarbeitet Verifikation und Passwort-Reset innerhalb der AURA-Oberfläche. Firebase Admin erzeugt die Action Links; die offizielle Trigger-Email-Extension übernimmt SMTP, sobald Functions und Extension live konfiguriert wurden.
+- **AURA Light Preview** ist in Header, Raumauswahl, Account, Publish-Ergebnis und Planvergleich sichtbar. Zukünftige professionelle Abofunktionen sind als geplant und noch nicht aktiv gekennzeichnet.
 
 ### P1 · Storage, Navigation und Raumtiefe
 
@@ -84,7 +87,8 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 | Punkt | Warum nicht lokal abschließbar | Nächster Schritt |
 |---|---|---|
 | Live Account-/Publish-Matrix | Firestore-/Storage-Regeln und Indexes bleiben manuelle Firebase-Schritte; Live-Writes wurden lokal nicht ausgeführt. | Regeln und beide Indexes veröffentlichen; Guest, Email, Google, Public, Unlisted, Private und eingeladen/nicht eingeladen live prüfen. |
-| Dauerhafte Tarife und Editor-Revisionen | Billing, permanente Retention und kollaboratives Bearbeiten brauchen Backend, Rate Limits, Konfliktmodell und Vertragsentscheidung. | Nach dem Preview-Pilot Tarif-/Retentionmodell sowie Revision Ownership definieren. Die aktuelle UI kennzeichnet diese Punkte als inaktiv. |
+| Branded Email live | SMTP-Absender, rechtliche Absenderdaten, Trigger-Email-Extension und Functions benötigen externe Konfiguration und dürfen nicht erfunden oder lokal versendet werden. | Verifizierte Domain/SMTP einrichten, Extension installieren, Functions deployen, Auth-Action-URL setzen und die Matrix in `FIREBASE_SETUP.md` testen. |
+| Dauerhafte Tarife und simultane Zusammenarbeit | Billing, permanente Retention, vollständiger Revisionsverlauf und gleichzeitiges Bearbeiten brauchen Backend, Rate Limits, Konfliktmodell und Vertragsentscheidung. | Nach dem Preview-Pilot Tarif-/Retentionmodell, Revisionsverlauf und Echtzeit-Konfliktmodell definieren. Die aktuelle UI kennzeichnet diese Punkte als inaktiv. |
 | Vollständige Rechtstexte | Controller, Kontakt, Sitz, Rechtsgrundlage, Auftragsverarbeitung und Vertragsbedingungen fehlen als Eingaben. | Mit realen Betreiberangaben Privacy, Terms, Content Rights und Pilotvertrag juristisch erstellen. |
 | Dynamische Social Cards / eigener Slug / Custom Domain | Hash-Routing und GitHub Pages können Galerie-spezifische Server-Metadaten nicht erzeugen. | Hosting/Edge-Rendering und Domain auswählen; OG-Route serverseitig aus Gallery-Metadaten erzeugen. |
 | Drei Builder-Räume als Blender-GLB | Der Runtime-Wechsel braucht finale Blender-Dateien, UV/PBR-QA, Export und Regression gegen alle Editor-Surfaces. | Bestehenden Exportvertrag pro Raum erfüllen und pro Template schrittweise hinter Feature Flags migrieren. |

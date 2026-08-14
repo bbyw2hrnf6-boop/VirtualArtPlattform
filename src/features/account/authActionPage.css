@@ -1,0 +1,121 @@
+.auth-action-page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 30px clamp(24px, 6vw, 84px);
+  color: #efeee8;
+  background: #151613;
+}
+
+.auth-action-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.auth-action-brand > span {
+  padding: 8px 10px;
+  color: #171816;
+  background: var(--acid);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.auth-action-page > section {
+  width: min(720px, 100%);
+  align-self: center;
+  padding: 7vh 0;
+}
+
+.auth-action-page h1 {
+  margin: 24px 0;
+  font: clamp(58px, 8vw, 104px)/.88 Instrument;
+  letter-spacing: -.045em;
+}
+
+.auth-action-page h1 em {
+  color: #989a91;
+  font-weight: 400;
+}
+
+.auth-action-page section > p:not(.eyebrow) {
+  max-width: 560px;
+  margin: 0 0 28px;
+  color: #a9aaa3;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.auth-action-page form {
+  display: grid;
+  gap: 15px;
+  width: min(440px, 100%);
+}
+
+.auth-action-page form label {
+  display: grid;
+  gap: 7px;
+  color: #a9aaa3;
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.auth-action-page form input {
+  min-height: 48px;
+  padding: 0 13px;
+  border: 1px solid #55574f;
+  color: #f0eee8;
+  background: #22231f;
+  font-size: 16px;
+}
+
+.auth-action-page form button {
+  justify-self: start;
+}
+
+.auth-action-page form button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.auth-action-page form .auth-action-form-error {
+  margin: 0;
+  color: #ffc9b8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.auth-action-page > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0 0;
+  border-top: 1px solid #3b3d37;
+  color: #86887f;
+  background: transparent;
+}
+
+.auth-action-page > footer a {
+  color: inherit;
+}
+
+.auth-action-page .button {
+  text-decoration: none;
+}
+
+@media (max-width: 620px) {
+  .auth-action-page {
+    padding: 24px;
+  }
+
+  .auth-action-page h1 {
+    font-size: 17vw;
+  }
+
+  .auth-action-page > footer {
+    gap: 20px;
+  }
+}

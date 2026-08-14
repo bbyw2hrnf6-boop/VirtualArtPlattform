@@ -27,6 +27,12 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower()));
     }
 
+    function isGalleryEditor(galleryId) {
+      return verifiedAccount()
+        && exists(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower()))
+        && get(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.role == 'editor';
+    }
+
     function isLegacyGallery(data) {
       return data.schemaVersion in [1, 2];
     }
@@ -61,24 +67,21 @@ service cloud.firestore {
       );
     }
 
-    function isValidGalleryCreate(galleryId) {
-      let data = request.resource.data;
+    function validGalleryShape(data) {
       // Artwork geometry is validated transactionally by the shared client
       // validator before publication. Keeping this rule bounded avoids the
       // Firestore expression limit for 14-artwork Forum rooms.
-      return signedIn()
-        && ownsGalleryData(data)
-        && data.keys().hasAll([
+      return data.keys().hasAll([
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
           'lighting', 'decor', 'artworks', 'coverPath', 'ownerId',
           'publishedAt', 'expiresAt', 'schemaVersion', 'visibility',
-          'retention', 'accessVersion'
+          'retention', 'accessVersion', 'revision', 'updatedAt'
         ])
         && data.keys().hasOnly([
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
           'lighting', 'decor', 'artworks', 'coverPath', 'ownerId',
           'publishedAt', 'expiresAt', 'schemaVersion', 'visibility',
-          'retention', 'accessVersion'
+          'retention', 'accessVersion', 'revision', 'updatedAt'
         ])
         && data.title is string
         && data.title.size() > 0
@@ -106,7 +109,6 @@ service cloud.firestore {
         && data.decor is list
         && data.decor.size() <= 8
         && data.coverPath is string
-        && data.coverPath == 'published/' + request.auth.uid + '/' + galleryId + '/cover.webp'
         && data.ownerId is string
         && data.ownerId.size() > 0
         && data.ownerId.size() <= 128
@@ -117,7 +119,58 @@ service cloud.firestore {
         && data.visibility in ['public', 'unlisted', 'private']
         && data.retention in ['guest-10-days', 'account-preview']
         && data.accessVersion == 1
+        && data.revision is int
+        && data.revision > 0
+        && data.revision <= 1000000
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidGalleryCreate(galleryId) {
+      let data = request.resource.data;
+      return signedIn()
+        && ownsGalleryData(data)
+        && validGalleryShape(data)
+        && data.coverPath == 'published/' + request.auth.uid + '/' + galleryId + '/cover.webp'
+        && data.revision == 1
+        && data.updatedAt == data.publishedAt
         && validPublicationWindow(data);
+    }
+
+    function currentRevision(data) {
+      return data.keys().hasAny(['revision']) ? data.revision : 1;
+    }
+
+    function currentVisibility(data) {
+      return data.keys().hasAny(['visibility']) ? data.visibility : 'public';
+    }
+
+    function currentRetention(data) {
+      return data.keys().hasAny(['retention']) ? data.retention : 'guest-10-days';
+    }
+
+    function currentAccessVersion(data) {
+      return data.keys().hasAny(['accessVersion']) ? data.accessVersion : 1;
+    }
+
+    function isValidGalleryUpdate(galleryId) {
+      let before = resource.data;
+      let data = request.resource.data;
+      return isActive(before)
+        && (ownsGalleryData(before) || isGalleryEditor(galleryId))
+        && validGalleryShape(data)
+        && data.ownerId == before.ownerId
+        && data.templateId == before.templateId
+        && data.publishedAt == before.publishedAt
+        && data.expiresAt == before.expiresAt
+        && data.visibility == currentVisibility(before)
+        && data.retention == currentRetention(before)
+        && data.accessVersion == currentAccessVersion(before)
+        && data.revision == currentRevision(before) + 1
+        && data.updatedAt == request.time
+        && data.coverPath.matches(
+          'published/' + data.ownerId + '/' + galleryId
+          + '/revisions/[A-Za-z0-9_-]{1,128}/cover[.]webp'
+        );
     }
 
     function validMember(galleryId, memberEmail) {
@@ -164,7 +217,7 @@ service cloud.firestore {
         && request.query.limit <= 30
         && (canListGallery(resource.data) || ownsGalleryData(resource.data));
       allow create: if isValidGalleryCreate(galleryId);
-      allow update: if false;
+      allow update: if isValidGalleryUpdate(galleryId);
       allow delete: if ownsGalleryData(resource.data);
 
       match /members/{memberEmail} {
@@ -172,7 +225,9 @@ service cloud.firestore {
           || (verifiedAccount() && memberEmail == request.auth.token.email.lower());
         allow list: if request.query.limit != null
           && request.query.limit <= 50
-          && ownsGallery(galleryId);
+          && ((verifiedAccount()
+              && resource.data.email == request.auth.token.email.lower())
+            || ownsGallery(galleryId));
         allow create, update: if validMember(galleryId, memberEmail);
         allow delete: if ownsGallery(galleryId);
       }
@@ -183,6 +238,26 @@ service cloud.firestore {
       allow list: if false;
       allow create, update: if validProfile(userId);
       allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Newsletter consent and mail delivery are written only by trusted Cloud
+    // Functions. The account may read its own preference; no client can queue
+    // arbitrary email or inspect delivery/rate-limit documents.
+    match /newsletterSubscriptions/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list, create, update, delete: if false;
+    }
+
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
+
+    match /verificationMailRateLimits/{userId} {
+      allow read, write: if false;
+    }
+
+    match /newsletterUnsubscribeTokens/{tokenHash} {
+      allow read, write: if false;
     }
 
     // Read-only compatibility for schema-v1 publications that embedded art in

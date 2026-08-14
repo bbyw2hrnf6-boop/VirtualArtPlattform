@@ -1,4 +1,5 @@
 import type { GalleryDraft, TemplateId } from "../features/gallery/types";
+import type { GalleryEditTarget } from "./galleryAccess";
 
 const DATABASE_NAME = "aura-gallery-editor";
 const DATABASE_VERSION = 2;
@@ -15,6 +16,7 @@ export interface StoredGalleryDraft {
   revision: number;
   savedAt: string;
   draft: GalleryDraft;
+  publication?: GalleryEditTarget;
 }
 
 type LegacyStoredGalleryDraft = Omit<StoredGalleryDraft, "projectId" | "schemaVersion"> & {
@@ -23,6 +25,24 @@ type LegacyStoredGalleryDraft = Omit<StoredGalleryDraft, "projectId" | "schemaVe
 
 const isTemplateId = (value: unknown): value is TemplateId =>
   value === "white-cube" || value === "nocturne" || value === "pavilion";
+
+function isGalleryEditTarget(value: unknown): value is GalleryEditTarget {
+  if (!value || typeof value !== "object") return false;
+  const target = value as Partial<GalleryEditTarget>;
+  return (
+    typeof target.id === "string" &&
+    typeof target.ownerId === "string" &&
+    typeof target.publishedAt === "string" &&
+    typeof target.expiresAt === "string" &&
+    (target.visibility === "public" || target.visibility === "unlisted" || target.visibility === "private") &&
+    (target.retention === "guest-10-days" || target.retention === "account-preview") &&
+    target.accessVersion === 1 &&
+    typeof target.revision === "number" &&
+    Number.isInteger(target.revision) &&
+    target.revision >= 1 &&
+    (target.role === "owner" || target.role === "editor")
+  );
+}
 
 function isStoredDraft(
   value: unknown,
@@ -37,6 +57,7 @@ function isStoredDraft(
     isTemplateId(item.templateId) &&
     typeof item.revision === "number" &&
     typeof item.savedAt === "string" &&
+    (item.publication === undefined || isGalleryEditTarget(item.publication)) &&
     Boolean(
       item.draft &&
         item.draft.templateId === item.templateId &&
@@ -188,6 +209,12 @@ export function createGalleryProjectId(templateId: TemplateId): string {
   return `${templateId}-${token}`;
 }
 
+export function publishedGalleryProjectId(galleryId: string): string {
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(galleryId))
+    throw new Error("Invalid published gallery project id.");
+  return `published-${galleryId}`;
+}
+
 export async function loadGalleryDraft(
   projectId: string,
 ): Promise<StoredGalleryDraft | null> {
@@ -241,15 +268,21 @@ export async function saveGalleryDraft(
   projectId: string,
   draft: GalleryDraft,
   revision: number,
+  publication?: GalleryEditTarget,
 ): Promise<StoredGalleryDraft> {
-  const record: StoredGalleryDraft = {
-    projectId,
-    templateId: draft.templateId,
-    schemaVersion: SCHEMA_VERSION,
-    revision,
-    savedAt: new Date().toISOString(),
-    draft,
-  };
+  const createRecord = (
+    preservedPublication?: GalleryEditTarget,
+  ): StoredGalleryDraft => ({
+      projectId,
+      templateId: draft.templateId,
+      schemaVersion: SCHEMA_VERSION,
+      revision,
+      savedAt: new Date().toISOString(),
+      draft,
+      ...(publication ?? preservedPublication
+        ? { publication: publication ?? preservedPublication }
+        : {}),
+    });
   try {
     const saved = await withStore<StoredGalleryDraft>("readwrite", (store, finish, fail) => {
       const current = store.get(projectId);
@@ -261,6 +294,9 @@ export async function saveGalleryDraft(
           finish(existing);
           return;
         }
+        const record = createRecord(
+          isStoredDraft(existing, projectId) ? existing.publication : undefined,
+        );
         const request = store.put(record);
         request.onsuccess = () => finish(record);
         request.onerror = () =>
@@ -277,6 +313,7 @@ export async function saveGalleryDraft(
     try {
       const existing = readFallback(projectId);
       if (existing && existing.revision > revision) return existing;
+      const record = createRecord(existing?.publication);
       localStorage.setItem(`${FALLBACK_PREFIX}${projectId}`, JSON.stringify(record));
       return record;
     } catch {

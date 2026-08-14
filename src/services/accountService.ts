@@ -16,6 +16,7 @@ import {
   updateProfile,
   type User,
 } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 import {
   doc,
   getDoc,
@@ -28,7 +29,12 @@ import {
   ref,
   uploadBytes,
 } from "firebase/storage";
-import { firebaseAuth, firebaseDb, firebaseStorage } from "./firebase";
+import {
+  firebaseAuth,
+  firebaseDb,
+  firebaseFunctions,
+  firebaseStorage,
+} from "./firebase";
 import type { AccountSession } from "./accountTypes";
 
 let persistenceReady: Promise<void> | undefined;
@@ -41,6 +47,13 @@ type AccountProfileInput = {
   avatar?: File;
   removeAvatar?: boolean;
 };
+
+export type NewsletterSource =
+  | "email-create"
+  | "email-signin"
+  | "google-create"
+  | "google-signin"
+  | "account-settings";
 
 function ensurePersistence() {
   persistenceReady ??= setPersistence(firebaseAuth, browserLocalPersistence);
@@ -76,9 +89,17 @@ export async function hydrateAccountSession(
   session: AccountSession | null,
 ): Promise<AccountSession | null> {
   if (!session || session.isAnonymous) return session;
-  const snapshot = await getDoc(doc(firebaseDb, "profiles", session.uid));
-  if (!snapshot.exists()) return session;
-  const data = snapshot.data();
+  const [profileResult, newsletterResult] = await Promise.allSettled([
+    getDoc(doc(firebaseDb, "profiles", session.uid)),
+    getDoc(doc(firebaseDb, "newsletterSubscriptions", session.uid)),
+  ]);
+  const snapshot = profileResult.status === "fulfilled"
+    ? profileResult.value
+    : undefined;
+  const newsletter = newsletterResult.status === "fulfilled"
+    ? newsletterResult.value
+    : undefined;
+  const data = snapshot?.data() ?? {};
   const displayName = profileString(data.displayName, 60);
   const nickname = profileString(data.nickname, 32);
   const avatarPath = profileString(data.avatarPath, 180);
@@ -96,6 +117,9 @@ export async function hydrateAccountSession(
     ...(nickname ? { nickname } : {}),
     ...(avatarPath ? { avatarPath } : {}),
     ...(avatarSrc ? { avatarSrc } : {}),
+    ...(newsletter?.exists()
+      ? { newsletterSubscribed: newsletter.data().status === "subscribed" }
+      : {}),
   };
 }
 
@@ -214,6 +238,7 @@ export function subscribeAccount(
 export async function createOrUpgradeEmailAccount(
   email: string,
   password: string,
+  displayName?: string,
 ) {
   await ensurePersistence();
   await firebaseAuth.authStateReady();
@@ -227,8 +252,45 @@ export async function createOrUpgradeEmailAccount(
         normalizedEmail,
         password,
       );
-  if (!result.user.emailVerified) await sendEmailVerification(result.user);
+  const normalizedName = displayName?.trim().replace(/\s+/g, " ");
+  if (normalizedName) {
+    if (normalizedName.length > 60)
+      throw new Error("Use a name with no more than 60 characters.");
+    await updateProfile(result.user, { displayName: normalizedName });
+  }
+  if (!result.user.emailVerified) await requestAuraVerification(result.user);
   return sessionFromUser(result.user);
+}
+
+function actionCodeSettings() {
+  const base = `${window.location.origin}${window.location.pathname}`;
+  return { url: `${base}#/create`, handleCodeInApp: false };
+}
+
+async function requestAuraVerification(user: User) {
+  firebaseAuth.useDeviceLanguage();
+  try {
+    await httpsCallable(firebaseFunctions, "sendAuraVerificationEmail")();
+  } catch (error) {
+    const code = typeof error === "object" && error && "code" in error
+      ? String(error.code).toLowerCase()
+      : "";
+    if (!code.includes("not-found") && !code.includes("unimplemented"))
+      throw error;
+    console.warn("Branded verification function is not deployed; using Firebase fallback.");
+    await sendEmailVerification(user, actionCodeSettings());
+  }
+}
+
+export async function setNewsletterPreference(
+  subscribed: boolean,
+  source: NewsletterSource,
+) {
+  const result = await httpsCallable<
+    { subscribed: boolean; source: NewsletterSource },
+    { status: "subscribed" | "unsubscribed"; welcomeQueued: boolean }
+  >(firebaseFunctions, "setAuraNewsletterPreference")({ subscribed, source });
+  return result.data;
 }
 
 export async function signInEmailAccount(email: string, password: string) {
@@ -274,7 +336,7 @@ export async function resendAccountVerification() {
   const user = firebaseAuth.currentUser;
   if (!user || user.isAnonymous || user.emailVerified)
     throw new Error("No unverified email account is signed in.");
-  await sendEmailVerification(user);
+  await requestAuraVerification(user);
 }
 
 export async function requestPasswordReset(email: string) {
@@ -311,5 +373,7 @@ export function accountErrorMessage(error: unknown) {
     return "Connection interrupted. Check the network and retry.";
   if (code.includes("too-many-requests"))
     return "Too many attempts. Wait a moment and retry.";
+  if (code.includes("resource-exhausted"))
+    return "Wait one minute before requesting another email.";
   return error instanceof Error ? error.message : "Account action failed.";
 }

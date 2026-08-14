@@ -1,6 +1,7 @@
 import { signInAnonymously, signOut, type User } from "firebase/auth";
 import {
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   getDoc,
@@ -8,6 +9,8 @@ import {
   limit,
   orderBy,
   query,
+  runTransaction,
+  serverTimestamp,
   setDoc,
   Timestamp,
   where,
@@ -17,6 +20,7 @@ import {
 import {
   deleteObject,
   getBlob,
+  listAll,
   ref,
   uploadBytes,
   type StorageReference,
@@ -44,9 +48,16 @@ import type { GalleryDraft } from "../features/gallery/types";
 import {
   galleryArtworkPath,
   galleryCoverPath,
+  galleryRevisionArtworkPath,
+  galleryRevisionCoverPath,
+  galleryStorageRoot,
   isOwnedGalleryStoragePath,
 } from "./galleryStoragePaths";
-import type { GalleryMember, GalleryRole } from "./galleryAccess";
+import type {
+  GalleryEditTarget,
+  GalleryMember,
+  GalleryRole,
+} from "./galleryAccess";
 import type { AccountSession } from "./accountTypes";
 
 const MAX_ARTWORK_DOWNLOAD_BYTES = 2 * 1024 * 1024;
@@ -123,6 +134,12 @@ async function deleteObjects(references: StorageReference[]) {
       firebaseErrorCode(result.reason) !== "storage/object-not-found",
   );
   if (failure) throw failure.reason;
+}
+
+async function listStorageTree(root: StorageReference): Promise<StorageReference[]> {
+  const result = await listAll(root);
+  const nested = await Promise.all(result.prefixes.map(listStorageTree));
+  return [...result.items, ...nested.flat()];
 }
 
 async function createThumbnail(source?: string) {
@@ -371,6 +388,8 @@ class FirebaseGalleryRepository implements GalleryRepository {
         visibility,
         retention,
         accessVersion: 1,
+        revision: 1,
+        updatedAt: publishedAt,
       });
       return {
         ...validatedDraft,
@@ -383,9 +402,141 @@ class FirebaseGalleryRepository implements GalleryRepository {
         visibility,
         retention,
         accessVersion: 1,
+        revision: 1,
+        updatedAt: now.toISOString(),
       };
     } catch (error) {
       if (galleryRef) await bestEffortDeleteDocuments([galleryRef]);
+      if (uploaded.length) await bestEffortDeleteObjects(uploaded);
+      throw normalizeGalleryPublishingError(error, FIREBASE_PROJECT_ID);
+    }
+  }
+
+  async updatePublished(
+    target: GalleryEditTarget,
+    draft: Parameters<GalleryRepository["updatePublished"]>[1],
+    roomCoverSource?: string,
+  ): Promise<GalleryRecord> {
+    const uploaded: StorageReference[] = [];
+    try {
+      const validatedDraft = prepareGalleryDraftForPublication(
+        await embedLocalArtworkSources(draft),
+      );
+      const user = await this.authenticatedUser();
+      const galleryReference = doc(firebaseDb, "galleries", target.id);
+      const currentSnapshot = await getDoc(galleryReference);
+      if (!currentSnapshot.exists()) throw new Error("This room no longer exists.");
+      const current = fromFirestore(currentSnapshot.id, currentSnapshot.data());
+      const role = await this.editableRole(current, user);
+      if (current.ownerId !== target.ownerId)
+        throw new Error("The published room owner changed. Reload the room before editing.");
+      if (current.revision !== target.revision)
+        throw new Error(
+          "This room was changed in another session. Reopen it from Account to load the latest version; your local draft stays saved.",
+        );
+      if (!current.ownerId) throw new Error("This room has no editable owner record.");
+      if (new Date(current.expiresAt).getTime() <= Date.now() + 60_000)
+        throw new Error("This room has expired and can no longer be updated.");
+
+      const nextRevision = current.revision + 1;
+      const revisionId = `r${nextRevision}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+      const expiresAtMs = String(new Date(current.expiresAt).getTime());
+      const coverSource = validateGalleryCoverSource(
+        await createThumbnail(roomCoverSource || validatedDraft.artworks[0]?.src),
+      );
+      const coverPath = galleryRevisionCoverPath(
+        current.ownerId,
+        current.id,
+        revisionId,
+      );
+      const coverReference = ref(firebaseStorage, coverPath);
+      uploaded.push(coverReference);
+      await uploadBytes(coverReference, await dataUrlAsBlob(coverSource), {
+        contentType: coverSource.slice(5, coverSource.indexOf(";")),
+        cacheControl: "public,max-age=3600",
+        customMetadata: {
+          ownerId: current.ownerId,
+          galleryId: current.id,
+          uploaderId: user.uid,
+          revisionId,
+          kind: "cover",
+          expiresAtMs,
+          schemaVersion: "3",
+          visibility: current.visibility,
+          retention: current.retention,
+        },
+      });
+      const artworks = await mapWithConcurrency(
+        validatedDraft.artworks,
+        3,
+        async (artwork, index) => {
+          const storagePath = galleryRevisionArtworkPath(
+            current.ownerId!,
+            current.id,
+            revisionId,
+            index,
+          );
+          const reference = ref(firebaseStorage, storagePath);
+          uploaded.push(reference);
+          await uploadBytes(reference, await dataUrlAsBlob(artwork.src), {
+            contentType: artwork.src.slice(5, artwork.src.indexOf(";")),
+            cacheControl: "public,max-age=3600",
+            customMetadata: {
+              ownerId: current.ownerId!,
+              galleryId: current.id,
+              uploaderId: user.uid,
+              revisionId,
+              kind: "artwork",
+              index: String(index),
+              expiresAtMs,
+              schemaVersion: "3",
+              visibility: current.visibility,
+              retention: current.retention,
+            },
+          });
+          return { ...artwork, storagePath, src: "" };
+        },
+      );
+      const updatedAt = new Date();
+      await runTransaction(firebaseDb, async (transaction) => {
+        const latestSnapshot = await transaction.get(galleryReference);
+        if (!latestSnapshot.exists()) throw new Error("This room no longer exists.");
+        const latest = fromFirestore(latestSnapshot.id, latestSnapshot.data());
+        if (latest.revision !== target.revision)
+          throw new Error(
+            "This room was changed in another session. Reopen it from Account to load the latest version; your local draft stays saved.",
+          );
+        transaction.set(galleryReference, {
+          ...validatedDraft,
+          artworks,
+          coverPath,
+          ownerId: current.ownerId,
+          publishedAt: Timestamp.fromDate(new Date(current.publishedAt)),
+          expiresAt: Timestamp.fromDate(new Date(current.expiresAt)),
+          schemaVersion: 3,
+          visibility: current.visibility,
+          retention: current.retention,
+          accessVersion: current.accessVersion,
+          revision: nextRevision,
+          updatedAt: serverTimestamp(),
+        });
+      });
+      return {
+        ...validatedDraft,
+        coverSrc: coverSource,
+        coverPath,
+        id: current.id,
+        ownerId: current.ownerId,
+        publishedAt: current.publishedAt,
+        expiresAt: current.expiresAt,
+        visibility: current.visibility,
+        retention: current.retention,
+        accessVersion: current.accessVersion,
+        revision: nextRevision,
+        updatedAt: updatedAt.toISOString(),
+        effectiveRole: role,
+      };
+    } catch (error) {
       if (uploaded.length) await bestEffortDeleteObjects(uploaded);
       throw normalizeGalleryPublishingError(error, FIREBASE_PROJECT_ID);
     }
@@ -561,11 +712,48 @@ class FirebaseGalleryRepository implements GalleryRepository {
       where("ownerId", "==", owner.uid),
       limit(30),
     );
+    const [ownedResult, sharedResult] = await Promise.allSettled([
+      getDocs(owned),
+      owner.email && owner.emailVerified
+        ? getDocs(query(
+            collectionGroup(firebaseDb, "members"),
+            where("email", "==", owner.email.toLowerCase()),
+            limit(30),
+          ))
+        : Promise.resolve(undefined),
+    ]);
+    if (ownedResult.status === "rejected") throw ownedResult.reason;
+    if (sharedResult.status === "rejected")
+      console.warn("Shared rooms could not be listed.", sharedResult.reason);
+    const entries = new Map<string, {
+      snapshot: (typeof ownedResult.value.docs)[number];
+      role: GalleryRole;
+    }>();
+    ownedResult.value.docs.forEach((snapshot) => {
+      entries.set(snapshot.id, { snapshot, role: "owner" });
+    });
+    if (sharedResult.status === "fulfilled" && sharedResult.value) {
+      const shared = await Promise.allSettled(
+        sharedResult.value.docs.map(async (membership) => {
+          const role = membership.data().role;
+          if (role !== "editor" && role !== "viewer") return null;
+          const galleryReference = membership.ref.parent.parent;
+          if (!galleryReference) return null;
+          const snapshot = await getDoc(galleryReference);
+          return snapshot.exists() ? { snapshot, role } : null;
+        }),
+      );
+      shared.forEach((result) => {
+        if (result.status !== "fulfilled" || !result.value) return;
+        if (!entries.has(result.value.snapshot.id))
+          entries.set(result.value.snapshot.id, result.value);
+      });
+    }
     const records = await mapWithConcurrency(
-      (await getDocs(owned)).docs,
+      [...entries.values()],
       DISCOVER_COVER_CONCURRENCY,
-      async (item) => {
-        const record = fromFirestore(item.id, item.data());
+      async ({ snapshot, role }) => {
+        const record = fromFirestore(snapshot.id, snapshot.data());
         let coverSrc = record.coverSrc;
         if (record.coverPath) {
           try {
@@ -582,7 +770,11 @@ class FirebaseGalleryRepository implements GalleryRepository {
             console.warn("Account room cover unavailable.", record.id, error);
           }
         }
-        return { ...record, ...(coverSrc ? { coverSrc } : {}) };
+        return {
+          ...record,
+          effectiveRole: role,
+          ...(coverSrc ? { coverSrc } : {}),
+        };
       },
     );
     const activeAt = Date.now() + 60_000;
@@ -594,12 +786,32 @@ class FirebaseGalleryRepository implements GalleryRepository {
       );
   }
 
-  async editableDraft(id: string): Promise<GalleryDraft> {
-    const owner = await this.authenticatedUser();
+  private async editableRole(
+    gallery: GalleryRecord,
+    user: User,
+  ): Promise<Extract<GalleryRole, "owner" | "editor">> {
+    if (gallery.ownerId === user.uid) return "owner";
+    if (!user.email || !user.emailVerified)
+      throw new Error("Use a verified invited account to edit this room.");
+    const membership = await getDoc(doc(
+      firebaseDb,
+      "galleries",
+      gallery.id,
+      "members",
+      user.email.toLowerCase(),
+    ));
+    if (!membership.exists() || membership.data().role !== "editor")
+      throw new Error("This account does not have Editor access to the room.");
+    return "editor";
+  }
+
+  async editableDraft(id: string) {
+    const user = await this.authenticatedUser();
     const gallery = await this.find(id);
     if (!gallery) throw new Error("This room no longer exists.");
-    if (gallery.ownerId !== owner.uid)
-      throw new Error("Only the room owner can edit this publication.");
+    if (!gallery.ownerId)
+      throw new Error("This legacy room cannot be edited in place.");
+    const role = await this.editableRole(gallery, user);
     const artworks = await mapWithConcurrency(
       gallery.artworks,
       ARTWORK_DOWNLOAD_CONCURRENCY,
@@ -620,15 +832,28 @@ class FirebaseGalleryRepository implements GalleryRepository {
       },
     );
     return {
-      title: gallery.title,
-      artist: gallery.artist,
-      templateId: gallery.templateId,
-      wall: gallery.wall,
-      floor: gallery.floor,
-      ceiling: gallery.ceiling,
-      lighting: gallery.lighting,
-      decor: gallery.decor.map((item) => ({ ...item })),
-      artworks,
+      draft: {
+        title: gallery.title,
+        artist: gallery.artist,
+        templateId: gallery.templateId,
+        wall: gallery.wall,
+        floor: gallery.floor,
+        ceiling: gallery.ceiling,
+        lighting: gallery.lighting,
+        decor: gallery.decor.map((item) => ({ ...item })),
+        artworks,
+      },
+      target: {
+        id: gallery.id,
+        ownerId: gallery.ownerId,
+        publishedAt: gallery.publishedAt,
+        expiresAt: gallery.expiresAt,
+        visibility: gallery.visibility,
+        retention: gallery.retention,
+        accessVersion: gallery.accessVersion,
+        revision: gallery.revision,
+        role,
+      },
     };
   }
 
@@ -715,12 +940,11 @@ class FirebaseGalleryRepository implements GalleryRepository {
     const gallery = fromFirestore(snapshot.id, snapshot.data());
     if (gallery.ownerId !== ownerId)
       throw new Error("Only the artist who published this gallery can delete it.");
-    const storagePaths = [
-      gallery.coverPath,
-      ...gallery.artworks.map((artwork) => artwork.storagePath),
-    ].filter((path): path is string => Boolean(path));
-    if (storagePaths.length)
-      await deleteObjects(storagePaths.map((path) => ref(firebaseStorage, path)));
+    const storageReferences = await listStorageTree(ref(
+      firebaseStorage,
+      galleryStorageRoot(ownerId, id),
+    ));
+    if (storageReferences.length) await deleteObjects(storageReferences);
     const assetIds = gallery.artworks
       .map((artwork) => artwork.assetId)
       .filter((assetId): assetId is string => Boolean(assetId));
