@@ -644,8 +644,10 @@ export function ScrollGalleryStory() {
       measuredViewportWidth = viewportWidth;
       const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
       storyTop = section.getBoundingClientRect().top + window.scrollY;
-      const visitorDwell = viewportHeight * (compact ? 1.25 : 1.15);
-      storyTravel = Math.max(1, section.offsetHeight - viewportHeight - visitorDwell);
+      // Resolve the live Danny room exactly as the sticky story ends. The old
+      // extra dwell consumed more than one viewport after every visual change
+      // had completed, so the final scroll gesture appeared to do nothing.
+      storyTravel = Math.max(1, section.offsetHeight - viewportHeight);
     };
 
     const renderFrame = (frameAt: number) => {

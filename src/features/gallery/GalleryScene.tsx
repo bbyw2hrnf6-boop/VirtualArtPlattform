@@ -117,6 +117,30 @@ const WALLS: Record<
   "south-cross-east": { position: (x, y, w, d) => [w * .375 + x, y, d * .2 - .175], rotation: [0, Math.PI, 0] },
   "south-room-east": { position: (x, y, w, d) => [w * .375 + x, y, d * .2 + .175], rotation: [0, 0, 0] },
 };
+
+function artworkLightPose(
+  artwork: GalleryDraft["artworks"][number],
+  w: number,
+  d: number,
+  h: number,
+) {
+  const [x, y, z] = WALLS[artwork.wall].position(
+    artwork.x,
+    artwork.y,
+    w,
+    d,
+  );
+  const target = new THREE.Vector3(x, y, z);
+  const source = target.clone();
+  const wallRotation = WALLS[artwork.wall].rotation[1];
+  const wallOffset = isShortGalleryWall(artwork.wall) ? 2 : 2.25;
+  source.x += Math.sin(wallRotation) * wallOffset;
+  source.y = h - 0.35;
+  source.z += Math.cos(wallRotation) * wallOffset;
+  source.x = THREE.MathUtils.clamp(source.x, -w / 2 + 0.5, w / 2 - 0.5);
+  source.z = THREE.MathUtils.clamp(source.z, -d / 2 + 0.5, d / 2 - 0.5);
+  return { source, target };
+}
 const wallColors = {
   chalk: "#dfdcd4",
   warm: "#b86f58",
@@ -2366,26 +2390,10 @@ function addLighting(
   const artworkTargets = draft.artworks
     .filter((artwork) => !artwork.hidden)
     .slice(0, getTemplate(draft.templateId).maxArtworks)
-    .map((artwork) => {
-      const [x, y, z] = WALLS[artwork.wall].position(
-        artwork.x,
-        artwork.y,
-        w,
-        d,
-      );
-      const target = new THREE.Vector3(x, y, z);
-      const source = target.clone();
-      source.y = h - 0.35;
-      if (artwork.wall === "north") source.z += 2.25;
-      if (artwork.wall === "south") source.z -= 2.25;
-      if (artwork.wall === "west") source.x += 2.25;
-      if (artwork.wall === "east") source.x -= 2.25;
-      if (artwork.wall === "divider-front") source.z += 2;
-      if (artwork.wall === "divider-back") source.z -= 2;
-      source.x = THREE.MathUtils.clamp(source.x, -w / 2 + 0.5, w / 2 - 0.5);
-      source.z = THREE.MathUtils.clamp(source.z, -d / 2 + 0.5, d / 2 - 0.5);
-      return { artworkId: artwork.id, source, target };
-    });
+    .map((artwork) => ({
+      artworkId: artwork.id,
+      ...artworkLightPose(artwork, w, d, h),
+    }));
   const lightTargets = artworkTargets.length
     ? artworkTargets
     : [-0.27, 0, 0.27].map((ratio) => ({
@@ -2495,21 +2503,17 @@ function updateLightingLayout(
     const artwork = installation.artworkId
       ? draft.artworks.find((item) => item.id === installation.artworkId)
       : undefined;
-    const target = artwork
-      ? new THREE.Vector3(
-          ...WALLS[artwork.wall].position(artwork.x, artwork.y, w, d),
-        )
-      : new THREE.Vector3(w * [-0.27, 0, 0.27][index % 3], 0, -d * 0.08);
-    const source = target.clone();
-    source.y = h - 0.35;
-    if (artwork?.wall === "north") source.z += 2.25;
-    if (artwork?.wall === "south") source.z -= 2.25;
-    if (artwork?.wall === "west") source.x += 2.25;
-    if (artwork?.wall === "east") source.x -= 2.25;
-    if (artwork?.wall === "divider-front") source.z += 2;
-    if (artwork?.wall === "divider-back") source.z -= 2;
-    source.x = THREE.MathUtils.clamp(source.x, -w / 2 + 0.5, w / 2 - 0.5);
-    source.z = THREE.MathUtils.clamp(source.z, -d / 2 + 0.5, d / 2 - 0.5);
+    const fallbackTarget = new THREE.Vector3(
+      w * [-0.27, 0, 0.27][index % 3],
+      0,
+      -d * 0.08,
+    );
+    const { source, target } = artwork
+      ? artworkLightPose(artwork, w, d, h)
+      : {
+          source: fallbackTarget.clone().setY(h - 0.35),
+          target: fallbackTarget,
+        };
     const direction = target.clone().sub(source).normalize();
     installation.mount.position.set(source.x, h - 0.05, source.z);
     installation.stem.position.set(source.x, h - 0.16, source.z);
@@ -2837,20 +2841,20 @@ function createCinematicIntro(
     "centripetal",
     0.38,
   );
-  const desktopDuration = THREE.MathUtils.clamp(
-    curve.getLength() * 410,
-    6400,
-    11500,
+  const duration = THREE.MathUtils.clamp(
+    curve.getLength() * (innerWidth < 620 ? 600 : 560),
+    innerWidth < 620 ? 10_500 : 10_000,
+    innerWidth < 620 ? 22_000 : 24_000,
   );
-  const duration =
-    innerWidth < 620 ? Math.min(desktopDuration, 7200) : desktopDuration;
-  const startedAt = performance.now();
   const baseFov = camera.fov;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let complete = false;
   let phaseIndex = -1;
   const position = new THREE.Vector3();
   const cinematicLook = new THREE.Vector3();
+  const orientation = new THREE.PerspectiveCamera();
+  let playhead = 0;
+  let previousUpdateAt = performance.now();
   const phases = [
     "Arrival",
     "The architecture",
@@ -2880,6 +2884,10 @@ function createCinematicIntro(
   copy.append(label, title, phase, line);
   overlay.append(copy, skip);
   element.appendChild(overlay);
+  element.dataset.introDuration = String(Math.round(duration));
+  element.dataset.introMotion = "capped-smooth";
+  camera.position.copy(tour.positions[0]);
+  camera.lookAt(tour.looks[0]);
   navigation.setEnabled(false);
   const finish = () => {
     if (complete) return;
@@ -2899,12 +2907,21 @@ function createCinematicIntro(
       finish();
       return;
     }
-    const raw = Math.min(1, (performance.now() - startedAt) / duration);
+    const now = performance.now();
+    const frameDelta = THREE.MathUtils.clamp(now - previousUpdateAt, 0, 34);
+    previousUpdateAt = now;
+    playhead = Math.min(duration, playhead + frameDelta);
+    const raw = playhead / duration;
     const eased = raw * raw * raw * (raw * (raw * 6 - 15) + 10);
     curve.getPointAt(eased, position);
     lookCurve.getPointAt(eased, cinematicLook);
     camera.position.copy(position);
-    camera.lookAt(cinematicLook);
+    orientation.position.copy(position);
+    orientation.lookAt(cinematicLook);
+    camera.quaternion.slerp(
+      orientation.quaternion,
+      1 - Math.exp((-8 * frameDelta) / 1000),
+    );
     camera.fov = baseFov + Math.sin(raw * Math.PI) * 2.2;
     camera.updateProjectionMatrix();
     const nextPhase = Math.min(
@@ -6989,9 +7006,8 @@ export function DannyDemoScene({
       applyAuthoredLightBudget();
       element.dataset.quality = "low";
       element.dataset.tourAutoplay = "disabled-low-tier";
-      intro?.skip();
-      intro = null;
     });
+    let lastDannyDiagnosticsAt = Number.NEGATIVE_INFINITY;
     const animate = (now = performance.now()) => {
       const delta = Math.min((now - previousFrame) / 1000, 0.05);
       previousFrame = now;
@@ -7068,13 +7084,16 @@ export function DannyDemoScene({
         material.opacity = 0.5 + Math.sin(now * 0.006) * 0.25;
         if (!navigation.hasDestination()) walkMarker.visible = false;
       }
-      element.dataset.cameraPosition = camera.position
-        .toArray()
-        .map((value) => value.toFixed(2))
-        .join(",");
-      element.dataset.cameraYaw = camera.rotation.y.toFixed(3);
-      element.dataset.intro =
-        intro && !intro.isComplete() ? "active" : "complete";
+      if (now - lastDannyDiagnosticsAt >= 120) {
+        lastDannyDiagnosticsAt = now;
+        element.dataset.cameraPosition = camera.position
+          .toArray()
+          .map((value) => value.toFixed(2))
+          .join(",");
+        element.dataset.cameraYaw = camera.rotation.y.toFixed(3);
+        element.dataset.intro =
+          intro && !intro.isComplete() ? "active" : "complete";
+      }
       adaptiveDpr.update(now);
       renderer.render(scene, camera);
       frame = requestAnimationFrame(animate);
