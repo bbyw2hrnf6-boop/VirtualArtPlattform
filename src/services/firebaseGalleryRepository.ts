@@ -27,7 +27,11 @@ import {
   firebaseStorage,
   FIREBASE_PROJECT_ID,
 } from "./firebase";
-import type { GalleryRepository, GalleryRecord } from "./galleryRepository";
+import {
+  GalleryAccessDeniedError,
+  type GalleryRepository,
+  type GalleryRecord,
+} from "./galleryRepository";
 import {
   GalleryRepositoryDataError,
   parseArtworkAsset,
@@ -42,11 +46,14 @@ import {
   galleryCoverPath,
   isOwnedGalleryStoragePath,
 } from "./galleryStoragePaths";
+import type { GalleryMember, GalleryRole } from "./galleryAccess";
+import type { AccountSession } from "./accountTypes";
 
 const MAX_ARTWORK_DOWNLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_COVER_DOWNLOAD_BYTES = 1024 * 1024;
 const MAX_CACHED_OBJECT_URLS = 64;
 const ARTWORK_DOWNLOAD_CONCURRENCY = 6;
+const DISCOVER_COVER_CONCURRENCY = 4;
 const objectUrls = new Map<string, Promise<string>>();
 
 const slugify = (value: string) =>
@@ -64,6 +71,30 @@ function firebaseErrorCode(error: unknown) {
   return typeof error === "object" && error && "code" in error
     ? String(error.code).toLowerCase()
     : "";
+}
+
+function accountSession(user: User | null): AccountSession | null {
+  if (!user) return null;
+  return {
+    uid: user.uid,
+    ...(user.email ? { email: user.email } : {}),
+    ...(user.displayName ? { displayName: user.displayName } : {}),
+    isAnonymous: user.isAnonymous,
+    emailVerified: user.emailVerified,
+    providers: user.providerData.map((provider) => provider.providerId),
+  };
+}
+
+function normalizedMemberEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (
+    normalized.length > 254 ||
+    !/^[a-z0-9.!#$%&'*+=?^_{}|~-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(
+      normalized,
+    )
+  )
+    throw new Error("Enter a valid member email address.");
+  return normalized;
 }
 
 const RECOVERABLE_ANONYMOUS_SESSION_ERRORS = new Set([
@@ -242,18 +273,22 @@ class FirebaseGalleryRepository implements GalleryRepository {
     return credential.user;
   }
 
-  private async userId() {
-    return (await this.authenticatedUser()).uid;
-  }
-
   async currentUserId() {
     await firebaseAuth.authStateReady();
     return firebaseAuth.currentUser?.uid ?? null;
   }
 
+  async currentSession() {
+    await firebaseAuth.authStateReady();
+    return accountSession(firebaseAuth.currentUser);
+  }
+
   async publish(
     draft: Parameters<GalleryRepository["publish"]>[0],
     roomCoverSource?: string,
+    options: Parameters<GalleryRepository["publish"]>[2] = {
+      visibility: "public",
+    },
   ): Promise<GalleryRecord> {
     const uploaded: StorageReference[] = [];
     let galleryRef: DocumentReference | undefined;
@@ -261,11 +296,21 @@ class FirebaseGalleryRepository implements GalleryRepository {
       const validatedDraft = prepareGalleryDraftForPublication(
         await embedLocalArtworkSources(draft),
       );
-      const ownerId = await this.userId();
+      const owner = await this.authenticatedUser();
+      const ownerId = owner.uid;
+      const verifiedAccount = !owner.isAnonymous && owner.emailVerified;
+      const visibility = options.visibility ?? "public";
+      if (!verifiedAccount && visibility !== "public")
+        throw new Error(
+          "Verify an email or Google account before publishing an unlisted or private room.",
+        );
+      const retention = verifiedAccount ? "account-preview" : "guest-10-days";
       const base = slugify(`${validatedDraft.artist}-${validatedDraft.title}`) || "gallery";
-      const id = `${base}-${crypto.randomUUID().slice(0, 7)}`;
+      const id = `${base}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
       const now = new Date();
-      const expires = new Date(now.getTime() + 10 * 86_400_000);
+      const expires = new Date(
+        now.getTime() + (verifiedAccount ? 365 : 10) * 86_400_000,
+      );
       const publishedAt = Timestamp.fromDate(now);
       const expiresAt = Timestamp.fromDate(expires);
       const expiresAtMs = String(expires.getTime());
@@ -283,7 +328,9 @@ class FirebaseGalleryRepository implements GalleryRepository {
           galleryId: id,
           kind: "cover",
           expiresAtMs,
-          schemaVersion: "2",
+          schemaVersion: "3",
+          visibility,
+          retention,
         },
       });
 
@@ -303,7 +350,9 @@ class FirebaseGalleryRepository implements GalleryRepository {
               kind: "artwork",
               index: String(index),
               expiresAtMs,
-              schemaVersion: "2",
+              schemaVersion: "3",
+              visibility,
+              retention,
             },
           });
           return { ...artwork, storagePath, src: "" };
@@ -318,7 +367,10 @@ class FirebaseGalleryRepository implements GalleryRepository {
         ownerId,
         publishedAt,
         expiresAt,
-        schemaVersion: 2,
+        schemaVersion: 3,
+        visibility,
+        retention,
+        accessVersion: 1,
       });
       return {
         ...validatedDraft,
@@ -328,6 +380,9 @@ class FirebaseGalleryRepository implements GalleryRepository {
         ownerId,
         publishedAt: now.toISOString(),
         expiresAt: expires.toISOString(),
+        visibility,
+        retention,
+        accessVersion: 1,
       };
     } catch (error) {
       if (galleryRef) await bestEffortDeleteDocuments([galleryRef]);
@@ -337,6 +392,7 @@ class FirebaseGalleryRepository implements GalleryRepository {
   }
 
   async find(id: string): Promise<GalleryRecord | null> {
+    await firebaseAuth.authStateReady();
     const safelyActiveAt = Timestamp.fromMillis(Date.now() + 60_000);
     let snapshot;
     try {
@@ -347,16 +403,17 @@ class FirebaseGalleryRepository implements GalleryRepository {
         throw error;
       const permissionProbe = query(
         collection(firebaseDb, "galleries"),
+        where("visibility", "==", "public"),
         where("expiresAt", ">", safelyActiveAt),
         orderBy("expiresAt", "desc"),
         limit(1),
       );
       try {
         await getDocs(permissionProbe);
-        return null;
       } catch {
         throw error;
       }
+      throw new GalleryAccessDeniedError(id);
     }
     if (!snapshot.exists()) return null;
     const record = fromFirestore(snapshot.id, snapshot.data());
@@ -410,34 +467,185 @@ class FirebaseGalleryRepository implements GalleryRepository {
 
   async discover(): Promise<GalleryRecord[]> {
     const safelyActiveAt = Timestamp.fromMillis(Date.now() + 60_000);
-    const active = query(
+    const publicActive = query(
       collection(firebaseDb, "galleries"),
+      where("visibility", "==", "public"),
       where("expiresAt", ">", safelyActiveAt),
       orderBy("expiresAt", "desc"),
       limit(12),
     );
+    const legacyActive = query(
+      collection(firebaseDb, "galleries"),
+      where("schemaVersion", "in", [1, 2]),
+      where("expiresAt", ">", safelyActiveAt),
+      orderBy("expiresAt", "desc"),
+      limit(12),
+    );
+    const snapshots = await Promise.all([
+      getDocs(publicActive),
+      getDocs(legacyActive),
+    ]);
+    const items = Array.from(
+      new Map(
+        snapshots.flatMap((snapshot) => snapshot.docs).map((item) => [item.id, item]),
+      ).values(),
+    ).slice(0, 12);
     const records: GalleryRecord[] = [];
-    for (const item of (await getDocs(active)).docs) {
-      try {
-        const record = fromFirestore(item.id, item.data());
-        if (new Date(record.expiresAt).getTime() <= Date.now()) continue;
-        const coverSrc = record.coverPath
-          ? await storageObjectUrl(
-              validateStoragePathOwnership(record.coverPath, record.ownerId, record.id, "coverPath"),
-              MAX_COVER_DOWNLOAD_BYTES,
-            )
-          : record.coverSrc;
-        records.push({ ...record, ...(coverSrc ? { coverSrc } : {}) });
-      } catch (error) {
-        if (!(error instanceof GalleryRepositoryDataError)) throw error;
-        console.warn("Skipping invalid Discover gallery.", error);
-      }
-    }
+    const discovered = await mapWithConcurrency(
+      items,
+      DISCOVER_COVER_CONCURRENCY,
+      async (item) => {
+        try {
+          const record = fromFirestore(item.id, item.data());
+          if (
+            record.visibility !== "public" ||
+            new Date(record.expiresAt).getTime() <= Date.now()
+          )
+            return null;
+          const coverSrc = record.coverPath
+            ? await storageObjectUrl(
+                validateStoragePathOwnership(
+                  record.coverPath,
+                  record.ownerId,
+                  record.id,
+                  "coverPath",
+                ),
+                MAX_COVER_DOWNLOAD_BYTES,
+              )
+            : record.coverSrc;
+          return { ...record, ...(coverSrc ? { coverSrc } : {}) };
+        } catch (error) {
+          if (!(error instanceof GalleryRepositoryDataError)) throw error;
+          console.warn("Skipping invalid Discover gallery.", error);
+          return null;
+        }
+      },
+    );
+    records.push(
+      ...discovered
+        .filter((record): record is GalleryRecord => Boolean(record))
+        .sort(
+          (a, b) =>
+            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+        ),
+    );
     return records;
   }
 
+  async mine(): Promise<GalleryRecord[]> {
+    const owner = await this.authenticatedUser();
+    if (owner.isAnonymous)
+      throw new Error("Sign in to see rooms saved to your account.");
+    const safelyActiveAt = Timestamp.fromMillis(Date.now() + 60_000);
+    const owned = query(
+      collection(firebaseDb, "galleries"),
+      where("ownerId", "==", owner.uid),
+      where("expiresAt", ">", safelyActiveAt),
+      orderBy("expiresAt", "desc"),
+      limit(30),
+    );
+    const records = await mapWithConcurrency(
+      (await getDocs(owned)).docs,
+      DISCOVER_COVER_CONCURRENCY,
+      async (item) => {
+        const record = fromFirestore(item.id, item.data());
+        const coverSrc = record.coverPath
+          ? await storageObjectUrl(
+              validateStoragePathOwnership(
+                record.coverPath,
+                record.ownerId,
+                record.id,
+                "coverPath",
+              ),
+              MAX_COVER_DOWNLOAD_BYTES,
+            )
+          : record.coverSrc;
+        return { ...record, ...(coverSrc ? { coverSrc } : {}) };
+      },
+    );
+    return records.sort(
+      (a, b) =>
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+    );
+  }
+
+  private async ownedGallery(id: string) {
+    const owner = await this.authenticatedUser();
+    if (owner.isAnonymous || !owner.emailVerified)
+      throw new Error("Use a verified account to manage room access.");
+    const reference = doc(firebaseDb, "galleries", id);
+    const snapshot = await getDoc(reference);
+    if (!snapshot.exists()) throw new Error("This room no longer exists.");
+    const gallery = fromFirestore(snapshot.id, snapshot.data());
+    if (gallery.ownerId !== owner.uid)
+      throw new Error("Only the room owner can manage access.");
+    return owner;
+  }
+
+  async listMembers(id: string): Promise<GalleryMember[]> {
+    await this.ownedGallery(id);
+    const snapshot = await getDocs(
+      query(collection(firebaseDb, "galleries", id, "members"), limit(50)),
+    );
+    return snapshot.docs
+      .map((item) => {
+        const data = item.data();
+        const role = data.role;
+        if (role !== "editor" && role !== "viewer") return null;
+        const addedAt = data.addedAt;
+        return {
+          email: item.id,
+          role,
+          addedAt:
+            addedAt instanceof Timestamp
+              ? addedAt.toDate().toISOString()
+              : new Date(0).toISOString(),
+        } satisfies GalleryMember;
+      })
+      .filter((member): member is GalleryMember => Boolean(member))
+      .sort((a, b) => a.email.localeCompare(b.email));
+  }
+
+  async setMember(
+    id: string,
+    email: string,
+    role: Exclude<GalleryRole, "owner">,
+  ): Promise<void> {
+    const owner = await this.ownedGallery(id);
+    const normalizedEmail = normalizedMemberEmail(email);
+    if (normalizedEmail === owner.email?.toLowerCase())
+      throw new Error("The owner already has full access.");
+    const memberReference = doc(
+      firebaseDb,
+      "galleries",
+      id,
+      "members",
+      normalizedEmail,
+    );
+    if (!(await getDoc(memberReference)).exists()) {
+      const current = await getDocs(
+        query(collection(firebaseDb, "galleries", id, "members"), limit(50)),
+      );
+      if (current.size >= 50)
+        throw new Error("This preview supports up to 50 invited accounts per room.");
+    }
+    await setDoc(memberReference, {
+      email: normalizedEmail,
+      role,
+      addedAt: Timestamp.now(),
+      addedBy: owner.uid,
+    });
+  }
+
+  async removeMember(id: string, email: string): Promise<void> {
+    await this.ownedGallery(id);
+    await deleteDoc(
+      doc(firebaseDb, "galleries", id, "members", normalizedMemberEmail(email)),
+    );
+  }
+
   async delete(id: string): Promise<void> {
-    const ownerId = await this.userId();
+    const ownerId = (await this.authenticatedUser()).uid;
     const galleryRef = doc(firebaseDb, "galleries", id);
     const snapshot = await getDoc(galleryRef);
     if (!snapshot.exists()) return;
@@ -454,6 +662,10 @@ class FirebaseGalleryRepository implements GalleryRepository {
       .map((artwork) => artwork.assetId)
       .filter((assetId): assetId is string => Boolean(assetId));
     const batch = writeBatch(firebaseDb);
+    const members = await getDocs(
+      query(collection(firebaseDb, "galleries", id, "members"), limit(50)),
+    );
+    members.docs.forEach((member) => batch.delete(member.ref));
     assetIds.forEach((assetId) =>
       batch.delete(doc(firebaseDb, "galleryArtworks", assetId)),
     );

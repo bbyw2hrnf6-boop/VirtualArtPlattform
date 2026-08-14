@@ -1,6 +1,6 @@
 # AURA — Virtual Art Platform MVP
 
-AURA is a browser-based platform for creating, curating, publishing, and sharing immersive 3D art exhibitions. This repository contains the first standalone MVP: a React and Three.js editor, three gallery architectures, a visitor experience, a public Discover section, and a ten-day Firebase publishing lifecycle.
+AURA is a browser-based platform for creating, curating, publishing, and sharing immersive 3D art exhibitions. This repository contains the standalone MVP: a React and Three.js editor, three gallery architectures, a visitor experience, Discover, account access, and a Firebase publishing lifecycle.
 
 Live MVP: [bbyw2hrnf6-boop.github.io/VirtualArtPlattform](https://bbyw2hrnf6-boop.github.io/VirtualArtPlattform/)
 
@@ -30,7 +30,8 @@ Live MVP: [bbyw2hrnf6-boop.github.io/VirtualArtPlattform](https://bbyw2hrnf6-boo
 - Cinematic gallery introductions, 1.75 m visitor eye height, walk and overview modes, artwork information cards, an accessible text-first artwork directory, and click-to-walk navigation.
 - The Danny Hirsch reference offers an optional 45-second guided tour, authored Smart Views, Reset View, exact GLB artwork metadata, and an automatic artwork-directory fallback when WebGL is unavailable.
 - Discover keeps the Danny reference exhibition visible when the live community feed is empty or unavailable.
-- Anonymous publishing, shareable hash links, public discovery, owner deletion, and automatic expiry after ten days.
+- Guest publishing with public ten-day links; verified Email/Password or Google accounts with public, unlisted, or private account-preview rooms.
+- Owner, editor, and viewer ACL records. Private viewing is active; shared editor revision is prepared but not active yet.
 
 ## Requirements
 
@@ -161,12 +162,12 @@ The repository boundary in `galleryRepository.ts` keeps persistence separate fro
 
 1. Artwork is decoded in the browser, resized to at most 1200 px on its longest side, converted to WebP, and compressed until its data URL is below the configured 780,000-character limit.
    Same-origin artwork bundled with the fast sandbox is embedded before publication as well.
-2. Firebase signs the publisher in anonymously in the background.
-3. Artwork images and the room cover are uploaded to owner-scoped Firebase Storage objects. The Firestore gallery document stores metadata, layout, and immutable object paths. Existing schema-v1 rooms remain readable.
+2. Firebase restores the publisher's verified Email/Password or Google account, or signs a guest in anonymously.
+3. Artwork images and the room cover are uploaded to owner-scoped Firebase Storage objects. The schema-v3 Firestore gallery document stores metadata, layout, visibility, retention, and immutable object paths. Existing schema-v1/v2 rooms remain readable.
    Hidden works and editor-only lock state are omitted from the public record; visitor-facing frame choices are preserved.
-4. Both document types receive an `expiresAt` timestamp ten days after publication.
-5. Firestore rules allow public reads only while `expiresAt` is in the future. Discover applies the same active-gallery constraint.
-6. The scheduled cleanup Action physically deletes expired documents as a separate, best-effort maintenance step.
+4. Guest rooms receive a ten-day `expiresAt`; verified account rooms currently receive a 365-day account-preview window. Billing and permanent hosting are not active.
+5. Firestore and Storage rules enforce expiry and visibility. Discover queries only public rooms; unlisted rooms require the link; private rooms require the owner or an invited verified email.
+6. ACL documents store editor/viewer membership separately from the public gallery record. The scheduled cleanup Action removes expired assets, ACL records, and documents.
 
 Firebase Storage requires Blaze as of February 2026, although no-cost quotas still apply. See [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) for bucket setup, rules, CORS, cleanup, quotas, and verification.
 
@@ -213,7 +214,7 @@ Run `npm ci` once, then keep `npm run dev` running in the terminal. Opening `ind
 ### Publishing reports `permission-denied`
 
 - The room itself is still autosaved locally. This error concerns Firestore publication, not the IndexedDB draft.
-- Enable Anonymous Authentication.
+- Enable Anonymous, Email/Password, and Google Authentication.
 - Add the current hostname to Firebase Authorized domains.
 - Publish the repository's `firestore.rules` and `firestore.indexes.json`.
 - Confirm the web configuration points to the same project in which the rules were deployed.
@@ -221,7 +222,7 @@ Run `npm ci` once, then keep `npm run dev` running in the terminal. Opening `ind
 
 ### Discover is empty or a shared gallery cannot be opened
 
-- Confirm the gallery has not reached its ten-day expiry.
+- Confirm the gallery has not reached its configured expiry.
 - Confirm the Firestore rules and indexes are deployed.
 - Check the browser console for Firebase errors rather than treating all missing records as network failures.
 
@@ -231,14 +232,14 @@ Use a current browser, enable hardware acceleration, and verify WebGL is availab
 
 ## Security, privacy, and current limitations
 
-- Published galleries and their artwork are intentionally public until expiry. Upload only work that may be shared publicly.
-- Publishing uses anonymous Firebase identities, not artist accounts. The ability to delete a gallery belongs to the anonymous identity stored in that browser; clearing site data or switching devices can remove that ownership access.
+- Guest galleries are public until expiry. Account rooms may be public, unlisted, or private; private preview access is not yet a contractual confidential-data service.
+- Publishing supports anonymous, Email/Password, and Google identities. Anonymous ownership is tied to the browser unless that identity is upgraded to an account before it is lost.
 - Published gallery records are immutable. Editing and republishing creates a new gallery and share link.
 - The client-only anonymous write path has no application-level rate limiting, moderation, malware scanning, or App Check enforcement. Harden it before opening unrestricted public publishing.
 - Firestore Security Rules protect client requests, but they are not a substitute for abuse prevention or a trusted publishing backend.
-- Storing compressed images as Firestore strings is appropriate for a low-traffic demo, not a production community or marketplace.
+- Artwork and covers use Firebase Storage; room data and ACL records use Firestore. App Check, backend rate limiting, and moderation remain production gates.
 - The local AI Curator is heuristic assistance, not a generative model or professional curatorial guarantee.
-- Multiplayer, chat, artist accounts, analytics, payments, sales, events, marketplace features, and community moderation are intentionally outside this MVP.
+- Shared revision, multiplayer, chat, analytics, payments, sales, events, marketplace features, and community moderation are intentionally outside this MVP.
 - This repository currently has no general code license. Do not infer permission for downstream reuse from public repository access.
 
 Review [ASSET_LICENSES.md](./ASSET_LICENSES.md) before reusing artwork, models, textures, fonts, or Blender files outside this AURA deployment.

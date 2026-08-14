@@ -60,10 +60,20 @@ import {
   type StoredGalleryDraft,
 } from "./services/draftStorage";
 import {
+  GalleryAccessDeniedError,
   galleryRepository,
   type GalleryRecord,
 } from "./services/galleryRepository";
 import { galleryShareUrl } from "./services/galleryShareUrl";
+import { useDialogFocus } from "./hooks/useDialogFocus";
+import { AccountButton } from "./features/account/AccountDialog";
+import { GalleryAccessManager } from "./features/account/GalleryAccessManager";
+import type { AccountSession } from "./services/accountTypes";
+import { isVerifiedAccount } from "./services/accountTypes";
+import {
+  visibilityLabel,
+  type GalleryVisibility,
+} from "./services/galleryAccess";
 
 const GalleryScene = lazy(() =>
   import("./features/gallery/GalleryScene").then((module) => ({
@@ -106,6 +116,7 @@ type GalleryLoadState =
   | { status: "loading" }
   | { status: "ready"; gallery: GalleryRecord }
   | { status: "not-found" }
+  | { status: "access-denied" }
   | { status: "error" };
 const MAX_DECOR_OBJECTS = 8;
 const DECOR_CATALOG: Array<{ id: DecorId; name: string; size: string }> = [
@@ -257,6 +268,7 @@ function Header({ light = false }: { light?: boolean }) {
       <Logo dark={light} />
       <nav>
         <button onClick={() => navigate("/demo")}>Live demo</button>
+        <AccountButton light={light} />
         <button onClick={() => navigate("/create")}>
           Create gallery <span>↗</span>
         </button>
@@ -666,14 +678,14 @@ function MvpDataNotice() {
     <main className="info-page">
       <Header light />
       <article>
-        <p className="eyebrow">Public MVP · Data and rights notice</p>
+        <p className="eyebrow">AURA preview · Data and rights notice</p>
         <h1>
           Know before
           <br />
           <em>you upload.</em>
         </h1>
         <p className="info-lead">
-          AURA is a public concept-validation product, not yet a production
+          AURA is a concept-validation product, not yet a production
           publishing service. This factual MVP notice does not replace a
           complete privacy policy or pilot agreement.
         </p>
@@ -689,26 +701,27 @@ function MvpDataNotice() {
         <section>
           <h2>What happens when you publish?</h2>
           <p>
-            The current option is public. Gallery metadata, compressed artwork,
-            and an anonymous Firebase owner identifier are stored in Cloud
-            Firestore. The link can appear in Discover and is scheduled to
-            become unreadable after ten days; separate cleanup later removes
-            expired records.
+            Gallery metadata and access roles are stored in Cloud Firestore;
+            compressed artwork and covers are stored in Firebase Storage.
+            Guest publications are public in Discover for ten days. Verified
+            email or Google accounts can choose public, unlisted, or private
+            access during an extended account preview.
           </p>
         </section>
         <section>
           <h2>Rights and confidentiality</h2>
           <p>
-            Only upload artwork and text you are allowed to share publicly. Do
-            not upload confidential, embargoed, personal, or rights-restricted
-            material. The MVP has no moderation review, private links, accounts,
+            Only upload artwork and text you are allowed to share. Private
+            access reduces discoverability but is not yet a contractual
+            confidential-data service. The preview has no moderation review,
             payments, or contractual archival promise.
           </p>
         </section>
         <section>
           <h2>Infrastructure and pilots</h2>
           <p>
-            Publishing uses Firebase Authentication and Cloud Firestore. Google
+            Publishing uses Firebase Authentication, Cloud Firestore, and
+            Firebase Storage. Google
             documents the service's processing, storage locations, and security
             controls on its{" "}
             <a
@@ -1015,6 +1028,11 @@ function Studio({
   const [publishError, setPublishError] = useState<string>();
   const [publishReviewOpen, setPublishReviewOpen] = useState(false);
   const [publishCover, setPublishCover] = useState<string>();
+  const [publishVisibility, setPublishVisibility] =
+    useState<GalleryVisibility>("public");
+  const [accountSession, setAccountSession] =
+    useState<AccountSession | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string>();
@@ -1528,11 +1546,19 @@ function Studio({
       setUploading(false);
     }
   };
+  const handleAccountSessionChange = useCallback(
+    (session: AccountSession | null) => {
+      setAccountSession(session);
+      if (!isVerifiedAccount(session)) setPublishVisibility("public");
+    },
+    [],
+  );
   const openPublishReview = () => {
     setPublishError(undefined);
     transitionPublish({ type: "RESET" });
     setPublishCover(undefined);
     setPublishReviewOpen(true);
+    void galleryRepository.currentSession().then(handleAccountSessionChange);
     void sceneCapture
       .current?.({ maxWidth: 720, maxHeight: 540, quality: 0.72 })
       .then((capture) => setPublishCover(capture.dataUrl))
@@ -1573,6 +1599,7 @@ function Studio({
       const publishedGallery = await galleryRepository.publish(
         { ...draftRef.current, title, artist },
         roomCoverSource,
+        { visibility: publishVisibility },
       );
       setPublished(publishedGallery);
       transitionPublish({ type: "SUCCEED" });
@@ -1727,8 +1754,11 @@ function Studio({
               <em>ready to share.</em>
             </h1>
             <p>
-              Anyone with this link can enter your exhibition. It remains in
-              Discover until {expiry}.
+              {published.visibility === "public"
+                ? `Your room is listed in Discover and live until ${expiry}.`
+                : published.visibility === "unlisted"
+                  ? `Only people with this link can find the room. It is live until ${expiry}.`
+                  : `Only the owner and invited accounts can enter. It is live until ${expiry}.`}
             </p>
             <div className="share-field">
               <input
@@ -1757,13 +1787,25 @@ function Studio({
             <p className="publish-success__copy-status" aria-live="polite">
               {copied ? "Gallery link copied to the clipboard." : ""}
             </p>
+            <p className="publish-access-label">
+              {visibilityLabel[published.visibility]} · {published.retention === "guest-10-days" ? "10-day guest room" : "Account preview"}
+            </p>
+            {isVerifiedAccount(accountSession) && (
+              <GalleryAccessManager
+                galleryId={published.id}
+                ownerEmail={accountSession?.email}
+                initiallyOpen={published.visibility === "private"}
+              />
+            )}
             <div className="success-actions">
               <a className="button button--light" href={url}>
                 Enter the room <span aria-hidden="true">↗</span>
               </a>
-              <button className="text-link" onClick={() => navigate("/")}>
-                View in Discover
-              </button>
+              {published.visibility === "public" && (
+                <button className="text-link" onClick={() => navigate("/")}>
+                  View in Discover
+                </button>
+              )}
               <button
                 className="text-link"
                 onClick={() => {
@@ -1836,6 +1878,11 @@ function Studio({
                     ? "Save error"
                     : "Autosave ready"}
           </span>
+          <AccountButton
+            open={accountOpen}
+            onOpenChange={setAccountOpen}
+            onSessionChange={handleAccountSessionChange}
+          />
           <div
             className="history-controls"
             role="group"
@@ -2598,6 +2645,13 @@ function Studio({
           publishStatus={publishStatus}
           publishError={publishError}
           coverSrc={publishCover}
+          visibility={publishVisibility}
+          accountEligible={isVerifiedAccount(accountSession)}
+          onVisibilityChange={setPublishVisibility}
+          onOpenAccount={() => {
+            setPublishReviewOpen(false);
+            setAccountOpen(true);
+          }}
           returnFocus={publishButton}
           onClose={closePublishReview}
           onPublish={() => void publish()}
@@ -2606,52 +2660,6 @@ function Studio({
       )}
     </main>
   );
-}
-
-function useDialogFocus(
-  dialog: React.RefObject<HTMLElement | null>,
-  onClose: () => void,
-  returnFocus?: React.RefObject<HTMLElement | null>,
-) {
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    const returnElement = returnFocus?.current;
-    const element = dialog.current;
-    const focusable = () =>
-      Array.from(
-        element?.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      );
-    (focusable()[0] ?? element)?.focus({ preventScroll: true });
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const items = focusable();
-      if (!items.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = items[0];
-      const last = items.at(-1)!;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    addEventListener("keydown", onKeyDown);
-    return () => {
-      removeEventListener("keydown", onKeyDown);
-      (returnElement ?? previous)?.focus?.({ preventScroll: true });
-    };
-  }, [dialog, onClose, returnFocus]);
 }
 
 function RecoveryDialog({
@@ -2711,10 +2719,14 @@ function PublishReviewDialog({
   publishStatus,
   publishError,
   coverSrc,
+  visibility,
+  accountEligible,
   returnFocus,
   onClose,
   onPublish,
   onFocusIssue,
+  onVisibilityChange,
+  onOpenAccount,
 }: {
   issues: PublishReviewIssue[];
   blockers: number;
@@ -2722,10 +2734,14 @@ function PublishReviewDialog({
   publishStatus: PublishStatus;
   publishError?: string;
   coverSrc?: string;
+  visibility: GalleryVisibility;
+  accountEligible: boolean;
   returnFocus: React.RefObject<HTMLElement | null>;
   onClose: () => void;
   onPublish: () => void;
   onFocusIssue: (issue: PublishReviewIssue) => void;
+  onVisibilityChange: (visibility: GalleryVisibility) => void;
+  onOpenAccount: () => void;
 }) {
   const dialog = useRef<HTMLElement>(null);
   useDialogFocus(dialog, onClose, returnFocus);
@@ -2799,22 +2815,42 @@ function PublishReviewDialog({
         )}
         <fieldset className="publish-visibility">
           <legend>Visibility and duration</legend>
-          <label>
-            <input type="radio" name="visibility" checked readOnly /> Public ·
-            Discover for 10 days
-          </label>
-          <label aria-disabled="true">
-            <input type="radio" name="visibility" disabled /> Unlisted · Pilot
-            plan
-          </label>
-          <label aria-disabled="true">
-            <input type="radio" name="visibility" disabled /> Private · Pilot
-            plan
-          </label>
+          {(["public", "unlisted", "private"] as GalleryVisibility[]).map(
+            (option) => {
+              const disabled = option !== "public" && !accountEligible;
+              const description =
+                option === "public"
+                  ? accountEligible
+                    ? "Listed in Discover · Account preview"
+                    : "Listed in Discover · 10 days"
+                  : option === "unlisted"
+                    ? "Anyone with the link · Account preview"
+                    : "Owner and invited accounts · Account preview";
+              return (
+                <label key={option} aria-disabled={disabled || undefined}>
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value={option}
+                    checked={visibility === option}
+                    disabled={disabled}
+                    onChange={() => onVisibilityChange(option)}
+                  />
+                  <span><strong>{visibilityLabel[option]}</strong>{description}</span>
+                </label>
+              );
+            },
+          )}
           <small>
-            This MVP currently publishes publicly for ten days. Private and
-            unlisted links are not active yet.
+            {accountEligible
+              ? "Billing is not active. Account rooms use an extended preview period for now."
+              : "Guest rooms are public for ten days. Create or verify an account for unlisted, private, and team access."}
           </small>
+          {!accountEligible && (
+            <button type="button" className="publish-account-unlock" onClick={onOpenAccount}>
+              Sign in or create account
+            </button>
+          )}
         </fieldset>
         {publishError && (
           <p className="publish-review-error" role="alert">
@@ -2833,7 +2869,7 @@ function PublishReviewDialog({
                 ? "Publishing…"
                 : publishStatus === "error"
                   ? "Retry publishing"
-                  : "Publish public gallery"}
+                  : `Publish ${visibilityLabel[visibility].toLowerCase()} gallery`}
           </button>
           <button className="text-link" onClick={onClose} disabled={publishing}>
             Back to editor
@@ -3566,6 +3602,13 @@ function PublishedGallery({ id }: { id: string }) {
   const [viewMode, setViewMode] = useState<ViewMode>("walk");
   const [artworkFocus, setArtworkFocus] = useState<ArtworkFocus | null>(null);
   const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const handleViewerSessionChange = useCallback((session: AccountSession | null) => {
+    if (!isVerifiedAccount(session)) return;
+    setAccountOpen(false);
+    setLoadState({ status: "loading" });
+    setLoadAttempt((attempt) => attempt + 1);
+  }, []);
   const openFallbackDirectory = useCallback(() => {
     setArtworkFocus(null);
     setDirectoryOpen(true);
@@ -3587,7 +3630,13 @@ function PublishedGallery({ id }: { id: string }) {
       })
       .catch((error) => {
         console.error("Gallery request failed", error);
-        if (!stale) setLoadState({ status: "error" });
+        if (!stale)
+          setLoadState({
+            status:
+              error instanceof GalleryAccessDeniedError
+                ? "access-denied"
+                : "error",
+          });
       });
     return () => {
       stale = true;
@@ -3628,12 +3677,31 @@ function PublishedGallery({ id }: { id: string }) {
         </div>
       </main>
     );
+  if (loadState.status === "access-denied")
+    return (
+      <main className="not-found not-found--private">
+        <Logo />
+        <p className="eyebrow">Private AURA room</p>
+        <h1>Sign in to enter.</h1>
+        <p>Use the verified email or Google account invited by the owner.</p>
+        <div className="not-found-actions">
+          <AccountButton
+            open={accountOpen}
+            onOpenChange={setAccountOpen}
+            onSessionChange={handleViewerSessionChange}
+          />
+          <button className="text-link" onClick={() => navigate("/")}>
+            Return home
+          </button>
+        </div>
+      </main>
+    );
   if (loadState.status === "not-found")
     return (
       <main className="not-found">
         <Logo />
         <h1>This gallery isn't available.</h1>
-        <p>The exhibition may have reached the end of its ten-day run.</p>
+        <p>The exhibition may have expired or been removed by its owner.</p>
         <button
           className="button button--light"
           onClick={() => navigate("/create")}
@@ -3706,7 +3774,7 @@ function PublishedGallery({ id }: { id: string }) {
           exhibitionTitle={gallery.title}
           artist={gallery.artist}
           artworks={directoryArtworks}
-          sourceNote="Artwork images and notes are shown as supplied with this public exhibition."
+          sourceNote="Artwork images and notes are shown as supplied with this exhibition."
           unavailable={sceneUnavailable}
           returnFocus={directoryButton}
           onClose={() => setDirectoryOpen(false)}

@@ -147,6 +147,7 @@
   border: 1px solid #41433d;
   background: #41433d;
 }
+.aura-pilot-options article.is-coming{grid-column:1/-1;min-height:260px;filter:saturate(.2);background:#d9d8d2;color:#777970}.aura-pilot-options article.is-coming>span,.aura-pilot-options article.is-coming p{color:#64665f}.aura-pilot-options article.is-coming h3{color:#5b5d56}.aura-pilot-options article.is-coming button{align-self:flex-start;margin-top:auto;min-height:50px;border:1px solid #a5a69f;background:#c8c7c1;color:#666861;padding:0 18px;text-transform:uppercase;font-size:9px;letter-spacing:.1em;cursor:not-allowed}
 
 .aura-pilot-options article {
   display: flex;
@@ -342,4 +343,3 @@
 @media (prefers-reduced-motion: reduce) {
   .aura-faq summary i { transition: none; }
 }
-

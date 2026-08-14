@@ -2,23 +2,83 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function verifiedAccount() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    function ownsGalleryData(data) {
+      return signedIn() && data.ownerId == request.auth.uid;
+    }
+
+    function ownsGallery(galleryId) {
+      return signedIn()
+        && get(/databases/$(database)/documents/galleries/$(galleryId)).data.ownerId == request.auth.uid;
+    }
+
+    function isGalleryMember(galleryId) {
+      return verifiedAccount()
+        && exists(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower()));
+    }
+
+    function isLegacyGallery(data) {
+      return data.schemaVersion in [1, 2];
+    }
+
+    function isActive(data) {
+      return data.expiresAt > request.time;
+    }
+
+    function canGetGallery(galleryId, data) {
+      return isActive(data) && (
+        isLegacyGallery(data)
+        || data.visibility in ['public', 'unlisted']
+        || ownsGalleryData(data)
+        || isGalleryMember(galleryId)
+      );
+    }
+
+    function canListGallery(data) {
+      return isActive(data)
+        && (isLegacyGallery(data) || data.visibility == 'public');
+    }
+
+    function validPublicationWindow(data) {
+      return (
+        data.retention == 'guest-10-days'
+        && data.visibility == 'public'
+        && data.expiresAt < request.time + duration.value(11, 'd')
+      ) || (
+        verifiedAccount()
+        && data.retention == 'account-preview'
+        && data.expiresAt < request.time + duration.value(366, 'd')
+      );
+    }
+
     function isValidGalleryCreate(galleryId) {
       let data = request.resource.data;
-      // Detailed artwork/decor validation happens in the client before this
-      // immutable publication write. Unrolling validation for all 14 artworks
-      // and 8 objects can exceed Firestore's per-request rule expression limit,
-      // which returns permission-denied for otherwise valid Grand Forum rooms.
-      return request.auth != null
-        && data.ownerId == request.auth.uid
+      // Artwork geometry is validated transactionally by the shared client
+      // validator before publication. Keeping this rule bounded avoids the
+      // Firestore expression limit for 14-artwork Forum rooms.
+      return signedIn()
+        && ownsGalleryData(data)
         && data.keys().hasAll([
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
-          'lighting', 'decor', 'artworks', 'ownerId',
-          'publishedAt', 'expiresAt', 'schemaVersion'
+          'lighting', 'decor', 'artworks', 'coverPath', 'ownerId',
+          'publishedAt', 'expiresAt', 'schemaVersion', 'visibility',
+          'retention', 'accessVersion'
         ])
         && data.keys().hasOnly([
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
-          'lighting', 'decor', 'artworks', 'coverSrc', 'coverPath', 'ownerId',
-          'publishedAt', 'expiresAt', 'schemaVersion'
+          'lighting', 'decor', 'artworks', 'coverPath', 'ownerId',
+          'publishedAt', 'expiresAt', 'schemaVersion', 'visibility',
+          'retention', 'accessVersion'
         ])
         && data.title is string
         && data.title.size() > 0
@@ -45,67 +105,61 @@ service cloud.firestore {
           || (data.templateId != 'pavilion' && data.artworks.size() <= 8))
         && data.decor is list
         && data.decor.size() <= 8
-        && ((data.schemaVersion == 1
-            && data.coverSrc is string
-            && data.coverSrc.size() > 0
-            && data.coverSrc.size() < 400000)
-          || (data.schemaVersion == 2
-            && data.coverPath is string
-            && data.coverPath == 'published/' + request.auth.uid + '/' + galleryId + '/cover.webp'))
+        && data.coverPath is string
+        && data.coverPath == 'published/' + request.auth.uid + '/' + galleryId + '/cover.webp'
         && data.ownerId is string
         && data.ownerId.size() > 0
         && data.ownerId.size() <= 128
         && data.publishedAt is timestamp
         && data.expiresAt is timestamp
         && data.expiresAt > request.time
-        && data.expiresAt < request.time + duration.value(11, 'd')
-        && data.schemaVersion in [1, 2];
+        && data.schemaVersion == 3
+        && data.visibility in ['public', 'unlisted', 'private']
+        && data.retention in ['guest-10-days', 'account-preview']
+        && data.accessVersion == 1
+        && validPublicationWindow(data);
     }
 
+    function validMember(galleryId, memberEmail) {
+      let data = request.resource.data;
+      return ownsGallery(galleryId)
+        && memberEmail == memberEmail.lower()
+        && memberEmail.size() <= 254
+        && memberEmail.matches('[^/@]+@[^/@]+[.][^/@]+')
+        && data.keys().hasAll(['email', 'role', 'addedAt', 'addedBy'])
+        && data.keys().hasOnly(['email', 'role', 'addedAt', 'addedBy'])
+        && data.email == memberEmail
+        && data.role in ['editor', 'viewer']
+        && data.addedAt is timestamp
+        && data.addedBy == request.auth.uid;
+    }
 
     match /galleries/{galleryId} {
-      // Create validation guarantees a timestamp. Keeping the read predicate
-      // to the same inequality used by the client lets Firestore prove that
-      // collection queries cannot return expired documents.
-      allow read: if resource.data.expiresAt > request.time;
+      allow get: if canGetGallery(galleryId, resource.data);
+      allow list: if request.query.limit != null
+        && request.query.limit <= 30
+        && (canListGallery(resource.data) || ownsGalleryData(resource.data));
       allow create: if isValidGalleryCreate(galleryId);
       allow update: if false;
-      allow delete: if request.auth != null
-        && resource.data.ownerId == request.auth.uid;
+      allow delete: if ownsGalleryData(resource.data);
+
+      match /members/{memberEmail} {
+        allow get: if ownsGallery(galleryId)
+          || (verifiedAccount() && memberEmail == request.auth.token.email.lower());
+        allow list: if request.query.limit != null
+          && request.query.limit <= 50
+          && ownsGallery(galleryId);
+        allow create, update: if validMember(galleryId, memberEmail);
+        allow delete: if ownsGallery(galleryId);
+      }
     }
 
+    // Read-only compatibility for schema-v1 publications that embedded art in
+    // Firestore. All new schema-v3 images live in Storage.
     match /galleryArtworks/{assetId} {
       allow read: if resource.data.expiresAt > request.time;
-      allow create: if request.auth != null
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.keys().hasAll([
-          'galleryId', 'ownerId', 'index', 'src', 'publishedAt',
-          'expiresAt', 'schemaVersion'
-        ])
-        && request.resource.data.keys().hasOnly([
-          'galleryId', 'ownerId', 'index', 'src', 'publishedAt',
-          'expiresAt', 'schemaVersion'
-        ])
-        && request.resource.data.galleryId is string
-        && request.resource.data.galleryId.size() > 0
-        && request.resource.data.galleryId.size() <= 100
-        && request.resource.data.ownerId is string
-        && request.resource.data.ownerId.size() > 0
-        && request.resource.data.ownerId.size() <= 128
-        && request.resource.data.index is int
-        && request.resource.data.index >= 0
-        && request.resource.data.index < 14
-        && request.resource.data.src is string
-        && request.resource.data.src.size() > 0
-        && request.resource.data.src.size() < 780000
-        && request.resource.data.publishedAt is timestamp
-        && request.resource.data.expiresAt is timestamp
-        && request.resource.data.expiresAt > request.time
-        && request.resource.data.expiresAt < request.time + duration.value(11, 'd')
-        && request.resource.data.schemaVersion == 1;
-      allow update: if false;
-      allow delete: if request.auth != null
-        && resource.data.ownerId == request.auth.uid;
+      allow create, update: if false;
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
   }
 }

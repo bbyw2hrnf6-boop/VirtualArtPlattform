@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Delete galleries older than ten days
+      - name: Delete expired galleries and assets
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_STORAGE_BUCKET: virtualartplattform.firebasestorage.app

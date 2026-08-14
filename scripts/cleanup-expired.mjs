@@ -36,6 +36,24 @@ const deleteDocument = async (name) => {
   const response = await fetch(`https://firestore.googleapis.com/v1/${name}`, { method: 'DELETE', headers });
   if (!response.ok && response.status !== 404) throw new Error(`Delete failed for ${name}: ${response.status}`);
 };
+const listCollectionDocuments = async (parentName, collectionId) => {
+  const documents = [];
+  let pageToken = '';
+  do {
+    const search = new URLSearchParams({ pageSize: '300' });
+    if (pageToken) search.set('pageToken', pageToken);
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/${parentName}/${collectionId}?${search}`,
+      { headers },
+    );
+    if (!response.ok)
+      throw new Error(`Firestore list failed for ${parentName}/${collectionId}: ${response.status}`);
+    const body = await response.json();
+    documents.push(...(body.documents ?? []));
+    pageToken = body.nextPageToken ?? '';
+  } while (pageToken);
+  return documents;
+};
 const deleteStorageObject = async (path) => {
   const response = await fetch(
     `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(storageBucket)}/o/${encodeURIComponent(path)}`,
@@ -81,17 +99,21 @@ async function deleteExpiredArtworkDocuments() {
 async function deleteExpiredGalleries() {
   let deleted = 0;
   let deletedObjects = 0;
+  let deletedMembers = 0;
   while (true) {
     const galleries = await runQuery({
       from: [{ collectionId: 'galleries' }],
       where: expirationFilter,
       limit: 100,
     });
-    if (!galleries.length) return { deleted, deletedObjects };
+    if (!galleries.length) return { deleted, deletedObjects, deletedMembers };
     for (const gallery of galleries) {
       const paths = storagePaths(gallery);
       await withConcurrency(paths, deleteStorageObject);
       deletedObjects += paths.length;
+      const members = await listCollectionDocuments(gallery.name, 'members');
+      await withConcurrency(members, (member) => deleteDocument(member.name));
+      deletedMembers += members.length;
       await deleteDocument(gallery.name);
       deleted += 1;
     }
@@ -102,4 +124,4 @@ async function deleteExpiredGalleries() {
 // retried without leaving unreferenced paid objects behind.
 const deletedAssets = await deleteExpiredArtworkDocuments();
 const galleries = await deleteExpiredGalleries();
-console.log(`Deleted ${galleries.deleted} expired galleries, ${galleries.deletedObjects} Storage objects, and ${deletedAssets} legacy artwork documents.`);
+console.log(`Deleted ${galleries.deleted} expired galleries, ${galleries.deletedObjects} Storage objects, ${galleries.deletedMembers} access records, and ${deletedAssets} legacy artwork documents.`);

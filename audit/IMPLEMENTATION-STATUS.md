@@ -1,10 +1,10 @@
 # AURA – Umsetzungsstatus nach dem Audit
 
-Stand: 12. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
+Stand: 14. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
 
 ## Verifiziertes Ergebnis
 
-- `npm run check`: grün; 94 Tests bestehen.
+- `npm run check`: grün; 97 Tests bestehen.
 - Der Emil Scroll beginnt nun direkt mit `01 · Blueprint`, baut ausschließlich DannyHirschArts in sechs synchronisierten Kapiteln auf und endet in einer scharfen begehbaren Live-Szene. Ein geglätteter, richtungsstabiler Playhead mit Fortschrittslimit verhindert Sprünge bei aggressivem Scrollen; die alte statische Posterphase bleibt nur als Lade-/Fehlerfallback.
 - Q/E und Pfeil hoch/runter bilden einen gemeinsamen getesteten Keyboard-Vertrag für Landing, Builder, veröffentlichte Räume und Danny. Alte Q/R-Hinweise und die separate Danny-Tour-Aktivitätsvariable wurden entfernt; die gemeinsame `VisitorControls`-Komponente bleibt die einzige Tour-Oberfläche.
 - Zwölf nach Referenz- und Hashprüfung ungenutzte Legacy-/Zwischenassets wurden entfernt. Lizenz- und Asset-Dokumentation sowie die bestehende Browser-QA verwenden jetzt die aktuellen gemeinsamen Selektoren.
@@ -25,9 +25,19 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 ## Umgesetzt
 
+### P2 · Accounts, Sichtbarkeit und Zugriff
+
+- Email/Password und Google ergänzen den anonymen Gastzugang. Ein Gast kann seine aktuelle anonyme Firebase-Identität durch Verknüpfen erhalten; Email-Verifikation ist Voraussetzung für erweiterten Zugriff.
+- Schema v3 unterscheidet Public, Unlisted und Private. Gäste bleiben auf öffentliche zehn Tage begrenzt; verifizierte Accounts nutzen aktuell einen ausdrücklich als Vorschau bezeichneten 365-Tage-Zeitraum. Billing ist nicht aktiv.
+- ACL-Dokumente liegen getrennt unter `galleries/{id}/members/{email}`. Owner ist implizit; Editor und Viewer werden gespeichert. Beide dürfen private Räume betreten, der Editor-Revisionsworkflow bleibt ehrlich als spätere Funktion gekennzeichnet.
+- Discover fragt ausschließlich aktive öffentliche Räume ab. Unlisted bleibt nur per Link auffindbar; Private benötigt Owner oder eingeladene verifizierte Email. Dieselbe Entscheidung schützt Firestore-Metadaten und Storage-Bilder.
+- Publish Review, Erfolgsseite, Share-Link, private Sign-in-Tür, Zugriffsverwaltung, Datenhinweis, FAQ und vorbereitete deaktivierte Bezahlmodelle verwenden denselben Vertrag.
+- Der Account-Dialog listet eigene aktive Public-, Unlisted- und Private-Räume, damit nicht gelistete Links später wieder erreichbar bleiben.
+- Cleanup entfernt nach Ablauf jetzt auch ACL-Unterkollektionen. Firebase-Regeln, drei Composite-Indexes und Setup-Dokumentation wurden lokal aktualisiert; die Live-Veröffentlichung bleibt manuell.
+
 ### P1 · Storage, Navigation und Raumtiefe
 
-- Neue Veröffentlichungen verwenden Schema v2: Firestore hält Raum/Metadaten und sichere Objektpfade; Firebase Storage hält Cover und Kunstbilder. Schema-v1-Räume bleiben lesbar.
+- Die P1-Storage-Migration führte Schema v2 ein; P2-Veröffentlichungen verwenden nun Schema v3 mit Sichtbarkeit, Retention und ACL-Version. Schema-v1/v2-Räume bleiben öffentlich lesbar.
 - Uploads sind owner-scoped, größen-/MIME-validiert, auf drei Transfers begrenzt und werden bei Teilfehlern zurückgerollt. Cleanup entfernt Storage-Dateien vor dem Firestore-Manifest.
 - Storage-Dateien werden als begrenzte Blob-URLs geladen und aus einem kleinen Cache freigegeben. Neue Räume landen nicht mehr als große Base64-Strings im Safari-JavaScript-Heap.
 - Click-to-walk plant einen kollisionsfreien Weg um Partitionen, statt verdeckte erreichbare Ziele nur abzulehnen.
@@ -73,8 +83,8 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 | Punkt | Warum nicht lokal abschließbar | Nächster Schritt |
 |---|---|---|
-| Live Discover / Publish | Firestore- und Storage-Regeln bleiben bewusst manuelle Firebase-Console-Schritte; Live-Writes waren in dieser Abnahme verboten. | Aktuelle `firestore.rules` und `storage.rules` manuell veröffentlichen und einen neuen anonymen Save→Publish→Private Window→Discover-Durchlauf live testen. |
-| Private, unlisted, permanent, Revisionen | Erfordert Zugriffsmodell, Accounts, dauerhafte Medienregeln, Rate Limits, Moderation und Tarifentscheidung. | Pilot-Backend und Rollenmodell definieren; erst danach UI aktivieren. Die aktuelle UI behauptet diese Funktionen nicht. |
+| Live Account-/Publish-Matrix | Firestore-/Storage-Regeln und Indexes bleiben manuelle Firebase-Schritte; Live-Writes wurden lokal nicht ausgeführt. | Regeln und beide Indexes veröffentlichen; Guest, Email, Google, Public, Unlisted, Private und eingeladen/nicht eingeladen live prüfen. |
+| Dauerhafte Tarife und Editor-Revisionen | Billing, permanente Retention und kollaboratives Bearbeiten brauchen Backend, Rate Limits, Konfliktmodell und Vertragsentscheidung. | Nach dem Preview-Pilot Tarif-/Retentionmodell sowie Revision Ownership definieren. Die aktuelle UI kennzeichnet diese Punkte als inaktiv. |
 | Vollständige Rechtstexte | Controller, Kontakt, Sitz, Rechtsgrundlage, Auftragsverarbeitung und Vertragsbedingungen fehlen als Eingaben. | Mit realen Betreiberangaben Privacy, Terms, Content Rights und Pilotvertrag juristisch erstellen. |
 | Dynamische Social Cards / eigener Slug / Custom Domain | Hash-Routing und GitHub Pages können Galerie-spezifische Server-Metadaten nicht erzeugen. | Hosting/Edge-Rendering und Domain auswählen; OG-Route serverseitig aus Gallery-Metadaten erzeugen. |
 | Drei Builder-Räume als Blender-GLB | Der Runtime-Wechsel braucht finale Blender-Dateien, UV/PBR-QA, Export und Regression gegen alle Editor-Surfaces. | Bestehenden Exportvertrag pro Raum erfüllen und pro Template schrittweise hinter Feature Flags migrieren. |
@@ -82,7 +92,7 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 ## Bewusst verbleibende technische Grenzen
 
-- Alte schema-v1-Räume enthalten weiterhin große Firestore-Data-URLs und können auf Safari das frühere Speicherproblem behalten. Neue schema-v2-Räume umgehen diesen Pfad; Live-Altdaten wurden nicht automatisch migriert.
+- Alte schema-v1-Räume enthalten weiterhin große Firestore-Data-URLs und können auf Safari das frühere Speicherproblem behalten. Neue schema-v3-Räume umgehen diesen Pfad; Live-Altdaten wurden nicht automatisch migriert.
 - Die Builder-Räume bleiben derzeit prozedural. Der Vertrag ist real, die Migration noch nicht.
 - Kollision ist swept AABB mit einem kleinen Visibility-Graphen für prozedurale Räume, kein Navmesh. Komplexe oder dynamische Hindernisfelder bleiben deshalb eine spätere Ausbaustufe.
 - Die Materialbibliothek verwendet dokumentierte Albedo-Texturen, physikalische Parameter und prozedurale Height-/Roughness-Details, aber noch keine scanbasierten Normal-/Roughness-/AO-Sets.
@@ -91,4 +101,4 @@ Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser
 
 ## Pitch-Gate
 
-Der lokale Produktstand ist für einen geführten Proof-of-Concept-Pitch belastbar. Vor einem öffentlichen oder vertraulichen Firmenpilot bleiben vier harte Gates: Live-Firebase-End-to-End-Test, echtes Privacy/Terms-Paket, ein privates Rollen-/Linkmodell und ein benannter Support-/Vertragskontakt.
+Der lokale Produktstand ist für einen geführten Proof-of-Concept-Pitch belastbar. Vor einem öffentlichen oder vertraulichen Firmenpilot bleiben vier harte Gates: Live-Firebase-Account-/Zugriffs-Test, echtes Privacy/Terms-Paket, Missbrauchsschutz/App Check und ein benannter Support-/Vertragskontakt.

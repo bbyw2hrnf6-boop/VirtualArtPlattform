@@ -1,17 +1,17 @@
 # Firebase setup for AURA — Firestore + Storage MVP
 
-AURA uses Anonymous Authentication, Firestore for gallery metadata, and Firebase Storage for artwork images and room covers. Firebase requires the Blaze pay-as-you-go plan for Storage access as of 3 February 2026. No-cost quotas still apply, but configure billing alerts.
+AURA uses Anonymous, Email/Password, and Google Authentication; Firestore for room metadata and access roles; and Firebase Storage for artwork images and room covers. Firebase requires the Blaze pay-as-you-go plan for Storage access as of 3 February 2026. No-cost quotas still apply, but configure billing alerts.
 
 ## Services
 
 | Service | Purpose |
 | --- | --- |
-| Authentication | Invisible anonymous publisher identity |
-| Firestore | Gallery metadata, layout, Discover, expiry |
+| Authentication | Guest identity plus Email/Password and Google accounts |
+| Firestore | Gallery metadata, layout, visibility, ACL, Discover, expiry |
 | Storage | Compressed artwork images and covers |
 | GitHub Action | Physical cleanup after expiry |
 
-New publications use schema v2. Existing schema-v1 galleries and `galleryArtworks` documents remain readable; new rooms do not create them.
+New publications use schema v3. Existing schema-v1/v2 galleries remain public and readable; new rooms do not create legacy `galleryArtworks` documents.
 
 ## 1. Confirm the project
 
@@ -21,7 +21,9 @@ The app targets project `virtualartplattform` and bucket `virtualartplattform.fi
 
 1. Open **Firebase Console → Authentication → Sign-in method**.
 2. Enable **Anonymous**.
-3. Under **Authentication → Settings → Authorized domains**, add:
+3. Enable **Email/Password** (Email link is not required).
+4. Enable **Google**, choose the public support email, and save.
+5. Under **Authentication → Settings → Authorized domains**, add:
    - `localhost`
    - `bbyw2hrnf6-boop.github.io`
    - any future custom domain
@@ -51,6 +53,18 @@ Storage:
 2. Replace everything with the repository's `storage.rules`.
 3. Select **Publish**.
 
+Indexes:
+
+1. Open **Firestore Database → Indexes → Composite**.
+2. Create `galleries`: `visibility` ascending, `expiresAt` descending.
+3. Create `galleries`: `schemaVersion` ascending, `expiresAt` descending.
+4. Create `galleries`: `ownerId` ascending, `expiresAt` descending.
+5. Wait until all three indexes show **Enabled**. Alternatively deploy only `firestore:indexes` with the CLI.
+
+Storage rules read the matching Firestore gallery and ACL before returning an
+image. The first Firebase Console publish may ask to enable cross-service
+permissions; accept that prompt for this project.
+
 The GitHub Pages workflow intentionally does not deploy Firebase rules. If you later choose the CLI:
 
 ```bash
@@ -77,14 +91,18 @@ Add any future custom origin to `storage.cors.json`, then rerun the last command
 - New objects are immutable.
 - Covers are below 1 MiB; artworks below 2 MiB.
 - Only supported image MIME types are accepted.
-- Public reads end after the ten-day expiry stored in object metadata.
+- Guests can create only public ten-day publications.
+- Verified accounts can create public, unlisted, or private account-preview rooms.
+- Unlisted rooms are readable by direct link but omitted from Discover.
+- Private room metadata and images require the owner or an invited verified email.
+- Owner, editor, and viewer roles are stored in a gallery member subcollection; the owner is implicit.
 - Firestore publications are immutable; only the owner may delete.
 - White Cube and Nocturne accept up to eight works; Grand Forum accepts fourteen.
 - Local drafts remain in IndexedDB and never require Firebase.
 
 ## 7. Lifecycle and cleanup
 
-At ten days, Firestore and Storage rules stop public reads. `.github/workflows/cleanup.yml` later deletes Storage objects first, then the gallery manifest and any legacy artwork documents.
+At each room's `expiresAt`, Firestore and Storage rules stop reads. `.github/workflows/cleanup.yml` later deletes Storage objects first, then ACL records, the gallery manifest, and any legacy artwork documents.
 
 The `FIREBASE_SERVICE_ACCOUNT` GitHub secret needs minimum Firestore read/delete and Storage object-delete permission. Never grant Owner. Prefer Workload Identity Federation for a production deployment.
 
@@ -95,12 +113,15 @@ Do not enable Firestore TTL as a replacement without redesigning cleanup: Firest
 1. Deploy the web app after publishing both rule files.
 2. Create a room with one small image and publish it.
 3. Confirm an anonymous user under **Authentication → Users**.
-4. Confirm one schema-v2 document under `galleries`.
+4. Confirm one schema-v3 document under `galleries`.
 5. Confirm `cover.webp` and `artworks/1.webp` under `published/{uid}/{galleryId}` in Storage.
 6. Copy the share URL and open it in Chrome incognito and Safari private mode.
 7. Confirm the room appears in Discover and all images load.
 8. Test owner deletion from the original browser.
-9. Run **GitHub Actions → Clean up expired galleries → Run workflow** and confirm zero or more successful deletions.
+9. Create and verify an Email/Password account; then repeat with Google.
+10. Publish one unlisted and one private room. Confirm unlisted is absent from Discover.
+11. Invite a second verified email as Viewer, confirm it can enter the private room, and confirm an uninvited account cannot.
+12. Run **GitHub Actions → Clean up expired galleries → Run workflow** and confirm zero or more successful deletions.
 
 ## Optional: migrate still-active legacy rooms
 

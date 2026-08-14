@@ -2,45 +2,88 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function verifiedAccount() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
     function validUpload(ownerId, galleryId, kind) {
-      return request.auth != null
+      return signedIn()
         && request.auth.uid == ownerId
         && request.resource != null
         && request.resource.metadata.ownerId == ownerId
         && request.resource.metadata.galleryId == galleryId
         && request.resource.metadata.kind == kind
-        && request.resource.metadata.schemaVersion == '2'
+        && request.resource.metadata.schemaVersion == '3'
+        && request.resource.metadata.visibility in ['public', 'unlisted', 'private']
+        && request.resource.metadata.retention in ['guest-10-days', 'account-preview']
         && request.resource.metadata.expiresAtMs.matches('[0-9]{13}')
         && timestamp.value(int(request.resource.metadata.expiresAtMs)) > request.time
-        && timestamp.value(int(request.resource.metadata.expiresAtMs)) < request.time + duration.value(11, 'd')
+        && (
+          (
+            request.resource.metadata.retention == 'guest-10-days'
+            && request.resource.metadata.visibility == 'public'
+            && timestamp.value(int(request.resource.metadata.expiresAtMs)) < request.time + duration.value(11, 'd')
+          ) || (
+            verifiedAccount()
+            && request.resource.metadata.retention == 'account-preview'
+            && timestamp.value(int(request.resource.metadata.expiresAtMs)) < request.time + duration.value(366, 'd')
+          )
+        )
         && request.resource.contentType.matches('image/(avif|jpeg|png|webp)');
     }
 
-    function isActive() {
-      return resource != null
-        && resource.metadata.expiresAtMs.matches('[0-9]{13}')
-        && timestamp.value(int(resource.metadata.expiresAtMs)) > request.time;
+    function gallery(galleryId) {
+      return firestore.get(/databases/(default)/documents/galleries/$(galleryId));
+    }
+
+    function activeGallery(galleryId) {
+      return gallery(galleryId).data.expiresAt > request.time;
+    }
+
+    function galleryOwner(galleryId) {
+      return signedIn() && gallery(galleryId).data.ownerId == request.auth.uid;
+    }
+
+    function galleryMember(galleryId) {
+      return verifiedAccount()
+        && firestore.exists(/databases/(default)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower()));
+    }
+
+    function canReadGallery(galleryId) {
+      return activeGallery(galleryId) && (
+        gallery(galleryId).data.schemaVersion in [1, 2]
+        || gallery(galleryId).data.visibility in ['public', 'unlisted']
+        || galleryOwner(galleryId)
+        || galleryMember(galleryId)
+      );
     }
 
     match /published/{ownerId}/{galleryId}/cover.webp {
-      allow read: if isActive();
+      allow read: if canReadGallery(galleryId);
       allow create: if validUpload(ownerId, galleryId, 'cover')
         && resource == null
         && request.resource.size > 0
         && request.resource.size < 1024 * 1024;
-      allow delete: if request.auth != null && request.auth.uid == ownerId;
+      allow delete: if signedIn() && request.auth.uid == ownerId;
       allow update: if false;
     }
 
     match /published/{ownerId}/{galleryId}/artworks/{fileName} {
-      allow read: if isActive();
+      allow read: if canReadGallery(galleryId);
       allow create: if fileName.matches('([1-9]|1[0-4])[.]webp')
         && validUpload(ownerId, galleryId, 'artwork')
         && request.resource.metadata.index.matches('([0-9]|1[0-3])')
         && resource == null
         && request.resource.size > 0
         && request.resource.size < 2 * 1024 * 1024;
-      allow delete: if request.auth != null && request.auth.uid == ownerId;
+      allow delete: if signedIn() && request.auth.uid == ownerId;
       allow update: if false;
     }
   }

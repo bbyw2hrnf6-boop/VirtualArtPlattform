@@ -99,6 +99,66 @@ describe('gallery publication payload', () => {
     const parsed = parseGalleryDocument('room-1', value);
     expect(parsed.coverPath).toBe(value.coverPath);
     expect(parsed.artworks[0].storagePath).toBe(value.artworks[0].storagePath);
+    expect(parsed.visibility).toBe('public');
+    expect(parsed.retention).toBe('guest-10-days');
+  });
+
+  it('accepts account-backed schema v3 access settings', () => {
+    const published = new Date('2026-08-12T12:00:00.000Z');
+    const expires = new Date('2027-08-12T12:00:00.000Z');
+    const parsed = parseGalleryDocument('private-room', {
+      ...draft([artwork({
+        src: '',
+        storagePath: 'published/owner_1/private-room/artworks/1.webp',
+      })]),
+      ownerId: 'owner_1',
+      coverPath: 'published/owner_1/private-room/cover.webp',
+      publishedAt: Timestamp.fromDate(published),
+      expiresAt: Timestamp.fromDate(expires),
+      visibility: 'private',
+      retention: 'account-preview',
+      accessVersion: 1,
+      schemaVersion: 3,
+    });
+    expect(parsed.visibility).toBe('private');
+    expect(parsed.retention).toBe('account-preview');
+    expect(parsed.accessVersion).toBe(1);
+  });
+
+  it('rejects a private guest publication', () => {
+    const published = new Date('2026-08-12T12:00:00.000Z');
+    expect(() => parseGalleryDocument('invalid-private-guest', {
+      ...draft([artwork({
+        src: '',
+        storagePath: 'published/owner_1/invalid-private-guest/artworks/1.webp',
+      })]),
+      ownerId: 'owner_1',
+      coverPath: 'published/owner_1/invalid-private-guest/cover.webp',
+      publishedAt: Timestamp.fromDate(published),
+      expiresAt: Timestamp.fromDate(new Date('2026-08-22T12:00:00.000Z')),
+      visibility: 'private',
+      retention: 'guest-10-days',
+      accessVersion: 1,
+      schemaVersion: 3,
+    })).toThrow(GalleryRepositoryDataError);
+  });
+
+  it('rejects account previews beyond the bounded retention window', () => {
+    const published = new Date('2026-08-12T12:00:00.000Z');
+    expect(() => parseGalleryDocument('overlong-account-room', {
+      ...draft([artwork({
+        src: '',
+        storagePath: 'published/owner_1/overlong-account-room/artworks/1.webp',
+      })]),
+      ownerId: 'owner_1',
+      coverPath: 'published/owner_1/overlong-account-room/cover.webp',
+      publishedAt: Timestamp.fromDate(published),
+      expiresAt: Timestamp.fromDate(new Date('2027-09-01T12:00:00.000Z')),
+      visibility: 'unlisted',
+      retention: 'account-preview',
+      accessVersion: 1,
+      schemaVersion: 3,
+    })).toThrow(GalleryRepositoryDataError);
   });
 
   it('keeps legacy Firestore image publications readable', () => {

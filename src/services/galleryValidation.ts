@@ -16,6 +16,10 @@ import {
   type WallFinish,
   type WallId,
 } from '../features/gallery/types';
+import type {
+  GalleryRetention,
+  GalleryVisibility,
+} from './galleryAccess';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -28,6 +32,8 @@ const LIGHTING_PRESETS = ['daylight', 'museum', 'evening'] as const satisfies re
 const PLANT_POT_FINISHES = ['light', 'black'] as const satisfies readonly PlantPotFinish[];
 const DECOR_IDS = ['olive', 'monstera', 'arc-lamp', 'pedestal', 'gallery-bench', 'stone-sculpture', 'floor-vase', 'ficus', 'snake-plant', 'leather-bench', 'wood-stool', 'rope-barrier'] as const satisfies readonly DecorId[];
 const ARTWORK_FRAMES = ['black', 'white', 'oak', 'none'] as const satisfies readonly ArtworkFrame[];
+const GALLERY_VISIBILITIES = ['public', 'unlisted', 'private'] as const satisfies readonly GalleryVisibility[];
+const GALLERY_RETENTIONS = ['guest-10-days', 'account-preview'] as const satisfies readonly GalleryRetention[];
 
 const MAX_ARTWORK_SOURCE_LENGTH = 779_999;
 // New covers are uploaded to Storage rather than embedded in Firestore. The
@@ -58,6 +64,9 @@ export interface ParsedGalleryDocument extends GalleryDraft {
   ownerId?: string;
   coverSrc?: string;
   coverPath?: string;
+  visibility: GalleryVisibility;
+  retention: GalleryRetention;
+  accessVersion: number;
 }
 
 export interface ParsedArtworkAsset {
@@ -133,10 +142,11 @@ function optionalImageSource(value: unknown, recordId: string, field: string, ma
   return value === undefined ? undefined : imageSource(value, recordId, field, maximum, true);
 }
 
-function validateSchemaVersion(value: unknown, recordId: string): 1 | 2 {
+function validateSchemaVersion(value: unknown, recordId: string): 1 | 2 | 3 {
   if (value === undefined || value === 1) return 1;
   if (value === 2) return 2;
-  invalid(recordId, 'schemaVersion', 'expected schema version 1 or 2');
+  if (value === 3) return 3;
+  invalid(recordId, 'schemaVersion', 'expected schema version 1, 2, or 3');
 }
 
 function storagePath(value: unknown, recordId: string, field: string): string {
@@ -267,19 +277,35 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
   const published = timestampValue(data.publishedAt, recordId, 'publishedAt');
   const expires = timestampValue(data.expiresAt, recordId, 'expiresAt');
   if (expires.getTime() <= published.getTime()) invalid(recordId, 'expiresAt', 'expected expiration after publication');
-  if (expires.getTime() - published.getTime() > 12 * 86_400_000) invalid(recordId, 'expiresAt', 'expected a maximum twelve-day publication window');
+  const visibility = schemaVersion === 3
+    ? enumValue(data.visibility, GALLERY_VISIBILITIES, recordId, 'visibility')
+    : 'public';
+  const retention = schemaVersion === 3
+    ? enumValue(data.retention, GALLERY_RETENTIONS, recordId, 'retention')
+    : 'guest-10-days';
+  const accessVersion = schemaVersion === 3
+    ? integerValue(data.accessVersion, recordId, 'accessVersion', 1, 1)
+    : 1;
+  const maximumDuration = retention === 'account-preview' ? 367 : 12;
+  if (expires.getTime() - published.getTime() > maximumDuration * 86_400_000)
+    invalid(recordId, 'expiresAt', `expected a maximum ${maximumDuration}-day publication window`);
+  if (retention === 'guest-10-days' && visibility !== 'public')
+    invalid(recordId, 'visibility', 'guest publications must be public');
   const ownerId = optionalString(data.ownerId, recordId, 'ownerId', 128);
   const coverSrc = optionalImageSource(data.coverSrc, recordId, 'coverSrc', MAX_LEGACY_COVER_SOURCE_LENGTH);
   const coverPath = optionalStoragePath(data.coverPath, recordId, 'coverPath');
-  if (schemaVersion === 2 && (!coverPath || !ownerId))
-    invalid(recordId, 'coverPath', 'expected an owned Storage cover in schema version 2');
+  if (schemaVersion >= 2 && (!coverPath || !ownerId))
+    invalid(recordId, 'coverPath', 'expected an owned Storage cover in schema version 2 or 3');
   return {
     ...draft,
     publishedAt: published.toISOString(),
     expiresAt: expires.toISOString(),
     ...(ownerId ? { ownerId } : {}),
     ...(coverSrc ? { coverSrc } : {}),
-    ...(coverPath ? { coverPath } : {})
+    ...(coverPath ? { coverPath } : {}),
+    visibility,
+    retention,
+    accessVersion,
   };
 }
 
