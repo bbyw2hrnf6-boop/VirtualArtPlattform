@@ -12,6 +12,7 @@ import {
 } from "../../services/draftStorage";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { GalleryAccessManager } from "./GalleryAccessManager";
+import { firebaseActionErrorMessage } from "../../services/firebaseActionError";
 import "./accountDialog.css";
 
 type AccountModule = typeof import("../../services/accountService");
@@ -84,7 +85,10 @@ function AccountRooms({ session }: { session: AccountSession }) {
       );
     } catch (caught) {
       console.error("Published room could not be opened for editing", caught);
-      setError("This room could not be opened for editing. Check your access and retry.");
+      setError(firebaseActionErrorMessage(
+        caught,
+        "This room could not be opened for editing. Check your access and retry.",
+      ));
     } finally {
       setEditingId(undefined);
     }
@@ -102,7 +106,10 @@ function AccountRooms({ session }: { session: AccountSession }) {
       await loadRooms();
     } catch (caught) {
       console.error("Room lifecycle update failed", caught);
-      setError(caught instanceof Error ? caught.message : "The room setting could not be saved.");
+      setError(firebaseActionErrorMessage(
+        caught,
+        "The room setting could not be saved.",
+      ));
     } finally {
       setLifecycleBusyId(undefined);
     }
@@ -135,7 +142,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
   };
   return (
     <section className="account-rooms" aria-labelledby="account-rooms-title">
-      <div><h3 id="account-rooms-title">My &amp; shared rooms</h3><span>{rooms.length}</span></div>
+      <div><h3 id="account-rooms-title">Rooms</h3><span>{rooms.length}</span></div>
       {invites.length > 0 && (
         <div className="account-invites" aria-label="Pending room invitations">
           <strong>Invitations</strong>
@@ -170,7 +177,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
             return <li key={room.id} data-role={role}>
               {available ? <a href={galleryShareUrl(room.id, window.location.href)}>
                 {room.coverSrc && <img src={room.coverSrc} alt="" />}
-                <span><strong>{room.title}</strong>{visibilityLabel[room.visibility]} · {role} · until {new Date(room.expiresAt).toLocaleDateString()}</span>
+                <span><strong>{room.title}</strong>{visibilityLabel[room.visibility]} · {role} · revision {room.revision} · until {new Date(room.expiresAt).toLocaleDateString()}</span>
                 <b aria-hidden="true">↗</b>
               </a> : <div className="account-room-summary">
                 {room.coverSrc && <img src={room.coverSrc} alt="" />}
@@ -186,11 +193,15 @@ function AccountRooms({ session }: { session: AccountSession }) {
               {role === "owner" && <button
                 type="button"
                 aria-expanded={manageRoomId === room.id}
-                aria-label={`Manage ${room.title}`}
+                aria-label={`Room settings for ${room.title}`}
                 onClick={() => setManageRoomId((current) => current === room.id ? undefined : room.id)}
-              >Manage</button>}
+              >Settings</button>}
               {role === "owner" && manageRoomId === room.id && (
                 <div className="account-room-manage">
+                  <div className="account-room-manage__summary">
+                    <strong>Room settings</strong>
+                    <span>Revision {room.revision} · updated {new Date(room.updatedAt).toLocaleDateString()}</span>
+                  </div>
                   <label>Visibility
                     <select
                       value={room.visibility}
@@ -202,6 +213,12 @@ function AccountRooms({ session }: { session: AccountSession }) {
                       <option value="private">Private</option>
                     </select>
                   </label>
+                  {available && <button type="button" onClick={() => {
+                    const shareUrl = galleryShareUrl(room.id, window.location.href);
+                    void navigator.clipboard.writeText(shareUrl).catch(() => {
+                      window.prompt("Copy this room link", shareUrl);
+                    });
+                  }}>Copy link</button>}
                   {available && <button type="button" onClick={() => setAccessRoom((current) => current?.id === room.id ? undefined : room)}>Access</button>}
                   {available && <button type="button" onClick={() => void exportRoom(room)}>Export</button>}
                   {room.retention === "account-preview" && room.lifecycleStatus !== "trashed" && <button type="button" onClick={() => void updateRoom(room, "renew")}>Renew</button>}
@@ -209,7 +226,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
                   {room.lifecycleStatus === "trashed"
                     ? <button type="button" onClick={() => void updateRoom(room, "restore")}>Restore</button>
                     : <button type="button" className="is-danger" onClick={() => void updateRoom(room, "trash")}>Move to Trash</button>}
-                  <span>{lifecycleBusyId === room.id ? "Saving…" : room.lifecycleStatus === "trashed" && room.purgeAt ? `Deletes ${new Date(room.purgeAt).toLocaleDateString()}` : `Revision ${room.revision}`}</span>
+                  <span>{lifecycleBusyId === room.id ? "Saving…" : room.lifecycleStatus === "trashed" && room.purgeAt ? `Deletes ${new Date(room.purgeAt).toLocaleDateString()}` : "Changes keep the same public URL"}</span>
                 </div>
               )}
             </li>;
@@ -322,10 +339,12 @@ export function AccountDialog({
   open,
   onClose,
   onSessionChange,
+  presentation = "dialog",
 }: {
   open: boolean;
   onClose: () => void;
   onSessionChange?: (session: AccountSession | null) => void;
+  presentation?: "dialog" | "page";
 }) {
   const dialog = useRef<HTMLElement>(null);
   const [service, setService] = useState<AccountModule>();
@@ -339,7 +358,7 @@ export function AccountDialog({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
-  useDialogFocus(dialog, onClose, undefined, open);
+  useDialogFocus(dialog, onClose, undefined, open && presentation === "dialog");
 
   useEffect(() => {
     if (!open) return;
@@ -400,19 +419,19 @@ export function AccountDialog({
   };
 
   return (
-    <div className="account-backdrop" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onClose();
+    <div className={`account-backdrop ${presentation === "page" ? "account-backdrop--page" : ""}`} onMouseDown={(event) => {
+      if (presentation === "dialog" && event.target === event.currentTarget) onClose();
     }}>
       <section
         ref={dialog}
-        className="account-dialog"
-        role="dialog"
-        aria-modal="true"
+        className={`account-dialog ${presentation === "page" ? "account-dialog--page" : ""}`}
+        role={presentation === "dialog" ? "dialog" : undefined}
+        aria-modal={presentation === "dialog" ? "true" : undefined}
         aria-labelledby="account-dialog-title"
         tabIndex={-1}
       >
-        <button className="account-dialog__close" onClick={onClose} aria-label="Close account">
-          ×
+        <button className="account-dialog__close" onClick={onClose} aria-label={presentation === "page" ? "Back to AURA" : "Close account"}>
+          {presentation === "page" ? "←" : "×"}
         </button>
         <p className="eyebrow">AURA account</p>
         {account ? (
@@ -642,7 +661,14 @@ export function AccountButton({
       <button
         type="button"
         className={`account-entry ${light ? "account-entry--light" : ""} ${signedIn ? "is-signed-in" : ""}`}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (signedIn && controlledOpen === undefined) {
+            window.location.hash = "/account";
+            window.scrollTo(0, 0);
+            return;
+          }
+          setOpen(true);
+        }}
         title={signedIn ? `Signed in as ${session?.email || accountLabel}` : "Open account"}
       >
         {signedIn && (
@@ -660,5 +686,20 @@ export function AccountButton({
         onSessionChange={handleSessionChange}
       />
     </>
+  );
+}
+
+export function AccountPage() {
+  return (
+    <main className="account-page" aria-label="AURA account and room management">
+      <AccountDialog
+        open
+        presentation="page"
+        onClose={() => {
+          window.location.hash = "/";
+          window.scrollTo(0, 0);
+        }}
+      />
+    </main>
   );
 }

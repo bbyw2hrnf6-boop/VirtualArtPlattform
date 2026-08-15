@@ -13,6 +13,8 @@ describe('gallery publishing errors', () => {
     ['auth/operation-not-allowed', 'authentication-disabled', 'Enable Anonymous Authentication'],
     ['auth/configuration-not-found', 'authentication-disabled', 'Enable Anonymous Authentication'],
     ['auth/unauthorized-domain', 'unauthorized-domain', 'Authorized domains'],
+    ['functions/internal', 'configuration', 'trusted room service'],
+    ['functions/not-found', 'configuration', 'core Firebase Functions'],
     ['resource-exhausted', 'quota', 'quota'],
     ['storage/quota-exceeded', 'quota', 'quota'],
     ['unavailable', 'unavailable', 'cannot reach Firebase']

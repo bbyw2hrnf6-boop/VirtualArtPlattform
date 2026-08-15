@@ -1,5 +1,12 @@
 name: Clean up expired galleries
 on:
+  # A workflow-only push gives maintainers a reliable recovery path when the
+  # manual Actions UI is unavailable. Normal application pushes do not run it.
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/cleanup.yml'
   schedule:
     - cron: '23 3 * * *'
   workflow_dispatch:

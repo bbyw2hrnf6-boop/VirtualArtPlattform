@@ -179,6 +179,13 @@ lifecycle Functions require a valid App Check token.
      --project virtualartplattform
    ```
 
+   This deploy does **not** need SMTP, a sending domain, or the Trigger Email
+   extension. Firebase may ask to enable Cloud Functions, Cloud Run, Cloud
+   Build, Artifact Registry, and Eventarc APIs on the first deployment; allow
+   those APIs for this project. Until this command succeeds, publishing,
+   visibility changes, Trash/restore, renewal, and ACL invitations intentionally
+   fail closed instead of changing room data directly from the browser.
+
 5. Publish the current Firestore and Storage rules manually.
 6. Deploy the web app, verify publishing and lifecycle actions, then enable
    App Check enforcement for **Cloud Functions, Firestore and Storage** in the
@@ -265,6 +272,9 @@ Without `--execute`, the script exits before any network request. Review credent
 - Callable returns `failed-precondition` before deployment: register App Check,
   deploy the trusted room Functions, publish both rule files, then deploy the
   site with the GitHub site-key variable.
+- Callable returns `internal`, or its `europe-west1` endpoint returns HTTP 404:
+  the core room Functions are not deployed. Run the section 6 core-only deploy;
+  SMTP is not required for it.
 - Cleanup `400 invalid_grant`: create a new service-account key with the same
   minimal roles, replace the GitHub `FIREBASE_SERVICE_ACCOUNT` secret, revoke
   the old key, and rerun the cleanup workflow.

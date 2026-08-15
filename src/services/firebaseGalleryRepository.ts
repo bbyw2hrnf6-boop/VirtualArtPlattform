@@ -168,9 +168,13 @@ async function dataUrlAsBlob(source: string) {
   const response = await fetch(source);
   if (!response.ok) throw new Error("The prepared image could not be read for upload.");
   const blob = await response.blob();
-  if (!/^image\/(?:avif|jpeg|png|webp)$/i.test(blob.type))
+  const contentType = blob.type.split(";", 1)[0].trim().toLowerCase();
+  if (!/^image\/(?:avif|jpeg|png|webp)$/.test(contentType))
     throw new Error("The prepared image uses an unsupported format.");
-  return blob;
+  return {
+    blob: blob.type === contentType ? blob : blob.slice(0, blob.size, contentType),
+    contentType,
+  };
 }
 
 async function embedLocalArtworkSources(draft: GalleryDraft): Promise<GalleryDraft> {
@@ -327,9 +331,10 @@ class FirebaseGalleryRepository implements GalleryRepository {
       );
       const coverPath = galleryCoverPath(ownerId, id);
       const coverReference = ref(firebaseStorage, coverPath);
+      const coverUpload = await dataUrlAsBlob(coverSource);
       uploaded.push(coverReference);
-      await uploadBytes(coverReference, await dataUrlAsBlob(coverSource), {
-        contentType: coverSource.slice(5, coverSource.indexOf(";")),
+      await uploadBytes(coverReference, coverUpload.blob, {
+        contentType: coverUpload.contentType,
         cacheControl: "public,max-age=3600",
         customMetadata: {
           ownerId,
@@ -348,9 +353,10 @@ class FirebaseGalleryRepository implements GalleryRepository {
         async (artwork, index) => {
           const storagePath = galleryArtworkPath(ownerId, id, index);
           const reference = ref(firebaseStorage, storagePath);
+          const artworkUpload = await dataUrlAsBlob(artwork.src);
           uploaded.push(reference);
-          await uploadBytes(reference, await dataUrlAsBlob(artwork.src), {
-            contentType: artwork.src.slice(5, artwork.src.indexOf(";")),
+          await uploadBytes(reference, artworkUpload.blob, {
+            contentType: artworkUpload.contentType,
             cacheControl: "public,max-age=3600",
             customMetadata: {
               ownerId,
@@ -448,9 +454,10 @@ class FirebaseGalleryRepository implements GalleryRepository {
         revisionId,
       );
       const coverReference = ref(firebaseStorage, coverPath);
+      const coverUpload = await dataUrlAsBlob(coverSource);
       uploaded.push(coverReference);
-      await uploadBytes(coverReference, await dataUrlAsBlob(coverSource), {
-        contentType: coverSource.slice(5, coverSource.indexOf(";")),
+      await uploadBytes(coverReference, coverUpload.blob, {
+        contentType: coverUpload.contentType,
         cacheControl: "public,max-age=3600",
         customMetadata: {
           ownerId: current.ownerId,
@@ -475,9 +482,10 @@ class FirebaseGalleryRepository implements GalleryRepository {
             index,
           );
           const reference = ref(firebaseStorage, storagePath);
+          const artworkUpload = await dataUrlAsBlob(artwork.src);
           uploaded.push(reference);
-          await uploadBytes(reference, await dataUrlAsBlob(artwork.src), {
-            contentType: artwork.src.slice(5, artwork.src.indexOf(";")),
+          await uploadBytes(reference, artworkUpload.blob, {
+            contentType: artworkUpload.contentType,
             cacheControl: "public,max-age=3600",
             customMetadata: {
               ownerId: current.ownerId!,

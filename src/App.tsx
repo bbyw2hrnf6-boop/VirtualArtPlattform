@@ -66,7 +66,7 @@ import {
 } from "./services/galleryRepository";
 import { galleryShareUrl } from "./services/galleryShareUrl";
 import { useDialogFocus } from "./hooks/useDialogFocus";
-import { AccountButton } from "./features/account/AccountDialog";
+import { AccountButton, AccountPage } from "./features/account/AccountDialog";
 import { GalleryAccessManager } from "./features/account/GalleryAccessManager";
 import type { AccountSession } from "./services/accountTypes";
 import { isVerifiedAccount } from "./services/accountTypes";
@@ -95,7 +95,7 @@ const ScrollGalleryStory = lazy(() =>
 const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
 
 type Route = {
-  page: "home" | "create" | "demo" | "gallery" | "data" | "auth-action";
+  page: "home" | "create" | "demo" | "gallery" | "data" | "auth-action" | "account";
   id?: string;
   template?: TemplateId;
   demoArt?: boolean;
@@ -259,6 +259,7 @@ const routeFromHash = (): Route => {
     };
   if (hash === "/demo") return { page: "demo" };
   if (hash === "/data") return { page: "data" };
+  if (hash === "/account") return { page: "account" };
   if (hash.startsWith("/g/")) return { page: "gallery", id: hash.slice(3) };
   return { page: "home" };
 };
@@ -3852,6 +3853,8 @@ export default function App() {
             ? "Threshold — Danny Hirsch Arts | AURA"
             : route.page === "data"
               ? "MVP data and rights | AURA"
+              : route.page === "account"
+                ? "Your rooms and account | AURA"
               : route.page === "auth-action"
                 ? "Account action | AURA"
               : "Virtual exhibition | AURA";
@@ -3882,6 +3885,7 @@ export default function App() {
       );
     if (route.page === "demo") return <Demo />;
     if (route.page === "data") return <MvpDataNotice />;
+    if (route.page === "account") return <AccountPage />;
     if (route.page === "auth-action") return <AuthActionPage />;
     if (route.page === "gallery" && route.id)
       return <PublishedGallery key={route.id} id={route.id} />;

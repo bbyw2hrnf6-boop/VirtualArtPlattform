@@ -1,6 +1,6 @@
 # AURA – Umsetzungsstatus nach dem Audit
 
-Stand: 14. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
+Stand: 15. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
 
 ## Verifiziertes Ergebnis
 
@@ -24,6 +24,15 @@ Stand: 14. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapsh
 Die Nachweise liegen unter [`audit/final/`](./final/), insbesondere in [`browser-qa.md`](./final/browser-qa.md), `browser-qa.json`, `audit-closure-qa.json`, `scroll-story-pipe-qa.json`, `lighthouse-home.json` und `lighthouse-demo.json`.
 
 ## Umgesetzt
+
+### Account- und Raumverwaltung · Konsistenzpass
+
+- Eingeloggte Nutzer öffnen die Raum- und Kontoverwaltung nun über eine eigene responsive `#/account`-Seite. Das Modal bleibt auf die fokussierten Login-/Verifikationsschritte im Builder und an privaten Raumtoren begrenzt.
+- Raumzeilen zeigen Rolle, Sichtbarkeit, aktuelle Revision und Laufzeit. Der Settings-Bereich gruppiert stabilen Link, ACL, Export, Renewal, Archive und Trash; Änderungen behalten dieselbe Live-URL.
+- Opaque Callable-Fehler wie `internal` werden nicht mehr ungefiltert angezeigt. Die UI erklärt, dass nichts geändert wurde und ein Retry möglich ist.
+- Artwork-Titel und Originaldateinamen beeinflussen keine Storage-Pfade. Upload-MIME wird aus dem vorbereiteten Blob normalisiert; alle neuen und revidierten Assets bleiben numerisch und immutable adressiert.
+- Desktop- und Mobile-QA der neuen Account-Route ist unter [`account-page-qa.json`](./account-page-qa.json) dokumentiert: kein horizontaler Overflow, keine Runtime-Diagnosen, primäre Touch-Ziele mindestens 44 px.
+- Der Research-/Audit-Abgleich und das verbleibende Functions-/Versions-Gate stehen in [`ACCOUNT-ROOM-MANAGEMENT-REVIEW.md`](./ACCOUNT-ROOM-MANAGEMENT-REVIEW.md).
 
 ### P2 · Accounts, Sichtbarkeit und Zugriff
 

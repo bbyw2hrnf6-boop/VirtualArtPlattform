@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { GalleryMember, GalleryRole } from "../../services/galleryAccess";
 import { galleryRepository } from "../../services/galleryRepository";
+import { firebaseActionErrorMessage } from "../../services/firebaseActionError";
 
 export function GalleryAccessManager({
   galleryId,
@@ -30,7 +31,7 @@ export function GalleryAccessManager({
       })
       .catch((caught) => {
         if (!active) return;
-        setError(caught instanceof Error ? caught.message : "Access could not be loaded.");
+        setError(firebaseActionErrorMessage(caught, "Access could not be loaded."));
         setStatus("ready");
       });
     return () => {
@@ -47,7 +48,7 @@ export function GalleryAccessManager({
       setMembers(await galleryRepository.listMembers(galleryId));
       setEmail("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Access could not be saved.");
+      setError(firebaseActionErrorMessage(caught, "Access could not be saved."));
     } finally {
       setStatus("ready");
     }
@@ -106,7 +107,7 @@ export function GalleryAccessManager({
                     void galleryRepository
                       .removeMember(galleryId, member.email)
                       .then(() => setMembers((current) => current.filter((item) => item.email !== member.email)))
-                      .catch((caught) => setError(caught instanceof Error ? caught.message : "Access could not be removed."))
+                      .catch((caught) => setError(firebaseActionErrorMessage(caught, "Access could not be removed.")))
                       .finally(() => setStatus("ready"));
                   }}
                 >Remove</button>

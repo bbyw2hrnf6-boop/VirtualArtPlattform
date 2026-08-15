@@ -59,6 +59,20 @@ describe('gallery publication payload', () => {
     expect(result.decor[0].potColor).toBe('black');
   });
 
+  it('keeps duplicate and unusual artwork names without using them as asset paths', () => {
+    const result = prepareGalleryDraftForPublication(draft([
+      artwork({ id: 'art-1', title: 'IMG_5402' }),
+      artwork({ id: 'art-2', title: 'IMG_5402', wall: 'south' }),
+      artwork({ id: 'art-3', title: '7d24f4cf-4c79-49ce-813e-1c810bce9ff5', wall: 'east' })
+    ]));
+    expect(result.artworks.map(({ title }) => title)).toEqual([
+      'IMG_5402',
+      'IMG_5402',
+      '7d24f4cf-4c79-49ce-813e-1c810bce9ff5'
+    ]);
+    expect(result.artworks.every(({ storagePath }) => storagePath === undefined)).toBe(true);
+  });
+
   it('omits hidden works and editor lock state from the public record', () => {
     const result = prepareGalleryDraftForPublication(draft([
       artwork({ id: 'visible', locked: true }),
