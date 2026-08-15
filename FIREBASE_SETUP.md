@@ -9,7 +9,9 @@ AURA uses Anonymous, Email/Password, and Google Authentication; Firestore for ro
 | Authentication | Guest identity plus Email/Password and Google accounts |
 | Firestore | Gallery metadata, layout, visibility, ACL, Discover, expiry |
 | Storage | Compressed artwork images and covers |
-| GitHub Action | Physical cleanup after expiry |
+| Cloud Functions | Publication permits, quotas, lifecycle and safe Trash |
+| App Check | Blocks scripts that are not running in the registered AURA app |
+| GitHub Action | Physical cleanup after expiry or the Trash recovery window |
 
 New publications use schema v3. Existing schema-v1/v2 galleries remain public and readable; new rooms do not create legacy `galleryArtworks` documents.
 
@@ -158,7 +160,41 @@ gcloud storage buckets update gs://virtualartplattform.firebasestorage.app \
 
 Add any future custom origin to `storage.cors.json`, then rerun the last command.
 
-## 6. Security contract
+## 6. App Check and trusted room mutations
+
+The current client initializes App Check only when
+`VITE_FIREBASE_APPCHECK_SITE_KEY` is present. The trusted publication and
+lifecycle Functions require a valid App Check token.
+
+1. Open **Firebase Console → App Check → Apps → Web app**.
+2. Register the existing AURA web app with **reCAPTCHA Enterprise** and create
+   a site key for `bbyw2hrnf6-boop.github.io` plus the future custom domain.
+3. Add a GitHub repository variable named
+   `VITE_FIREBASE_APPCHECK_SITE_KEY` containing that public site key.
+4. Deploy only the trusted room Functions (email remains independent):
+
+   ```bash
+   npx firebase-tools@latest deploy \
+     --only functions:beginAuraGalleryPublication,functions:abortAuraGalleryPublication,functions:manageAuraGalleryLifecycle,functions:purgeAuraGallery,functions:createAuraGalleryInvite,functions:acceptAuraGalleryInvite,functions:revokeAuraGalleryAccess \
+     --project virtualartplattform
+   ```
+
+5. Publish the current Firestore and Storage rules manually.
+6. Deploy the web app, verify publishing and lifecycle actions, then enable
+   App Check enforcement for **Cloud Functions, Firestore and Storage** in the
+   Firebase Console. Use monitor mode first and review metrics before enforcing.
+7. For local testing, register a Firebase App Check debug token and place it in
+   an uncommitted `.env.local` as
+   `VITE_FIREBASE_APPCHECK_DEBUG_TOKEN=...`. Never put a debug token in GitHub
+   variables or a production bundle.
+
+Publication now starts with a 20-minute server permit. Anonymous identities can
+hold one ten-day publication; verified accounts can start at most 20 new
+publications per UTC day. Storage paths are immutable and bounded to one cover
+plus the template artwork limit. Repeated revisions still require a current
+Owner/Editor ACL and App Check.
+
+## 7. Security contract
 
 - Upload requires Firebase Authentication and an owner-scoped path. New-room uploads require the owner; revision uploads also allow a current Editor.
 - Storage objects remain immutable. Live edits create a new asset revision and atomically move the existing gallery manifest to it.
@@ -169,19 +205,28 @@ Add any future custom origin to `storage.cors.json`, then rerun the last command
 - Unlisted rooms are readable by direct link but omitted from Discover.
 - Private room metadata and images require the owner or an invited verified email.
 - Owner, editor, and viewer roles are stored in a gallery member subcollection; the owner is implicit.
-- Owners and Editors may update content under the same gallery ID/share URL. Visibility, owner, expiry, and access settings stay unchanged during content updates. Only the owner may manage access or delete.
+- Owners and Editors may update content under the same gallery ID/share URL. Only the owner may change visibility, renew, archive, restore, or move a room to Trash.
+- Trash hides the room immediately and keeps a seven-day recovery window. Physical Firestore/Storage deletion is performed by the trusted cleanup worker, never by the browser.
 - White Cube and Nocturne accept up to eight works; Grand Forum accepts fourteen.
 - Local drafts remain in IndexedDB and never require Firebase.
 
-## 7. Lifecycle and cleanup
+## 8. Lifecycle and cleanup
 
-At each room's `expiresAt`, Firestore and Storage rules stop reads. `.github/workflows/cleanup.yml` later deletes Storage objects first, then ACL records, the gallery manifest, and any legacy artwork documents.
+At each room's `expiresAt`, Firestore and Storage rules stop public reads. A room
+in Trash is hidden immediately and receives `purgeAt` seven days later.
+`.github/workflows/cleanup.yml` deletes Storage objects first, then ACL records,
+the gallery manifest, and any legacy artwork documents after either deadline.
 
-The `FIREBASE_SERVICE_ACCOUNT` GitHub secret needs minimum Firestore read/delete and Storage object-delete permission. Never grant Owner. Prefer Workload Identity Federation for a production deployment.
+The `FIREBASE_SERVICE_ACCOUNT` GitHub secret needs minimum Firestore read/delete
+and Storage object-delete permission. Never grant Owner. The workflow now uses
+Google's official authentication action and prints the OAuth reason without
+printing credentials. A `400 invalid_grant` means the key must be rotated; the
+script cannot repair a revoked key. Prefer Workload Identity Federation for the
+long-term production credential.
 
 Do not enable Firestore TTL as a replacement without redesigning cleanup: Firestore TTL cannot remove related Storage objects.
 
-## 8. Live verification
+## 9. Live verification
 
 1. Deploy the web app after publishing both rule files.
 2. Create a room with one small image and publish it.
@@ -190,7 +235,7 @@ Do not enable Firestore TTL as a replacement without redesigning cleanup: Firest
 5. Confirm `cover.webp` and `artworks/1.webp` under `published/{uid}/{galleryId}` in Storage.
 6. Copy the share URL and open it in Chrome incognito and Safari private mode.
 7. Confirm the room appears in Discover and all images load.
-8. Test owner deletion from the original browser.
+8. Move the room to Trash, confirm the link closes, restore it, and confirm the same link reopens.
 9. Create and verify an Email/Password account; then repeat with Google.
 10. Publish one unlisted and one private room. Confirm unlisted is absent from Discover.
 11. Invite a second verified email as Viewer, confirm it can enter the private room, and confirm an uninvited account cannot.
@@ -210,13 +255,19 @@ node scripts/migrate-gallery-assets-to-storage.mjs --execute
 
 Without `--execute`, the script exits before any network request. Review credentials, project and backup first. The script keeps legacy artwork documents until their normal scheduled expiry cleanup, providing a rollback window. Do not place the service-account JSON in a shell-history file or commit it.
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 - `storage/unauthorized`: publish current `storage.rules`; confirm the authenticated UID matches the object path.
 - `storage/bucket-not-found`: confirm Blaze and the exact default bucket name.
 - CORS error: apply `storage.cors.json` and include the current origin.
 - `firestore/permission-denied`: publish current `firestore.rules` to the same project.
 - `auth/unauthorized-domain`: add the hostname under Authorized domains.
+- Callable returns `failed-precondition` before deployment: register App Check,
+  deploy the trusted room Functions, publish both rule files, then deploy the
+  site with the GitHub site-key variable.
+- Cleanup `400 invalid_grant`: create a new service-account key with the same
+  minimal roles, replace the GitHub `FIREBASE_SERVICE_ACCOUNT` secret, revoke
+  the old key, and rerun the cleanup workflow.
 - Share link has metadata but missing images: verify Storage rules, CORS, object expiry metadata, and object paths.
 
 Official references: [Storage web setup](https://firebase.google.com/docs/storage/web/start), [Storage rules](https://firebase.google.com/docs/storage/security), [billing requirement](https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024), [Anonymous Auth](https://firebase.google.com/docs/auth/web/anonymous-auth).

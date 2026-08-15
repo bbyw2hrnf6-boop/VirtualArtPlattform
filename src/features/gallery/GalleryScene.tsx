@@ -2239,18 +2239,9 @@ function roomReflectionSignature(draft: GalleryDraft) {
     draft.floor,
     draft.ceiling ?? "gallery",
     draft.lighting,
-    ...draft.artworks.map((artwork) =>
-      [
-        artwork.id,
-        artwork.src.length,
-        artwork.wall,
-        artwork.x,
-        artwork.y,
-        artwork.scale,
-        artwork.hidden ? 1 : 0,
-        artwork.frame ?? "black",
-      ].join(":"),
-    ),
+    // Artwork streaming and transforms do not invalidate the room probe. Their
+    // color remains unlit/tone-map neutral, while rebaking per image or slider
+    // step caused the largest editor latency spikes.
     ...draft.decor.map((item) =>
       [
         item.id,
@@ -3080,6 +3071,34 @@ export interface GallerySceneProps {
   onOpenArtworkDirectory?: () => void;
 }
 
+function observeRenderActivity(
+  element: HTMLElement,
+  onChange: (active: boolean) => void,
+) {
+  let pageVisible = !document.hidden;
+  let intersecting = true;
+  const publish = () => onChange(pageVisible && intersecting);
+  const visibility = () => {
+    pageVisible = !document.hidden;
+    publish();
+  };
+  document.addEventListener("visibilitychange", visibility);
+  const intersection = "IntersectionObserver" in window
+    ? new IntersectionObserver((entries) => {
+        intersecting = entries[0]?.isIntersecting ?? true;
+        publish();
+      }, { threshold: 0.01 })
+    : undefined;
+  intersection?.observe(element);
+  return {
+    active: () => pageVisible && intersecting,
+    dispose: () => {
+      document.removeEventListener("visibilitychange", visibility);
+      intersection?.disconnect();
+    },
+  };
+}
+
 function sceneDraftKey(draft: GalleryDraft, visitor: boolean) {
   const artworks = draft.artworks
     .map((artwork) =>
@@ -3231,6 +3250,12 @@ function syncArtworkObject(
   if (group.userData.source !== artwork.src) {
     const previous = canvas.material.map;
     group.userData.source = artwork.src;
+    if (!artwork.src) {
+      canvas.material.map = null;
+      canvas.material.needsUpdate = true;
+      previous?.dispose();
+      return;
+    }
     const texture = new THREE.TextureLoader().load(
       artwork.src,
       (loadedTexture) => {
@@ -5068,6 +5093,12 @@ function GallerySceneRenderer({
       });
       renderer.shadowMap.needsUpdate = true;
       element.dataset.quality = "low";
+    }, () => {
+      lighting.installations.forEach((installation, index) => {
+        installation.spot.castShadow = index < 2;
+      });
+      renderer.shadowMap.needsUpdate = true;
+      element.dataset.quality = "balanced";
     });
     const cameraDirection = new THREE.Vector3();
     const artworkDirection = new THREE.Vector3();
@@ -5078,7 +5109,21 @@ function GallerySceneRenderer({
     const editorCameraOffset = new THREE.Vector3();
     let placementFrame = 0;
     let lastDiagnosticsAt = Number.NEGATIVE_INFINITY;
+    let renderRunning = false;
+    const renderActivity: ReturnType<typeof observeRenderActivity> = {
+      active: () => true,
+      dispose: () => undefined,
+    };
+    const wakeRender = () => {
+      if (renderRunning || !renderActivity.active()) return;
+      renderRunning = true;
+      frame = requestAnimationFrame(animate);
+    };
     const animate = (now = performance.now()) => {
+      if (!renderActivity.active()) {
+        renderRunning = false;
+        return;
+      }
       intro?.update();
       if (activeGuidedTour && activeGuidedTour.pausedAt === undefined) {
         const tour = activeGuidedTour;
@@ -5275,11 +5320,20 @@ function GallerySceneRenderer({
       renderer.render(scene, camera);
       frame = requestAnimationFrame(animate);
     };
-    animate();
+    const observedRenderActivity = observeRenderActivity(element, (active) => {
+      if (!active) {
+        cancelAnimationFrame(frame);
+        renderRunning = false;
+      } else wakeRender();
+    });
+    renderActivity.active = observedRenderActivity.active;
+    renderActivity.dispose = observedRenderActivity.dispose;
+    wakeRender();
     return () => {
       disposed = true;
       runtime.current = null;
       cancelAnimationFrame(frame);
+      renderActivity.dispose();
       roomTurn.current = null;
       observer.disconnect();
       reducedMotion.removeEventListener("change", updateMotionPreference);
@@ -7006,9 +7060,28 @@ export function DannyDemoScene({
       applyAuthoredLightBudget();
       element.dataset.quality = "low";
       element.dataset.tourAutoplay = "disabled-low-tier";
+    }, () => {
+      effectiveQualityTier = "balanced";
+      applyAuthoredLightBudget();
+      element.dataset.quality = "balanced";
+      delete element.dataset.tourAutoplay;
     });
     let lastDannyDiagnosticsAt = Number.NEGATIVE_INFINITY;
+    let renderRunning = false;
+    const renderActivity: ReturnType<typeof observeRenderActivity> = {
+      active: () => true,
+      dispose: () => undefined,
+    };
+    const wakeRender = () => {
+      if (renderRunning || !renderActivity.active()) return;
+      renderRunning = true;
+      frame = requestAnimationFrame(animate);
+    };
     const animate = (now = performance.now()) => {
+      if (!renderActivity.active()) {
+        renderRunning = false;
+        return;
+      }
       const delta = Math.min((now - previousFrame) / 1000, 0.05);
       previousFrame = now;
       intro?.update();
@@ -7098,11 +7171,20 @@ export function DannyDemoScene({
       renderer.render(scene, camera);
       frame = requestAnimationFrame(animate);
     };
-    animate();
+    const observedRenderActivity = observeRenderActivity(element, (active) => {
+      if (!active) {
+        cancelAnimationFrame(frame);
+        renderRunning = false;
+      } else wakeRender();
+    });
+    renderActivity.active = observedRenderActivity.active;
+    renderActivity.dispose = observedRenderActivity.dispose;
+    wakeRender();
     return () => {
       destroyed = true;
       modeRuntime.current = null;
       cancelAnimationFrame(frame);
+      renderActivity.dispose();
       observer.disconnect();
       reducedMotion.removeEventListener("change", updateMotionPreference);
       renderer.domElement.removeEventListener("click", handlePointer);

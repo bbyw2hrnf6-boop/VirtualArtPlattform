@@ -87,8 +87,8 @@ export function GalleryAccessManager({
           <button disabled={status !== "ready"}>Add</button>
         </form>
         <p className="gallery-access__note">
-          Viewers can enter private rooms. Editors can also update room content
-          under the same live URL. Only the owner manages access and deletion.
+          Invitations remain pending until the recipient accepts them in AURA.
+          Viewers can then enter private rooms; Editors can also update content.
         </p>
         {status === "loading" ? (
           <p className="gallery-access__status">Loading access…</p>
@@ -96,7 +96,7 @@ export function GalleryAccessManager({
           <ul>
             {members.map((member) => (
               <li key={member.email}>
-                <span><strong>{member.email}</strong>{member.role}</span>
+                <span><strong>{member.email}</strong>{member.role} · {member.status ?? "active"}</span>
                 <button
                   type="button"
                   disabled={status === "saving"}

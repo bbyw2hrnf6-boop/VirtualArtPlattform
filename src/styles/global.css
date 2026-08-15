@@ -151,3 +151,6 @@ footer nav{display:flex;justify-content:center;align-items:center;gap:22px}foote
 .preview-status{padding:7px 9px;background:#d9ff43;color:#171816;font-size:8px;font-weight:750;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
 .publish-edit-target{display:grid;gap:6px;margin:18px 0;padding:16px;border-left:3px solid var(--acid);background:#e2e1da;color:#292a26}.publish-edit-target strong{font:22px Instrument}.publish-edit-target span{color:#65675f;font-size:11px;line-height:1.5}
 @media(max-width:900px){.preview-status{display:none}}
+.viewer-asset-progress{position:absolute;z-index:5;left:50%;bottom:24px;transform:translateX(-50%);margin:0;padding:10px 14px;background:#10110fe6;color:#d8d8d0;font-size:12px;letter-spacing:.08em;pointer-events:none}
+.site-header__create-compact{display:none}.site-header__create i{font-style:normal}
+@media(max-width:620px){.site-header{gap:12px;padding:18px 16px}.site-header nav{gap:8px}.site-header__demo{display:none}.site-header__create-wide{display:none}.site-header__create-compact{display:inline}.site-header__create{padding:10px 12px!important}.site-header .account-entry{padding:0 9px}.site-header .logo{flex:0 0 auto}.site-header .logo b{font-size:12px}}

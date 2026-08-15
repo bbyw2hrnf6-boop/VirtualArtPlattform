@@ -4,6 +4,8 @@ import type {
   GalleryEditTarget,
   GalleryPublishOptions,
   GalleryRetention,
+  GalleryLifecycleStatus,
+  GalleryInvite,
   GalleryRole,
   GalleryVisibility,
 } from './galleryAccess';
@@ -22,6 +24,9 @@ export interface GalleryRecord extends GalleryDraft {
   revision: number;
   updatedAt: string;
   effectiveRole?: GalleryRole;
+  lifecycleStatus: GalleryLifecycleStatus;
+  trashedAt?: string;
+  purgeAt?: string;
 }
 
 export type EditableGalleryProject = {
@@ -50,14 +55,26 @@ export interface GalleryRepository {
     roomCoverSource?: string,
   ): Promise<GalleryRecord>;
   find(id: string): Promise<GalleryRecord | null>;
+  findManifest(id: string): Promise<GalleryRecord | null>;
+  hydrateGalleryArtworks(
+    gallery: GalleryRecord,
+    onArtwork?: (gallery: GalleryRecord, loaded: number, total: number) => void,
+  ): Promise<GalleryRecord>;
   editableDraft(id: string): Promise<EditableGalleryProject>;
   discover(): Promise<GalleryRecord[]>;
   mine(): Promise<GalleryRecord[]>;
   currentUserId(): Promise<string | null>;
   currentSession(): Promise<AccountSession | null>;
   listMembers(id: string): Promise<GalleryMember[]>;
+  listInvites(): Promise<GalleryInvite[]>;
+  acceptInvite(inviteId: string): Promise<void>;
   setMember(id: string, email: string, role: Exclude<GalleryRole, 'owner'>): Promise<void>;
   removeMember(id: string, email: string): Promise<void>;
+  updateLifecycle(
+    id: string,
+    action: "archive" | "restore" | "renew" | "trash" | "visibility",
+    visibility?: GalleryVisibility,
+  ): Promise<void>;
   delete(id: string): Promise<void>;
 }
 
@@ -79,13 +96,18 @@ export const galleryRepository: GalleryRepository = {
   async publish(draft, roomCoverSource, options) { return (await loadRepository()).publish(draft, roomCoverSource, options); },
   async updatePublished(target, draft, roomCoverSource) { return (await loadRepository()).updatePublished(target, draft, roomCoverSource); },
   async find(id) { return (await loadRepository()).find(id); },
+  async findManifest(id) { return (await loadRepository()).findManifest(id); },
+  async hydrateGalleryArtworks(gallery, onArtwork) { return (await loadRepository()).hydrateGalleryArtworks(gallery, onArtwork); },
   async editableDraft(id) { return (await loadRepository()).editableDraft(id); },
   async discover() { return (await loadRepository()).discover(); },
   async mine() { return (await loadRepository()).mine(); },
   async currentUserId() { return (await loadRepository()).currentUserId(); },
   async currentSession() { return (await loadRepository()).currentSession(); },
   async listMembers(id) { return (await loadRepository()).listMembers(id); },
+  async listInvites() { return (await loadRepository()).listInvites(); },
+  async acceptInvite(inviteId) { return (await loadRepository()).acceptInvite(inviteId); },
   async setMember(id, email, role) { return (await loadRepository()).setMember(id, email, role); },
   async removeMember(id, email) { return (await loadRepository()).removeMember(id, email); },
+  async updateLifecycle(id, action, visibility) { return (await loadRepository()).updateLifecycle(id, action, visibility); },
   async delete(id) { return (await loadRepository()).delete(id); }
 };

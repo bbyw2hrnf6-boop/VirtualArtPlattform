@@ -1,31 +1,49 @@
 import { createSign } from 'node:crypto';
 
-const credentials = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
-if (!credentials.client_email || !credentials.private_key || !credentials.project_id) {
-  throw new Error('FIREBASE_SERVICE_ACCOUNT must contain the complete service-account JSON.');
+let credentials = {};
+try {
+  credentials = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+} catch {
+  throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON. Replace the GitHub secret with the complete downloaded key file.');
 }
+const expectedProjectId = process.env.FIREBASE_PROJECT_ID || 'virtualartplattform';
+const projectId = credentials.project_id || expectedProjectId;
+if (projectId !== expectedProjectId)
+  throw new Error(`Cleanup credential project mismatch: expected ${expectedProjectId}.`);
 
 const encode = (value) => Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url');
-const issuedAt = Math.floor(Date.now() / 1000);
-const unsigned = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({
-  iss: credentials.client_email,
-  scope: 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/devstorage.read_write',
-  aud: 'https://oauth2.googleapis.com/token',
-  iat: issuedAt,
-  exp: issuedAt + 3600
-})}`;
-const signer = createSign('RSA-SHA256'); signer.update(unsigned); signer.end();
-const assertion = `${unsigned}.${signer.sign(credentials.private_key, 'base64url')}`;
-const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-  method: 'POST',
-  headers: { 'content-type': 'application/x-www-form-urlencoded' },
-  body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth2:grant-type:jwt-bearer', assertion })
-});
-if (!tokenResponse.ok) throw new Error(`Token request failed: ${tokenResponse.status}`);
-const { access_token: accessToken } = await tokenResponse.json();
-const databaseRoot = `https://firestore.googleapis.com/v1/projects/${credentials.project_id}/databases/(default)/documents`;
+let accessToken = process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
+if (!accessToken) {
+  if (!credentials.client_email || !credentials.private_key)
+    throw new Error('FIREBASE_SERVICE_ACCOUNT must contain the complete service-account JSON.');
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const unsigned = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({
+    iss: credentials.client_email,
+    scope: 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/devstorage.read_write',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: issuedAt,
+    exp: issuedAt + 3600
+  })}`;
+  const signer = createSign('RSA-SHA256'); signer.update(unsigned); signer.end();
+  const privateKey = String(credentials.private_key).replace(/\\n/g, '\n');
+  const assertion = `${unsigned}.${signer.sign(privateKey, 'base64url')}`;
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth2:grant-type:jwt-bearer', assertion })
+  });
+  if (!tokenResponse.ok) {
+    const body = await tokenResponse.json().catch(() => ({}));
+    const reason = [body.error, body.error_description].filter(Boolean).join(': ');
+    throw new Error(`Token request failed: ${tokenResponse.status}${reason ? ` (${reason})` : ''}. Rotate FIREBASE_SERVICE_ACCOUNT or configure Workload Identity.`);
+  }
+  ({ access_token: accessToken } = await tokenResponse.json());
+}
+if (!accessToken) throw new Error('Google authentication returned no access token.');
+const databaseDocumentRoot = `projects/${projectId}/databases/(default)/documents`;
+const databaseRoot = `https://firestore.googleapis.com/v1/${databaseDocumentRoot}`;
 const headers = { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' };
-const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || `${credentials.project_id}.firebasestorage.app`;
+const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || `${projectId}.firebasestorage.app`;
 
 const runQuery = async (structuredQuery) => {
   const response = await fetch(`${databaseRoot}:runQuery`, { method: 'POST', headers, body: JSON.stringify({ structuredQuery }) });
@@ -89,7 +107,7 @@ const storagePaths = (gallery) => [
   ...arrayValues(gallery, 'artworks').map((artwork) => mapField(artwork, 'storagePath')),
 ].filter(Boolean);
 
-const expirationFilter = { fieldFilter: { field: { fieldPath: 'expiresAt' }, op: 'LESS_THAN_OR_EQUAL', value: { timestampValue: new Date().toISOString() } } };
+const expirationFilter = (fieldPath) => ({ fieldFilter: { field: { fieldPath }, op: 'LESS_THAN_OR_EQUAL', value: { timestampValue: new Date().toISOString() } } });
 const DELETE_CONCURRENCY = 12;
 
 async function withConcurrency(values, task) {
@@ -105,7 +123,7 @@ async function deleteExpiredArtworkDocuments() {
   while (true) {
     const documents = await runQuery({
       from: [{ collectionId: 'galleryArtworks' }],
-      where: expirationFilter,
+      where: expirationFilter('expiresAt'),
       limit: 500,
     });
     if (!documents.length) return deleted;
@@ -114,17 +132,62 @@ async function deleteExpiredArtworkDocuments() {
   }
 }
 
-async function deleteExpiredGalleries() {
+async function deleteExpiredDocuments(collectionId, fieldPath) {
+  let deleted = 0;
+  while (true) {
+    const documents = await runQuery({
+      from: [{ collectionId }],
+      where: expirationFilter(fieldPath),
+      limit: 500,
+    });
+    if (!documents.length) return deleted;
+    await withConcurrency(documents, (document) => deleteDocument(document.name));
+    deleted += documents.length;
+  }
+}
+
+async function deleteExpiredPublicationPermits() {
+  let deleted = 0;
+  let deletedObjects = 0;
+  while (true) {
+    const documents = await runQuery({
+      from: [{ collectionId: 'galleryPublishPermits' }],
+      where: expirationFilter('permitExpiresAt'),
+      limit: 100,
+    });
+    if (!documents.length) return { deleted, deletedObjects };
+    for (const permit of documents) {
+      const ownerId = fieldValue(permit, 'ownerId');
+      const galleryId = fieldValue(permit, 'galleryId');
+      if (ownerId && galleryId) {
+        const galleryName = `${databaseDocumentRoot}/galleries/${galleryId}`;
+        const response = await fetch(`https://firestore.googleapis.com/v1/${galleryName}`, { headers });
+        if (response.status === 404) {
+          const paths = await listStorageObjects(`published/${ownerId}/${galleryId}/`);
+          await withConcurrency(paths, deleteStorageObject);
+          deletedObjects += paths.length;
+        } else if (!response.ok) {
+          throw new Error(`Firestore permit probe failed for ${galleryId}: ${response.status}`);
+        }
+      }
+      await deleteDocument(permit.name);
+      deleted += 1;
+    }
+  }
+}
+
+async function deleteExpiredGalleries(fieldPath = 'expiresAt') {
   let deleted = 0;
   let deletedObjects = 0;
   let deletedMembers = 0;
+  let deletedInvites = 0;
   while (true) {
     const galleries = await runQuery({
       from: [{ collectionId: 'galleries' }],
-      where: expirationFilter,
+      where: expirationFilter(fieldPath),
       limit: 100,
     });
-    if (!galleries.length) return { deleted, deletedObjects, deletedMembers };
+    if (!galleries.length) return { deleted, deletedObjects, deletedMembers, deletedInvites };
     for (const gallery of galleries) {
       const galleryId = gallery.name.split('/').at(-1);
       const ownerId = fieldValue(gallery, 'ownerId');
@@ -136,6 +199,14 @@ async function deleteExpiredGalleries() {
       const members = await listCollectionDocuments(gallery.name, 'members');
       await withConcurrency(members, (member) => deleteDocument(member.name));
       deletedMembers += members.length;
+      const invites = await runQuery({
+        from: [{ collectionId: 'galleryInvites' }],
+        where: { fieldFilter: { field: { fieldPath: 'galleryId' }, op: 'EQUAL', value: { stringValue: galleryId } } },
+        limit: 100,
+      });
+      await withConcurrency(invites, (invite) => deleteDocument(invite.name));
+      deletedInvites += invites.length;
+      await deleteDocument(`${databaseDocumentRoot}/galleryPublishPermits/${galleryId}`);
       await deleteDocument(gallery.name);
       deleted += 1;
     }
@@ -145,5 +216,8 @@ async function deleteExpiredGalleries() {
 // Storage is removed before its gallery manifest, so a failed cleanup can be
 // retried without leaving unreferenced paid objects behind.
 const deletedAssets = await deleteExpiredArtworkDocuments();
-const galleries = await deleteExpiredGalleries();
-console.log(`Deleted ${galleries.deleted} expired galleries, ${galleries.deletedObjects} Storage objects, ${galleries.deletedMembers} access records, and ${deletedAssets} legacy artwork documents.`);
+const expiredPermits = await deleteExpiredPublicationPermits();
+const expiredInvites = await deleteExpiredDocuments('galleryInvites', 'expiresAt');
+const trashed = await deleteExpiredGalleries('purgeAt');
+const expired = await deleteExpiredGalleries('expiresAt');
+console.log(`Deleted ${trashed.deleted} trashed and ${expired.deleted} expired galleries, ${trashed.deletedObjects + expired.deletedObjects + expiredPermits.deletedObjects} Storage objects, ${trashed.deletedMembers + expired.deletedMembers} access records, ${trashed.deletedInvites + expired.deletedInvites + expiredInvites} invitations, ${expiredPermits.deleted} expired permits, and ${deletedAssets} legacy artwork documents.`);

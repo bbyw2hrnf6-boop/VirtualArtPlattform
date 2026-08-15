@@ -18,6 +18,7 @@ import {
 } from '../features/gallery/types';
 import type {
   GalleryRetention,
+  GalleryLifecycleStatus,
   GalleryVisibility,
 } from './galleryAccess';
 
@@ -34,6 +35,7 @@ const DECOR_IDS = ['olive', 'monstera', 'arc-lamp', 'pedestal', 'gallery-bench',
 const ARTWORK_FRAMES = ['black', 'white', 'oak', 'none'] as const satisfies readonly ArtworkFrame[];
 const GALLERY_VISIBILITIES = ['public', 'unlisted', 'private'] as const satisfies readonly GalleryVisibility[];
 const GALLERY_RETENTIONS = ['guest-10-days', 'account-preview'] as const satisfies readonly GalleryRetention[];
+const GALLERY_LIFECYCLE_STATUSES = ['active', 'archived', 'trashed'] as const satisfies readonly GalleryLifecycleStatus[];
 
 const MAX_ARTWORK_SOURCE_LENGTH = 779_999;
 // New covers are uploaded to Storage rather than embedded in Firestore. The
@@ -69,6 +71,9 @@ export interface ParsedGalleryDocument extends GalleryDraft {
   accessVersion: number;
   revision: number;
   updatedAt: string;
+  lifecycleStatus: GalleryLifecycleStatus;
+  trashedAt?: string;
+  purgeAt?: string;
 }
 
 export interface ParsedArtworkAsset {
@@ -297,13 +302,24 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
   if (updated.getTime() < published.getTime())
     invalid(recordId, 'updatedAt', 'expected a time at or after publication');
   const maximumDuration = retention === 'account-preview' ? 367 : 12;
-  if (expires.getTime() - published.getTime() > maximumDuration * 86_400_000)
+  if (expires.getTime() - updated.getTime() > maximumDuration * 86_400_000)
     invalid(recordId, 'expiresAt', `expected a maximum ${maximumDuration}-day publication window`);
   if (retention === 'guest-10-days' && visibility !== 'public')
     invalid(recordId, 'visibility', 'guest publications must be public');
   const ownerId = optionalString(data.ownerId, recordId, 'ownerId', 128);
   const coverSrc = optionalImageSource(data.coverSrc, recordId, 'coverSrc', MAX_LEGACY_COVER_SOURCE_LENGTH);
   const coverPath = optionalStoragePath(data.coverPath, recordId, 'coverPath');
+  const lifecycleStatus = data.lifecycleStatus === undefined
+    ? 'active'
+    : enumValue(data.lifecycleStatus, GALLERY_LIFECYCLE_STATUSES, recordId, 'lifecycleStatus');
+  const trashedAt = data.trashedAt === undefined
+    ? undefined
+    : timestampValue(data.trashedAt, recordId, 'trashedAt').toISOString();
+  const purgeAt = data.purgeAt === undefined
+    ? undefined
+    : timestampValue(data.purgeAt, recordId, 'purgeAt').toISOString();
+  if (lifecycleStatus === 'trashed' && (!trashedAt || !purgeAt))
+    invalid(recordId, 'lifecycleStatus', 'trashed rooms require trash and purge times');
   if (schemaVersion >= 2 && (!coverPath || !ownerId))
     invalid(recordId, 'coverPath', 'expected an owned Storage cover in schema version 2 or 3');
   return {
@@ -318,6 +334,9 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
     accessVersion,
     revision,
     updatedAt: updated.toISOString(),
+    lifecycleStatus,
+    ...(trashedAt ? { trashedAt } : {}),
+    ...(purgeAt ? { purgeAt } : {}),
   };
 }
 

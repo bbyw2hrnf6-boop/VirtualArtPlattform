@@ -173,19 +173,44 @@ export function getRenderQuality(): RenderQuality {
   const compact = Math.min(window.innerWidth, window.innerHeight) < 700;
   const cores = navigator.hardwareConcurrency || 4;
   const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
-  const low = coarse || compact || cores <= 4 || memory <= 4;
-  const high = !low && cores >= 8 && memory >= 8;
-  return low
-    ? { antialias: false, dpr: Math.min(devicePixelRatio, 1.15), shadows: true, shadowMapSize: 512, tier: 'low' }
-    : high
-      ? { antialias: true, dpr: Math.min(devicePixelRatio, 1.65), shadows: true, shadowMapSize: 2048, tier: 'high' }
-      : { antialias: true, dpr: Math.min(devicePixelRatio, 1.35), shadows: true, shadowMapSize: 1024, tier: 'balanced' };
+  return renderQualityForCapabilities({ coarse, compact, cores, memory, dpr: devicePixelRatio });
 }
 
-export function createAdaptiveDpr(renderer: THREE.WebGLRenderer, initial: RenderQuality, onDowngrade?: () => void) {
+export function renderQualityForCapabilities({
+  coarse,
+  compact,
+  cores,
+  memory,
+  dpr,
+}: {
+  coarse: boolean;
+  compact: boolean;
+  cores: number;
+  memory: number;
+  dpr: number;
+}): RenderQuality {
+  // Touch and viewport size describe interaction, not GPU strength. A modern
+  // tablet therefore starts balanced and is downgraded only by measured frame
+  // time; genuinely constrained CPU/memory combinations still start low.
+  const low = cores <= 2 || memory <= 2 || (cores <= 4 && memory <= 4);
+  const high = !low && !coarse && !compact && cores >= 8 && memory >= 8;
+  return low
+    ? { antialias: false, dpr: Math.min(dpr, 1.15), shadows: true, shadowMapSize: 512, tier: 'low' }
+    : high
+      ? { antialias: true, dpr: Math.min(dpr, 1.65), shadows: true, shadowMapSize: 2048, tier: 'high' }
+      : { antialias: true, dpr: Math.min(dpr, 1.35), shadows: true, shadowMapSize: 1024, tier: 'balanced' };
+}
+
+export function createAdaptiveDpr(
+  renderer: THREE.WebGLRenderer,
+  initial: RenderQuality,
+  onDowngrade?: () => void,
+  onRecover?: () => void,
+) {
   let tier = initial.tier;
   let sampleStartedAt = performance.now();
   let frames = 0;
+  let healthyWindows = 0;
   const update = (now: number) => {
     frames += 1;
     if (frames < 120) return;
@@ -194,6 +219,17 @@ export function createAdaptiveDpr(renderer: THREE.WebGLRenderer, initial: Render
       tier = 'low';
       renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
       onDowngrade?.();
+      healthyWindows = 0;
+    } else if (tier === 'low' && averageFrameMs < 17.5) {
+      healthyWindows += 1;
+      if (healthyWindows >= 5) {
+        tier = 'balanced';
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
+        onRecover?.();
+        healthyWindows = 0;
+      }
+    } else if (averageFrameMs > 20) {
+      healthyWindows = 0;
     }
     frames = 0;
     sampleStartedAt = now;

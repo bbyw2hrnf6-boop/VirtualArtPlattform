@@ -14,20 +14,20 @@ import {
   setDoc,
   Timestamp,
   where,
-  writeBatch,
   type DocumentReference,
 } from "firebase/firestore";
 import {
   deleteObject,
   getBlob,
-  listAll,
   ref,
   uploadBytes,
   type StorageReference,
 } from "firebase/storage";
+import { httpsCallable } from "firebase/functions";
 import {
   firebaseAuth,
   firebaseDb,
+  firebaseFunctions,
   firebaseStorage,
   FIREBASE_PROJECT_ID,
 } from "./firebase";
@@ -50,20 +50,20 @@ import {
   galleryCoverPath,
   galleryRevisionArtworkPath,
   galleryRevisionCoverPath,
-  galleryStorageRoot,
   isOwnedGalleryStoragePath,
 } from "./galleryStoragePaths";
 import type {
   GalleryEditTarget,
   GalleryMember,
   GalleryRole,
+  GalleryInvite,
 } from "./galleryAccess";
 import type { AccountSession } from "./accountTypes";
 
 const MAX_ARTWORK_DOWNLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_COVER_DOWNLOAD_BYTES = 1024 * 1024;
 const MAX_CACHED_OBJECT_URLS = 64;
-const ARTWORK_DOWNLOAD_CONCURRENCY = 6;
+const ARTWORK_DOWNLOAD_CONCURRENCY = 3;
 const DISCOVER_COVER_CONCURRENCY = 4;
 const objectUrls = new Map<string, Promise<string>>();
 
@@ -122,24 +122,6 @@ async function bestEffortDeleteDocuments(references: DocumentReference[]) {
 
 async function bestEffortDeleteObjects(references: StorageReference[]) {
   return Promise.allSettled(references.map((reference) => deleteObject(reference)));
-}
-
-async function deleteObjects(references: StorageReference[]) {
-  const results = await Promise.allSettled(
-    references.map((reference) => deleteObject(reference)),
-  );
-  const failure = results.find(
-    (result): result is PromiseRejectedResult =>
-      result.status === "rejected" &&
-      firebaseErrorCode(result.reason) !== "storage/object-not-found",
-  );
-  if (failure) throw failure.reason;
-}
-
-async function listStorageTree(root: StorageReference): Promise<StorageReference[]> {
-  const result = await listAll(root);
-  const nested = await Promise.all(result.prefixes.map(listStorageTree));
-  return [...result.items, ...nested.flat()];
 }
 
 async function createThumbnail(source?: string) {
@@ -309,6 +291,7 @@ class FirebaseGalleryRepository implements GalleryRepository {
   ): Promise<GalleryRecord> {
     const uploaded: StorageReference[] = [];
     let galleryRef: DocumentReference | undefined;
+    let permittedGalleryId: string | undefined;
     try {
       const validatedDraft = prepareGalleryDraftForPublication(
         await embedLocalArtworkSources(draft),
@@ -324,10 +307,18 @@ class FirebaseGalleryRepository implements GalleryRepository {
       const retention = verifiedAccount ? "account-preview" : "guest-10-days";
       const base = slugify(`${validatedDraft.artist}-${validatedDraft.title}`) || "gallery";
       const id = `${base}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+      permittedGalleryId = id;
+      const permit = await httpsCallable<
+        { galleryId: string; visibility: string },
+        { expiresAt: string; retention: "guest-10-days" | "account-preview" }
+      >(firebaseFunctions, "beginAuraGalleryPublication")({
+        galleryId: id,
+        visibility,
+      });
       const now = new Date();
-      const expires = new Date(
-        now.getTime() + (verifiedAccount ? 365 : 10) * 86_400_000,
-      );
+      const expires = new Date(permit.data.expiresAt);
+      if (!Number.isFinite(expires.getTime()))
+        throw new Error("The publication permit returned an invalid expiry.");
       const publishedAt = Timestamp.fromDate(now);
       const expiresAt = Timestamp.fromDate(expires);
       const expiresAtMs = String(expires.getTime());
@@ -390,6 +381,7 @@ class FirebaseGalleryRepository implements GalleryRepository {
         accessVersion: 1,
         revision: 1,
         updatedAt: publishedAt,
+        lifecycleStatus: "active",
       });
       return {
         ...validatedDraft,
@@ -404,8 +396,14 @@ class FirebaseGalleryRepository implements GalleryRepository {
         accessVersion: 1,
         revision: 1,
         updatedAt: now.toISOString(),
+        lifecycleStatus: "active",
       };
     } catch (error) {
+      if (permittedGalleryId) {
+        await httpsCallable(firebaseFunctions, "abortAuraGalleryPublication")({
+          galleryId: permittedGalleryId,
+        }).catch((abortError) => console.warn("Publication cleanup deferred to the scheduled worker.", abortError));
+      }
       if (galleryRef) await bestEffortDeleteDocuments([galleryRef]);
       if (uploaded.length) await bestEffortDeleteObjects(uploaded);
       throw normalizeGalleryPublishingError(error, FIREBASE_PROJECT_ID);
@@ -519,6 +517,7 @@ class FirebaseGalleryRepository implements GalleryRepository {
           accessVersion: current.accessVersion,
           revision: nextRevision,
           updatedAt: serverTimestamp(),
+          lifecycleStatus: current.lifecycleStatus,
         });
       });
       return {
@@ -535,6 +534,7 @@ class FirebaseGalleryRepository implements GalleryRepository {
         revision: nextRevision,
         updatedAt: updatedAt.toISOString(),
         effectiveRole: role,
+        lifecycleStatus: current.lifecycleStatus,
       };
     } catch (error) {
       if (uploaded.length) await bestEffortDeleteObjects(uploaded);
@@ -542,7 +542,7 @@ class FirebaseGalleryRepository implements GalleryRepository {
     }
   }
 
-  async find(id: string): Promise<GalleryRecord | null> {
+  async findManifest(id: string): Promise<GalleryRecord | null> {
     await firebaseAuth.authStateReady();
     const safelyActiveAt = Timestamp.fromMillis(Date.now() + 60_000);
     let snapshot;
@@ -568,52 +568,75 @@ class FirebaseGalleryRepository implements GalleryRepository {
     }
     if (!snapshot.exists()) return null;
     const record = fromFirestore(snapshot.id, snapshot.data());
-    if (new Date(record.expiresAt).getTime() <= Date.now()) return null;
-    const artworks = await mapWithConcurrency(
-      record.artworks,
+    if (
+      record.lifecycleStatus !== "active" ||
+      new Date(record.expiresAt).getTime() <= Date.now()
+    ) return null;
+    return record;
+  }
+
+  async hydrateGalleryArtworks(
+    gallery: GalleryRecord,
+    onArtwork?: (gallery: GalleryRecord, loaded: number, total: number) => void,
+  ): Promise<GalleryRecord> {
+    const hydrated = gallery.artworks.map((artwork) => ({ ...artwork }));
+    let loaded = hydrated.filter((artwork) => Boolean(artwork.src)).length;
+    await mapWithConcurrency(
+      gallery.artworks,
       ARTWORK_DOWNLOAD_CONCURRENCY,
       async (artwork, index) => {
+        let next = artwork;
         if (artwork.storagePath) {
           validateStoragePathOwnership(
             artwork.storagePath,
-            record.ownerId,
-            record.id,
+            gallery.ownerId,
+            gallery.id,
             `artworks[${index}].storagePath`,
           );
-          return {
+          next = {
             ...artwork,
             src: await storageObjectUrl(
               artwork.storagePath,
               MAX_ARTWORK_DOWNLOAD_BYTES,
             ),
           };
-        }
-        if (!artwork.assetId) return artwork;
-        const asset = await getDoc(
-          doc(firebaseDb, "galleryArtworks", artwork.assetId),
-        );
-        if (!asset.exists())
-          throw new GalleryRepositoryDataError(
-            artwork.assetId,
-            "asset",
-            "referenced artwork document is missing",
+        } else if (artwork.assetId) {
+          const asset = await getDoc(
+            doc(firebaseDb, "galleryArtworks", artwork.assetId),
           );
-        const parsed = parseArtworkAsset(artwork.assetId, asset.data(), {
-          galleryId: record.id,
-          ownerId: record.ownerId,
-          index,
-          expiresAt: record.expiresAt,
-        });
-        if (new Date(parsed.expiresAt).getTime() <= Date.now())
-          return { ...artwork, src: "" };
-        return { ...artwork, src: parsed.src };
+          if (!asset.exists())
+            throw new GalleryRepositoryDataError(
+              artwork.assetId,
+              "asset",
+              "referenced artwork document is missing",
+            );
+          const parsed = parseArtworkAsset(artwork.assetId, asset.data(), {
+            galleryId: gallery.id,
+            ownerId: gallery.ownerId,
+            index,
+            expiresAt: gallery.expiresAt,
+          });
+          next = { ...artwork, src: parsed.src };
+        }
+        hydrated[index] = next;
+        loaded += artwork.src ? 0 : 1;
+        onArtwork?.({ ...gallery, artworks: hydrated.map((item) => ({ ...item })) }, loaded, hydrated.length);
+        return next;
       },
     );
-    if (artworks.some((artwork) => !artwork.src)) return null;
+    if (hydrated.some((artwork) => !artwork.src))
+      throw new GalleryRepositoryDataError(gallery.id, "artworks", "an artwork image is unavailable");
+    return { ...gallery, artworks: hydrated };
+  }
+
+  async find(id: string): Promise<GalleryRecord | null> {
+    const record = await this.findManifest(id);
+    if (!record) return null;
+    const hydrated = await this.hydrateGalleryArtworks(record);
     // The public viewer renders the room itself and never consumes its Discover
     // cover. Avoid delaying the first usable frame with a separate cover download.
     // Legacy records keep their already-embedded coverSrc through `record`.
-    return { ...record, artworks };
+    return hydrated;
   }
 
   async discover(): Promise<GalleryRecord[]> {
@@ -661,6 +684,7 @@ class FirebaseGalleryRepository implements GalleryRepository {
           const record = fromFirestore(item.id, item.data());
           if (
             record.visibility !== "public" ||
+            record.lifecycleStatus !== "active" ||
             new Date(record.expiresAt).getTime() <= Date.now()
           )
             return null;
@@ -777,9 +801,7 @@ class FirebaseGalleryRepository implements GalleryRepository {
         };
       },
     );
-    const activeAt = Date.now() + 60_000;
     return records
-      .filter((record) => new Date(record.expiresAt).getTime() > activeAt)
       .sort(
         (a, b) =>
           new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
@@ -871,27 +893,72 @@ class FirebaseGalleryRepository implements GalleryRepository {
   }
 
   async listMembers(id: string): Promise<GalleryMember[]> {
-    await this.ownedGallery(id);
+    const owner = await this.ownedGallery(id);
     const snapshot = await getDocs(
       query(collection(firebaseDb, "galleries", id, "members"), limit(50)),
     );
-    return snapshot.docs
-      .map((item) => {
+    const active: GalleryMember[] = snapshot.docs.flatMap((item) => {
         const data = item.data();
         const role = data.role;
-        if (role !== "editor" && role !== "viewer") return null;
+        if (role !== "editor" && role !== "viewer") return [];
         const addedAt = data.addedAt;
-        return {
+        return [{
           email: item.id,
           role,
+          status: "active" as const,
           addedAt:
             addedAt instanceof Timestamp
               ? addedAt.toDate().toISOString()
               : new Date(0).toISOString(),
-        } satisfies GalleryMember;
-      })
-      .filter((member): member is GalleryMember => Boolean(member))
-      .sort((a, b) => a.email.localeCompare(b.email));
+        } satisfies GalleryMember];
+      }).sort((a, b) => a.email.localeCompare(b.email));
+    const pendingSnapshot = await getDocs(query(
+      collection(firebaseDb, "galleryInvites"),
+      where("ownerId", "==", owner.uid),
+      limit(50),
+    ));
+    const pending = pendingSnapshot.docs.flatMap((item) => {
+      const data = item.data();
+      if (data.galleryId !== id || data.status !== "pending" || (data.role !== "editor" && data.role !== "viewer") || typeof data.email !== "string") return [];
+      return [{
+        email: data.email,
+        role: data.role,
+        status: "pending" as const,
+        inviteId: item.id,
+        addedAt: data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
+          : new Date(0).toISOString(),
+      } satisfies GalleryMember];
+    });
+    return [...active, ...pending].sort((a, b) => a.email.localeCompare(b.email));
+  }
+
+  async listInvites(): Promise<GalleryInvite[]> {
+    const user = await this.authenticatedUser();
+    if (user.isAnonymous || !user.emailVerified || !user.email) return [];
+    const snapshot = await getDocs(query(
+      collection(firebaseDb, "galleryInvites"),
+      where("email", "==", user.email.toLowerCase()),
+      limit(30),
+    ));
+    return snapshot.docs.flatMap((item) => {
+      const data = item.data();
+      const expiresAt = data.expiresAt instanceof Timestamp ? data.expiresAt.toDate() : new Date(0);
+      if (data.status !== "pending" || expiresAt.getTime() <= Date.now() || typeof data.galleryId !== "string" || typeof data.galleryTitle !== "string" || (data.role !== "viewer" && data.role !== "editor")) return [];
+      return [{
+        id: item.id,
+        galleryId: data.galleryId,
+        galleryTitle: data.galleryTitle,
+        email: user.email!.toLowerCase(),
+        role: data.role,
+        expiresAt: expiresAt.toISOString(),
+      } satisfies GalleryInvite];
+    });
+  }
+
+  async acceptInvite(inviteId: string): Promise<void> {
+    await this.authenticatedUser();
+    await httpsCallable(firebaseFunctions, "acceptAuraGalleryInvite")({ inviteId });
   }
 
   async setMember(
@@ -903,61 +970,36 @@ class FirebaseGalleryRepository implements GalleryRepository {
     const normalizedEmail = normalizedMemberEmail(email);
     if (normalizedEmail === owner.email?.toLowerCase())
       throw new Error("The owner already has full access.");
-    const memberReference = doc(
-      firebaseDb,
-      "galleries",
-      id,
-      "members",
-      normalizedEmail,
-    );
-    if (!(await getDoc(memberReference)).exists()) {
-      const current = await getDocs(
-        query(collection(firebaseDb, "galleries", id, "members"), limit(50)),
-      );
-      if (current.size >= 50)
-        throw new Error("This preview supports up to 50 invited accounts per room.");
-    }
-    await setDoc(memberReference, {
+    await httpsCallable(firebaseFunctions, "createAuraGalleryInvite")({
+      galleryId: id,
       email: normalizedEmail,
       role,
-      addedAt: Timestamp.now(),
-      addedBy: owner.uid,
     });
   }
 
   async removeMember(id: string, email: string): Promise<void> {
     await this.ownedGallery(id);
-    await deleteDoc(
-      doc(firebaseDb, "galleries", id, "members", normalizedMemberEmail(email)),
-    );
+    await httpsCallable(firebaseFunctions, "revokeAuraGalleryAccess")({
+      galleryId: id,
+      email: normalizedMemberEmail(email),
+    });
+  }
+
+  async updateLifecycle(
+    id: string,
+    action: "archive" | "restore" | "renew" | "trash" | "visibility",
+    visibility?: "public" | "unlisted" | "private",
+  ): Promise<void> {
+    await this.authenticatedUser();
+    await httpsCallable(firebaseFunctions, "manageAuraGalleryLifecycle")({
+      galleryId: id,
+      action,
+      ...(visibility ? { visibility } : {}),
+    });
   }
 
   async delete(id: string): Promise<void> {
-    const ownerId = (await this.authenticatedUser()).uid;
-    const galleryRef = doc(firebaseDb, "galleries", id);
-    const snapshot = await getDoc(galleryRef);
-    if (!snapshot.exists()) return;
-    const gallery = fromFirestore(snapshot.id, snapshot.data());
-    if (gallery.ownerId !== ownerId)
-      throw new Error("Only the artist who published this gallery can delete it.");
-    const storageReferences = await listStorageTree(ref(
-      firebaseStorage,
-      galleryStorageRoot(ownerId, id),
-    ));
-    if (storageReferences.length) await deleteObjects(storageReferences);
-    const assetIds = gallery.artworks
-      .map((artwork) => artwork.assetId)
-      .filter((assetId): assetId is string => Boolean(assetId));
-    const batch = writeBatch(firebaseDb);
-    const members = await getDocs(
-      query(collection(firebaseDb, "galleries", id, "members"), limit(50)),
-    );
-    members.docs.forEach((member) => batch.delete(member.ref));
-    assetIds.forEach((assetId) =>
-      batch.delete(doc(firebaseDb, "galleryArtworks", assetId)),
-    );
-    batch.delete(galleryRef);
-    await batch.commit();
+    await this.updateLifecycle(id, "trash");
   }
 }
 

@@ -70,6 +70,7 @@ import { AccountButton } from "./features/account/AccountDialog";
 import { GalleryAccessManager } from "./features/account/GalleryAccessManager";
 import type { AccountSession } from "./services/accountTypes";
 import { isVerifiedAccount } from "./services/accountTypes";
+import { imageFromFile } from "./services/imagePreparation";
 import {
   visibilityLabel,
   type GalleryEditTarget,
@@ -272,10 +273,12 @@ function Header({ light = false }: { light?: boolean }) {
       <Logo dark={light} />
       <nav>
         <span className="preview-status">AURA Light Preview</span>
-        <button onClick={() => navigate("/demo")}>Live demo</button>
+        <button className="site-header__demo" onClick={() => navigate("/demo")}>Live demo</button>
         <AccountButton light={light} />
-        <button onClick={() => navigate("/create")}>
-          Create gallery <span>↗</span>
+        <button className="site-header__create" onClick={() => navigate("/create")}>
+          <span className="site-header__create-wide">Create gallery</span>
+          <span className="site-header__create-compact">Create</span>
+          <i>↗</i>
         </button>
       </nav>
     </header>
@@ -877,57 +880,6 @@ function TemplatePicker({
       </p>
     </main>
   );
-}
-
-async function imageFromFile(
-  file: File,
-): Promise<Pick<Artwork, "src" | "aspect">> {
-  if (file.size > 30 * 1024 * 1024)
-    throw new Error(`${file.name} is larger than 30 MB.`);
-  const url = URL.createObjectURL(file);
-  const image = new Image();
-  image.decoding = "async";
-  try {
-    await new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = () =>
-        reject(
-          new Error(
-            `${file.name} could not be opened. Please export it as JPG, PNG, or WebP.`,
-          ),
-        );
-      image.src = url;
-    });
-    const max = 1200;
-    const scale = Math.min(
-      1,
-      max / Math.max(image.naturalWidth, image.naturalHeight),
-    );
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("Your browser could not prepare this image.");
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    let quality = 0.78;
-    let src = canvas.toDataURL("image/webp", quality);
-    if (!src.startsWith("data:image/webp"))
-      src = canvas.toDataURL("image/jpeg", 0.82);
-    while (src.length > 720000 && quality > 0.38) {
-      quality -= 0.08;
-      src = canvas.toDataURL(
-        src.startsWith("data:image/webp") ? "image/webp" : "image/jpeg",
-        quality,
-      );
-    }
-    if (src.length > 780000)
-      throw new Error(
-        `${file.name} could not be compressed below the gallery limit.`,
-      );
-    return { src, aspect: canvas.width / canvas.height };
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }
 
 function initialArtworkPlacement(
@@ -3668,6 +3620,7 @@ function PublishedGallery({ id }: { id: string }) {
   const [artworkFocus, setArtworkFocus] = useState<ArtworkFocus | null>(null);
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [artworkLoad, setArtworkLoad] = useState({ loaded: 0, total: 0, failed: false });
   const handleViewerSessionChange = useCallback((session: AccountSession | null) => {
     if (!isVerifiedAccount(session)) return;
     setAccountOpen(false);
@@ -3686,12 +3639,36 @@ function PublishedGallery({ id }: { id: string }) {
   useEffect(() => {
     let stale = false;
     galleryRepository
-      .find(id)
-      .then((gallery) => {
-        if (!stale)
-          setLoadState(
-            gallery ? { status: "ready", gallery } : { status: "not-found" },
+      .findManifest(id)
+      .then(async (gallery) => {
+        if (stale) return;
+        if (!gallery) {
+          setLoadState({ status: "not-found" });
+          return;
+        }
+        setLoadState({ status: "ready", gallery });
+        setArtworkLoad({
+          loaded: gallery.artworks.filter((artwork) => Boolean(artwork.src)).length,
+          total: gallery.artworks.length,
+          failed: false,
+        });
+        try {
+          const hydrated = await galleryRepository.hydrateGalleryArtworks(
+            gallery,
+            (next, loaded, total) => {
+              if (stale) return;
+              setLoadState({ status: "ready", gallery: next });
+              setArtworkLoad({ loaded, total, failed: false });
+            },
           );
+          if (!stale) {
+            setLoadState({ status: "ready", gallery: hydrated });
+            setArtworkLoad({ loaded: hydrated.artworks.length, total: hydrated.artworks.length, failed: false });
+          }
+        } catch (error) {
+          console.error("Artwork stream interrupted", error);
+          if (!stale) setArtworkLoad((current) => ({ ...current, failed: true }));
+        }
       })
       .catch((error) => {
         console.error("Gallery request failed", error);
@@ -3834,6 +3811,13 @@ function PublishedGallery({ id }: { id: string }) {
         <p>by {gallery.artist}</p>
       </div>
       <MovementHint viewMode={viewMode} />
+      {artworkLoad.total > 0 && artworkLoad.loaded < artworkLoad.total && (
+        <p className="viewer-asset-progress" role="status">
+          {artworkLoad.failed
+            ? "Some artwork images could not be loaded."
+            : `Preparing artwork ${artworkLoad.loaded} / ${artworkLoad.total}`}
+        </p>
+      )}
       {directoryOpen && (
         <ArtworkDirectory
           exhibitionTitle={gallery.title}

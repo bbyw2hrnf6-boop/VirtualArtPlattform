@@ -27,7 +27,7 @@ import "./scrollGalleryStory.css";
 const CHAPTERS = [
   {
     eyebrow: "01 · Blueprint",
-    title: "Draw DannyHirschArts.",
+    title: "Draw Danny Hirsch Arts.",
     body: "Scale, thresholds, sightlines, and visitor circulation establish this exhibition—not a random template.",
   },
   {
@@ -52,7 +52,7 @@ const CHAPTERS = [
   },
   {
     eyebrow: "06 · DannyHirschArts",
-    title: "Enter DannyHirschArts.",
+    title: "Enter Danny Hirsch Arts.",
     body: "The live room resolves at visitor height. Drag to look, then walk the completed exhibition.",
   },
 ] as const;

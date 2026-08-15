@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  id-token: write
 concurrency:
   group: cleanup-expired-galleries
   cancel-in-progress: false
@@ -17,8 +18,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Authenticate cleanup worker
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: >-
+            https://www.googleapis.com/auth/datastore
+            https://www.googleapis.com/auth/devstorage.read_write
       - name: Delete expired galleries and assets
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          FIREBASE_PROJECT_ID: virtualartplattform
           FIREBASE_STORAGE_BUCKET: virtualartplattform.firebasestorage.app
         run: node scripts/cleanup-expired.mjs

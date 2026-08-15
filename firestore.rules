@@ -24,12 +24,16 @@ service cloud.firestore {
 
     function isGalleryMember(galleryId) {
       return verifiedAccount()
-        && exists(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower()));
+        && exists(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower()))
+        && (!get(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.keys().hasAny(['status'])
+          || get(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.status == 'active');
     }
 
     function isGalleryEditor(galleryId) {
       return verifiedAccount()
         && exists(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower()))
+        && (!get(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.keys().hasAny(['status'])
+          || get(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.status == 'active')
         && get(/databases/$(database)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.role == 'editor';
     }
 
@@ -38,20 +42,24 @@ service cloud.firestore {
     }
 
     function isActive(data) {
-      return data.expiresAt > request.time;
+      return data.expiresAt > request.time
+        && (!data.keys().hasAny(['lifecycleStatus']) || data.lifecycleStatus == 'active');
     }
 
     function canGetGallery(galleryId, data) {
-      return isActive(data) && (
+      return ownsGalleryData(data) || (isActive(data) && (
         isLegacyGallery(data)
         || data.visibility in ['public', 'unlisted']
-        || ownsGalleryData(data)
         || isGalleryMember(galleryId)
-      );
+      ));
     }
 
     function canListGallery(data) {
-      return isActive(data)
+      // Lifecycle is filtered in Discover for schema-v3 compatibility because
+      // older active records do not yet carry the optional lifecycle field.
+      // Archived public manifests remain metadata-readable, but their direct
+      // document and Storage reads are denied by canGetGallery/canReadGallery.
+      return data.expiresAt > request.time
         && (isLegacyGallery(data) || data.visibility == 'public');
     }
 
@@ -81,7 +89,8 @@ service cloud.firestore {
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
           'lighting', 'decor', 'artworks', 'coverPath', 'ownerId',
           'publishedAt', 'expiresAt', 'schemaVersion', 'visibility',
-          'retention', 'accessVersion', 'revision', 'updatedAt'
+          'retention', 'accessVersion', 'revision', 'updatedAt',
+          'lifecycleStatus', 'trashedAt', 'purgeAt'
         ])
         && data.title is string
         && data.title.size() > 0
@@ -122,7 +131,19 @@ service cloud.firestore {
         && data.revision is int
         && data.revision > 0
         && data.revision <= 1000000
+        && (!data.keys().hasAny(['lifecycleStatus'])
+          || data.lifecycleStatus in ['active', 'archived', 'trashed'])
         && data.updatedAt is timestamp;
+    }
+
+    function validPublicationPermit(galleryId, data) {
+      let permit = get(/databases/$(database)/documents/galleryPublishPermits/$(galleryId)).data;
+      return permit.ownerId == request.auth.uid
+        && permit.galleryId == galleryId
+        && permit.visibility == data.visibility
+        && permit.retention == data.retention
+        && permit.expiresAt == data.expiresAt
+        && permit.permitExpiresAt > request.time;
     }
 
     function isValidGalleryCreate(galleryId) {
@@ -133,6 +154,8 @@ service cloud.firestore {
         && data.coverPath == 'published/' + request.auth.uid + '/' + galleryId + '/cover.webp'
         && data.revision == 1
         && data.updatedAt == data.publishedAt
+        && data.lifecycleStatus == 'active'
+        && validPublicationPermit(galleryId, data)
         && validPublicationWindow(data);
     }
 
@@ -167,24 +190,11 @@ service cloud.firestore {
         && data.accessVersion == currentAccessVersion(before)
         && data.revision == currentRevision(before) + 1
         && data.updatedAt == request.time
+        && (!data.keys().hasAny(['lifecycleStatus']) || data.lifecycleStatus == 'active')
         && data.coverPath.matches(
           'published/' + data.ownerId + '/' + galleryId
           + '/revisions/[A-Za-z0-9_-]{1,128}/cover[.]webp'
         );
-    }
-
-    function validMember(galleryId, memberEmail) {
-      let data = request.resource.data;
-      return ownsGallery(galleryId)
-        && memberEmail == memberEmail.lower()
-        && memberEmail.size() <= 254
-        && memberEmail.matches('[^/@]+@[^/@]+[.][^/@]+')
-        && data.keys().hasAll(['email', 'role', 'addedAt', 'addedBy'])
-        && data.keys().hasOnly(['email', 'role', 'addedAt', 'addedBy'])
-        && data.email == memberEmail
-        && data.role in ['editor', 'viewer']
-        && data.addedAt is timestamp
-        && data.addedBy == request.auth.uid;
     }
 
     function validProfile(userId) {
@@ -218,7 +228,7 @@ service cloud.firestore {
         && (canListGallery(resource.data) || ownsGalleryData(resource.data));
       allow create: if isValidGalleryCreate(galleryId);
       allow update: if isValidGalleryUpdate(galleryId);
-      allow delete: if ownsGalleryData(resource.data);
+      allow delete: if false;
 
       match /members/{memberEmail} {
         allow get: if ownsGallery(galleryId)
@@ -228,9 +238,28 @@ service cloud.firestore {
           && ((verifiedAccount()
               && resource.data.email == request.auth.token.email.lower())
             || ownsGallery(galleryId));
-        allow create, update: if validMember(galleryId, memberEmail);
-        allow delete: if ownsGallery(galleryId);
+        allow create, update, delete: if false;
       }
+    }
+
+    match /galleryInvites/{inviteId} {
+      allow get: if verifiedAccount()
+        && (resource.data.ownerId == request.auth.uid
+          || resource.data.email == request.auth.token.email.lower());
+      allow list: if request.query.limit != null
+        && request.query.limit <= 50
+        && verifiedAccount()
+        && (resource.data.ownerId == request.auth.uid
+          || resource.data.email == request.auth.token.email.lower());
+      allow create, update, delete: if false;
+    }
+
+    match /galleryPublishPermits/{galleryId} {
+      allow read, write: if false;
+    }
+
+    match /galleryPublicationQuotas/{userId} {
+      allow read, write: if false;
     }
 
     match /profiles/{userId} {
@@ -265,7 +294,7 @@ service cloud.firestore {
     match /galleryArtworks/{assetId} {
       allow read: if resource.data.expiresAt > request.time;
       allow create, update: if false;
-      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if false;
     }
   }
 }

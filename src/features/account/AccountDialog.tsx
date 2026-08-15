@@ -3,6 +3,7 @@ import type { AccountSession } from "../../services/accountTypes";
 import { galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
 import { galleryShareUrl } from "../../services/galleryShareUrl";
 import { visibilityLabel } from "../../services/galleryAccess";
+import type { GalleryInvite } from "../../services/galleryAccess";
 import {
   createGalleryProjectId,
   loadGalleryDraft,
@@ -16,18 +17,25 @@ import "./accountDialog.css";
 type AccountModule = typeof import("../../services/accountService");
 
 function AccountRooms({ session }: { session: AccountSession }) {
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [rooms, setRooms] = useState<GalleryRecord[]>([]);
+  const [invites, setInvites] = useState<GalleryInvite[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [removingId, setRemovingId] = useState<string>();
+  const [lifecycleBusyId, setLifecycleBusyId] = useState<string>();
   const [editingId, setEditingId] = useState<string>();
   const [error, setError] = useState<string>();
   const [accessRoom, setAccessRoom] = useState<GalleryRecord>();
+  const [manageRoomId, setManageRoomId] = useState<string>();
   const loadRooms = useCallback(async () => {
     setStatus("loading");
     setError(undefined);
     try {
-      const next = await galleryRepository.mine();
+      const [next, pending] = await Promise.all([
+        galleryRepository.mine(),
+        galleryRepository.listInvites(),
+      ]);
       setRooms(next);
+      setInvites(pending);
       setStatus("ready");
     } catch (caught) {
       console.error("Account rooms unavailable", caught);
@@ -38,6 +46,10 @@ function AccountRooms({ session }: { session: AccountSession }) {
     const frame = requestAnimationFrame(() => void loadRooms());
     return () => cancelAnimationFrame(frame);
   }, [loadRooms, session.uid]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const editRoom = async (room: GalleryRecord) => {
     setEditingId(room.id);
     setError(undefined);
@@ -77,9 +89,71 @@ function AccountRooms({ session }: { session: AccountSession }) {
       setEditingId(undefined);
     }
   };
+  const updateRoom = async (
+    room: GalleryRecord,
+    action: "archive" | "restore" | "renew" | "trash" | "visibility",
+    visibility?: GalleryRecord["visibility"],
+  ) => {
+    if (action === "trash" && !window.confirm(`Move “${room.title}” to Trash? You can restore it for seven days.`)) return;
+    setLifecycleBusyId(room.id);
+    setError(undefined);
+    try {
+      await galleryRepository.updateLifecycle(room.id, action, visibility);
+      await loadRooms();
+    } catch (caught) {
+      console.error("Room lifecycle update failed", caught);
+      setError(caught instanceof Error ? caught.message : "The room setting could not be saved.");
+    } finally {
+      setLifecycleBusyId(undefined);
+    }
+  };
+  const exportRoom = async (room: GalleryRecord) => {
+    setLifecycleBusyId(room.id);
+    setError(undefined);
+    try {
+      const editable = await galleryRepository.editableDraft(room.id);
+      const blob = new Blob([JSON.stringify({
+        format: "aura-gallery-export",
+        schemaVersion: 1,
+        exportedAt: new Date().toISOString(),
+        galleryId: room.id,
+        revision: room.revision,
+        visibility: room.visibility,
+        draft: editable.draft,
+      }, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${room.id}-r${room.revision}.aura.json`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The room export could not be prepared.");
+    } finally {
+      setLifecycleBusyId(undefined);
+    }
+  };
   return (
     <section className="account-rooms" aria-labelledby="account-rooms-title">
       <div><h3 id="account-rooms-title">My &amp; shared rooms</h3><span>{rooms.length}</span></div>
+      {invites.length > 0 && (
+        <div className="account-invites" aria-label="Pending room invitations">
+          <strong>Invitations</strong>
+          {invites.map((invite) => (
+            <div key={invite.id}>
+              <span>{invite.galleryTitle}<small>{invite.role} · expires {new Date(invite.expiresAt).toLocaleDateString()}</small></span>
+              <button type="button" disabled={lifecycleBusyId === invite.id} onClick={() => {
+                setLifecycleBusyId(invite.id);
+                setError(undefined);
+                void galleryRepository.acceptInvite(invite.id)
+                  .then(loadRooms)
+                  .catch((caught) => setError(caught instanceof Error ? caught.message : "The invitation could not be accepted."))
+                  .finally(() => setLifecycleBusyId(undefined));
+              }}>{lifecycleBusyId === invite.id ? "…" : "Accept"}</button>
+            </div>
+          ))}
+        </div>
+      )}
       {status === "loading" ? (
         <p>Loading rooms…</p>
       ) : status === "error" ? (
@@ -91,13 +165,18 @@ function AccountRooms({ session }: { session: AccountSession }) {
         <ul>
           {rooms.map((room) => {
             const role = room.effectiveRole ?? (room.ownerId === session.uid ? "owner" : "viewer");
+            const expired = new Date(room.expiresAt).getTime() <= currentTime;
+            const available = room.lifecycleStatus === "active" && !expired;
             return <li key={room.id} data-role={role}>
-              <a href={galleryShareUrl(room.id, window.location.href)}>
+              {available ? <a href={galleryShareUrl(room.id, window.location.href)}>
                 {room.coverSrc && <img src={room.coverSrc} alt="" />}
                 <span><strong>{room.title}</strong>{visibilityLabel[room.visibility]} · {role} · until {new Date(room.expiresAt).toLocaleDateString()}</span>
                 <b aria-hidden="true">↗</b>
-              </a>
-              {(role === "owner" || role === "editor") && <button
+              </a> : <div className="account-room-summary">
+                {room.coverSrc && <img src={room.coverSrc} alt="" />}
+                <span><strong>{room.title}</strong>{room.lifecycleStatus === "trashed" ? "Trash" : room.lifecycleStatus === "archived" ? "Archived" : "Expired"}</span>
+              </div>}
+              {available && (role === "owner" || role === "editor") && <button
                 type="button"
                 disabled={editingId === room.id}
                 aria-label={`Edit ${room.title}`}
@@ -106,27 +185,33 @@ function AccountRooms({ session }: { session: AccountSession }) {
               >{editingId === room.id ? "…" : "Edit"}</button>}
               {role === "owner" && <button
                 type="button"
-                aria-label={`Manage access for ${room.title}`}
-                onClick={() => setAccessRoom((current) => current?.id === room.id ? undefined : room)}
-              >Access</button>}
-              {role === "owner" && <button
-                type="button"
-                disabled={removingId === room.id}
-                aria-label={`Delete ${room.title}`}
-                onClick={() => {
-                  if (!window.confirm(`Delete “${room.title}” and its published images?`)) return;
-                  setRemovingId(room.id);
-                  setError(undefined);
-                  void galleryRepository
-                    .delete(room.id)
-                    .then(() => {
-                      setRooms((current) => current.filter((item) => item.id !== room.id));
-                      setAccessRoom((current) => current?.id === room.id ? undefined : current);
-                    })
-                    .catch(() => setError("The room could not be deleted. Retry after checking your connection."))
-                    .finally(() => setRemovingId(undefined));
-                }}
-              >{removingId === room.id ? "…" : "Delete"}</button>}
+                aria-expanded={manageRoomId === room.id}
+                aria-label={`Manage ${room.title}`}
+                onClick={() => setManageRoomId((current) => current === room.id ? undefined : room.id)}
+              >Manage</button>}
+              {role === "owner" && manageRoomId === room.id && (
+                <div className="account-room-manage">
+                  <label>Visibility
+                    <select
+                      value={room.visibility}
+                      disabled={lifecycleBusyId === room.id || room.lifecycleStatus === "trashed"}
+                      onChange={(event) => void updateRoom(room, "visibility", event.target.value as GalleryRecord["visibility"])}
+                    >
+                      <option value="public">Public</option>
+                      <option value="unlisted">Unlisted</option>
+                      <option value="private">Private</option>
+                    </select>
+                  </label>
+                  {available && <button type="button" onClick={() => setAccessRoom((current) => current?.id === room.id ? undefined : room)}>Access</button>}
+                  {available && <button type="button" onClick={() => void exportRoom(room)}>Export</button>}
+                  {room.retention === "account-preview" && room.lifecycleStatus !== "trashed" && <button type="button" onClick={() => void updateRoom(room, "renew")}>Renew</button>}
+                  {room.lifecycleStatus !== "trashed" && <button type="button" onClick={() => void updateRoom(room, "archive")}>{room.lifecycleStatus === "archived" ? "Unarchive" : "Archive"}</button>}
+                  {room.lifecycleStatus === "trashed"
+                    ? <button type="button" onClick={() => void updateRoom(room, "restore")}>Restore</button>
+                    : <button type="button" className="is-danger" onClick={() => void updateRoom(room, "trash")}>Move to Trash</button>}
+                  <span>{lifecycleBusyId === room.id ? "Saving…" : room.lifecycleStatus === "trashed" && room.purgeAt ? `Deletes ${new Date(room.purgeAt).toLocaleDateString()}` : `Revision ${room.revision}`}</span>
+                </div>
+              )}
             </li>;
           })}
         </ul>
@@ -134,7 +219,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
         <p>Rooms published with this account will appear here.</p>
       )}
       {rooms.length > 0 && (
-        <p className="account-rooms__hint">Edit updates the same live URL after review. Owners manage access and deletion; Editors can update room content.</p>
+        <p className="account-rooms__hint">Edit updates the same live URL. Archive hides a room; Trash keeps a seven-day recovery window.</p>
       )}
       {accessRoom && (
         <GalleryAccessManager
