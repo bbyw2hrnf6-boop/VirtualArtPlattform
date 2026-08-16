@@ -128,6 +128,7 @@ export const beginAuraGalleryPublication = onCall(
         transaction.get(
           db.collection("galleries")
             .where("ownerId", "==", uid)
+            .where("lifecycleStatus", "==", "active")
             .where("expiresAt", ">", new Date(now))
             .limit(30),
         ),

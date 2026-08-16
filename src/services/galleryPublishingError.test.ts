@@ -13,7 +13,7 @@ describe('gallery publishing errors', () => {
     ['auth/operation-not-allowed', 'authentication-disabled', 'Email/Password and Google Authentication'],
     ['auth/configuration-not-found', 'authentication-disabled', 'Email/Password and Google Authentication'],
     ['auth/unauthorized-domain', 'unauthorized-domain', 'Authorized domains'],
-    ['functions/internal', 'configuration', 'trusted room service'],
+    ['functions/internal', 'configuration', 'reached the room service'],
     ['functions/not-found', 'configuration', 'core Firebase Functions'],
     ['resource-exhausted', 'quota', 'quota'],
     ['storage/quota-exceeded', 'quota', 'quota'],

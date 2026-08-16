@@ -198,10 +198,13 @@ async function embeddableArtworkSource(
 
 async function embedLocalArtworkSources(
   draft: GalleryDraft,
-  publishedFallback?: (artwork: Artwork) => Promise<string | undefined>,
+  publishedFallback?: (
+    artwork: Artwork,
+    index: number,
+  ) => Promise<string | undefined>,
 ): Promise<GalleryDraft> {
   const artworks = await Promise.all(
-    draft.artworks.map(async (artwork) => {
+    draft.artworks.map(async (artwork, index) => {
       if (artwork.hidden || /^data:image\//i.test(artwork.src)) return artwork;
       try {
         return {
@@ -209,7 +212,7 @@ async function embedLocalArtworkSources(
           src: await embeddableArtworkSource(artwork, artwork.src),
         };
       } catch (sourceError) {
-        const fallback = await publishedFallback?.(artwork);
+        const fallback = await publishedFallback?.(artwork, index);
         if (!fallback) throw sourceError;
         return {
           ...artwork,
@@ -496,8 +499,14 @@ class FirebaseGalleryRepository implements GalleryRepository {
         current.artworks.map((artwork, index) => [artwork.id, { artwork, index }]),
       );
       const validatedDraft = prepareGalleryDraftForPublication(
-        await embedLocalArtworkSources(draft, async (artwork) => {
-          const published = currentArtworks.get(artwork.id);
+        await embedLocalArtworkSources(draft, async (artwork, index) => {
+          const exact = currentArtworks.get(artwork.id);
+          const sameSlot = current.artworks[index];
+          const published = exact ?? (
+            sameSlot?.title === artwork.title
+              ? { artwork: sameSlot, index }
+              : undefined
+          );
           if (!published) return undefined;
           return publishedArtworkSource(
             current,

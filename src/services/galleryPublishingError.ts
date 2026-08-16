@@ -78,12 +78,17 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
   if (
     code === 'internal'
     || code === 'functions/internal'
-    || code === 'functions/not-found'
-    || code === 'functions/unimplemented'
   ) {
     return new GalleryPublishingError(
       'configuration',
-      'AURA publishing is not available yet because its trusted room service is not live. Your room is still saved locally; deploy the core Firebase Functions, then retry.',
+      'AURA publishing reached the room service, but the server could not finish the request. Your room is still saved locally; retry once, then check the Firebase Functions logs if it continues.',
+      error
+    );
+  }
+  if (code === 'functions/not-found' || code === 'functions/unimplemented') {
+    return new GalleryPublishingError(
+      'configuration',
+      'AURA publishing is not available because the core Firebase Functions are missing. Your room is still saved locally; deploy them, then retry.',
       error
     );
   }
