@@ -44,7 +44,7 @@ import {
   prepareGalleryDraftForPublication,
 } from "./galleryValidation";
 import { normalizeGalleryPublishingError } from "./galleryPublishingError";
-import type { GalleryDraft } from "../features/gallery/types";
+import type { Artwork, GalleryDraft } from "../features/gallery/types";
 import {
   galleryArtworkPath,
   galleryCoverPath,
@@ -177,24 +177,45 @@ async function dataUrlAsBlob(source: string) {
   };
 }
 
-async function embedLocalArtworkSources(draft: GalleryDraft): Promise<GalleryDraft> {
+async function embeddableArtworkSource(
+  artwork: Artwork,
+  source: string,
+): Promise<string> {
+  if (/^data:image\//i.test(source)) return source;
+  const sourceUrl = new URL(source, document.baseURI);
+  if (sourceUrl.protocol !== "blob:" && sourceUrl.origin !== location.origin)
+    throw new Error(
+      `“${artwork.title}” must use an uploaded image or a same-origin sample asset.`,
+    );
+  const response = await fetch(sourceUrl);
+  if (!response.ok)
+    throw new Error(`The image for “${artwork.title}” could not be loaded.`);
+  const blob = await response.blob();
+  if (!/^image\/(?:avif|jpeg|png|webp)$/i.test(blob.type))
+    throw new Error(`The image for “${artwork.title}” uses an unsupported format.`);
+  return blobAsDataUrl(blob);
+}
+
+async function embedLocalArtworkSources(
+  draft: GalleryDraft,
+  publishedFallback?: (artwork: Artwork) => Promise<string | undefined>,
+): Promise<GalleryDraft> {
   const artworks = await Promise.all(
     draft.artworks.map(async (artwork) => {
       if (artwork.hidden || /^data:image\//i.test(artwork.src)) return artwork;
-      const sourceUrl = new URL(artwork.src, document.baseURI);
-      if (sourceUrl.origin !== location.origin)
-        throw new Error(
-          `“${artwork.title}” must use an uploaded image or a same-origin sample asset.`,
-        );
-      const response = await fetch(sourceUrl);
-      if (!response.ok)
-        throw new Error(`The sample image for “${artwork.title}” could not be loaded.`);
-      const blob = await response.blob();
-      if (!/^image\/(?:avif|jpeg|png|webp)$/i.test(blob.type))
-        throw new Error(
-          `The sample image for “${artwork.title}” uses an unsupported format.`,
-        );
-      return { ...artwork, src: await blobAsDataUrl(blob) };
+      try {
+        return {
+          ...artwork,
+          src: await embeddableArtworkSource(artwork, artwork.src),
+        };
+      } catch (sourceError) {
+        const fallback = await publishedFallback?.(artwork);
+        if (!fallback) throw sourceError;
+        return {
+          ...artwork,
+          src: await embeddableArtworkSource(artwork, fallback),
+        };
+      }
     }),
   );
   return { ...draft, artworks };
@@ -233,6 +254,38 @@ function validateStoragePathOwnership(
       "does not belong to the gallery owner",
     );
   return path;
+}
+
+async function publishedArtworkSource(
+  gallery: GalleryRecord,
+  artwork: Artwork,
+  index: number,
+): Promise<string | undefined> {
+  if (artwork.storagePath) {
+    validateStoragePathOwnership(
+      artwork.storagePath,
+      gallery.ownerId,
+      gallery.id,
+      `artworks[${index}].storagePath`,
+    );
+    return storageObjectUrl(artwork.storagePath, MAX_ARTWORK_DOWNLOAD_BYTES);
+  }
+  if (artwork.assetId) {
+    const asset = await getDoc(doc(firebaseDb, "galleryArtworks", artwork.assetId));
+    if (!asset.exists())
+      throw new GalleryRepositoryDataError(
+        artwork.assetId,
+        "asset",
+        "referenced artwork document is missing",
+      );
+    return parseArtworkAsset(artwork.assetId, asset.data(), {
+      galleryId: gallery.id,
+      ownerId: gallery.ownerId,
+      index,
+      expiresAt: gallery.expiresAt,
+    }).src;
+  }
+  return artwork.src || undefined;
 }
 
 async function mapWithConcurrency<T, R>(
@@ -423,9 +476,6 @@ class FirebaseGalleryRepository implements GalleryRepository {
   ): Promise<GalleryRecord> {
     const uploaded: StorageReference[] = [];
     try {
-      const validatedDraft = prepareGalleryDraftForPublication(
-        await embedLocalArtworkSources(draft),
-      );
       const user = await this.authenticatedUser();
       const galleryReference = doc(firebaseDb, "galleries", target.id);
       const currentSnapshot = await getDoc(galleryReference);
@@ -441,6 +491,21 @@ class FirebaseGalleryRepository implements GalleryRepository {
       if (!current.ownerId) throw new Error("This room has no editable owner record.");
       if (new Date(current.expiresAt).getTime() <= Date.now() + 60_000)
         throw new Error("This room has expired and can no longer be updated.");
+
+      const currentArtworks = new Map(
+        current.artworks.map((artwork, index) => [artwork.id, { artwork, index }]),
+      );
+      const validatedDraft = prepareGalleryDraftForPublication(
+        await embedLocalArtworkSources(draft, async (artwork) => {
+          const published = currentArtworks.get(artwork.id);
+          if (!published) return undefined;
+          return publishedArtworkSource(
+            current,
+            published.artwork,
+            published.index,
+          );
+        }),
+      );
 
       const nextRevision = current.revision + 1;
       const revisionId = `r${nextRevision}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
@@ -594,37 +659,11 @@ class FirebaseGalleryRepository implements GalleryRepository {
       ARTWORK_DOWNLOAD_CONCURRENCY,
       async (artwork, index) => {
         let next = artwork;
-        if (artwork.storagePath) {
-          validateStoragePathOwnership(
-            artwork.storagePath,
-            gallery.ownerId,
-            gallery.id,
-            `artworks[${index}].storagePath`,
-          );
+        if (artwork.storagePath || artwork.assetId) {
           next = {
             ...artwork,
-            src: await storageObjectUrl(
-              artwork.storagePath,
-              MAX_ARTWORK_DOWNLOAD_BYTES,
-            ),
+            src: (await publishedArtworkSource(gallery, artwork, index)) ?? "",
           };
-        } else if (artwork.assetId) {
-          const asset = await getDoc(
-            doc(firebaseDb, "galleryArtworks", artwork.assetId),
-          );
-          if (!asset.exists())
-            throw new GalleryRepositoryDataError(
-              artwork.assetId,
-              "asset",
-              "referenced artwork document is missing",
-            );
-          const parsed = parseArtworkAsset(artwork.assetId, asset.data(), {
-            galleryId: gallery.id,
-            ownerId: gallery.ownerId,
-            index,
-            expiresAt: gallery.expiresAt,
-          });
-          next = { ...artwork, src: parsed.src };
         }
         hydrated[index] = next;
         loaded += artwork.src ? 0 : 1;
