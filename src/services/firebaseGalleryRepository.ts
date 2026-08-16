@@ -59,6 +59,7 @@ import type {
   GalleryInvite,
 } from "./galleryAccess";
 import type { AccountSession } from "./accountTypes";
+import { normalizedImageBlob } from "./imageBlob";
 
 const MAX_ARTWORK_DOWNLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_COVER_DOWNLOAD_BYTES = 1024 * 1024;
@@ -167,14 +168,7 @@ function blobAsDataUrl(blob: Blob): Promise<string> {
 async function dataUrlAsBlob(source: string) {
   const response = await fetch(source);
   if (!response.ok) throw new Error("The prepared image could not be read for upload.");
-  const blob = await response.blob();
-  const contentType = blob.type.split(";", 1)[0].trim().toLowerCase();
-  if (!/^image\/(?:avif|jpeg|png|webp)$/.test(contentType))
-    throw new Error("The prepared image uses an unsupported format.");
-  return {
-    blob: blob.type === contentType ? blob : blob.slice(0, blob.size, contentType),
-    contentType,
-  };
+  return normalizedImageBlob(await response.blob());
 }
 
 async function embeddableArtworkSource(
@@ -190,10 +184,12 @@ async function embeddableArtworkSource(
   const response = await fetch(sourceUrl);
   if (!response.ok)
     throw new Error(`The image for “${artwork.title}” could not be loaded.`);
-  const blob = await response.blob();
-  if (!/^image\/(?:avif|jpeg|png|webp)$/i.test(blob.type))
+  try {
+    const { blob } = await normalizedImageBlob(await response.blob());
+    return blobAsDataUrl(blob);
+  } catch {
     throw new Error(`The image for “${artwork.title}” uses an unsupported format.`);
-  return blobAsDataUrl(blob);
+  }
 }
 
 async function embedLocalArtworkSources(
@@ -903,7 +899,8 @@ class FirebaseGalleryRepository implements GalleryRepository {
             ? await fetch(artwork.src).then(async (response) => {
                 if (!response.ok)
                   throw new Error(`“${artwork.title}” could not be prepared for editing.`);
-                return blobAsDataUrl(await response.blob());
+                const { blob } = await normalizedImageBlob(await response.blob());
+                return blobAsDataUrl(blob);
               })
             : artwork.src,
         };
