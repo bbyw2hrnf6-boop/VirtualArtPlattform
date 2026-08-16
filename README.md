@@ -2,7 +2,7 @@
 
 AURA is a browser-based platform for creating, curating, publishing, and sharing immersive 3D art exhibitions. This repository contains the standalone MVP: a React and Three.js editor, three gallery architectures, a visitor experience, Discover, account access, and a Firebase publishing lifecycle.
 
-Live MVP: [bbyw2hrnf6-boop.github.io/VirtualArtPlattform](https://bbyw2hrnf6-boop.github.io/VirtualArtPlattform/)
+Live MVP: [lieuva.com](https://lieuva.com/)
 
 > **MVP status:** AURA is a concept-validation showcase, not yet a production marketplace. Read [Security, privacy, and current limitations](#security-privacy-and-current-limitations) before inviting public uploads.
 
@@ -125,7 +125,7 @@ AURA uses hash-based routes, so refreshing a gallery does not require server-sid
 - `#/data` — factual MVP data and rights notice
 - `?mode={verifyEmail|resetPassword}&oobCode=…` — Firebase account action handler; query parameters precede the hash route
 
-The Vite production base is relative, allowing the built bundle to run from the `/VirtualArtPlattform/` repository path. Runtime assets also use relative URLs.
+The Vite production base is relative, allowing the built bundle to run from both the custom domain and the legacy `/VirtualArtPlattform/` repository path. Runtime assets also use relative URLs.
 
 ## Architecture
 
@@ -213,7 +213,7 @@ For a custom domain, also add the hostname under **Firebase Authentication → S
 
 - Confirm Pages uses **GitHub Actions**, not `main / (root)`.
 - Open the latest deployment in the Actions tab and confirm the build and deploy jobs succeeded.
-- Make sure the deployed URL includes `/VirtualArtPlattform/`.
+- Use `https://lieuva.com/` for the production site. The legacy GitHub Pages repository URL may still include `/VirtualArtPlattform/`.
 - Hard-refresh after a deployment and inspect the browser console/network panel for missing JavaScript or asset files.
 
 ### `localhost:5173` is not running

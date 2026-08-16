@@ -3,7 +3,9 @@
     "origin": [
       "http://localhost:5173",
       "http://127.0.0.1:5173",
-      "https://bbyw2hrnf6-boop.github.io"
+    "https://bbyw2hrnf6-boop.github.io",
+    "https://lieuva.com",
+    "https://www.lieuva.com"
     ],
     "method": ["GET", "HEAD", "OPTIONS"],
     "responseHeader": ["Content-Type", "Content-Length", "ETag"],

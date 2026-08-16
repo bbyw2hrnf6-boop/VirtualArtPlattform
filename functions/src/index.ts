@@ -22,7 +22,7 @@ if (!getApps().length) initializeApp();
 
 const REGION = "europe-west1";
 const PUBLIC_APP_URL = defineString("AURA_PUBLIC_APP_URL", {
-  default: "https://bbyw2hrnf6-boop.github.io/VirtualArtPlattform",
+  default: "https://lieuva.com",
   description: "Public AURA URL without a trailing slash.",
 });
 const REPLY_TO = defineString("AURA_REPLY_TO", {
