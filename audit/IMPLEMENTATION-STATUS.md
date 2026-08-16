@@ -1,9 +1,10 @@
 # AURA – Umsetzungsstatus nach dem Audit
 
-Stand: 15. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
+Stand: 16. August 2026. Dieser Bericht ergänzt den ursprünglichen Audit-Snapshot. Er trennt lokal umgesetzte Produktarbeit von Punkten, die Zugang zu Live-Infrastruktur, Vertragsdaten oder einer Produktentscheidung benötigen.
 
 ## Verifiziertes Ergebnis
 
+- Sieben Core-Functions für Publish-Permit, Lifecycle, Trash/Purge und ACL sind in `europe-west1` live. Unauthentifizierte Direktaufrufe liefern 401 statt 404; Mail-/Newsletter-Functions und SMTP wurden bewusst nicht deployt. Artifact-Registry-Builds erhalten eine Sieben-Tage-Cleanup-Policy.
 - `npm run check`: grün; 106 Tests bestehen. Das zusätzliche Functions-Gate besteht 3 Template-/Sicherheitschecks und den TypeScript-Build.
 - Der Emil Scroll beginnt nun direkt mit `01 · Blueprint`, baut ausschließlich DannyHirschArts in sechs synchronisierten Kapiteln auf und endet in einer scharfen begehbaren Live-Szene. Ein geglätteter, richtungsstabiler Playhead mit Fortschrittslimit verhindert Sprünge bei aggressivem Scrollen; die alte statische Posterphase bleibt nur als Lade-/Fehlerfallback.
 - Q/E und Pfeil hoch/runter bilden einen gemeinsamen getesteten Keyboard-Vertrag für Landing, Builder, veröffentlichte Räume und Danny. Alte Q/R-Hinweise und die separate Danny-Tour-Aktivitätsvariable wurden entfernt; die gemeinsame `VisitorControls`-Komponente bleibt die einzige Tour-Oberfläche.

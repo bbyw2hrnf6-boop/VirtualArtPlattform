@@ -1,6 +1,6 @@
 # AURA account and room-management review
 
-Stand: 15 August 2026.
+Stand: 16 August 2026.
 
 ## Finding
 
@@ -10,9 +10,9 @@ long-lived resource-management workflow. It also made the opaque Firebase
 Callable error `internal` look like a user mistake.
 
 The live cross-check found a separate production blocker: the trusted gallery
-Callable endpoints in `europe-west1` currently return HTTP 404. Consequently,
-visibility, lifecycle and ACL actions cannot succeed until the non-mail Cloud
-Functions are deployed. Existing Storage objects use numeric immutable paths
+Callable endpoints in `europe-west1` returned HTTP 404. The seven non-mail Core
+Functions were deployed on 16 August 2026; every endpoint now rejects an
+unauthenticated probe with HTTP 401 instead of 404. Existing Storage objects use numeric immutable paths
 (`artworks/1.webp`, revision equivalents), so uploaded display names are not
 used as Firebase object names.
 
@@ -50,8 +50,7 @@ used as Firebase object names.
 
 ## Remaining gate
 
-Deploy and live-test the trusted non-mail Functions before calling lifecycle or
-ACL production-ready. A true restorable revision timeline needs a backend
+Run the signed-in browser matrix for visibility, lifecycle and ACL before
+calling those flows production-ready. A true restorable revision timeline needs a backend
 revision manifest and retention policy; the current product correctly exposes
 only the active revision number and export rather than implying restore support.
-
