@@ -30,7 +30,7 @@ Live MVP: [bbyw2hrnf6-boop.github.io/VirtualArtPlattform](https://bbyw2hrnf6-boo
 - Cinematic gallery introductions, 1.75 m visitor eye height, walk and overview modes, artwork information cards, an accessible text-first artwork directory, and click-to-walk navigation.
 - The Danny Hirsch reference offers an optional 45-second guided tour, authored Smart Views, Reset View, exact GLB artwork metadata, and an automatic artwork-directory fallback when WebGL is unavailable.
 - Discover keeps the Danny reference exhibition visible when the live community feed is empty or unavailable.
-- Guest publishing with public ten-day links; verified Email/Password or Google accounts with public, unlisted, or private account-preview rooms.
+- Account-free building and Walk Preview; publishing uses verified Email/Password or Google accounts with public, unlisted, or private account-preview rooms.
 - Owner, Editor, and Viewer ACL records. Owners and Editors can update room content under the existing share URL; only Owners manage access and deletion.
 - A separate optional AURA Preview Letter opt-in for Email and Google accounts, with one welcome edition, account-level withdrawal, and one-click unsubscribe. Branded verification/newsletter delivery requires the documented Cloud Functions and SMTP extension setup.
 - Clear **AURA Light Preview** status throughout account, picker, publishing, and plan surfaces; future paid professional tools remain visibly planned and inactive.
@@ -170,10 +170,10 @@ The repository boundary in `galleryRepository.ts` keeps persistence separate fro
 
 1. Artwork is decoded in the browser, resized to at most 1200 px on its longest side, converted to WebP, and compressed until its data URL is below the configured 780,000-character limit.
    Same-origin artwork bundled with the fast sandbox is embedded before publication as well.
-2. Firebase restores the publisher's verified Email/Password or Google account, or signs a guest in anonymously.
+2. Draft building and Walk Preview remain local and account-free. Publishing restores a verified Email/Password or Google account.
 3. A trusted callable Function issues a short-lived, quota-checked publication permit. Artwork images and the room cover are then uploaded to immutable owner-scoped Firebase Storage objects. In-place edits create a new asset revision and atomically update the same schema-v3 gallery document, preserving its share URL. Existing schema-v1/v2 rooms remain readable.
    Hidden works and editor-only lock state are omitted from the public record; visitor-facing frame choices are preserved.
-4. Guest rooms receive a ten-day `expiresAt`; verified account rooms currently receive a 365-day account-preview window. Billing and permanent hosting are not active.
+4. New verified-account rooms currently receive a 365-day account-preview window. Billing and permanent hosting are not active; older guest rooms retain their original expiry for compatibility.
 5. Firestore and Storage rules enforce expiry and visibility. Discover queries only public rooms; unlisted rooms require the link; private rooms require the owner or an invited verified email.
 6. ACL documents store editor/viewer membership separately from the public gallery record. Archive hides a room without deleting it; Trash provides seven days to restore. The scheduled cleanup Action removes expired or purge-ready assets, ACL records, and documents.
 7. Trusted Cloud Functions generate verification action links, persist optional newsletter consent, and queue branded messages into the official Trigger Email extension's protected `mail` collection. The welcome edition is idempotent per account; users may withdraw in Account settings or through a one-click link.
@@ -241,10 +241,9 @@ Use a current browser, enable hardware acceleration, and verify WebGL is availab
 
 ## Security, privacy, and current limitations
 
-- Guest galleries are public until expiry. Account rooms may be public, unlisted, or private; private preview access is not yet a contractual confidential-data service.
-- Publishing supports anonymous, Email/Password, and Google identities. Anonymous ownership is tied to the browser unless that identity is upgraded to an account before it is lost.
+- Guests can build and Walk Preview locally, but publishing requires a verified account. Account rooms may be public, unlisted, or private; private preview access is not yet a contractual confidential-data service.
 - Published gallery identity, ownership, visibility, and expiry remain stable. Owners and Editors can revision content under the same link; concurrent stale edits are rejected without deleting the local draft.
-- New publications use a trusted permit Function: guests are limited to one live ten-day room and verified accounts to 20 new rooms per UTC day. App Check is wired into the client and trusted room Functions, but must be registered and enforced in the Firebase Console before public launch.
+- New publications use a trusted permit Function and are limited to 20 new rooms per verified account per UTC day. App Check is wired into the client and trusted room Functions, but must be registered and enforced in the Firebase Console before public launch.
 - Firestore and Storage rules require the server permit for new immutable upload paths. They remain one layer of defense; moderation and image malware scanning are still production gates.
 - Artwork and covers use Firebase Storage; room data, lifecycle state, permits, and ACL records use Firestore. Physical deletion runs in the trusted cleanup worker after expiry or the Trash recovery window.
 - The local AI Curator is heuristic assistance, not a generative model or professional curatorial guarantee.

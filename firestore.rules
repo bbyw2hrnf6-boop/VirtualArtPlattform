@@ -64,15 +64,9 @@ service cloud.firestore {
     }
 
     function validPublicationWindow(data) {
-      return (
-        data.retention == 'guest-10-days'
-        && data.visibility == 'public'
-        && data.expiresAt < request.time + duration.value(11, 'd')
-      ) || (
-        verifiedAccount()
+      return verifiedAccount()
         && data.retention == 'account-preview'
-        && data.expiresAt < request.time + duration.value(366, 'd')
-      );
+        && data.expiresAt < request.time + duration.value(366, 'd');
     }
 
     function validGalleryShape(data) {
@@ -148,7 +142,7 @@ service cloud.firestore {
 
     function isValidGalleryCreate(galleryId) {
       let data = request.resource.data;
-      return signedIn()
+      return verifiedAccount()
         && ownsGalleryData(data)
         && validGalleryShape(data)
         && data.coverPath == 'published/' + request.auth.uid + '/' + galleryId + '/cover.webp'
@@ -178,7 +172,8 @@ service cloud.firestore {
     function isValidGalleryUpdate(galleryId) {
       let before = resource.data;
       let data = request.resource.data;
-      return isActive(before)
+      return verifiedAccount()
+        && isActive(before)
         && (ownsGalleryData(before) || isGalleryEditor(galleryId))
         && validGalleryShape(data)
         && data.ownerId == before.ownerId

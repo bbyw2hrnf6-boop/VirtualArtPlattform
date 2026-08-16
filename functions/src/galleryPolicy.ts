@@ -20,10 +20,9 @@ export function publicationTerms(
   visibility: GalleryVisibility,
   now: number,
 ) {
-  if (!verified && visibility !== "public") return null;
-  const days = verified ? 365 : 10;
+  if (!verified) return null;
   return {
-    retention: verified ? "account-preview" as const : "guest-10-days" as const,
-    expiresAt: new Date(now + days * 86_400_000),
+    retention: "account-preview" as const,
+    expiresAt: new Date(now + 365 * 86_400_000),
   };
 }

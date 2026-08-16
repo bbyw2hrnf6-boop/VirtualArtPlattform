@@ -12,10 +12,11 @@ describe("gallery mutation policy", () => {
     expect(parseGalleryId("../galleries/room")).toBeNull();
   });
 
-  it("keeps guest rooms public and bounded to ten days", () => {
+  it("requires a verified account for every publication visibility", () => {
     const now = Date.UTC(2026, 7, 15);
+    expect(publicationTerms(false, "public", now)).toBeNull();
     expect(publicationTerms(false, "private", now)).toBeNull();
-    expect(publicationTerms(false, "public", now)?.expiresAt.getTime()).toBe(now + 10 * 86_400_000);
     expect(publicationTerms(true, "private", now)?.retention).toBe("account-preview");
+    expect(publicationTerms(true, "public", now)?.expiresAt.getTime()).toBe(now + 365 * 86_400_000);
   });
 });

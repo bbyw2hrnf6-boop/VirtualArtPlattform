@@ -385,7 +385,7 @@ function DiscoverGalleries() {
     <section ref={section} className="discover">
       <div className="discover-heading">
         <div>
-          <p className="eyebrow">Open for ten days</p>
+          <p className="eyebrow">Live from AURA</p>
           <h2>
             Discover
             <br />
@@ -464,7 +464,7 @@ function DiscoverGalleries() {
               <p>
                 {status === "error"
                   ? "The reference exhibition stays available. Retry the live community feed when the connection is ready."
-                  : "Explore the reference exhibition or publish the first ten-day gallery."}
+                  : "Explore the reference exhibition or publish the first community gallery."}
               </p>
               <button
                 className="text-link"
@@ -712,9 +712,9 @@ function MvpDataNotice() {
           <p>
             Gallery metadata and access roles are stored in Cloud Firestore;
             compressed artwork and covers are stored in Firebase Storage.
-            Guest publications are public in Discover for ten days. Verified
-            email or Google accounts can choose public, unlisted, or private
-            access during an extended account preview.
+            Building and Walk Preview work without an account. Publishing
+            requires a verified email or Google account, which can choose
+            public, unlisted, or private access during the account preview.
           </p>
         </section>
         <section>
@@ -1027,6 +1027,7 @@ function Studio({
   const saveRevision = useRef(0);
   const latestSaveRequest = useRef(0);
   const publishAttemptInFlight = useRef(false);
+  const resumePublishAfterAccount = useRef(false);
   const publishButton = useRef<HTMLButtonElement>(null);
   const editorDirectoryButton = useRef<HTMLButtonElement>(null);
   const previousToolSheet = useRef<"peek" | "half" | "full">("half");
@@ -1527,6 +1528,11 @@ function Studio({
     (session: AccountSession | null) => {
       setAccountSession(session);
       if (!isVerifiedAccount(session)) setPublishVisibility("public");
+      if (isVerifiedAccount(session) && resumePublishAfterAccount.current) {
+        resumePublishAfterAccount.current = false;
+        setAccountOpen(false);
+        setPublishReviewOpen(true);
+      }
     },
     [],
   );
@@ -1545,6 +1551,12 @@ function Studio({
   };
   const publish = async () => {
     if (publishAttemptInFlight.current) return;
+    if (!isVerifiedAccount(accountSession)) {
+      resumePublishAfterAccount.current = true;
+      setPublishReviewOpen(false);
+      setAccountOpen(true);
+      return;
+    }
     const latestIssues = reviewGalleryForPublish(draftRef.current);
     const blocker = latestIssues.find((issue) => issue.severity === "error");
     if (blocker) {
@@ -1794,7 +1806,7 @@ function Studio({
               {copied ? "Gallery link copied to the clipboard." : ""}
             </p>
             <p className="publish-access-label">
-              AURA Light Preview · {visibilityLabel[published.visibility]} · {published.retention === "guest-10-days" ? "10-day guest room" : "Account preview"}
+              AURA Light Preview · {visibilityLabel[published.visibility]} · Account preview
             </p>
             {isVerifiedAccount(accountSession) && editTarget?.role === "owner" && (
               <GalleryAccessManager
@@ -1886,7 +1898,11 @@ function Studio({
           </span>
           <AccountButton
             open={accountOpen}
-            onOpenChange={setAccountOpen}
+            onOpenChange={(open) => {
+              setAccountOpen(open);
+              if (!open && !isVerifiedAccount(accountSession))
+                resumePublishAfterAccount.current = false;
+            }}
             onSessionChange={handleAccountSessionChange}
           />
           <div
@@ -2658,6 +2674,7 @@ function Studio({
           accountEligible={isVerifiedAccount(accountSession)}
           onVisibilityChange={setPublishVisibility}
           onOpenAccount={() => {
+            resumePublishAfterAccount.current = true;
             setPublishReviewOpen(false);
             setAccountOpen(true);
           }}
@@ -2824,7 +2841,15 @@ function PublishReviewDialog({
             ))}
           </ul>
         )}
-        {editing ? (
+        {!accountEligible ? (
+          <div className="publish-account-gate">
+            <span aria-hidden="true">A</span>
+            <div>
+              <strong>Sign in to publish.</strong>
+              <p>Build and Walk Preview stay available without an account. Use Google or create and verify an AURA account when you are ready to share.</p>
+            </div>
+          </div>
+        ) : editing ? (
           <div className="publish-edit-target">
             <strong>Same room. Same share URL.</strong>
             <span>{visibilityLabel[editing.visibility]} · Revision {editing.revision + 1} · Visibility and expiry stay unchanged.</span>
@@ -2833,23 +2858,19 @@ function PublishReviewDialog({
           <legend>Visibility and duration</legend>
           {(["public", "unlisted", "private"] as GalleryVisibility[]).map(
             (option) => {
-              const disabled = option !== "public" && !accountEligible;
               const description =
                 option === "public"
-                  ? accountEligible
-                    ? "Listed in Discover · Account preview"
-                    : "Listed in Discover · 10 days"
+                  ? "Listed in Discover · Account preview"
                   : option === "unlisted"
                     ? "Anyone with the link · Account preview"
                     : "Owner and invited accounts · Account preview";
               return (
-                <label key={option} aria-disabled={disabled || undefined}>
+                <label key={option}>
                   <input
                     type="radio"
                     name="visibility"
                     value={option}
                     checked={visibility === option}
-                    disabled={disabled}
                     onChange={() => onVisibilityChange(option)}
                   />
                   <span><strong>{visibilityLabel[option]}</strong>{description}</span>
@@ -2857,16 +2878,7 @@ function PublishReviewDialog({
               );
             },
           )}
-          <small>
-            {accountEligible
-              ? "Billing is not active. Account rooms use an extended preview period for now."
-              : "Guest rooms are public for ten days. Create or verify an account for unlisted, private, and team access."}
-          </small>
-          {!accountEligible && (
-            <button type="button" className="publish-account-unlock" onClick={onOpenAccount}>
-              Sign in or create account
-            </button>
-          )}
+          <small>Billing is not active. Account rooms use an extended preview period for now.</small>
         </fieldset>}
         {publishError && (
           <p className="publish-review-error" role="alert">
@@ -2876,13 +2888,15 @@ function PublishReviewDialog({
         <div className="editor-modal-actions">
           <button
             className="publish-button"
-            onClick={onPublish}
-            disabled={blockers > 0 || publishing}
+            onClick={accountEligible ? onPublish : onOpenAccount}
+            disabled={publishing || (accountEligible && blockers > 0)}
           >
             {publishStatus === "preparing"
               ? "Preparing room cover…"
               : publishStatus === "publishing"
                 ? "Publishing…"
+                : !accountEligible
+                  ? "Sign in to publish"
                 : publishStatus === "error"
                   ? "Retry publishing"
                   : editing

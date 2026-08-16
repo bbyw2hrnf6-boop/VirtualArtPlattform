@@ -9,7 +9,7 @@ const USE_CASES = [
 
 const FAQS = [
   ['Do I need Blender or 3D software?', 'No. The current builder creates its rooms in the browser. The Danny Hirsch reference demo uses a separate GLB asset, but a general Blender import pipeline is not part of the MVP yet.'],
-  ['What can I publish today?', 'Guests can publish a public ten-day room. Verified email or Google accounts can also choose unlisted or private access during the account preview.'],
+  ['What can I publish today?', 'You can build and Walk Preview without an account. Publishing requires a verified email or Google account, with public, unlisted, or private access during the preview.'],
   ['How does private access work?', 'The owner invites verified accounts as viewers or editors. Viewers can enter private rooms; Editors can update room content under the same share URL. Only the Owner manages access and deletion. Permanent hosting and billing are not active.'],
   ['Where are artwork files stored?', 'Published artwork and covers use Firebase Storage. Room data and access roles use Firestore. Only upload work you have the right to share.'],
   ['Which devices are supported?', 'Visitors can enter on modern desktop and mobile browsers. Building works on mobile through a resizable tool sheet; desktop remains the most precise arrangement surface.']
@@ -43,14 +43,14 @@ export function PitchSections() {
         <div className="aura-pilot-options">
           <article>
             <span>Light Preview · Free now</span>
-            <h3>10-day public room</h3>
-            <p>Build, arrange, walk through, publish to Discover, and share one browser link without creating an account.</p>
+            <h3>Build before signing in</h3>
+            <p>Build, arrange, and Walk Preview without an account. Your local draft stays with you until you are ready to publish.</p>
             <a href="#/create">Create a gallery <b>↗</b></a>
           </article>
           <article>
             <span>Light Preview account · Free now</span>
             <h3>Control who enters</h3>
-            <p>Use email or Google login for public, unlisted, or private rooms, update live rooms, and invite Viewers or Editors.</p>
+            <p>Use a verified email or Google account to publish public, unlisted, or private rooms, update live rooms, and invite Viewers or Editors.</p>
             <a href="#/create">Build with an account <b>→</b></a>
           </article>
           <article className="is-coming" aria-disabled="true">
@@ -69,7 +69,7 @@ export function PitchSections() {
         </div>
         <dl>
           <div><dt>Runtime</dt><dd>Procedural Three.js rooms run in the browser. No builder claim depends on a Blender pipeline.</dd></div>
-          <div><dt>Publishing</dt><dd>Guests receive public ten-day rooms. Verified accounts add unlisted, private, and role-based access during the preview.</dd></div>
+          <div><dt>Publishing</dt><dd>Building and Walk Preview need no account. Publishing and role-based access require a verified account.</dd></div>
           <div><dt>Artwork</dt><dd>Published artwork and covers live in Firebase Storage; room configuration and access live in Firestore.</dd></div>
           <div><dt>Limits</dt><dd>Billing, permanent hosting, simultaneous co-editing, analytics, and custom domains are not active yet.</dd></div>
         </dl>

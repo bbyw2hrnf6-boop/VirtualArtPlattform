@@ -15,7 +15,7 @@ service firebase.storage {
 
     function validUpload(ownerId, galleryId, kind) {
       let permit = firestore.get(/databases/(default)/documents/galleryPublishPermits/$(galleryId)).data;
-      return signedIn()
+      return verifiedAccount()
         && request.auth.uid == ownerId
         && permit.ownerId == ownerId
         && permit.galleryId == galleryId
@@ -27,22 +27,12 @@ service firebase.storage {
         && request.resource.metadata.schemaVersion == '3'
         && request.resource.metadata.visibility in ['public', 'unlisted', 'private']
         && request.resource.metadata.visibility == permit.visibility
-        && request.resource.metadata.retention in ['guest-10-days', 'account-preview']
+        && request.resource.metadata.retention == 'account-preview'
         && request.resource.metadata.retention == permit.retention
         && request.resource.metadata.expiresAtMs.matches('[0-9]{13}')
         && timestamp.value(int(request.resource.metadata.expiresAtMs)) == permit.expiresAt
         && timestamp.value(int(request.resource.metadata.expiresAtMs)) > request.time
-        && (
-          (
-            request.resource.metadata.retention == 'guest-10-days'
-            && request.resource.metadata.visibility == 'public'
-            && timestamp.value(int(request.resource.metadata.expiresAtMs)) < request.time + duration.value(11, 'd')
-          ) || (
-            verifiedAccount()
-            && request.resource.metadata.retention == 'account-preview'
-            && timestamp.value(int(request.resource.metadata.expiresAtMs)) < request.time + duration.value(366, 'd')
-          )
-        )
+        && timestamp.value(int(request.resource.metadata.expiresAtMs)) < request.time + duration.value(366, 'd')
         && request.resource.contentType.matches('image/(avif|jpeg|png|webp)');
     }
 
@@ -93,7 +83,8 @@ service firebase.storage {
     }
 
     function validRevisionUpload(ownerId, galleryId, revisionId, kind) {
-      return canEditGallery(galleryId)
+      return verifiedAccount()
+        && canEditGallery(galleryId)
         && gallery(galleryId).data.ownerId == ownerId
         && request.resource != null
         && request.resource.metadata.ownerId == ownerId

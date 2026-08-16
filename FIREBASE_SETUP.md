@@ -195,8 +195,8 @@ lifecycle Functions require a valid App Check token.
    `VITE_FIREBASE_APPCHECK_DEBUG_TOKEN=...`. Never put a debug token in GitHub
    variables or a production bundle.
 
-Publication now starts with a 20-minute server permit. Anonymous identities can
-hold one ten-day publication; verified accounts can start at most 20 new
+Publication now starts with a 20-minute server permit. Publishing requires a
+verified Email/Password or Google account; each account can start at most 20 new
 publications per UTC day. Storage paths are immutable and bounded to one cover
 plus the template artwork limit. Repeated revisions still require a current
 Owner/Editor ACL and App Check.
@@ -207,8 +207,8 @@ Owner/Editor ACL and App Check.
 - Storage objects remain immutable. Live edits create a new asset revision and atomically move the existing gallery manifest to it.
 - Covers are below 1 MiB; artworks below 2 MiB.
 - Only supported image MIME types are accepted.
-- Guests can create only public ten-day publications.
-- Verified accounts can create public, unlisted, or private account-preview rooms.
+- Guests can build, autosave locally, and use Walk Preview without an account.
+- Only verified accounts can create public, unlisted, or private account-preview rooms.
 - Unlisted rooms are readable by direct link but omitted from Discover.
 - Private room metadata and images require the owner or an invited verified email.
 - Owner, editor, and viewer roles are stored in a gallery member subcollection; the owner is implicit.

@@ -140,9 +140,25 @@ function AccountRooms({ session }: { session: AccountSession }) {
       setLifecycleBusyId(undefined);
     }
   };
+  const activeRooms = rooms.filter(
+    (room) => room.lifecycleStatus === "active" && new Date(room.expiresAt).getTime() > currentTime,
+  );
+  const publicRooms = activeRooms.filter((room) => room.visibility === "public");
+  const sharedRooms = activeRooms.filter((room) => room.ownerId !== session.uid);
   return (
     <section className="account-rooms" aria-labelledby="account-rooms-title">
-      <div><h3 id="account-rooms-title">Rooms</h3><span>{rooms.length}</span></div>
+      <div className="account-rooms__heading">
+        <div>
+          <p className="eyebrow">Exhibition control</p>
+          <h3 id="account-rooms-title">Your rooms</h3>
+        </div>
+        <span>{rooms.length}</span>
+      </div>
+      <div className="account-room-stats" aria-label="Room overview">
+        <article><span>Live</span><strong>{activeRooms.length}</strong></article>
+        <article><span>In Discover</span><strong>{publicRooms.length}</strong></article>
+        <article><span>Shared with you</span><strong>{sharedRooms.length}</strong></article>
+      </div>
       {invites.length > 0 && (
         <div className="account-invites" aria-label="Pending room invitations">
           <strong>Invitations</strong>
@@ -176,8 +192,12 @@ function AccountRooms({ session }: { session: AccountSession }) {
             const available = room.lifecycleStatus === "active" && !expired;
             return <li key={room.id} data-role={role}>
               {available ? <a href={galleryShareUrl(room.id, window.location.href)}>
-                {room.coverSrc && <img src={room.coverSrc} alt="" />}
-                <span><strong>{room.title}</strong>{visibilityLabel[room.visibility]} · {role} · revision {room.revision} · until {new Date(room.expiresAt).toLocaleDateString()}</span>
+                <span className="account-room-cover">{room.coverSrc && <img src={room.coverSrc} alt="" />}</span>
+                <span className="account-room-copy">
+                  <span className="account-room-badges"><i>{visibilityLabel[room.visibility]}</i><i>{role}</i></span>
+                  <strong>{room.title}</strong>
+                  <small>Revision {room.revision} · Live until {new Date(room.expiresAt).toLocaleDateString()}</small>
+                </span>
                 <b aria-hidden="true">↗</b>
               </a> : <div className="account-room-summary">
                 {room.coverSrc && <img src={room.coverSrc} alt="" />}
@@ -287,50 +307,60 @@ function AccountProfileSettings({
         removeAvatar,
       });
     }}>
-      <div className="account-profile__avatar">
-        <div className="account-avatar account-avatar--large" aria-hidden="true">
-          {account.avatarSrc && !removeAvatar
-            ? <img src={account.avatarSrc} alt="" />
-            : <span>{(nickname || displayName || account.email || "A").slice(0, 1).toUpperCase()}</span>}
-        </div>
-        <div>
-          <label className="account-profile__upload">Choose image
-            <input type="file" accept="image/avif,image/jpeg,image/png,image/webp" onChange={(event) => {
-              const next = event.target.files?.[0];
-              setAvatar(next);
-              if (next) setRemoveAvatar(false);
-            }} />
-          </label>
-          {avatar && <small>{avatar.name}</small>}
-          {(account.avatarSrc || avatar) && (
-            <button type="button" className="account-profile__remove" onClick={() => {
-              setAvatar(undefined);
-              setRemoveAvatar(true);
-            }}>Remove image</button>
-          )}
-        </div>
+      <div className="account-profile__heading">
+        <div><p className="eyebrow">Profile</p><h3>How you appear.</h3></div>
+        <span>Visible to collaborators</span>
       </div>
-      <label>Full name<input maxLength={60} required autoComplete="name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
-      <label>Nickname<input maxLength={32} autoComplete="nickname" placeholder="artist-name" value={nickname} onChange={(event) => setNickname(event.target.value)} /><small>Letters, numbers, dots, dashes, or underscores.</small></label>
-      <button className="account-primary" disabled={busy}>{busy ? "Saving…" : "Save profile"}</button>
-      <label className="account-newsletter-setting">
-        <input
-          type="checkbox"
-          checked={newsletterSubscribed}
-          disabled={busy || newsletterBusy}
-          onChange={(event) => {
-            const next = event.target.checked;
-            setNewsletterBusy(true);
-            void onNewsletterChange(next).then((saved) => {
-              if (saved) setNewsletterSubscribed(next);
-            }).finally(() => setNewsletterBusy(false));
-          }}
-        />
-        <span><strong>AURA Preview Letter</strong>Occasional product and roadmap notes. Unsubscribe here or from any email.</span>
-      </label>
-      {account.email && (
-        <button type="button" className="account-reset" disabled={busy} onClick={onResetPassword}>Send password reset email</button>
-      )}
+      <fieldset>
+        <legend>Identity</legend>
+        <div className="account-profile__avatar">
+          <div className="account-avatar account-avatar--large" aria-hidden="true">
+            {account.avatarSrc && !removeAvatar
+              ? <img src={account.avatarSrc} alt="" />
+              : <span>{(nickname || displayName || account.email || "A").slice(0, 1).toUpperCase()}</span>}
+          </div>
+          <div>
+            <label className="account-profile__upload">Choose image
+              <input type="file" accept="image/avif,image/jpeg,image/png,image/webp" onChange={(event) => {
+                const next = event.target.files?.[0];
+                setAvatar(next);
+                if (next) setRemoveAvatar(false);
+              }} />
+            </label>
+            {avatar && <small>{avatar.name}</small>}
+            {(account.avatarSrc || avatar) && (
+              <button type="button" className="account-profile__remove" onClick={() => {
+                setAvatar(undefined);
+                setRemoveAvatar(true);
+              }}>Remove image</button>
+            )}
+          </div>
+        </div>
+        <label>Full name<input maxLength={60} required autoComplete="name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
+        <label>Nickname<input maxLength={32} autoComplete="nickname" placeholder="artist-name" value={nickname} onChange={(event) => setNickname(event.target.value)} /><small>Letters, numbers, dots, dashes, or underscores.</small></label>
+        <button className="account-primary" disabled={busy}>{busy ? "Saving…" : "Save profile"}</button>
+      </fieldset>
+      <fieldset>
+        <legend>Communication &amp; security</legend>
+        <label className="account-newsletter-setting">
+          <input
+            type="checkbox"
+            checked={newsletterSubscribed}
+            disabled={busy || newsletterBusy}
+            onChange={(event) => {
+              const next = event.target.checked;
+              setNewsletterBusy(true);
+              void onNewsletterChange(next).then((saved) => {
+                if (saved) setNewsletterSubscribed(next);
+              }).finally(() => setNewsletterBusy(false));
+            }}
+          />
+          <span><strong>AURA Preview Letter</strong>Occasional product and roadmap notes. Unsubscribe here or from any email.</span>
+        </label>
+        {account.email && (
+          <button type="button" className="account-reset" disabled={busy} onClick={onResetPassword}>Send password reset email</button>
+        )}
+      </fieldset>
     </form>
   );
 }
@@ -437,19 +467,27 @@ export function AccountDialog({
         {account ? (
           <>
             <h2 id="account-dialog-title">Your rooms.<br /><em>One identity.</em></h2>
-            <div className="account-identity">
-              <div className="account-avatar" aria-hidden="true">
-                {account.avatarSrc
-                  ? <img src={account.avatarSrc} alt="" />
-                  : <span>{(account.nickname || account.displayName || account.email || "A").slice(0, 1).toUpperCase()}</span>}
+            <div className="account-overview-card">
+              <div className="account-identity">
+                <div className="account-avatar" aria-hidden="true">
+                  {account.avatarSrc
+                    ? <img src={account.avatarSrc} alt="" />
+                    : <span>{(account.nickname || account.displayName || account.email || "A").slice(0, 1).toUpperCase()}</span>}
+                </div>
+                <div>
+                  <strong>{account.displayName || account.email}</strong>
+                  {account.nickname && <small>@{account.nickname}</small>}
+                  <span>{account.email}</span>
+                  <i className={account.emailVerified ? "is-verified" : ""}>
+                    {account.emailVerified ? "Verified account" : "Email verification required"}
+                  </i>
+                </div>
               </div>
-              <div>
-                <strong>{account.displayName || account.email}</strong>
-                {account.nickname && <small>@{account.nickname}</small>}
-                <span>{account.email}</span>
-                <i className={account.emailVerified ? "is-verified" : ""}>
-                  {account.emailVerified ? "Verified account" : "Email verification required"}
-                </i>
+              <div className="account-plan-card">
+                <span>Current access</span>
+                <strong>Light Preview</strong>
+                <p>{account.emailVerified ? "Publishing and collaboration enabled." : "Verify email to publish."}</p>
+                <i>Free now</i>
               </div>
             </div>
             <div className="account-tabs account-tabs--settings" role="tablist" aria-label="Account settings">
@@ -503,7 +541,7 @@ export function AccountDialog({
             )}
             {!account.emailVerified && (
               <div className="account-verification">
-                <p>Verify your email before publishing private rooms or joining a team.</p>
+                <p>Verify your email before publishing or joining a team.</p>
                 <button onClick={() => void run(async () => {
                   await service?.resendAccountVerification();
                   setMessage("Verification email queued. Check your inbox shortly.");
@@ -526,7 +564,7 @@ export function AccountDialog({
         ) : (
           <>
             <h2 id="account-dialog-title">Keep control<br /><em>of your rooms.</em></h2>
-            <p className="account-lead">Guests can publish one public ten-day link. A verified account unlocks private, unlisted, and team access.</p>
+            <p className="account-lead">Build and Walk Preview freely. Sign in with Google or create and verify an account only when you are ready to publish.</p>
             <div className="account-tabs" role="tablist" aria-label="Account action">
               <button role="tab" aria-selected={mode === "create"} onClick={() => setMode("create")}>Create account</button>
               <button role="tab" aria-selected={mode === "signin"} onClick={() => setMode("signin")}>Sign in</button>
@@ -592,7 +630,7 @@ export function AccountDialog({
                 setMessage("Password reset email sent.");
               })}>Forgot password?</button>
             )}
-            <p className="account-note">Creating an account upgrades the current guest identity, so its rooms stay under the same owner. Signing into an existing account does not transfer older guest publications. <a href="#/data">Read the preview data &amp; rights notice.</a></p>
+            <p className="account-note">Your local draft stays on this device while you sign in. A verified account is required to publish and manage live rooms. <a href="#/data">Read the preview data &amp; rights notice.</a></p>
           </>
         )}
         {(message || error) && <p className={error ? "account-message is-error" : "account-message"} role={error ? "alert" : "status"}>{error || message}</p>}

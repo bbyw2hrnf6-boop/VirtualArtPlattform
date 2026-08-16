@@ -356,7 +356,7 @@ export function accountErrorMessage(error: unknown) {
   if (code.includes("invalid-credential"))
     return "Email or password is incorrect.";
   if (code.includes("email-already-in-use") || code.includes("credential-already-in-use"))
-    return "This account already exists. Choose Sign in instead; guest publications keep their original ten-day link.";
+    return "This account already exists. Choose Sign in instead; your local draft stays on this device.";
   if (code.includes("weak-password"))
     return "Use a password with at least six characters.";
   if (code.includes("invalid-email")) return "Enter a valid email address.";

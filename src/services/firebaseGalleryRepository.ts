@@ -304,17 +304,17 @@ class FirebaseGalleryRepository implements GalleryRepository {
       const ownerId = owner.uid;
       const verifiedAccount = !owner.isAnonymous && owner.emailVerified;
       const visibility = options.visibility ?? "public";
-      if (!verifiedAccount && visibility !== "public")
+      if (!verifiedAccount)
         throw new Error(
-          "Verify an email or Google account before publishing an unlisted or private room.",
+          "Sign in with Google or create and verify an AURA account before publishing. Your draft and Walk Preview remain available.",
         );
-      const retention = verifiedAccount ? "account-preview" : "guest-10-days";
+      const retention = "account-preview" as const;
       const base = slugify(`${validatedDraft.artist}-${validatedDraft.title}`) || "gallery";
       const id = `${base}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
       permittedGalleryId = id;
       const permit = await httpsCallable<
         { galleryId: string; visibility: string },
-        { expiresAt: string; retention: "guest-10-days" | "account-preview" }
+        { expiresAt: string; retention: "account-preview" }
       >(firebaseFunctions, "beginAuraGalleryPublication")({
         galleryId: id,
         visibility,

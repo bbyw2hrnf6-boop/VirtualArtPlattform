@@ -64,7 +64,7 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
   ) {
     return new GalleryPublishingError(
       'authentication-disabled',
-      `Anonymous publishing is disabled for “${projectId}”. Enable Anonymous Authentication in Firebase, then retry. Your room is still saved locally.`,
+      `Account publishing is not enabled correctly for “${projectId}”. Confirm Email/Password and Google Authentication are enabled, then retry. Your room is still saved locally.`,
       error
     );
   }

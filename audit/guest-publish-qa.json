@@ -1,0 +1,37 @@
+{
+  "runAt": "2026-08-16T10:39:26.307Z",
+  "desktop": {
+    "review": true,
+    "gate": true,
+    "gateText": "A\nSign in to publish.\n\nBuild and Walk Preview stay available without an account. Use Google or create and verify an AURA account when you are ready to share.",
+    "publishLabel": "Sign in to publish",
+    "visibilityChoices": 0,
+    "overflowX": 0
+  },
+  "mobile": {
+    "gate": true,
+    "overflowX": 0,
+    "controls": [
+      {
+        "label": "×",
+        "height": 44
+      },
+      {
+        "label": "Sign in to publish",
+        "height": 44
+      },
+      {
+        "label": "Back to editor",
+        "height": 44
+      }
+    ]
+  },
+  "accountPrompt": {
+    "accountDialog": true,
+    "reviewClosed": true,
+    "editorPreserved": true,
+    "hasGoogle": true,
+    "hasEmailForm": true
+  },
+  "diagnostics": []
+}

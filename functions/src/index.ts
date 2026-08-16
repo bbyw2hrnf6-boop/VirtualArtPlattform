@@ -100,21 +100,22 @@ function inviteIdFor(galleryId: string, email: string) {
 /**
  * Server-issued publication permits close the unbounded direct-upload path.
  * Storage and Firestore Rules both require this short-lived permit, while the
- * quota document makes concurrent guest attempts transactional.
+ * quota document keeps concurrent account publications bounded.
  */
 export const beginAuraGalleryPublication = onCall(
   { region: REGION, timeoutSeconds: 30, enforceAppCheck: true },
   async (request) => {
-    const uid = requireSignedIn(request.auth);
+    const uid = requireAccount(request.auth);
+    if (!verifiedAccount(request.auth))
+      throw new HttpsError("failed-precondition", "Verify your email before publishing.");
     const galleryId = galleryIdFrom(request.data?.galleryId);
     const visibility = request.data?.visibility;
     if (typeof visibility !== "string" || !galleryVisibilities.has(visibility))
       throw new HttpsError("invalid-argument", "Invalid room visibility.");
-    const verified = verifiedAccount(request.auth);
     const now = Date.now();
-    const terms = publicationTerms(verified, visibility as GalleryVisibility, now);
+    const terms = publicationTerms(true, visibility as GalleryVisibility, now);
     if (!terms)
-      throw new HttpsError("failed-precondition", "Guest rooms must be public.");
+      throw new HttpsError("failed-precondition", "A verified account is required to publish.");
     const { retention, expiresAt } = terms;
     const permitExpiresAt = new Date(now + 20 * 60_000);
     const quotaReference = db.collection("galleryPublicationQuotas").doc(uid);
@@ -128,42 +129,23 @@ export const beginAuraGalleryPublication = onCall(
           db.collection("galleries")
             .where("ownerId", "==", uid)
             .where("expiresAt", ">", new Date(now))
-            .limit(verified ? 30 : 1),
+            .limit(30),
         ),
       ]);
       if (existingGallery.exists || existingPermit.exists)
         throw new HttpsError("already-exists", "This publication id is already in use.");
       const data = quota.data() ?? {};
-      if (!verified) {
-        if (!activeRooms.empty)
-          throw new HttpsError(
-            "resource-exhausted",
-            "This guest account already has a live room. Create an account to manage more rooms.",
-          );
-        const guestLockedUntil = data.guestLockedUntil?.toMillis?.() ?? 0;
-        if (guestLockedUntil > now)
-          throw new HttpsError(
-            "resource-exhausted",
-            "This guest account already has a live room. Create an account to manage more rooms.",
-          );
-        transaction.set(quotaReference, {
-          guestGalleryId: galleryId,
-          guestLockedUntil: permitExpiresAt,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      } else {
-        if (activeRooms.size >= 30)
-          throw new HttpsError("resource-exhausted", "Archive or remove a live room before publishing another.");
-        const day = new Date(now).toISOString().slice(0, 10);
-        const dailyCount = data.day === day ? Number(data.dailyCount ?? 0) : 0;
-        if (dailyCount >= 20)
-          throw new HttpsError("resource-exhausted", "Daily publication limit reached. Try again tomorrow.");
-        transaction.set(quotaReference, {
-          day,
-          dailyCount: dailyCount + 1,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      }
+      if (activeRooms.size >= 30)
+        throw new HttpsError("resource-exhausted", "Archive or remove a live room before publishing another.");
+      const day = new Date(now).toISOString().slice(0, 10);
+      const dailyCount = data.day === day ? Number(data.dailyCount ?? 0) : 0;
+      if (dailyCount >= 20)
+        throw new HttpsError("resource-exhausted", "Daily publication limit reached. Try again tomorrow.");
+      transaction.set(quotaReference, {
+        day,
+        dailyCount: dailyCount + 1,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
       transaction.create(permitReference, {
         galleryId,
         ownerId: uid,
