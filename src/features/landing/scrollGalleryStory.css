@@ -495,7 +495,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px), (max-height: 520px) and (pointer: coarse) {
   .sgs {
     height: 1100svh;
     min-height: 7800px;

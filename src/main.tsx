@@ -6,6 +6,7 @@ import './styles/global.css';
 import './styles/generatedAssets.css';
 import './styles/visitorControls.css';
 import './styles/p0Consistency.css';
+import './styles/mobileExperience.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

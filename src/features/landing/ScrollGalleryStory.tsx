@@ -23,6 +23,7 @@ import {
   visitorLookDirection,
 } from "../gallery/visitorKeyboard";
 import "./scrollGalleryStory.css";
+import { usesCompactInteractionLayout } from "../../utils/mobileLayout";
 
 const CHAPTERS = [
   {
@@ -149,7 +150,7 @@ export function ScrollGalleryStory() {
     const visitor = visitorRef.current;
     if (!section || !canvas || !visitor) return undefined;
 
-    const compact = window.matchMedia("(max-width: 720px)").matches;
+    const compact = usesCompactInteractionLayout();
     const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reducedMotion = reducedMotionQuery.matches;
     let disposed = false;
@@ -923,7 +924,10 @@ export function ScrollGalleryStory() {
         <div className="sgs__visual">
           <div className="sgs__poster" aria-hidden="true">
             <picture>
-              <source media="(max-width: 720px)" srcSet="./assets/demo/danny-emil-finale-mobile-v2.webp" />
+              <source
+                media="(max-width: 900px), (max-height: 520px) and (pointer: coarse)"
+                srcSet="./assets/demo/danny-emil-finale-mobile-v2.webp"
+              />
               <img src="./assets/demo/danny-emil-finale-v2.webp" alt="" />
             </picture>
           </div>

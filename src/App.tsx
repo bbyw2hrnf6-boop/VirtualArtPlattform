@@ -69,6 +69,7 @@ import { useDialogFocus } from "./hooks/useDialogFocus";
 import { AccountButton, AccountPage } from "./features/account/AccountDialog";
 import { GalleryAccessManager } from "./features/account/GalleryAccessManager";
 import type { AccountSession } from "./services/accountTypes";
+import { usesCompactInteractionLayout } from "./utils/mobileLayout";
 import { isVerifiedAccount } from "./services/accountTypes";
 import { imageFromFile } from "./services/imagePreparation";
 import {
@@ -1073,7 +1074,7 @@ function Studio({
     [draft.artist, draft.artworks],
   );
   const handleEditorModeChange = useCallback((mode: "arrange" | "walk") => {
-    if (!window.matchMedia("(max-width: 620px)").matches) return;
+    if (!usesCompactInteractionLayout()) return;
     if (mode === "walk") {
       setToolSheet((current) => {
         previousToolSheet.current = current === "peek" ? "half" : current;
