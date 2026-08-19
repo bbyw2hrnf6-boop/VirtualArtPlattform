@@ -104,7 +104,15 @@
   }
 
   .gallery-scene--editor-walk .visitor-controls {
-    bottom: calc(72px + max(8px, env(safe-area-inset-bottom)));
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  /* Walk Preview owns the viewport. Arrange remains the obvious way back to
+     the editor, so the collapsed editor sheet does not need to consume space. */
+  .studio:has(.gallery-scene--editor-walk) .tool-panel {
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(100%);
   }
 
   .visitor-controls button {
@@ -131,6 +139,44 @@
   }
 
   .viewer .movement-hint { display: none; }
+}
+
+@media (max-height: 520px) and (pointer: coarse) {
+  .studio-header {
+    height: 48px;
+    min-height: 48px;
+  }
+
+  .studio-body {
+    height: calc(100dvh - 48px) !important;
+  }
+
+  .studio-actions button,
+  .studio-actions .account-entry {
+    min-height: 44px;
+  }
+
+  .visitor-controls {
+    right: max(6px, env(safe-area-inset-right));
+    bottom: max(6px, env(safe-area-inset-bottom));
+    width: calc(100% - max(12px, calc(env(safe-area-inset-left) + env(safe-area-inset-right))));
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.35fr);
+  }
+
+  .visitor-controls__modes {
+    border-right: 1px solid rgba(255, 255, 255, .09);
+    border-bottom: 0;
+  }
+
+  .visitor-controls button {
+    min-height: 44px;
+    padding-block: 5px;
+    font-size: 12px;
+  }
+
+  .gallery-scene--editor-walk .scene-hint {
+    bottom: calc(58px + env(safe-area-inset-bottom));
+  }
 }
 
 @media (max-width: 620px) {
