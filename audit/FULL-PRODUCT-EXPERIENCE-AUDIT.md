@@ -1,26 +1,25 @@
 # LIEUVA — Full Product Experience Audit
 
-**Audit date:** 16 August 2026  
+**Audit date:** 23 August 2026  
 **Scope:** Product, UX, UI, 3D, technical product experience, brand, SEO, competition and go-to-market  
 **Decision in force:** the customer-facing brand is **LIEUVA**; AURA is the legacy implementation name  
 **Implementation status:** audit only. No product code, Firebase data/rules, deployment or production configuration was changed.
 
 ## 0. Method, evidence and limits
 
-This is a new audit of the current repository and live product, not a restatement of `UI-UX-3D-AUDIT.md`. I read `AGENTS.md`, `README.md`, the previous audit, the implementation/status/access reviews and the relevant landing, Studio, Viewer, Discover, Account, sharing, persistence, Firebase, rules, Functions, email, metadata, manifest and 3D code. Repository-wide searches covered `AURA/Aura/aura`, legacy claims, titles, descriptions, JSON-LD, Open Graph, email copy, URLs, storage keys, exports, Blender metadata and brand assets.
+This is a new audit of the current repository and product, not a restatement of `UI-UX-3D-AUDIT.md`. It uses the verified Step 1 baseline in `audit/REPOSITORY-PRODUCT-BASELINE.md` and checks it against the current implementation. I read `AGENTS.md`, `README.md`, the previous audits, implementation/status/access reviews and the relevant landing, Studio, Viewer, Discover, Account, sharing, persistence, Firebase, rules, Functions, email, metadata, manifest and 3D code. Repository-wide searches covered `AURA/Aura/aura`, legacy claims, titles, descriptions, JSON-LD, Open Graph, email copy, URLs, storage keys, exports, Blender metadata and brand assets.
 
 Evidence used:
 
-- Live site: `https://bbyw2hrnf6-boop.github.io/VirtualArtPlattform/#/`, tested on 16 August 2026.
-- Exact responsive viewports: desktop 1440×1000 and mobile 390×844. Current captures: [homepage](lieuva-evidence/live-home-1440x1000.jpeg), [mobile Studio](lieuva-evidence/live-builder-390x844.jpeg), [mobile Walk Preview](lieuva-evidence/live-walk-390x844.jpeg), [mobile DannyHirschArts](lieuva-evidence/live-danny-390x844.jpeg).
-- Browser console and Network panel on landing, Studio and DannyHirschArts. Danny produced eight repeated `THREE.WebGLRenderer: Texture marked for update but no image data found` warnings. The inspected reload completed without failed key requests; its cached transfer figures are not a lab performance benchmark.
-- `npm run check`: **21 test files / 123 tests passed**; production build passed. `npm run check:functions`: **2 files / 6 tests passed** and Functions TypeScript build passed.
+- Canonical production host: `https://lieuva.com/`. On 23 August it returned HTTP 200 from GitHub Pages. `robots.txt` permits crawling and points to `https://lieuva.com/sitemap.xml`; that sitemap currently contains only the homepage.
+- Interactive Chrome QA was requested, but no connected browser was available during this pass. Therefore visual claims below are either current code findings or clearly identified earlier evidence; they are not presented as a fresh production-browser result.
+- The unchanged Step 1 snapshot passed `npm run check`: **22 test files / 126 tests**, lint and production build. `npm run check:functions`: **2 files / 6 tests** and the Functions TypeScript build passed.
 - Existing device/performance evidence in `audit/final/`, `audit/IMPLEMENTATION-STATUS.md` and `audit/LIVE-ACCESS-MATRIX.md` was cross-checked against the current code.
-- Current public sources are linked inline and listed in §17. Brand/database checks are preliminary desk research, not legal clearance. Domain results are point-in-time availability signals, not reservations.
+- Current public sources are linked inline. Brand/database checks are preliminary desk research, not legal clearance. `lieuva.com` is controlled and serving the product; social handles and trademark rights are separate questions.
 
 Important limits:
 
-- I did not publish, delete or alter live user data. Therefore owner/editor/viewer/private/unlisted operations are assessed from code and existing evidence, not newly re-executed destructive tests.
+- I did not publish, delete or alter live user data. Therefore owner/editor/viewer/private/unlisted operations are assessed from code and existing evidence, not newly re-executed destructive tests. A release-gate E2E run remains required.
 - Firebase console enforcement, billing/quota dashboards, Analytics, Search Console, email-provider delivery and DNS ownership cannot be proven from the repository.
 - Search-result composition and domain/handle availability change. Recheck immediately before launch.
 
@@ -58,7 +57,7 @@ The launch blockers are not another visual redesign. They are: production trust/
 
 ---
 
-## 2. Current product state and architecture
+## 2. Current Product Maturity
 
 ### What is real and working
 
@@ -90,7 +89,7 @@ The launch blockers are not another visual redesign. They are: production trust/
 
 ---
 
-## 3. LIEUVA positioning and messaging hierarchy
+## 3. Recommended LIEUVA Positioning
 
 ### Category decision
 
@@ -154,7 +153,7 @@ Use state and audience to remove ambiguity:
 
 ---
 
-## 4. Beachhead audience and product strategy
+## 4. Beachhead Audience
 
 ### Recommended beachhead
 
@@ -222,12 +221,12 @@ Prices require storage/egress/rendering/support cost telemetry and willingness-t
 
 ---
 
-## 5. Ten largest risks
+## 5. Top 10 Risks
 
 | Rank | Risk | Type | Evidence | Consequence |
 |---:|---|---|---|---|
 | 1 | Broad promise outruns art-bound product | Strategic | `gallery/artwork/exhibition` permeate model, UI and templates | Architecture/brand prospects churn after the claim. |
-| 2 | LIEUVA not legally/operationally secured | Brand/P0 | Preliminary search only; domains not reserved | Forced rename or domain loss after exposure. |
+| 2 | LIEUVA not legally cleared | Brand/P0 | `lieuva.com` is live, but open-web screening is not a professional similarity search | Forced rename after investment if an earlier right is found. |
 | 3 | Hash/static hosting blocks search/share identity | Technical/SEO/P0 | `#/g/...`; one AURA `index.html` OG/JSON-LD for all routes | No per-Space SERP, weak social sharing, broken flywheel. |
 | 4 | Trust/privacy lifecycle incomplete | Product/legal/P0 | No coherent account deletion/export; incomplete legal sender/operator details | Cannot responsibly invite public UGC or paid pilots. |
 | 5 | Live security/abuse posture not demonstrated | Technical/P0 | App Check conditional; no new full role matrix; no moderation/alert evidence | Data exposure, cost abuse or incident without response. |
@@ -239,7 +238,7 @@ Prices require storage/egress/rendering/support cost telemetry and willingness-t
 
 ---
 
-## 6. Ten largest opportunities
+## 6. Top 10 Opportunities
 
 | Rank | Opportunity | Mechanism | Proof to seek |
 |---:|---|---|---|
@@ -256,7 +255,7 @@ Prices require storage/egress/rendering/support cost telemetry and willingness-t
 
 ---
 
-## 7. Complete customer journey
+## 7. Full Customer Journey Audit
 
 | Stage | Current experience | Finding/type | Target experience and metric | Priority |
 |---|---|---|---|---:|
@@ -287,7 +286,7 @@ The visitor experience must never become an acquisition interstitial. Earn the c
 
 ---
 
-## 8. Product-area audit
+## 8. UI/UX Audit
 
 ### 8.1 Landing, information architecture and conversion
 
@@ -304,7 +303,7 @@ The visitor experience must never become an acquisition interstitial. Earn the c
 3. Copy says “concept images” while the repository status says the landing now uses product captures. That lowers trust in real proof.
 4. One static `index.html` supplies title, description, JSON-LD and social metadata to every hash route. `App.tsx` changes only `document.title` after JavaScript.
 5. The header shows “AURA Light Preview”; the PWA prompt offers “Install AURA — Virtual Art Platform.”
-6. Importing account UI in the shared header pulls Firebase/App Check into the landing startup path; the live homepage requested reCAPTCHA resources even before account intent. This conflicts with the product’s intended progressive loading.
+6. Importing account UI in the shared header pulls Firebase/App Check into the landing startup path; earlier production network evidence showed reCAPTCHA resources before account intent. This conflicts with the intended progressive loading and must be remeasured after route/chunk changes.
 
 **Recommended IA**
 
@@ -407,13 +406,13 @@ Network effect: more quality Spaces → more visitor discovery and indexed creat
 
 ---
 
-## 9. 3D experience audit
+## 9. 3D Experience Audit
 
 ### 9.1 Current quality
 
 DannyHirschArts remains the quality reference because its scene is authored as an experience: custom geometry, metadata, collision/navigation anchors, tuned lighting and a coherent presentation. The procedural Studio templates are flexible and reliable but read more like generated rooms. The gap is not one shader setting; it is asset authorship, lighting, material variation, composition and performance budget working together.
 
-The live mobile-sized Danny test rendered and controls remained usable. The bottom title/info layer consumes meaningful scene area but did not block navigation. The console emitted repeated Three.js texture-update warnings; even if visually benign, this is an asset/lifecycle defect and can mask real renderer problems.
+Earlier 390×844 evidence showed Danny rendering with usable controls; the bottom title/info layer consumed meaningful scene area without blocking navigation. That run emitted repeated Three.js texture-update warnings. Because interactive Chrome was unavailable on 23 August, treat the warning as a **previously confirmed defect requiring re-verification**, not proof that the current deployment still emits it.
 
 ### 9.2 Rendering, material and lighting findings
 
@@ -479,7 +478,7 @@ Do not replace the current collision/placement architecture before a broader use
 
 ---
 
-## 10. Technical product-experience audit
+## 10. Technical Product Audit
 
 ### 10.1 Save, autosave, recovery and versioning
 
@@ -550,7 +549,7 @@ Three rules:
 
 ---
 
-## 11. DannyHirschArts, Studio and published-Space inconsistencies
+## 11. DannyHirschArts Quality Gap
 
 | Area | DannyHirschArts | Studio templates | Published Spaces | Required resolution |
 |---|---|---|---|---|
@@ -563,19 +562,19 @@ Three rules:
 | Controls | Shared visitor controls | Author + preview controls | Shared visitor controls | Keep shared core; version and test one contract. |
 | Accessibility | Directory/details available | Authoring controls dense | Depends on metadata completeness | Require title/alt/description rules and equivalent directory. |
 | Proof | Visually compelling | Can appear less refined | Quality varies | Publish honest “made with template” examples and quality tiers. |
-| Console | Live texture warnings observed | No messages in inspected Studio session | Asset-dependent | Make zero unexpected renderer warnings a release gate. |
+| Console | Texture warnings in earlier production evidence | No current interactive session in this audit | Asset-dependent | Reproduce first; make zero unexpected renderer warnings a release gate. |
 
 ---
 
-## 12. LIEUVA brand validation
+## 12. LIEUVA Brand Validation
 
 ### 12.1 Result
 
-**Preliminary verdict: PASS WITH CONDITIONS.** No obvious exact-name company, spatial-platform competitor, severe multilingual meaning or public exact-handle conflict surfaced in the 16 August 2026 desk search. No finding makes LIEUVA obviously unsuitable. This is **not trademark clearance** and not legal advice.
+**Preliminary verdict: PASS WITH CONDITIONS.** No obvious exact-name company, spatial-platform competitor, severe multilingual meaning or indexed exact-handle conflict surfaced in the 23 August 2026 open-web screen. Exact-name results are mostly historical misspellings of Lithuanian `Lietuva`, including philatelic records, rather than an active technology brand. No finding justifies reopening naming. This is **not trademark clearance** and not legal advice.
 
 Conditions before public exposure:
 
-1. Reserve the principal domain and defensive variants immediately.
+1. Keep `lieuva.com` as the canonical domain; consider only cost-effective defensive variants.
 2. Run exact, phonetic and similarity searches in relevant Nice classes/territories with trademark counsel.
 3. Decide and document one pronunciation; test hear-once spelling with target users.
 4. Reserve platform-native handles and verify entity names directly inside each platform.
@@ -596,23 +595,23 @@ Current direct/adjacent category brands are descriptive or distinct—KUNSTMATRI
 
 ### 12.4 Domain and handle screen
 
-Point-in-time RDAP/DNS checks returned no registered record/A record for `lieuva.com`, `.io`, `.app`, `.space`, `.studio`, `.co`, `.eu` and `.nl`. Treat that only as an availability signal; it grants no rights. Recommended acquisition order:
+`lieuva.com` is owned, resolves to GitHub Pages and returned HTTP 200 during this audit. That settles the primary-domain question, not trademark or handle rights. Recommended defensive order:
 
-1. `lieuva.com` — primary.
+1. `lieuva.com` — primary and already active.
 2. `lieuva.eu` and `lieuva.nl` — defensive/market trust.
 3. `lieuva.app` — defensive/product redirect.
 4. `.studio`, `.space`, `.io`, `.co` only if inexpensive; redirect to the canonical domain.
 
-Search-engine screens for exact GitHub/Instagram/X/LinkedIn names did not reveal a prominent exact LIEUVA account. Search indexing is incomplete; reserve handles directly and keep one consistent `@lieuva` or `@lieuvahq` fallback.
+Search-engine screens for exact GitHub/Instagram/X/LinkedIn names did not reveal a prominent exact LIEUVA account. TikTok could not be reliably screened through search because of crawler restrictions. Search indexing is incomplete; check and reserve handles directly, using one consistent `@lieuva` or `@lieuvahq` fallback.
 
 ### 12.5 Trademark due diligence
 
 The EUIPO itself directs users to eSearch plus/TMview for identical and similar marks, and TMview aggregates participating offices ([EUIPO](https://www.euipo.europa.eu/en/trade-marks/after-applying/where-to-watch)). Required professional search:
 
 - EUIPO eSearch plus and TMview: exact `LIEUVA`, prefixes/suffixes, phonetics and device marks.
-- WIPO Global Brand Database/Madrid system.
-- USPTO Trademark Search.
-- BOIP/Benelux register plus relevant national/company-name registers.
+- [WIPO Global Brand Database](https://www.wipo.int/en/web/global-brand-database)/Madrid system; WIPO itself recommends also searching national/regional registers.
+- [USPTO Trademark Search](https://www.uspto.gov/trademarks/search).
+- [BOIP/Benelux register](https://support.boip.int/hc/nl/articles/23546410785041-Wat-is-het-BOIP-Merkenregister) plus relevant national/company-name registers and [TMview](https://www.tmdn.org/tmview/).
 - Likely Nice classes for counsel to confirm: 9 (software/downloadables), 35 (business/showcase services where applicable), 38 (communications), 41 (cultural/educational exhibitions), 42 (SaaS/design/hosting). Product scope and filing strategy decide the actual list.
 
 **Decision point only if counsel finds:** an earlier identical/highly similar mark with overlapping SaaS/exhibition/creative-platform services, a credible opposition risk, or blocked principal domain/handle ownership that materially damages use. Do not autonomously select another name.
@@ -623,9 +622,9 @@ The near-empty exact SERP is favorable: LIEUVA can become an ownable branded que
 
 ---
 
-## 13. Complete AURA → LIEUVA rebranding inventory
+## 13. AURA → LIEUVA Migration Plan
 
-Repository search found **392 exact AURA/Aura/aura occurrences** outside generated dependencies/build output at audit time. Count alone is misleading: many are stable technical contracts or CSS/assets. Classify by audience and migration risk.
+The Step 1 inventory found **388 matching lines across 58 files** for AURA/Aura/aura outside generated dependencies/build output. Count alone is misleading: many are stable technical contracts or CSS/assets. Classify by audience and migration risk.
 
 ### 13.1 Must rename before LIEUVA public launch
 
@@ -636,7 +635,7 @@ Repository search found **392 exact AURA/Aura/aura occurrences** outside generat
 | Page titles and metadata | `index.html`; route title map in `App.tsx` | LIEUVA title/description/H1; route-specific server metadata. |
 | Open Graph/Twitter/JSON-LD | `index.html` points to GitHub/AURA hero | Brand and per-Space dynamic cards/canonical. |
 | PWA/browser identity | `public/site.webmanifest`, favicon/app icons/theme/install prompt | LIEUVA name, short name, icons and start URL. |
-| Robots/sitemap public host | `public/robots.txt`, `public/sitemap.xml` hardcode GitHub Pages | Generate against canonical LIEUVA domain. |
+| Robots/sitemap public host | `public/robots.txt` and `public/sitemap.xml` now use `lieuva.com`, but the sitemap lists only `/` | Preserve the canonical host and generate eligible public route/Space entries later. |
 | Transactional/marketing email | `functions/src/emailTemplates.ts`; unsubscribe HTML in `functions/src/index.ts` | LIEUVA sender, wordmark, subjects, links, legal footer and consent copy. |
 | Firebase Auth/OAuth-facing templates | Firebase console/action URLs/authorized-domain brand | Update only after final domain; test verification/reset/Google flows. |
 | Data/privacy/support/legal | `src/App.tsx` data page, README/setup/docs and live sender footer | LIEUVA legal entity/operator, contacts, service list and rights flows. |
@@ -685,7 +684,7 @@ Do not rename the existing Firebase project, Firestore collections, deployed cal
 
 **Phase 0 — secure and decide (P0)**
 
-1. Reserve domains/handles; commission trademark similarity search.
+1. Preserve control of `lieuva.com`, reserve priority handles/defensive domains, and commission trademark similarity search.
 2. Choose pronunciation, legal operator name, canonical host and support/sender addresses.
 3. Freeze LIEUVA messaging hierarchy and visible terminology.
 4. Inventory all public URLs, email templates, OAuth/Auth action links, Firebase authorized domains, App Check, Analytics and Search Console properties.
@@ -724,7 +723,7 @@ Do not rename the existing Firebase project, Firestore collections, deployed cal
 
 ---
 
-## 14. SEO strategy and information architecture
+## 14. SEO Strategy
 
 ### 14.1 Current diagnosis
 
@@ -863,7 +862,7 @@ Thin pages do not enter the loop. Discover should link only to canonical Space p
 
 ---
 
-## 15. Current competitor analysis
+## 15. Competitor Analysis
 
 ### 15.1 Market map
 
@@ -908,7 +907,7 @@ The hard-to-copy asset is not WebGL. It is a library of high-quality spatial pre
 
 ---
 
-## 16. Go-to-market recommendation
+## 16. Go-to-Market Strategy
 
 ### 16.1 Pilot offer
 
@@ -974,23 +973,48 @@ Open self-serve only when all P0 acceptance criteria pass and at least five pilo
 
 ---
 
-## 17. Prioritized action plan and next 20 work packages
+## 17. Launch/Pilot Readiness
+
+**Launch decision: not ready for open self-service; ready for controlled, founder-supported pilots after the P0 release gate.** The creator and visitor core is credible, but production trust cannot be inferred from green unit tests. The immediate gate is a non-destructive staging/live matrix covering new publish, in-place update, reload/recovery, visibility changes, owner/editor/viewer permissions, invitation acceptance, expired/revoked access, Storage media resolution, App Check and retry behavior.
+
+Required before a public beta:
+
+1. Every P0 acceptance criterion in the §19 work-package table passes with dated evidence and an owner.
+2. Legal operator, privacy, terms, content/takedown, retention, export and deletion behavior are published and match implementation.
+3. Five pilot Spaces can be created, updated and shared; at least 80% of pilot creators complete the second update without founder intervention.
+4. Public, unlisted and private metadata/access matrices show no content leak.
+5. Production errors, App Check rejects, Function failures, storage/bandwidth and Firebase spend have alerts and rollback/runbooks.
+6. The visible product is consistently LIEUVA while all legacy persistent contracts remain compatible.
+7. One authored/template output is close enough to DannyHirschArts that the landing promise is honest.
+
+Pilot format: 10–15 Founding Spaces, one real publishing deadline each, a 30-minute onboarding ceiling, written permission for selected case-study use, explicit beta limits, weekly issue review and no promise of broad paid availability. Do not treat bespoke 3D production as included SaaS support.
+
+## 18. Prioritized P0–P3 Backlog
+
+- **P0 — launch/data/security/core:** production publish/update/access release gate; legal operator and complete data rights; App Check/ACL/quota/alert proof; coordinated visible LIEUVA migration; authenticated email/Auth identity; clean Space URLs and privacy-safe metadata.
+- **P1 — convincing pilots:** immediate landing comprehension; mobile creator simplification; one reference-quality template; progressive visitor loading/performance budgets; clear draft/live/share UX; curated Discover/moderation; Account Project/Space information architecture; privacy-safe observability; five evidence-rich cases.
+- **P2 — major quality/growth:** neutral Project/Space/Content capability adapters, restorable version history, validated pricing/entitlements, creator profiles, audience-specific SEO clusters and lifecycle retention.
+- **P3 — later:** multilingual/hreflang, marketplace, advanced embeds/custom domains, synchronous co-editing, native/VR apps and broad AI authoring. These are not launch requirements without pilot evidence.
+
+The work-package table below is the actionable backlog. Each row contains evidence, impact, solution, affected systems, effort, risk, dependencies, owner decision and measurable acceptance.
+
+## 19. Recommended next 20 work packages
 
 Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream/unknown. “Impact” is expected user/business impact. Estimates assume the current architecture is preserved.
 
 | # / Pri. | Concrete problem + evidence | User/business impact | Concrete solution | Files/systems | Effort / impact | Risk | Dependencies | Decision needed | Measurable acceptance criterion |
 |---|---|---|---|---|---|---|---|---|---|
-| **1 P0** | LIEUVA rights/domain not secured; only desk screen | Rename/domain-loss risk | Reserve domain/handles; counsel exact+similarity search; decide pronunciation | Registrar, EUIPO/TMview/WIPO/USPTO/BOIP, social | S / high | Legal result | Owner/legal | Filing territories, classes, budget | Domains owned; written search memo; handles reserved; pronunciation recorded |
-| **2 P0** | No single final brand/terminology contract; 392 legacy hits | Inconsistent migration and copy | Approve messaging hierarchy, terms, visible inventory and “legacy contract” list | Brand brief, copy source, repo inventory | S / high | Stakeholder churn | #1 | Approve claim/category/terms | Signed one-page brand contract; zero unresolved visible noun decisions |
-| **3 P0** | Hash routes/static AURA metadata; Google advises clean routes | Spaces cannot rank/share correctly | Choose production hosting with clean routes, SSR/edge metadata, legacy resolution and canonical domain | Hosting, DNS, router, metadata service, Firebase authorized domains | L / high | Route/auth outage | #1–2 | Hosting/domain architecture | `/spaces/{id}` returns unique HTML title/OG/canonical; every legacy `#/g/{id}` resolves |
-| **4 P0** | Legal operator, content terms, export/delete incomplete | Unsafe public UGC and paid pilots | Complete privacy/terms/content/takedown; build export and account deletion specification/flow | Legal pages, Account, Auth, Firestore/Storage/Functions/email | L / high | Data deletion error | Legal counsel; data map | Retention/grace/license policy | Test account exports then deletes all owned data under documented policy; legal pages identify operator |
-| **5 P0** | Live ACL/App Check/abuse posture not proven | Exposure, misuse, cost incident | Execute full role/state matrix; enforce App Check; quotas/rate limits; upload validation; incident runbook | Firebase console, rules, Functions, Storage, QA docs | M / high | Lockout/false reject | Final domain; test accounts | Supported roles/quotas | Matrix passes; invalid App Check rejected; quota alerts fire; rollback documented |
-| **6 P0** | Visible AURA across UI/PWA/errors/metadata | Brand launch impossible | Centralize brand config; replace all customer-visible AURA and platform-wide art-only copy | `Logo.tsx`, `App.tsx`, account/access/errors, `index.html`, manifest/icons | M / high | Missed surface | #2–3 | Logo/assets/beta label | Automated visible-string scan + manual route matrix finds zero AURA; LIEUVA appears correctly at all viewports |
-| **7 P0** | Email/Auth/OAuth still AURA; sender/legal config incomplete | Confusing or broken verification/invites | Ship coordinated LIEUVA templates, authenticated sender, action URLs, OAuth consent, outstanding-link grace tests | `functions/src/emailTemplates.ts`, Functions params, Firebase Auth, DNS email | M / high | Deliverability/auth break | #1, #3–4 | Sender/provider/address | Verification/reset/invite/unsubscribe pass; SPF/DKIM/DMARC pass; old links behave per grace policy |
-| **8 P0** | No operational telemetry/funnel | Failures and value invisible | Add privacy-safe errors, RUM, structured logs/alerts and defined funnel | Client, Functions, Analytics, monitoring, consent | M / high | PII leakage/noise | #4; vendor choice | Analytics/monitor vendor | Synthetic error reaches alert; dashboard shows activation/publish/Space-ready; no content/PII payload |
+| **1 P0** | Unit tests pass, but this audit could not re-run live owner/editor/viewer publish and update flows; prior user reports centered on these paths | A single regression blocks the product’s core promise or loses trust | Create a release-gate harness and execute new publish, in-place update, recovery, visibility, role, invite, retry and media-path tests without mutating unrelated live data | `App.tsx`, publish/update state, repositories, Functions, rules, Storage, E2E fixtures | M / high | Test-data leakage or false confidence | Two isolated test accounts, test galleries, Firebase project access | Which environment may hold test data; cleanup policy | All matrix cases pass twice; stable URLs/revisions preserved; failures are recoverable and logged; test data removed by documented cleanup |
+| **2 P0** | Legal operator, content terms, export/delete and account-wide erasure are incomplete | Unsafe public UGC and paid pilots | Complete privacy/terms/content/takedown; build export plus callable soft-delete/purge workflow | Legal pages, Account, Auth, Firestore/Storage/Functions/email | L / high | Incomplete or over-broad deletion | Legal counsel; verified data map | Retention/grace/license/controller policy | Test account exports readable data, then deletes all owned data after grace; legal pages identify operator and match behavior |
+| **3 P0** | `lieuva.com` is live, but the name has only preliminary screening and no frozen terminology/pronunciation contract | Rework, inconsistency or later rights conflict | Professional exact/similarity clearance; reserve priority handles; approve one-page category/claim/terms/pronunciation contract | Counsel/registers, social accounts, brand decision record | S / high | Adverse legal result | Owner/legal | Territories, classes, pronunciation | Written counsel result; handles recorded; one signed vocabulary/claim contract with no unresolved customer-facing noun |
+| **4 P0** | Visible AURA remains across UI, metadata, PWA, email and errors; Step 1 found 388 matching lines in 58 files | Brand launch is incoherent despite LIEUVA domain | Centralize visible brand config and migrate customer-facing surfaces only; preserve legacy technical identifiers | `Logo.tsx`, `App.tsx`, account/access/errors, `index.html`, manifest/icons, email | M / high | Missed surface or accidental persistent rename | #3; approved assets/legal identity | Logo/icons/beta label | Automated scan plus route/email/PWA matrix finds zero unintended visible AURA; all legacy drafts/URLs/data still open |
+| **5 P0** | Hash routes return one static AURA document; Google explicitly advises History API rather than fragments for distinct content | Public Spaces cannot earn unique search or reliable social previews | Select clean-route hosting/edge strategy; server-generate per-route HTML metadata; retain permanent hash resolver | Hosting, DNS, router, metadata/card service, Firebase authorized domains | L / high | Route/auth outage or private metadata leak | #3–4; host choice | Hosting architecture and slug policy | `/spaces/{id}` returns unique title/OG/canonical without JS; legacy `#/g/{id}` resolves; unlisted/private output contains no sensitive metadata |
+| **6 P0** | App Check exists in code and callable Functions enforce it, but live enforcement, ACL state matrix, revision-upload abuse limits and alerts are not evidenced | Exposure, lockout or cost incident | Execute role/state tests; verify Enterprise App Check; add bounded revision/upload quotas, billing alerts and incident rollback | Firebase console, rules, Functions, Storage, QA/runbooks | M / high | False rejection or accidental access | #1; two accounts; console access | Quotas, alert thresholds, supported roles | Matrix passes; invalid token and excess quota reject safely; alert test reaches owner; rollback is documented |
+| **7 P0** | Auth/email templates and sender identity remain AURA; provider delivery and action URLs are not proven end-to-end | Verification/invite flows confuse or fail at the conversion point | Coordinate LIEUVA sender, templates, OAuth/Auth action URLs, unsubscribe and legacy-link grace testing | `functions/src/emailTemplates.ts`, Functions params, Firebase Auth, DNS/email provider | M / high | Deliverability/auth break | #2–5; verified sender | Sender/reply-to/legal footer/provider | Verification/reset/invite/welcome/unsubscribe pass in Gmail and one second provider; SPF/DKIM/DMARC pass; links return to correct route |
+| **8 P1** | No consent-aware product funnel, RUM or client error tracing is implemented | Failures, performance and value remain invisible | Add privacy-safe errors, Web Vitals/3D readiness, structured Function logs/alerts and minimal funnel | Client, Functions, analytics/monitoring, consent | M / high | PII leakage or noisy data | #2; vendor choice | Vendor, consent regions, retention | Synthetic error alerts; dashboard shows landing→preview→account→publish→share; payload audit finds no artwork/title/email content |
 | **9 P1** | Landing lacks immediate definition/H1; Danny story dominates | Low comprehension/conversion | New LIEUVA product hero and IA; move Emil/Danny into proof case; update truthful copy | `App.tsx`, `PitchSections.tsx`, CSS/content assets | M / high | Lose distinctive feel | #2, proof assets | Hero copy/CTA | 5-second test ≥80% identify product/job; H1/heading/keyboard audit passes; CTA tracked |
 | **10 P1** | 390×844 Studio is cramped/truncated | Mobile creator abandonment | Mode-specific mobile toolbar, bottom sheet, quick-edit scope and desktop recommendation for advanced tasks | `App.tsx`, Studio CSS/components | M / high | Desktop regression | UX prototype, device lab | Supported mobile authoring scope | At 390×844 no clipped primary control; upload/place/Walk/publish task completes keyboard/touch test |
-| **11 P1** | Procedural output below Danny quality; texture warnings live | Trust gap after demo | Fix texture lifecycle; author one launch template with baked light/PBR; establish asset budgets | `GalleryScene.tsx`, Danny lighting, GLB/assets, material pipeline | L / high | Visual/perf regression | 3D artist/asset source | Launch template/art direction | Zero unexpected renderer warning; blind quality test closes gap; budget/FPS/ready gates pass |
+| **11 P1** | Procedural output remains below Danny quality; earlier production evidence contained texture warnings that need reproduction | Trust gap after demo | Reproduce/fix any texture lifecycle defect; author one launch template with baked light/PBR; establish asset budgets | `GalleryScene.tsx`, Danny lighting, GLB/assets, material pipeline | L / high | Visual/perf regression | 3D artist/asset source | Launch template/art direction | Zero unexpected renderer warning in current matrix; blind quality test closes gap; budget/FPS/ready gates pass |
 | **12 P1** | No progressive asset/quality budget system | Slow viral visits/cost | Add per-template budgets, derivatives, KTX2 where measured, staged loading, RUM | Asset tooling, Storage/CDN, loader, CI | L / high | Compression artifacts | #8, #11 | Device targets/quality bar | CI rejects over-budget asset; p75 ready/FPS targets pass on real matrix |
 | **13 P1** | Publish/share has generic card and unclear draft/live distinction | Sharing underperforms; accidental expectations | Draft vs live status, update review, dynamic card, QR/copy/view-as-visitor | Studio publish UI, metadata/card service, Functions | M / high | Cache/privacy leak | #3, #5, #8 | Card design/index defaults | Each public Space card validates and is unique; unlisted/private leaks zero content; publish retry tested |
 | **14 P1** | Public UGC has no index/Discover quality gate | Spam/thin-content SEO damage | Eligibility workflow, moderation/takedown, sitemap inclusion, creator consent and UGC link rules | Discover, admin/moderation, Functions, sitemap/Search Console | L / high | False positives/moderation load | #3–5, legal | Quality/moderation policy | Only eligible public Spaces enter sitemap; abuse report SLA; spam can be removed/deindexed end-to-end |
@@ -1012,25 +1036,28 @@ Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream
 
 ---
 
-## 18. 30/60/90-day roadmap
+## 20. 30/60/90-day roadmap and execution handoff
 
-### Days 0–30 — secure, define and remove launch uncertainty
+### 20.1 Days 0–30 — prove the core and freeze the contract
 
-- Complete packages 1–2: LIEUVA rights/domain/handles, pronunciation and brand contract.
-- Decide hosting/clean-URL architecture and write migration/rollback design (#3).
-- Complete legal/data map and account deletion/export specification (#4).
-- Run live Firebase access/App Check/quota audit (#5).
+- Execute the publish/update/access release matrix (#1).
+- Complete legal/data map and account deletion/export policy/specification (#2).
+- Complete LIEUVA clearance, handles, pronunciation and brand contract (#3).
+- Write the visible rebrand inventory and compatibility test plan (#4).
+- Decide hosting/clean-URL architecture and migration/rollback design (#5).
+- Run live Firebase access/App Check/quota audit (#6).
 - Define telemetry schema/vendor/privacy controls (#8).
 - Fix the observed texture warnings and establish the first 3D budget baseline (#11 partial).
 - Recruit pilot cohort, but do not promise public date before P0 gates.
 
-**Day-30 exit:** name/domain controlled; no unresolved architecture decision; security/legal gap list owned; pilot partners selected.
+**Day-30 exit:** core release matrix green; brand/domain controlled; no unresolved route architecture decision; security/legal gap list owned; pilot partners selected.
 
-### Days 31–60 — build the trustworthy LIEUVA surface
+### 20.2 Days 31–60 — build the trustworthy LIEUVA surface
 
-- Implement clean routes/dynamic metadata and legacy URL compatibility (#3).
-- Implement deletion/export and production trust pages (#4).
-- Complete visible LIEUVA and email/Auth switch in staging (#6–7).
+- Implement deletion/export and production trust pages (#2).
+- Complete visible LIEUVA switch in staging (#4).
+- Implement clean routes/dynamic metadata and legacy URL compatibility (#5).
+- Complete email/Auth identity and delivery tests (#7).
 - Add error/RUM/funnel instrumentation (#8).
 - Ship clear landing hero/IA (#9) and mobile Studio simplification (#10).
 - Bring the launch template toward Danny quality and progressive budget (#11–12).
@@ -1038,7 +1065,7 @@ Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream
 
 **Day-60 exit:** staging is entirely LIEUVA to users; legacy data/links still work; route, auth, privacy and performance matrices pass.
 
-### Days 61–90 — pilot, prove and prepare controlled release
+### 20.3 Days 61–90 — pilot, prove and prepare controlled release
 
 - Launch Founding Spaces pilots (#16).
 - Operate quality/index/moderation gate and curated Discover (#14).
@@ -1051,9 +1078,9 @@ Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream
 
 ---
 
-## 19. Ownership: what Codex can do and what the owner must do
+### 20.4 Ownership: what Codex can do and what the owner must do
 
-### Codex can implement in the repository
+#### Codex can implement in the repository
 
 - central brand/copy/terminology configuration and visible AURA scan tests;
 - LIEUVA UI/metadata/manifest/icons once approved assets are supplied;
@@ -1065,9 +1092,9 @@ Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream
 - telemetry hooks, accessibility/mobile fixes, asset validation/budgets and renderer warning fix;
 - role/state/migration test harnesses, runbooks and implementation documentation.
 
-### Owner actions in external services
+#### Owner actions in external services
 
-- buy/hold domains and reserve social handles;
+- keep `lieuva.com` controlled and reserve priority social/defensive domains;
 - instruct trademark counsel and decide filing jurisdictions/classes;
 - choose/confirm legal operator, controller address, support contact, retention/license/takedown policies;
 - configure DNS/SSL, production hosting account and redirects;
@@ -1077,9 +1104,9 @@ Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream
 - approve monitoring vendor/DPA and incident contacts;
 - recruit/contract pilots, approve case-study permissions and conduct pricing decisions.
 
-### Information/access still required
+#### Information/access still required
 
-1. Final canonical domain choice and proof of control.
+1. Confirmation that `lieuva.com` remains the canonical production domain and who controls DNS/hosting.
 2. Legal entity/operator name, address, country, support and privacy contacts.
 3. Trademark counsel result and filing decision.
 4. Firebase project admin access or exported screenshots/settings for Auth, App Check, billing, quotas and Functions.
@@ -1090,17 +1117,17 @@ Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream
 
 ---
 
-## 20. The next five tasks
+### 20.5 Exact next five implementation tasks
 
-1. **Secure LIEUVA:** domains/handles plus professional trademark similarity search.
-2. **Freeze the contract:** positioning, terminology, pronunciation, legal operator and migration non-goals.
-3. **Design clean hosting/routes:** canonical LIEUVA domain, per-Space HTML metadata and permanent legacy-link compatibility.
-4. **Close trust/security:** legal/data map, export/delete, Firebase role matrix, App Check/quotas/alerts.
-5. **Build the staging rebrand:** central visible-brand layer, LIEUVA email/Auth/PWA/social surfaces and zero-visible-AURA tests—without renaming Firebase internals.
+1. **Prove the core:** implement and run the isolated publish/update/access E2E release gate, then fix only confirmed blockers.
+2. **Close data rights:** implement account export, soft-delete/purge and the approved retention/legal surfaces.
+3. **Freeze LIEUVA:** complete professional similarity clearance and approve category, claim, terminology, pronunciation and migration non-goals.
+4. **Build the compatibility-first visible rebrand:** central brand layer, LIEUVA UI/PWA/email identity and zero-visible-AURA checks without renaming persistent contracts.
+5. **Move to crawlable Space delivery:** clean URLs, server/edge metadata, unique share cards, canonical/sitemap policy and permanent legacy-hash compatibility.
 
 ---
 
-## 21. Ready implementation prompt for work package 1
+### 20.6 Ready-to-use implementation prompt for Work Package 1
 
 ```text
 Work on /Users/uhorizon/Documents/VirtualArtPlattform.
@@ -1110,25 +1137,25 @@ First read completely:
 - audit/FULL-PRODUCT-EXPERIENCE-AUDIT.md, especially §§12, 13 and work package 1
 - README.md
 
-Task: prepare the LIEUVA brand-security decision pack. Do not implement the product rebrand yet and do not change Firebase data, rules, deployments, DNS, domains, email or external accounts.
+Task: implement Work Package 1, the isolated publish/update/access release gate. First inspect the existing publish state machine, repository, validation, Functions, rules, Storage paths, recovery and current tests. Reuse those systems; do not create a parallel publisher.
 
-Create audit/LIEUVA-BRAND-SECURITY-PACK.md containing:
-1. a dated exact/phonetic/confusing-similarity search protocol for EUIPO eSearch/TMview, WIPO Global Brand Database, USPTO and BOIP;
-2. proposed Nice-class hypotheses with explicit “counsel must confirm” language;
-3. an exact domain/defensive-domain and social-handle reservation checklist, with owner/status/date/evidence columns;
-4. a pronunciation decision: recommended form, IPA/phonetic spelling, risks and a 10-person hear-once spelling-test script with pass criteria;
-5. a conflict log for LIEUVA and close forms, including source, goods/services, territory, similarity, severity and decision needed;
-6. explicit legal disclaimer and go/no-go decision rubric;
-7. a one-page owner action checklist.
+Requirements:
+1. Add deterministic E2E/integration coverage for a new public, unlisted and private Space; an in-place update that keeps ID/share URL/ACL; reload recovery; visibility change; owner/editor/viewer permissions; invite accept/revoke; stale revision; App Check/function rejection; upload failure and retry.
+2. Use isolated test accounts and uniquely prefixed test data. Never touch unrelated live data. Add a documented, exact cleanup procedure.
+3. Reproduce failures before changing behavior. Fix only confirmed defects with the smallest coherent architectural change.
+4. Preserve local backup after every failed publish/update. Never delete working drafts or old revisions during a failed attempt.
+5. Assert artwork images remain valid across initial publish and revision updates, including normalized JPG/PNG/WebP blobs and existing Storage-backed assets.
+6. Record clear Saving/Saved/Error/Publishing/Published states and actionable errors; no stuck modal or contradictory live status.
+7. Do not deploy Functions/rules, mutate production configuration, rebrand, change routes or begin other audit work.
 
-Use current primary sources and direct register links. Do not claim legal clearance, do not select an alternative name, do not purchase anything and do not contact third parties. Where a register blocks automated access, document the exact manual query the owner/counsel must run. Preserve all existing technical AURA/gallery identifiers. Run no deployment commands.
+Verification: run `npm run check` and `npm run check:functions`; run the new matrix against the authorized isolated environment; document cases/results, test-data identifiers and cleanup in `audit/PUBLISH-UPDATE-RELEASE-GATE.md`.
 
-Acceptance: the pack lets the owner and trademark counsel execute or verify every external check, distinguishes “no result found” from clearance, and ends with a clear PASS / PASS WITH CONDITIONS / DECISION POINT template.
+Acceptance: every matrix case passes twice; initial and updated visitor URLs load; update increments revision without changing URL/visibility/ACL; editor can update but viewer cannot; rejected operations preserve recovery; cleanup removes only prefixed fixtures. End with changed files, commands, evidence and remaining risks. Do not commit, push or deploy.
 ```
 
 ---
 
-## 22. Final decision summary
+### 20.7 Final decision summary
 
 - **Positioning:** LIEUVA is a platform for creating and publishing immersive 3D presentations; “spatial publishing platform” remains the internal category.
 - **Primary claim:** **Give your work a place.**
@@ -1137,4 +1164,3 @@ Acceptance: the pack lets the owner and trademark counsel execute or verify ever
 - **Migration principle:** customer-visible LIEUVA everywhere; legacy Firebase/data/routes/assets remain where renaming creates risk without user value.
 - **SEO opportunity:** quality public Spaces + creator profiles can form a strong non-branded acquisition loop, but only after clean routes, unique HTML metadata and quality/index controls.
 - **Launch standard:** verified security/privacy/operations and repeatable pilot outcomes, not merely a finished visual rebrand.
-
