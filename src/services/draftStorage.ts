@@ -32,6 +32,7 @@ function isGalleryEditTarget(value: unknown): value is GalleryEditTarget {
   return (
     typeof target.id === "string" &&
     typeof target.ownerId === "string" &&
+    (target.accountUid === undefined || typeof target.accountUid === "string") &&
     typeof target.publishedAt === "string" &&
     typeof target.expiresAt === "string" &&
     (target.visibility === "public" || target.visibility === "unlisted" || target.visibility === "private") &&
@@ -342,4 +343,62 @@ export async function deleteGalleryDraft(projectId: string): Promise<void> {
   } catch {
     // Storage may be disabled.
   }
+}
+
+export type AccountLinkedDraftExport = {
+  projectId: string;
+  templateId: TemplateId;
+  revision: number;
+  savedAt: string;
+  publication: GalleryEditTarget;
+  draft: Omit<GalleryDraft, "artworks"> & {
+    artworks: Array<Omit<GalleryDraft["artworks"][number], "src"> & {
+      mediaReference: { kind: "storage" | "same-origin" | "browser-object" | "embedded-data" | "unknown"; reference?: string };
+    }>;
+  };
+};
+
+function localMediaReference(source: string | undefined, storagePath?: string) {
+  if (storagePath) return { kind: "storage" as const, reference: storagePath };
+  if (!source) return { kind: "unknown" as const };
+  if (source.startsWith("blob:")) return { kind: "browser-object" as const };
+  if (source.startsWith("data:")) return { kind: "embedded-data" as const };
+  if (/^(?:\.\/|\/|https?:\/\/)/.test(source))
+    return { kind: "same-origin" as const, reference: source };
+  return { kind: "unknown" as const };
+}
+
+/** Account export includes only drafts linked to this account. Anonymous and
+ * unrelated browser work remains private to the device and is not removed. */
+export async function accountLinkedDraftExport(uid: string): Promise<AccountLinkedDraftExport[]> {
+  const records = await listGalleryDrafts();
+  return records
+    .filter((record): record is StoredGalleryDraft & { publication: GalleryEditTarget } =>
+      record.publication?.accountUid === uid ||
+      (record.publication?.role === "owner" && record.publication.ownerId === uid),
+    )
+    .map((record) => ({
+      projectId: record.projectId,
+      templateId: record.templateId,
+      revision: record.revision,
+      savedAt: record.savedAt,
+      publication: record.publication,
+      draft: {
+        ...record.draft,
+        artworks: record.draft.artworks.map(({ src, ...artwork }) => ({
+          ...artwork,
+          mediaReference: localMediaReference(src, artwork.storagePath),
+        })),
+      },
+    }));
+}
+
+export async function clearAccountLinkedDrafts(uid: string): Promise<number> {
+  const records = await listGalleryDrafts();
+  const linked = records.filter((record) =>
+    record.publication?.accountUid === uid ||
+    (record.publication?.role === "owner" && record.publication.ownerId === uid),
+  );
+  for (const record of linked) await deleteGalleryDraft(record.projectId);
+  return linked.length;
 }

@@ -17,6 +17,14 @@ import {
   publicationTerms,
   type GalleryVisibility,
 } from "./galleryPolicy.js";
+import {
+  assertRecentAuthentication,
+  assertAccountAccess,
+  buildAccountExport,
+  executeAccountDeletion,
+  portableValue,
+  type AccountDeletionPlan,
+} from "./accountDataRights.js";
 
 if (!getApps().length) initializeApp();
 
@@ -58,9 +66,11 @@ function requireAccount(auth: { uid: string; token: Record<string, unknown> } | 
   const provider = firebaseClaims && typeof firebaseClaims === "object"
     ? (firebaseClaims as { sign_in_provider?: string }).sign_in_provider
     : undefined;
-  if (!auth || provider === "anonymous")
+  try {
+    return assertAccountAccess(auth?.uid, provider);
+  } catch {
     throw new HttpsError("unauthenticated", "Use an email or Google account.");
-  return auth.uid;
+  }
 }
 
 function requireSignedIn(auth: { uid: string; token: Record<string, unknown> } | undefined) {
@@ -96,6 +106,197 @@ function memberEmailFrom(value: unknown) {
 function inviteIdFor(galleryId: string, email: string) {
   return createHash("sha256").update(`${galleryId}:${email}`).digest("hex");
 }
+
+function uniqueDocumentPaths(documents: Array<{ ref: { path: string } }>) {
+  return [...new Set(documents.map((document) => document.ref.path))];
+}
+
+async function accountMediaFootprint(ownerId: string, galleryId: string) {
+  const [files] = await getStorage().bucket().getFiles({
+    prefix: `published/${ownerId}/${galleryId}/`,
+  });
+  return Promise.all(files.map(async (file) => {
+    const [metadata] = await file.getMetadata();
+    const revisionMatch = /\/revisions\/([^/]+)\//.exec(file.name);
+    return {
+      path: file.name,
+      contentType: metadata.contentType ?? null,
+      sizeBytes: Number(metadata.size ?? 0),
+      updatedAt: metadata.updated ?? null,
+      revisionId: revisionMatch?.[1] ?? null,
+    };
+  }));
+}
+
+/** Account-wide portability export. Media binaries stay in Storage; exact paths
+ * and metadata make the data footprint inspectable without exposing signed URLs. */
+export const exportAuraAccountData = onCall(
+  { region: REGION, timeoutSeconds: 120, memory: "512MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const user = await getAuth().getUser(uid);
+    const email = user.email?.trim().toLowerCase();
+    const ownedSnapshot = await db.collection("galleries").where("ownerId", "==", uid).get();
+    const [profile, newsletter, publicationUsage, sharedMemberships, receivedInvites, sentInvites,
+      permits, unsubscribeTokens, verificationLimit] = await Promise.all([
+      db.collection("profiles").doc(uid).get(),
+      db.collection("newsletterSubscriptions").doc(uid).get(),
+      db.collection("galleryPublicationQuotas").doc(uid).get(),
+      email
+        ? db.collectionGroup("members").where("email", "==", email).get()
+        : Promise.resolve(undefined),
+      email
+        ? db.collection("galleryInvites").where("email", "==", email).get()
+        : Promise.resolve(undefined),
+      db.collection("galleryInvites").where("ownerId", "==", uid).get(),
+      db.collection("galleryPublishPermits").where("ownerId", "==", uid).get(),
+      db.collection("newsletterUnsubscribeTokens").where("uid", "==", uid).get(),
+      db.collection("verificationMailRateLimits").doc(uid).get(),
+    ]);
+    const ownedSpaces = await Promise.all(ownedSnapshot.docs.map(async (gallery) => {
+      const [members, media] = await Promise.all([
+        gallery.ref.collection("members").get(),
+        accountMediaFootprint(uid, gallery.id),
+      ]);
+      return {
+        id: gallery.id,
+        manifest: gallery.data(),
+        members: members.docs.map((member) => member.data()),
+        media,
+      };
+    }));
+    return buildAccountExport({
+      generatedAt: new Date().toISOString(),
+      account: {
+        uid,
+        email: user.email ?? null,
+        emailVerified: user.emailVerified,
+        displayName: user.displayName ?? null,
+        disabled: user.disabled,
+        providers: user.providerData.map((provider) => provider.providerId),
+        createdAt: user.metadata.creationTime ?? null,
+        lastSignInAt: user.metadata.lastSignInTime ?? null,
+      },
+      ...(profile.exists ? { profile: profile.data()! } : {}),
+      ...(newsletter.exists ? { newsletter: newsletter.data()! } : {}),
+      ...(publicationUsage.exists ? { publicationUsage: publicationUsage.data()! } : {}),
+      ownedSpaces,
+      sharedSpaces: sharedMemberships?.docs
+        .filter((member) => Boolean(member.ref.parent.parent))
+        .map((member) => ({ galleryId: member.ref.parent.parent!.id, ...member.data() })) ?? [],
+      receivedInvitations: receivedInvites?.docs.map((invite) => invite.data()) ?? [],
+      sentInvitations: sentInvites.docs.map((invite) => invite.data()),
+      operationalState: {
+        pendingPublicationPermits: permits.size,
+        newsletterUnsubscribeRecords: unsubscribeTokens.size,
+        verificationRateLimitRecord: verificationLimit.exists,
+      },
+    });
+  },
+);
+
+function accountDeletionErrorCode(error: unknown) {
+  if (typeof error === "object" && error && "code" in error)
+    return String(error.code).slice(0, 80);
+  return "internal";
+}
+
+/** Immediate, irreversible account erasure. Auth is deleted last, so failures
+ * remain authenticated and retryable. No grace period is asserted here. */
+export const deleteAuraAccount = onCall(
+  { region: REGION, timeoutSeconds: 540, memory: "1GiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    if (request.data?.confirmation !== "DELETE")
+      throw new HttpsError("invalid-argument", "Type DELETE to confirm account deletion.");
+    try {
+      assertRecentAuthentication(request.auth?.token.auth_time);
+    } catch {
+      throw new HttpsError("failed-precondition", "Recent authentication required. Sign in again, then retry.");
+    }
+    const user = await getAuth().getUser(uid);
+    const email = user.email?.trim().toLowerCase();
+    const job = db.collection("accountDeletionJobs").doc(uid);
+    let phase = "inventory";
+    await job.set({ uid, status: "running", phase, startedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    try {
+      const [owned, memberships, ownedInvites, receivedInvites, permits, tokens, queuedMail] = await Promise.all([
+        db.collection("galleries").where("ownerId", "==", uid).get(),
+        email
+          ? db.collectionGroup("members").where("email", "==", email).get()
+          : Promise.resolve(undefined),
+        db.collection("galleryInvites").where("ownerId", "==", uid).get(),
+        email
+          ? db.collection("galleryInvites").where("email", "==", email).get()
+          : Promise.resolve(undefined),
+        db.collection("galleryPublishPermits").where("ownerId", "==", uid).get(),
+        db.collection("newsletterUnsubscribeTokens").where("uid", "==", uid).get(),
+        db.collection("mail").where("accountUid", "==", uid).get(),
+      ]);
+      const plan: AccountDeletionPlan = {
+        uid,
+        ownedGalleryIds: owned.docs.map((gallery) => gallery.id),
+        membershipPaths: uniqueDocumentPaths(memberships?.docs ?? []),
+        invitePaths: uniqueDocumentPaths([
+          ...ownedInvites.docs,
+          ...(receivedInvites?.docs ?? []),
+        ]),
+        documentPaths: uniqueDocumentPaths([
+          { ref: db.collection("profiles").doc(uid) },
+          { ref: db.collection("newsletterSubscriptions").doc(uid) },
+          { ref: db.collection("galleryPublicationQuotas").doc(uid) },
+          { ref: db.collection("verificationMailRateLimits").doc(uid) },
+          ...permits.docs,
+          ...tokens.docs,
+          ...queuedMail.docs,
+        ]),
+      };
+      const summary = await executeAccountDeletion(plan, {
+        phase: async (next) => {
+          phase = next;
+          await job.set({ status: "running", phase, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        },
+        markOwnedSpaces: async (galleryIds) => {
+          if (!galleryIds.length) return;
+          const batch = db.batch();
+          galleryIds.forEach((galleryId) => batch.set(db.collection("galleries").doc(galleryId), {
+            lifecycleStatus: "trashed",
+            trashedAt: FieldValue.serverTimestamp(),
+            purgeAt: new Date(),
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true }));
+          await batch.commit();
+        },
+        deleteOwnedSpaceAssets: async (ownerId, galleryId) => {
+          await getStorage().bucket().deleteFiles({ prefix: `published/${ownerId}/${galleryId}/`, force: true });
+        },
+        deleteOwnedSpace: async (galleryId) => {
+          await db.recursiveDelete(db.collection("galleries").doc(galleryId));
+        },
+        removeMembership: async (path) => { await db.doc(path).delete(); },
+        removeInvitation: async (path) => { await db.doc(path).delete(); },
+        deleteAvatar: async (ownerId) => {
+          await getStorage().bucket().deleteFiles({ prefix: `profiles/${ownerId}/`, force: true });
+        },
+        removeLinkedDocument: async (path) => { await db.doc(path).delete(); },
+        deleteAuthentication: async (ownerId) => { await getAuth().deleteUser(ownerId); },
+        finish: async (result) => {
+          await job.set({ status: "complete", phase: "complete", summary: result, updatedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => undefined);
+          await job.delete().catch(() => undefined);
+        },
+      });
+      return { status: "deleted", summary: portableValue(summary) };
+    } catch (error) {
+      await job.set({
+        status: "failed",
+        phase,
+        errorCode: accountDeletionErrorCode(error),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true }).catch(() => undefined);
+      throw new HttpsError("internal", "Account deletion is incomplete. Your account remains available; retry safely.");
+    }
+  },
+);
 
 /**
  * Server-issued publication permits close the unbounded direct-upload path.
@@ -386,10 +587,11 @@ export const revokeAuraGalleryAccess = onCall(
   },
 );
 
-async function queueMail(to: string, mail: { subject: string; text: string; html: string }) {
+async function queueMail(to: string, mail: { subject: string; text: string; html: string }, accountUid?: string) {
   await db.collection("mail").add({
     to: [to],
     message: mail,
+    ...(accountUid ? { accountUid } : {}),
     createdAt: FieldValue.serverTimestamp(),
   });
 }
@@ -424,6 +626,7 @@ export const sendAuraVerificationEmail = onCall(
         displayName: user.displayName,
         verificationUrl,
       }),
+      uid,
     );
     return { status: "queued" };
   },
@@ -483,6 +686,7 @@ export const setAuraNewsletterPreference = onCall(
       });
       transaction.create(mailReference, {
         to: [user.email],
+        accountUid: uid,
         message: welcomeMail(currentBrand, {
           displayName: user.displayName,
           unsubscribeUrl,

@@ -921,6 +921,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       target: {
         id: gallery.id,
         ownerId: gallery.ownerId,
+        accountUid: user.uid,
         publishedAt: gallery.publishedAt,
         expiresAt: gallery.expiresAt,
         visibility: gallery.visibility,

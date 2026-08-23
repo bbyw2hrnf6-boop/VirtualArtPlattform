@@ -365,6 +365,71 @@ function AccountProfileSettings({
   );
 }
 
+function AccountDataRights({
+  account,
+  busy,
+  onExport,
+  onDelete,
+}: {
+  account: AccountSession;
+  busy: boolean;
+  onExport: () => void;
+  onDelete: (password?: string) => Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const [password, setPassword] = useState("");
+  const usesGoogle = account.providers.includes("google.com");
+  const needsPassword = account.providers.includes("password") && !usesGoogle;
+  return (
+    <section className="account-data-rights" aria-labelledby="account-data-rights-title">
+      <div className="account-profile__heading">
+        <div><p className="eyebrow">Data &amp; rights</p><h3 id="account-data-rights-title">Your data. Your decision.</h3></div>
+        <span>Account-wide controls</span>
+      </div>
+      <article className="account-data-card">
+        <div>
+          <strong>Download account data</strong>
+          <p>Exports your profile, newsletter preference, owned Space manifests, revision/media references, roles, invitations, and account-linked drafts stored in this browser.</p>
+        </div>
+        <button type="button" disabled={busy} onClick={onExport}>{busy ? "Preparing…" : "Download JSON"}</button>
+        <small>This is separate from the existing single-Space .aura.json export. Media files remain in Storage and are represented by paths and metadata.</small>
+      </article>
+      <article className="account-data-card account-data-card--danger">
+        <div>
+          <strong>Delete account permanently</strong>
+          <p>Deletes Spaces you own, all published revisions and media, profile/avatar, invitations, newsletter state, and your sign-in. Roles in Spaces owned by others are removed; those Spaces are not deleted.</p>
+        </div>
+        {!confirming ? (
+          <button type="button" className="is-danger" disabled={busy} onClick={() => setConfirming(true)}>Start deletion</button>
+        ) : (
+          <div className="account-delete-confirmation">
+            <p><strong>Irreversible.</strong> There is no account-level recovery window in this preview. Export first if you need a record.</p>
+            {needsPassword && <label>Current password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>}
+            {usesGoogle && <p>Google will ask you to confirm your account again.</p>}
+            <label>Type DELETE<input autoComplete="off" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
+            <div>
+              <button type="button" onClick={() => {
+                setConfirming(false);
+                setConfirmation("");
+                setPassword("");
+              }} disabled={busy}>Cancel</button>
+              <button
+                type="button"
+                className="is-danger"
+                disabled={busy || confirmation !== "DELETE" || (needsPassword && !password)}
+                onClick={() => void onDelete(password || undefined)}
+              >{busy ? "Deleting…" : "Delete account"}</button>
+            </div>
+          </div>
+        )}
+        <small>If a server step fails, the UI reports an incomplete operation and keeps authentication until the deletion can be retried.</small>
+      </article>
+      <p className="account-data-rights__policy">This preview does not yet state a legal backup-retention period or production controller/contact. Those owner decisions remain open. <a href="#/data">Read the current factual data notice.</a></p>
+    </section>
+  );
+}
+
 export function AccountDialog({
   open,
   onClose,
@@ -380,7 +445,7 @@ export function AccountDialog({
   const [service, setService] = useState<AccountModule>();
   const [session, setSession] = useState<AccountSession | null>(null);
   const [mode, setMode] = useState<"signin" | "create">("create");
-  const [section, setSection] = useState<"rooms" | "profile">("rooms");
+  const [section, setSection] = useState<"rooms" | "profile" | "data">("rooms");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -493,6 +558,7 @@ export function AccountDialog({
             <div className="account-tabs account-tabs--settings" role="tablist" aria-label="Account settings">
               <button role="tab" aria-selected={section === "rooms"} onClick={() => setSection("rooms")}>Rooms</button>
               <button role="tab" aria-selected={section === "profile"} onClick={() => setSection("profile")}>Profile &amp; settings</button>
+              <button role="tab" aria-selected={section === "data"} onClick={() => setSection("data")}>Data &amp; rights</button>
             </div>
             {account.emailVerified && section === "rooms" && <AccountRooms session={account} />}
             {account.emailVerified && section === "profile" && (
@@ -533,6 +599,34 @@ export function AccountDialog({
                   } catch (caught) {
                     setError(service.accountErrorMessage(caught));
                     return false;
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
+            )}
+            {section === "data" && (
+              <AccountDataRights
+                account={account}
+                busy={busy}
+                onExport={() => void run(async () => {
+                  const result = await service?.downloadAccountExport();
+                  setMessage(`Account export downloaded${result ? ` with ${result.localDrafts} local linked draft${result.localDrafts === 1 ? "" : "s"}` : ""}.`);
+                })}
+                onDelete={async (currentPassword) => {
+                  if (!service || busy) return;
+                  setBusy(true);
+                  setError(undefined);
+                  setMessage(undefined);
+                  try {
+                    await service.deleteCurrentAccount(currentPassword);
+                    setSession(null);
+                    onSessionChange?.(null);
+                    onClose();
+                    window.location.hash = "/";
+                    window.scrollTo(0, 0);
+                  } catch (caught) {
+                    setError(service.accountErrorMessage(caught));
                   } finally {
                     setBusy(false);
                   }

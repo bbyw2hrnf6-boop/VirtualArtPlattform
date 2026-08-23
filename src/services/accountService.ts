@@ -6,6 +6,8 @@ import {
   linkWithCredential,
   linkWithPopup,
   onIdTokenChanged,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
   reload,
   sendEmailVerification,
   sendPasswordResetEmail,
@@ -36,6 +38,10 @@ import {
   firebaseStorage,
 } from "./firebase";
 import type { AccountSession } from "./accountTypes";
+import {
+  accountLinkedDraftExport,
+  clearAccountLinkedDrafts,
+} from "./draftStorage";
 
 let persistenceReady: Promise<void> | undefined;
 const avatarObjectUrls = new Map<string, string>();
@@ -348,6 +354,78 @@ export async function signOutAccount() {
   await signOut(firebaseAuth);
 }
 
+async function verifiedCurrentAccount() {
+  await ensurePersistence();
+  await firebaseAuth.authStateReady();
+  const user = firebaseAuth.currentUser;
+  if (!user || user.isAnonymous)
+    throw new Error("Use an email or Google account.");
+  return user;
+}
+
+export async function downloadAccountExport() {
+  const user = await verifiedCurrentAccount();
+  const result = await httpsCallable<Record<string, never>, Record<string, unknown>>(
+    firebaseFunctions,
+    "exportAuraAccountData",
+  )({});
+  const localDrafts = await accountLinkedDraftExport(user.uid);
+  const payload = {
+    ...result.data,
+    localBrowserData: {
+      deviceScoped: true,
+      accountLinkedDrafts: localDrafts,
+      note: "Anonymous and other-account drafts on this browser are intentionally excluded.",
+    },
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `aura-account-data-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  return { localDrafts: localDrafts.length };
+}
+
+async function reauthenticateForDeletion(user: User, password?: string) {
+  const providers = new Set(user.providerData.map((provider) => provider.providerId));
+  if (providers.has(GoogleAuthProvider.PROVIDER_ID)) {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    await reauthenticateWithPopup(user, provider);
+  } else if (providers.has(EmailAuthProvider.PROVIDER_ID) && user.email) {
+    if (!password) throw new Error("Enter your current password to delete the account.");
+    await reauthenticateWithCredential(
+      user,
+      EmailAuthProvider.credential(user.email, password),
+    );
+  } else {
+    throw new Error("This account cannot be re-authenticated in the current preview.");
+  }
+  await user.getIdToken(true);
+}
+
+export async function deleteCurrentAccount(password?: string) {
+  const user = await verifiedCurrentAccount();
+  const uid = user.uid;
+  await reauthenticateForDeletion(user, password);
+  const result = await httpsCallable<
+    { confirmation: "DELETE" },
+    { status: "deleted"; summary: Record<string, unknown> }
+  >(firebaseFunctions, "deleteAuraAccount")({ confirmation: "DELETE" });
+  if (result.data.status !== "deleted")
+    throw new Error("Account deletion did not complete.");
+  const localDraftsRemoved = await clearAccountLinkedDrafts(uid);
+  for (const [path, source] of avatarObjectUrls) {
+    if (!path.startsWith(`profiles/${uid}/`)) continue;
+    URL.revokeObjectURL(source);
+    avatarObjectUrls.delete(path);
+  }
+  await signOut(firebaseAuth).catch(() => undefined);
+  return { ...result.data.summary, localDraftsRemoved };
+}
+
 export function accountErrorMessage(error: unknown) {
   const code =
     typeof error === "object" && error && "code" in error
@@ -375,5 +453,9 @@ export function accountErrorMessage(error: unknown) {
     return "Too many attempts. Wait a moment and retry.";
   if (code.includes("resource-exhausted"))
     return "Wait one minute before requesting another email.";
+  if (code.includes("failed-precondition"))
+    return "Please sign in again to confirm this sensitive action.";
+  if (code.includes("functions/internal") || code.endsWith("/internal"))
+    return "The operation is incomplete. Your account remains available; retry safely.";
   return error instanceof Error ? error.message : "Account action failed.";
 }

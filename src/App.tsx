@@ -758,7 +758,44 @@ function MvpDataNotice() {
             Profile &amp; settings without affecting rooms or account access.
           </p>
         </section>
+        <section>
+          <h2>Export and account deletion</h2>
+          <p>
+            Signed-in accounts can download an account-wide JSON record under
+            Account → Data &amp; rights. It includes profile and preference data,
+            owned-Space manifests, revision and media references, access-role
+            summaries, invitations, and account-linked drafts on the current
+            browser. The existing single-Space .aura.json export remains a
+            separate tool.
+          </p>
+          <p>
+            Permanent account deletion requires a fresh Google or password
+            confirmation. It deletes Spaces owned by the account, their
+            published Storage files and revisions, profile/avatar, invitations,
+            newsletter state, and authentication. Memberships in Spaces owned
+            by other people are removed without deleting those Spaces. Local
+            drafts linked to the deleted account are cleared only after the
+            server confirms completion; unrelated anonymous browser drafts stay.
+          </p>
+        </section>
+        <section>
+          <h2>Retention and contact still to be named</h2>
+          <p>
+            Account deletion is immediate and irreversible in the current
+            preview; it does not promise an account-level grace period. Firebase
+            or infrastructure backups may follow provider-level retention that
+            is not yet stated as an AURA production policy. A named controller,
+            postal address, rights-request inbox, backup-retention decision, and
+            formal privacy policy are still required before production use.
+          </p>
+        </section>
         <div className="info-actions">
+          <button
+            className="button button--dark"
+            onClick={() => navigate("/account")}
+          >
+            Open account data controls
+          </button>
           <button
             className="button button--dark"
             onClick={() => navigate("/create")}
@@ -1598,9 +1635,11 @@ function Studio({
             roomCoverSource,
             { visibility: publishVisibility },
           );
+      const editingAccountUid = await galleryRepository.currentUserId();
       const nextTarget: GalleryEditTarget = {
         id: publishedGallery.id,
         ownerId: publishedGallery.ownerId!,
+        ...(editingAccountUid ? { accountUid: editingAccountUid } : {}),
         publishedAt: publishedGallery.publishedAt,
         expiresAt: publishedGallery.expiresAt,
         visibility: publishedGallery.visibility,

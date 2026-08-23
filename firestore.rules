@@ -284,6 +284,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Trusted Functions coordinate cross-service account deletion. Clients may
+    // neither inspect nor forge progress records.
+    match /accountDeletionJobs/{userId} {
+      allow read, write: if false;
+    }
+
     // Read-only compatibility for schema-v1 publications that embedded art in
     // Firestore. All new schema-v3 images live in Storage.
     match /galleryArtworks/{assetId} {

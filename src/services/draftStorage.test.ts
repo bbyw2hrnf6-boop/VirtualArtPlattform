@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { GalleryDraft, TemplateId } from "../features/gallery/types";
 import {
   createGalleryProjectId,
+  accountLinkedDraftExport,
+  clearAccountLinkedDrafts,
   deleteGalleryDraft,
   listGalleryDrafts,
   loadGalleryDraft,
@@ -209,6 +211,45 @@ describe("versioned multi-project draft storage", () => {
   it("creates a stable local project id for a published room", () => {
     expect(publishedGalleryProjectId("room-1")).toBe("published-room-1");
     expect(() => publishedGalleryProjectId("../room")).toThrow();
+  });
+
+  it("exports and clears only drafts linked to the deleted account", async () => {
+    const publication = {
+      id: "room-owned",
+      ownerId: "account-a",
+      publishedAt: "2026-08-14T10:00:00.000Z",
+      expiresAt: "2027-08-14T10:00:00.000Z",
+      visibility: "private" as const,
+      retention: "account-preview" as const,
+      accessVersion: 1,
+      revision: 2,
+      role: "owner" as const,
+    };
+    await saveGalleryDraft("published-room-owned", draft(), 3, publication);
+    await saveGalleryDraft("anonymous-work", draft("nocturne"), 2);
+    await saveGalleryDraft("other-account", draft("pavilion"), 2, {
+      ...publication,
+      id: "room-other",
+      ownerId: "account-b",
+    });
+    await saveGalleryDraft("shared-editor-work", draft("white-cube"), 2, {
+      ...publication,
+      id: "room-shared",
+      ownerId: "account-b",
+      accountUid: "account-a",
+      role: "editor",
+    });
+
+    const exported = await accountLinkedDraftExport("account-a");
+    expect(exported.map((record) => record.projectId).sort()).toEqual([
+      "published-room-owned",
+      "shared-editor-work",
+    ]);
+    expect(await clearAccountLinkedDrafts("account-a")).toBe(2);
+    expect(await loadGalleryDraft("published-room-owned")).toBeNull();
+    expect(await loadGalleryDraft("shared-editor-work")).toBeNull();
+    expect(await loadGalleryDraft("anonymous-work")).not.toBeNull();
+    expect(await loadGalleryDraft("other-account")).not.toBeNull();
   });
 });
 

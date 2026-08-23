@@ -27,6 +27,8 @@ export type GalleryInvite = {
 export type GalleryEditTarget = {
   id: string;
   ownerId: string;
+  /** Account that created this device-local edit link; not a public ACL field. */
+  accountUid?: string;
   publishedAt: string;
   expiresAt: string;
   visibility: GalleryVisibility;
