@@ -44,7 +44,7 @@ export function VisitorControls<TMode extends string>({
   artworkDirectoryUnavailable = false,
   artworkButtonRef,
   onOpenArtworkDirectory,
-  compactLabel = "Exhibition controls",
+  compactLabel = "Space controls",
 }: VisitorControlsProps<TMode>) {
   const tourRunning = tour.status !== "idle";
   const progressStyle = {
@@ -98,7 +98,7 @@ export function VisitorControls<TMode extends string>({
           disabled={!tourAvailable || tourRunning}
           onClick={onSmartView}
         >
-          <span>Smart view</span>
+          <span>Focus view</span>
           <small>{smartViewLabel}</small>
         </button>
         <button type="button" data-visitor-reset-view onClick={onResetView}>

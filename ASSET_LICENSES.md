@@ -1,31 +1,31 @@
-# AURA asset and licensing notice
+# LIEUVA asset and licensing notice
 
 This repository combines application code, gallery models, artwork, fonts, material images, and generated concept files. Public access to the repository does not by itself grant a license to reuse those materials.
 
 ## Danny Hirsch demo
 
-The project owner has confirmed permission to display and distribute the Danny Hirsch artwork and gallery assets as part of the AURA live demo. Relevant files include:
+The project owner has confirmed permission to display and distribute the Danny Hirsch artwork and Space assets as part of the LIEUVA live demo. Relevant files include:
 
 - `public/assets/demo/danny-gallery.glb`
-- `public/assets/demo/danny-gallery-mobile.glb` — an AURA-only mobile derivative of the same model, simplified and recompressed without changing its authored metadata
+- `public/assets/demo/danny-gallery-mobile.glb` — a LIEUVA-only mobile derivative of the same model, simplified and recompressed without changing its authored metadata
 - `public/assets/demo/danny-cover.webp`
 - Danny Hirsch artwork embedded in or displayed by the demo model
 
-That permission is specific to their use within this AURA project. It does not automatically grant repository visitors permission to extract, resell, sublicense, train on, or redistribute the artwork or model separately. Contact the project owner and artist for any use outside the AURA demo.
+That permission is specific to their use within this LIEUVA project. It does not automatically grant repository visitors permission to extract, resell, sublicense, train on, or redistribute the artwork or model separately. Contact the project owner and artist for any use outside the LIEUVA demo.
 
-## AURA promotional image
+## LIEUVA promotional image
 
-`public/assets/demo/aura-hero-gallery.webp` is used as AURA promotional artwork and as the social-sharing image for the deployed site. No standalone third-party reuse license is declared in this repository.
+`public/assets/demo/aura-hero-gallery.webp` is a compatibility-preserved filename used for LIEUVA promotional artwork and as the social-sharing image for the deployed site. No standalone third-party reuse license is declared in this repository.
 
-## Generated AURA demo artwork and room previews
+## Generated LIEUVA demo artwork and Space previews
 
 The three fictional studies in `public/assets/artworks/` were generated specifically for the product demo. Exact generation and processing details are recorded in [`public/assets/artworks/README.md`](./public/assets/artworks/README.md). They are not presented as works by a real artist.
 
-The three images in `public/assets/templates/` are AURA-specific concept-direction images generated with OpenAI ImageGen on 2026-08-04. Their role, prompts' visual intent, dimensions, and checksums are recorded in [`public/assets/templates/README.md`](./public/assets/templates/README.md). They are disclosed as concept imagery in the UI and are not presented as captures of the live builder.
+The three images in `public/assets/templates/` are LIEUVA-specific concept-direction images generated with OpenAI ImageGen on 2026-08-04. Their role, prompts' visual intent, dimensions, and checksums are recorded in [`public/assets/templates/README.md`](./public/assets/templates/README.md). They are disclosed as concept imagery in the UI and are not presented as captures of the live Studio.
 
 ## Material images
 
-Unlicensed legacy material images and superseded generated variants were removed from the repository. The runtime uses only the AURA-generated base-color textures documented with generation records and checksums in [`public/assets/materials/README.md`](./public/assets/materials/README.md). The generated files are albedo only; no PBR map is implied.
+Unlicensed legacy material images and superseded generated variants were removed from the repository. The runtime uses only the LIEUVA-generated base-color textures documented with generation records and checksums in [`public/assets/materials/README.md`](./public/assets/materials/README.md). The generated files are albedo only; no PBR map is implied.
 
 ## Fonts
 

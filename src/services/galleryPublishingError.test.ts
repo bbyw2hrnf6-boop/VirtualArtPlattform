@@ -15,7 +15,7 @@ describe('gallery publishing errors', () => {
     ['auth/unauthorized-domain', 'unauthorized-domain', 'Authorized domains'],
     ['functions/unauthenticated', 'app-check', 'verify this publishing request'],
     ['functions/permission-denied', 'app-check', 'verify this publishing request'],
-    ['functions/internal', 'configuration', 'reached the room service'],
+    ['functions/internal', 'configuration', 'reached the Space service'],
     ['functions/not-found', 'configuration', 'core Firebase Functions'],
     ['resource-exhausted', 'quota', 'quota'],
     ['functions/resource-exhausted', 'quota', 'quota'],

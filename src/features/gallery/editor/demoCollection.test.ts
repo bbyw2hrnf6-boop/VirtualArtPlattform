@@ -15,7 +15,7 @@ describe("demo collection sandbox", () => {
       expect(draft).toMatchObject({
         templateId,
         title: "Field Studies",
-        artist: "AURA sample collection",
+        artist: "LIEUVA sample collection",
       });
       expect(draft.artworks).toHaveLength(3);
       expect(new Set(draft.artworks.map((artwork) => artwork.id)).size).toBe(3);

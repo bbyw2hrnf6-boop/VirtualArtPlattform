@@ -10,19 +10,19 @@ const DEMO_ARTWORKS = [
     src: "./assets/artworks/aura-cliffs-study.webp",
     title: "Cliff Study",
     description:
-      "A fictional mineral landscape created as sample artwork for the AURA builder.",
+      "A fictional mineral landscape created as sample work for LIEUVA Studio.",
   },
   {
     src: "./assets/artworks/aura-forest-study.webp",
     title: "Forest Study",
     description:
-      "A fictional botanical abstraction created as sample artwork for the AURA builder.",
+      "A fictional botanical abstraction created as sample work for LIEUVA Studio.",
   },
   {
     src: "./assets/artworks/aura-pigment-study.webp",
     title: "Pigment Study",
     description:
-      "A fictional pigment composition created as sample artwork for the AURA builder.",
+      "A fictional pigment composition created as sample work for LIEUVA Studio.",
   },
 ] as const;
 
@@ -50,7 +50,7 @@ export function createDemoCollectionDraft(
   return {
     ...draft,
     title: "Field Studies",
-    artist: "AURA sample collection",
+    artist: "LIEUVA sample collection",
     artworks,
   };
 }

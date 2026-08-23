@@ -212,7 +212,7 @@ export function createGalleryProjectId(templateId: TemplateId): string {
 
 export function publishedGalleryProjectId(galleryId: string): string {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(galleryId))
-    throw new Error("Invalid published gallery project id.");
+    throw new Error("Invalid published Space Project ID.");
   return `published-${galleryId}`;
 }
 
@@ -318,7 +318,7 @@ export async function saveGalleryDraft(
       localStorage.setItem(`${FALLBACK_PREFIX}${projectId}`, JSON.stringify(record));
       return record;
     } catch {
-      throw new Error("This browser could not save the exhibition locally.");
+      throw new Error("This browser could not save the Project locally.");
     }
   }
 }

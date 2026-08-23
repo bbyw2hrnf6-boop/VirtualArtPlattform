@@ -45,7 +45,7 @@ function readableActionError(error: unknown) {
     return "This link is invalid or was already used.";
   if (code.includes("weak-password"))
     return "Choose a password with at least six characters.";
-  return "AURA could not complete this account action. Request a fresh email and retry.";
+  return "LIEUVA could not complete this account action. Request a fresh email and retry.";
 }
 
 export default function AuthActionPage() {
@@ -81,7 +81,7 @@ export default function AuthActionPage() {
     } else {
       queueMicrotask(() => setState({
         status: "error",
-        message: "This account action is not supported by the AURA preview yet.",
+        message: "This account action is not supported by the LIEUVA preview yet.",
       }));
     }
     return () => {
@@ -91,11 +91,11 @@ export default function AuthActionPage() {
 
   return (
     <main className="auth-action-page">
-      <div className="auth-action-brand"><Logo /><span>AURA Light Preview</span></div>
+      <div className="auth-action-brand"><Logo /><span>LIEUVA Light Preview</span></div>
       <section aria-live="polite">
-        <p className="eyebrow">AURA account</p>
+        <p className="eyebrow">LIEUVA account</p>
         {state.status === "working" && <><h1>One moment.<br /><em>Securing your space.</em></h1><p>Checking the account link…</p></>}
-        {state.status === "verified" && <><h1>Email verified.<br /><em>Now make a room.</em></h1><p>Your AURA identity is ready. Account preview access can now keep public, unlisted, and private rooms together.</p><a className="button button--dark" href={returnUrl}>Enter AURA <span>↗</span></a></>}
+        {state.status === "verified" && <><h1>Email verified.<br /><em>Now create a Space.</em></h1><p>Your LIEUVA identity is ready. Account preview access can now keep public, unlisted, and private Spaces together.</p><a className="button button--dark" href={returnUrl}>Enter LIEUVA <span>↗</span></a></>}
         {state.status === "reset-ready" && (
           <>
             <h1>Choose a new<br /><em>password.</em></h1>
@@ -121,10 +121,10 @@ export default function AuthActionPage() {
             </form>
           </>
         )}
-        {state.status === "reset-complete" && <><h1>Password saved.<br /><em>Welcome back.</em></h1><p>Your rooms and local drafts stay unchanged.</p><a className="button button--dark" href={returnUrl}>Return to AURA <span>↗</span></a></>}
-        {state.status === "error" && <><h1>Link not complete.<br /><em>Your work is safe.</em></h1><p role="alert">{state.message}</p><a className="button button--dark" href={`${window.location.origin}${window.location.pathname}`}>Return to AURA</a></>}
+        {state.status === "reset-complete" && <><h1>Password saved.<br /><em>Welcome back.</em></h1><p>Your Projects and local drafts stay unchanged.</p><a className="button button--dark" href={returnUrl}>Return to LIEUVA <span>↗</span></a></>}
+        {state.status === "error" && <><h1>Link not complete.<br /><em>Your work is safe.</em></h1><p role="alert">{state.message}</p><a className="button button--dark" href={`${window.location.origin}${window.location.pathname}`}>Return to LIEUVA</a></>}
       </section>
-      <footer><span>© 2026 AURA</span><a href={`${window.location.origin}${window.location.pathname}#/data`}>Data &amp; rights</a></footer>
+      <footer><span>© 2026 LIEUVA</span><a href={`${window.location.origin}${window.location.pathname}#/data`}>Data &amp; rights</a></footer>
     </main>
   );
 }

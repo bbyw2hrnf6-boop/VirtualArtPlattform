@@ -1,4 +1,4 @@
-# AURA generated material sources
+# LIEUVA generated material sources
 
 The `aura-*-v2.webp` textures were generated specifically for this project on 2 August 2026 with the built-in OpenAI image-generation tool, then resized to 1024 × 1024 and encoded as WebP at quality 84. They are base-color/albedo assets only. Do not reuse them as normal, bump, roughness, or AO maps.
 

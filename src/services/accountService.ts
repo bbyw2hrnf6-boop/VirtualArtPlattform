@@ -382,7 +382,7 @@ export async function downloadAccountExport() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `aura-account-data-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `lieuva-account-data-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
   return { localDrafts: localDrafts.length };

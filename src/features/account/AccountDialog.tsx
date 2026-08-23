@@ -39,7 +39,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
       setInvites(pending);
       setStatus("ready");
     } catch (caught) {
-      console.error("Account rooms unavailable", caught);
+      console.error("Account Spaces unavailable", caught);
       setStatus("error");
     }
   }, []);
@@ -84,10 +84,10 @@ function AccountRooms({ session }: { session: AccountSession }) {
         `#/create/${editable.draft.templateId}/${projectId}`,
       );
     } catch (caught) {
-      console.error("Published room could not be opened for editing", caught);
+      console.error("Published Space could not be opened for editing", caught);
       setError(firebaseActionErrorMessage(
         caught,
-        "This room could not be opened for editing. Check your access and retry.",
+        "This Space could not be opened for editing. Check your access and retry.",
       ));
     } finally {
       setEditingId(undefined);
@@ -105,10 +105,10 @@ function AccountRooms({ session }: { session: AccountSession }) {
       await galleryRepository.updateLifecycle(room.id, action, visibility);
       await loadRooms();
     } catch (caught) {
-      console.error("Room lifecycle update failed", caught);
+      console.error("Space lifecycle update failed", caught);
       setError(firebaseActionErrorMessage(
         caught,
-        "The room setting could not be saved.",
+        "The Space setting could not be saved.",
       ));
     } finally {
       setLifecycleBusyId(undefined);
@@ -135,7 +135,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "The room export could not be prepared.");
+      setError(caught instanceof Error ? caught.message : "The Space export could not be prepared.");
     } finally {
       setLifecycleBusyId(undefined);
     }
@@ -149,18 +149,18 @@ function AccountRooms({ session }: { session: AccountSession }) {
     <section className="account-rooms" aria-labelledby="account-rooms-title">
       <div className="account-rooms__heading">
         <div>
-          <p className="eyebrow">Exhibition control</p>
-          <h3 id="account-rooms-title">Your rooms</h3>
+          <p className="eyebrow">Space control</p>
+          <h3 id="account-rooms-title">Your Spaces</h3>
         </div>
         <span>{rooms.length}</span>
       </div>
-      <div className="account-room-stats" aria-label="Room overview">
+      <div className="account-room-stats" aria-label="Space overview">
         <article><span>Live</span><strong>{activeRooms.length}</strong></article>
         <article><span>In Discover</span><strong>{publicRooms.length}</strong></article>
         <article><span>Shared with you</span><strong>{sharedRooms.length}</strong></article>
       </div>
       {invites.length > 0 && (
-        <div className="account-invites" aria-label="Pending room invitations">
+        <div className="account-invites" aria-label="Pending Space invitations">
           <strong>Invitations</strong>
           {invites.map((invite) => (
             <div key={invite.id}>
@@ -178,10 +178,10 @@ function AccountRooms({ session }: { session: AccountSession }) {
         </div>
       )}
       {status === "loading" ? (
-        <p>Loading rooms…</p>
+        <p>Loading Spaces…</p>
       ) : status === "error" ? (
         <div className="account-rooms__empty">
-          <p>Rooms could not be loaded. Your publications remain stored.</p>
+          <p>Spaces could not be loaded. Your publications remain stored.</p>
           <button type="button" onClick={() => void loadRooms()}>Retry</button>
         </div>
       ) : rooms.length ? (
@@ -207,19 +207,19 @@ function AccountRooms({ session }: { session: AccountSession }) {
                 type="button"
                 disabled={editingId === room.id}
                 aria-label={`Edit ${room.title}`}
-                title="Updates this room under the same live link after review."
+                title="Updates this Space under the same live link after review."
                 onClick={() => void editRoom(room)}
               >{editingId === room.id ? "…" : "Edit"}</button>}
               {role === "owner" && <button
                 type="button"
                 aria-expanded={manageRoomId === room.id}
-                aria-label={`Room settings for ${room.title}`}
+                aria-label={`Space settings for ${room.title}`}
                 onClick={() => setManageRoomId((current) => current === room.id ? undefined : room.id)}
               >Settings</button>}
               {role === "owner" && manageRoomId === room.id && (
                 <div className="account-room-manage">
                   <div className="account-room-manage__summary">
-                    <strong>Room settings</strong>
+                    <strong>Space settings</strong>
                     <span>Revision {room.revision} · updated {new Date(room.updatedAt).toLocaleDateString()}</span>
                   </div>
                   <label>Visibility
@@ -236,7 +236,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
                   {available && <button type="button" onClick={() => {
                     const shareUrl = galleryShareUrl(room.id, window.location.href);
                     void navigator.clipboard.writeText(shareUrl).catch(() => {
-                      window.prompt("Copy this room link", shareUrl);
+                      window.prompt("Copy this Space link", shareUrl);
                     });
                   }}>Copy link</button>}
                   {available && <button type="button" onClick={() => setAccessRoom((current) => current?.id === room.id ? undefined : room)}>Access</button>}
@@ -253,10 +253,10 @@ function AccountRooms({ session }: { session: AccountSession }) {
           })}
         </ul>
       ) : (
-        <p>Rooms published with this account will appear here.</p>
+        <p>Spaces published with this account will appear here.</p>
       )}
       {rooms.length > 0 && (
-        <p className="account-rooms__hint">Edit updates the same live URL. Archive hides a room; Trash keeps a seven-day recovery window.</p>
+        <p className="account-rooms__hint">Edit updates the same live URL. Archive hides a Space; Trash keeps a seven-day recovery window.</p>
       )}
       {accessRoom && (
         <GalleryAccessManager
@@ -337,7 +337,7 @@ function AccountProfileSettings({
           </div>
         </div>
         <label>Full name<input maxLength={60} required autoComplete="name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
-        <label>Nickname<input maxLength={32} autoComplete="nickname" placeholder="artist-name" value={nickname} onChange={(event) => setNickname(event.target.value)} /><small>Letters, numbers, dots, dashes, or underscores.</small></label>
+        <label>Nickname<input maxLength={32} autoComplete="nickname" placeholder="creator-name" value={nickname} onChange={(event) => setNickname(event.target.value)} /><small>Letters, numbers, dots, dashes, or underscores.</small></label>
         <button className="account-primary" disabled={busy}>{busy ? "Saving…" : "Save profile"}</button>
       </fieldset>
       <fieldset>
@@ -355,7 +355,7 @@ function AccountProfileSettings({
               }).finally(() => setNewsletterBusy(false));
             }}
           />
-          <span><strong>AURA Preview Letter</strong>Occasional product and roadmap notes. Unsubscribe here or from any email.</span>
+          <span><strong>LIEUVA Preview Letter</strong>Occasional product and roadmap notes. Unsubscribe here or from any email.</span>
         </label>
         {account.email && (
           <button type="button" className="account-reset" disabled={busy} onClick={onResetPassword}>Send password reset email</button>
@@ -525,13 +525,13 @@ export function AccountDialog({
         aria-labelledby="account-dialog-title"
         tabIndex={-1}
       >
-        <button className="account-dialog__close" onClick={onClose} aria-label={presentation === "page" ? "Back to AURA" : "Close account"}>
+        <button className="account-dialog__close" onClick={onClose} aria-label={presentation === "page" ? "Back to LIEUVA" : "Close account"}>
           {presentation === "page" ? "←" : "×"}
         </button>
-        <p className="eyebrow">AURA account</p>
+        <p className="eyebrow">LIEUVA account</p>
         {account ? (
           <>
-            <h2 id="account-dialog-title">Your rooms.<br /><em>One identity.</em></h2>
+            <h2 id="account-dialog-title">Your Spaces.<br /><em>One identity.</em></h2>
             <div className="account-overview-card">
               <div className="account-identity">
                 <div className="account-avatar" aria-hidden="true">
@@ -556,7 +556,7 @@ export function AccountDialog({
               </div>
             </div>
             <div className="account-tabs account-tabs--settings" role="tablist" aria-label="Account settings">
-              <button role="tab" aria-selected={section === "rooms"} onClick={() => setSection("rooms")}>Rooms</button>
+              <button role="tab" aria-selected={section === "rooms"} onClick={() => setSection("rooms")}>Spaces</button>
               <button role="tab" aria-selected={section === "profile"} onClick={() => setSection("profile")}>Profile &amp; settings</button>
               <button role="tab" aria-selected={section === "data"} onClick={() => setSection("data")}>Data &amp; rights</button>
             </div>
@@ -592,8 +592,8 @@ export function AccountDialog({
                     onSessionChange?.(next);
                     setMessage(subscribed
                       ? result.welcomeQueued
-                        ? "Subscribed. Your first AURA letter is queued."
-                        : "AURA letters enabled."
+                        ? "Subscribed. Your first LIEUVA letter is queued."
+                        : "LIEUVA letters enabled."
                       : "Newsletter unsubscribed. Your account stays active.");
                     return true;
                   } catch (caught) {
@@ -647,7 +647,7 @@ export function AccountDialog({
                 })} disabled={busy}>I verified</button>
               </div>
             )}
-            <p className="account-note">AURA Light Preview is free now. Public rooms appear in Discover; unlisted and private rooms stay in My rooms. Paid plans and additional professional tools are coming later—billing is not active.</p>
+            <p className="account-note">LIEUVA Light Preview is free now. Public Spaces appear in Discover; unlisted and private Spaces stay in Your Spaces. Paid plans and additional professional tools are coming later—billing is not active.</p>
             <button className="account-secondary" onClick={() => void run(async () => {
               await service?.signOutAccount();
               setSession(null);
@@ -657,7 +657,7 @@ export function AccountDialog({
           </>
         ) : (
           <>
-            <h2 id="account-dialog-title">Keep control<br /><em>of your rooms.</em></h2>
+            <h2 id="account-dialog-title">Keep control<br /><em>of your Spaces.</em></h2>
             <p className="account-lead">Build and Walk Preview freely. Sign in with Google or create and verify an account only when you are ready to publish.</p>
             <div className="account-tabs" role="tablist" aria-label="Account action">
               <button role="tab" aria-selected={mode === "create"} onClick={() => setMode("create")}>Create account</button>
@@ -665,7 +665,7 @@ export function AccountDialog({
             </div>
             <label className="account-newsletter-consent">
               <input type="checkbox" checked={newsletterOptIn} onChange={(event) => setNewsletterOptIn(event.target.checked)} />
-              <span><strong>Send me the AURA Preview Letter.</strong>One welcome edition now, plus occasional honest product and roadmap updates. Optional. Unsubscribe anytime. <a href="#/data">Data notice</a>.</span>
+              <span><strong>Send me the LIEUVA Preview Letter.</strong>One welcome edition now, plus occasional honest product and roadmap updates. Optional. Unsubscribe anytime. <a href="#/data">Data notice</a>.</span>
             </label>
             <button className="account-google" disabled={!service || busy} onClick={() => void run(async () => {
               const next = mode === "create"
@@ -678,8 +678,8 @@ export function AccountDialog({
                     mode === "create" ? "google-create" : "google-signin",
                   );
                   setMessage(result?.welcomeQueued
-                    ? "Google account ready. Your AURA letter is queued."
-                    : "Google account ready. AURA letters enabled.");
+                    ? "Google account ready. Your LIEUVA letter is queued."
+                    : "Google account ready. LIEUVA letters enabled.");
                 } catch {
                   setMessage("Google account ready. Newsletter signup needs a retry in Profile & settings.");
                 }
@@ -701,9 +701,9 @@ export function AccountDialog({
                     );
                     setMessage(mode === "create"
                       ? result?.welcomeQueued
-                        ? "Account created. Verification and AURA letter queued."
+                        ? "Account created. Verification and LIEUVA letter queued."
                         : "Account created. Check your email to verify it."
-                      : "Signed in. AURA letters enabled.");
+                      : "Signed in. LIEUVA letters enabled.");
                   } catch {
                     setMessage(mode === "create"
                       ? "Account created. Check your email to verify it. Newsletter signup needs a retry in Profile & settings."
@@ -724,7 +724,7 @@ export function AccountDialog({
                 setMessage("Password reset email sent.");
               })}>Forgot password?</button>
             )}
-            <p className="account-note">Your local draft stays on this device while you sign in. A verified account is required to publish and manage live rooms. <a href="#/data">Read the preview data &amp; rights notice.</a></p>
+            <p className="account-note">Your local Project stays on this device while you sign in. A verified account is required to publish and manage live Spaces. <a href="#/data">Read the preview data &amp; rights notice.</a></p>
           </>
         )}
         {(message || error) && <p className={error ? "account-message is-error" : "account-message"} role={error ? "alert" : "status"}>{error || message}</p>}
@@ -823,7 +823,7 @@ export function AccountButton({
 
 export function AccountPage() {
   return (
-    <main className="account-page" aria-label="AURA account and room management">
+    <main className="account-page" aria-label="LIEUVA account and Space management">
       <AccountDialog
         open
         presentation="page"

@@ -25,15 +25,15 @@ export function firebaseActionErrorMessage(
   if (code.includes("unauthenticated"))
     return "Your session expired. Sign in again, then retry.";
   if (code.includes("permission-denied"))
-    return "This account does not have permission to change this room.";
+    return "This account does not have permission to change this Space.";
   if (code.includes("not-found"))
-    return "This room no longer exists. Refresh your room list.";
+    return "This Space no longer exists. Refresh your Space list.";
   if (code.includes("failed-precondition"))
     return message && message !== "internal"
       ? message
-      : "This room is not ready for that action. Refresh it, then retry.";
+      : "This Space is not ready for that action. Refresh it, then retry.";
   if (code.includes("invalid-argument"))
-    return "That room setting is not valid. Refresh the page, then retry.";
+    return "That Space setting is not valid. Refresh the page, then retry.";
   if (code.includes("resource-exhausted"))
     return "The current preview limit has been reached. Nothing was changed.";
   if (
@@ -42,7 +42,7 @@ export function firebaseActionErrorMessage(
     code.includes("deadline-exceeded") ||
     code.includes("network-request-failed")
   )
-    return "AURA room management is temporarily unavailable. Nothing was changed; retry shortly.";
+    return "LIEUVA Space management is temporarily unavailable. Nothing was changed; retry shortly.";
   return message && message !== "internal"
     ? message
     : fallback;

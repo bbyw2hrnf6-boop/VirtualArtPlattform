@@ -39,22 +39,22 @@ export function reviewGalleryForPublish(
     issues.push({
       id: "title",
       severity: "error",
-      title: "Exhibition title needed",
+      title: "Project title needed",
       detail: "Replace the placeholder with the title visitors should see.",
     });
   if (!artist || artist === EMPTY_DRAFT.artist)
     issues.push({
       id: "artist",
       severity: "error",
-      title: "Artist name needed",
-      detail: "Replace “Your name” before publishing.",
+      title: "Creator name needed",
+      detail: "Add the Creator name visitors should see before publishing.",
     });
   if (!visibleArtworks.length)
     issues.push({
       id: "artworks",
       severity: "error",
       title: "Visible artwork needed",
-      detail: "Show at least one artwork for this exhibition.",
+      detail: "Show at least one work in this Space.",
     });
   visibleArtworks.forEach((artwork, index) => {
     if (!artwork.src)

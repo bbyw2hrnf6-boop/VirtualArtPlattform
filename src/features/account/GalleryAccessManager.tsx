@@ -88,8 +88,8 @@ export function GalleryAccessManager({
           <button disabled={status !== "ready"}>Add</button>
         </form>
         <p className="gallery-access__note">
-          Invitations remain pending until the recipient accepts them in AURA.
-          Viewers can then enter private rooms; Editors can also update content.
+          Invitations remain pending until the recipient accepts them in LIEUVA.
+          Viewers can then enter private Spaces; Editors can also update content.
         </p>
         {status === "loading" ? (
           <p className="gallery-access__status">Loading access…</p>

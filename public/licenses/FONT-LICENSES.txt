@@ -1,4 +1,4 @@
-AURA bundled font notices
+LIEUVA bundled font notices
 =========================
 
 Manrope
@@ -12,7 +12,7 @@ Copyright 2022 The Instrument Serif Project Authors
 (https://github.com/Instrument/instrument-serif)
 
 Both font families are distributed under the SIL Open Font License, Version
-1.1. The license applies to the font software, not to AURA's application code
+1.1. The license applies to the font software, not to LIEUVA's application code
 or other project assets.
 
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007

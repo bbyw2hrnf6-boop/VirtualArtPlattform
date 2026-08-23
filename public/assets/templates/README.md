@@ -1,6 +1,6 @@
-# AURA template concept previews
+# LIEUVA template concept previews
 
-These three 965 × 752 WebP files are photorealistic concept-direction images generated specifically for AURA with OpenAI ImageGen on 2026-08-04. They communicate the intended character of each configurable room and are explicitly described as concepts in the product UI; they are not screenshots of the current Three.js runtime and contain no third-party stock imagery.
+These three 965 × 752 WebP files are photorealistic concept-direction images generated specifically for LIEUVA with OpenAI ImageGen on 2026-08-04. They communicate the intended character of each configurable Space and are explicitly described as concepts in the product UI; they are not screenshots of the current Three.js runtime and contain no third-party stock imagery.
 
 - `white-cube-preview.webp`: luminous white museum room, warm daylight, restrained dark timber bench
 - `nocturne-preview.webp`: intimate charcoal room, warm spot lighting, jewel-toned works and sculpture

@@ -454,7 +454,7 @@ function createSurfaceDetailMaps(kind: SurfaceKind) {
 
 function showSceneError(
   element: HTMLElement,
-  message = "This gallery needs WebGL. Please enable hardware acceleration or open it in a current browser.",
+  message = "This Space needs WebGL. Please enable hardware acceleration or open it in a current browser.",
 ) {
   const notice = document.createElement("div");
   const label = document.createElement("span");
@@ -2818,7 +2818,7 @@ function createCinematicIntro(
   element: HTMLElement,
   onComplete?: () => void,
   labelText = "Private view",
-  titleText = "Entering exhibition",
+  titleText = "Entering Space",
 ) {
   const curve = new THREE.CatmullRomCurve3(
     tour.positions,
@@ -2854,7 +2854,7 @@ function createCinematicIntro(
   ];
   const overlay = document.createElement("div");
   overlay.className = "cinematic-intro";
-  overlay.setAttribute("aria-label", "Cinematic gallery introduction");
+  overlay.setAttribute("aria-label", "Cinematic Space introduction");
   const copy = document.createElement("div");
   copy.className = "cinematic-copy";
   const label = document.createElement("span");
@@ -2866,7 +2866,7 @@ function createCinematicIntro(
   skip.type = "button";
   skip.setAttribute(
     "aria-label",
-    "Skip the gallery introduction and enter now",
+    "Skip the Space introduction and enter now",
   );
   label.textContent = labelText;
   title.textContent = titleText;
@@ -3164,7 +3164,7 @@ function createSceneStatus(element: HTMLElement, initial: string) {
       if (progress === undefined) delete element.dataset.loadProgress;
       else element.dataset.loadProgress = String(Math.round(progress));
     },
-    ready(message = "3D gallery ready") {
+    ready(message = "3D Space ready") {
       status.textContent = message;
       status.dataset.ready = "true";
       element.dataset.loadProgress = "100";
@@ -3511,10 +3511,10 @@ function GallerySceneRenderer({
     configureSceneCanvas(
       renderer.domElement,
       initial.visitor
-        ? "Interactive virtual gallery. Focus this view to use keyboard movement."
+        ? "Interactive virtual Space. Focus this view to use keyboard movement."
         : mode === "walk"
-          ? "Gallery walk preview. Focus this view to use keyboard movement."
-          : "Interactive gallery arranger.",
+          ? "Space Walk Preview. Focus this view to use keyboard movement."
+          : "Interactive Studio arranger.",
     );
     renderer.domElement.dataset.sceneCanvas = "room";
     renderer.domElement.dataset.interaction = mode === "walk" ? "walk" : mode;
@@ -3718,7 +3718,7 @@ function GallerySceneRenderer({
       mode === "overview" ||
       (mode === "arrange" && currentDraft.templateId === "pavilion");
     navigation.setEnabled(mode === "walk" && !initial.playIntro);
-    const status = createSceneStatus(element, "Preparing 3D gallery…");
+    const status = createSceneStatus(element, "Preparing 3D Space…");
     let intro =
       navigation && initial.playIntro && mode === "walk" && !introPlayed.current
         ? createCinematicIntro(
@@ -4045,10 +4045,10 @@ function GallerySceneRenderer({
       renderer.domElement.setAttribute(
         "aria-label",
         initial.visitor
-          ? "Interactive virtual gallery. Focus this view to use keyboard movement."
+          ? "Interactive virtual Space. Focus this view to use keyboard movement."
           : mode === "walk"
-            ? "Gallery walk preview. Focus this view to use keyboard movement."
-            : "Interactive gallery arranger.",
+            ? "Space Walk Preview. Focus this view to use keyboard movement."
+            : "Interactive Studio arranger.",
       );
       controls.enabled = false;
       navigation.setEnabled(false);
@@ -4088,7 +4088,7 @@ function GallerySceneRenderer({
               ? "Arrange view ready."
               : mode === "overview"
                 ? "Overview ready."
-                : "Gallery walk ready.",
+                : "Space Walk Preview ready.",
         );
       };
       modeTransition = {
@@ -4787,7 +4787,7 @@ function GallerySceneRenderer({
     rebuildCollision();
     status.ready();
     const capture: GallerySceneCapture = async (options = {}) => {
-      if (disposed) throw new Error("The 3D gallery is no longer available.");
+      if (disposed) throw new Error("The 3D Space is no longer available.");
       const sourceWidth = Math.max(1, renderer.domElement.width);
       const sourceHeight = Math.max(1, renderer.domElement.height);
       const maxWidth = THREE.MathUtils.clamp(
@@ -4813,7 +4813,7 @@ function GallerySceneRenderer({
       const context = output.getContext("2d");
       if (!context)
         throw new Error(
-          "The gallery cover could not be prepared in this browser.",
+          "The Space cover could not be prepared in this browser.",
         );
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);
@@ -5429,7 +5429,7 @@ function GallerySceneRenderer({
           artworkDirectoryUnavailable={artworkDirectoryUnavailable}
           artworkButtonRef={artworkButtonRef}
           onOpenArtworkDirectory={onOpenArtworkDirectory}
-          compactLabel={visitor ? "Exhibition controls" : "Walk preview controls"}
+          compactLabel={visitor ? "Space controls" : "Walk Preview controls"}
         />
       )}
       {!visitor && arranging && (
@@ -5545,7 +5545,7 @@ function GallerySceneRenderer({
                   </button>
                 ))}
               </div>
-              <p>Five camera zones · one exhibition draft</p>
+              <p>Five camera zones · one Project</p>
             </nav>
           )}
         </>

@@ -1,10 +1,12 @@
-# AURA repository guidance
+# LIEUVA repository guidance
+
+> **Compatibility firewall:** LIEUVA is the customer-facing brand. Legacy AURA/gallery technical identifiers—including Firebase collections and project IDs, Storage paths, callable names, Function parameters, IndexedDB/localStorage keys, `.aura.json`, routes and GLB `aura_*` metadata—are compatibility contracts. Never rename them for cosmetic consistency without an explicit migration plan and regression coverage.
 
 ## Product goal
 
 - Build a pitch-ready browser platform for creating, curating, previewing, publishing, and sharing premium virtual art exhibitions.
 - Treat audit/UI-UX-3D-AUDIT.md as the current product-quality backlog and acceptance guide.
-- Preserve AURA's editorial visual identity: Instrument Serif, Manrope, restrained neutral palettes, and acid-green only for state/action emphasis.
+- Preserve LIEUVA's editorial visual identity: Instrument Serif, Manrope, restrained neutral palettes, and acid-green only for state/action emphasis.
 - Prefer visible product proof over marketing claims. Never describe a runtime feature or Blender pipeline that does not exist.
 
 ## Product priorities

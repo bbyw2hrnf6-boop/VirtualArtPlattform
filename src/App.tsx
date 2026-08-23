@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { Logo } from "./components/Logo";
+import { PRODUCT_BRAND, productTitle } from "./config/brand";
 import { PitchSections } from "./features/landing/PitchSections";
 import { TEMPLATES } from "./features/gallery/templates";
 import {
@@ -274,16 +275,30 @@ function Header({ light = false }: { light?: boolean }) {
     <header className={`site-header ${light ? "site-header--light" : ""}`}>
       <Logo dark={light} />
       <nav>
-        <span className="preview-status">AURA Light Preview</span>
-        <button className="site-header__demo" onClick={() => navigate("/demo")}>Live demo</button>
+        <span className="preview-status">{PRODUCT_BRAND.previewLabel}</span>
+        <button className="site-header__demo" onClick={() => navigate("/demo")}>{PRODUCT_BRAND.secondaryCta}</button>
         <AccountButton light={light} />
         <button className="site-header__create" onClick={() => navigate("/create")}>
-          <span className="site-header__create-wide">Create gallery</span>
+          <span className="site-header__create-wide">{PRODUCT_BRAND.primaryCta}</span>
           <span className="site-header__create-compact">Create</span>
           <i>↗</i>
         </button>
       </nav>
     </header>
+  );
+}
+
+function BrandHero() {
+  return (
+    <section className="brand-hero" aria-labelledby="brand-hero-title">
+      <p className="eyebrow">{PRODUCT_BRAND.category}</p>
+      <h1 id="brand-hero-title">{PRODUCT_BRAND.claim}</h1>
+      <p>{PRODUCT_BRAND.heroCopy}</p>
+      <div className="brand-hero__actions">
+        <button className="button button--light" onClick={() => navigate("/create")}>{PRODUCT_BRAND.primaryCta} <span>↗</span></button>
+        <button className="text-link" onClick={() => navigate("/demo")}>{PRODUCT_BRAND.secondaryCta} →</button>
+      </div>
+    </section>
   );
 }
 
@@ -294,7 +309,7 @@ function DeferredScrollStory() {
         fallback={
           <section
             className="story-placeholder"
-            aria-label="Loading interactive gallery story"
+            aria-label="Loading interactive Space story"
           >
             <span>Preparing Danny Hirsch Arts…</span>
           </section>
@@ -376,7 +391,7 @@ function DiscoverGalleries() {
     } catch (error) {
       console.error("Gallery deletion failed", error);
       alert(
-        "The gallery could not be removed. Deploy the updated Firestore rules, then try again.",
+        "The Space could not be removed. Deploy the updated Firestore rules, then try again.",
       );
     } finally {
       setRemovingId(undefined);
@@ -386,23 +401,23 @@ function DiscoverGalleries() {
     <section ref={section} className="discover">
       <div className="discover-heading">
         <div>
-          <p className="eyebrow">Live from AURA</p>
+          <p className="eyebrow">Live from {PRODUCT_BRAND.name}</p>
           <h2>
             Discover
             <br />
-            <em>galleries.</em>
+            <em>Spaces.</em>
           </h2>
         </div>
         <div className="discover-intro">
           <p>
-            New spaces created by artists using AURA. Enter while the exhibition
-            is live.
+            New Spaces created by visual artists and small galleries using {PRODUCT_BRAND.name}.
+            Enter while each presentation is live.
           </p>
           {galleries.length > 3 && (
             <div
               className="discover-controls"
               role="group"
-              aria-label="Browse open galleries"
+              aria-label="Browse public Spaces"
             >
               <span>
                 {String(visiblePage + 1).padStart(2, "0")} /{" "}
@@ -411,7 +426,7 @@ function DiscoverGalleries() {
               <button
                 onClick={() => setPage(Math.max(0, visiblePage - 1))}
                 disabled={visiblePage === 0}
-                aria-label="Previous galleries"
+                aria-label="Previous Spaces"
               >
                 ←
               </button>
@@ -420,7 +435,7 @@ function DiscoverGalleries() {
                   setPage(Math.min(pageCount - 1, visiblePage + 1))
                 }
                 disabled={visiblePage === pageCount - 1}
-                aria-label="Next galleries"
+                aria-label="Next Spaces"
               >
                 →
               </button>
@@ -465,7 +480,7 @@ function DiscoverGalleries() {
               <p>
                 {status === "error"
                   ? "The reference exhibition stays available. Retry the live community feed when the connection is ready."
-                  : "Explore the reference exhibition or publish the first community gallery."}
+                  : "Explore the reference exhibition or publish the first community Space."}
               </p>
               <button
                 className="text-link"
@@ -473,7 +488,7 @@ function DiscoverGalleries() {
               >
                 {status === "error"
                   ? "Retry live feed →"
-                  : "Create a gallery →"}
+                  : `${PRODUCT_BRAND.primaryCta} →`}
               </button>
             </div>
           </>
@@ -511,7 +526,7 @@ function DiscoverGalleries() {
                 </div>
                 <p>{gallery.artist}</p>
                 <h3>{gallery.title}</h3>
-                <small>Enter exhibition →</small>
+                <small>Enter Space →</small>
               </button>
               {gallery.ownerId === ownerId && (
                 <button
@@ -535,6 +550,7 @@ function Landing() {
   return (
     <main className="landing">
       <Header />
+      <BrandHero />
       <DeferredScrollStory />
       <RoomShowcase />
       <section className="demo-tease">
@@ -547,7 +563,7 @@ function Landing() {
           </h2>
           <p>
             Brief: preserve the atmosphere of an authored Blender exhibition in
-            one browser link. AURA converted its navigation anchors, routes,
+            one browser link. {PRODUCT_BRAND.name} converted its navigation anchors, routes,
             artwork metadata, and collision data into an optimized walk,
             overview, and guided tour.
           </p>
@@ -569,7 +585,7 @@ function Landing() {
             className="button button--light"
             onClick={() => navigate("/demo")}
           >
-            Enter the gallery <span>→</span>
+            {PRODUCT_BRAND.secondaryCta} <span>→</span>
           </button>
         </div>
         <button
@@ -591,17 +607,17 @@ function Landing() {
       <PitchSections />
       <DiscoverGalleries />
       <section className="closing">
-        <p className="eyebrow">Your next exhibition starts here</p>
+        <p className="eyebrow">Your next Project starts here</p>
         <h2>
-          Make space
+          Give your work
           <br />
-          <em>for your art.</em>
+          <em>a place.</em>
         </h2>
         <button
           className="button button--dark"
           onClick={() => navigate("/create")}
         >
-          Create a gallery <span>↗</span>
+          {PRODUCT_BRAND.primaryCta} <span>↗</span>
         </button>
       </section>
       <Footer />
@@ -678,7 +694,7 @@ function Footer() {
         <a href="./licenses/FONT-LICENSES.txt">Font licenses</a>
         <a href="#pilot-faq">FAQ</a>
       </nav>
-      <span>© 2026 AURA</span>
+      <span>© 2026 {PRODUCT_BRAND.name}</span>
     </footer>
   );
 }
@@ -688,14 +704,14 @@ function MvpDataNotice() {
     <main className="info-page">
       <Header light />
       <article>
-        <p className="eyebrow">AURA preview · Data and rights notice</p>
+        <p className="eyebrow">{PRODUCT_BRAND.name} preview · Data and rights notice</p>
         <h1>
           Know before
           <br />
           <em>you upload.</em>
         </h1>
         <p className="info-lead">
-          AURA is a concept-validation product, not yet a production
+          {PRODUCT_BRAND.name} is a concept-validation product, not yet a production
           publishing service. This factual MVP notice does not replace a
           complete privacy policy or pilot agreement.
         </p>
@@ -711,7 +727,7 @@ function MvpDataNotice() {
         <section>
           <h2>What happens when you publish?</h2>
           <p>
-            Gallery metadata and access roles are stored in Cloud Firestore;
+            Space metadata and access roles are stored in Cloud Firestore;
             compressed artwork and covers are stored in Firebase Storage.
             Building and Walk Preview work without an account. Publishing
             requires a verified email or Google account, which can choose
@@ -747,15 +763,15 @@ function MvpDataNotice() {
           </p>
         </section>
         <section>
-          <h2>Optional AURA letters</h2>
+          <h2>Optional {PRODUCT_BRAND.name} letters</h2>
           <p>
             Newsletter consent is separate, optional, and unchecked by
-            default. If selected, AURA stores the account ID, email address,
+            default. If selected, {PRODUCT_BRAND.name} stores the account ID, email address,
             consent time, source, and subscription status in Firestore. One
             welcome edition is queued once per account; later product letters
             require the subscription to remain active. Every letter includes
             an unsubscribe link, and the preference can also be changed under
-            Profile &amp; settings without affecting rooms or account access.
+            Profile &amp; settings without affecting Spaces or account access.
           </p>
         </section>
         <section>
@@ -784,7 +800,7 @@ function MvpDataNotice() {
             Account deletion is immediate and irreversible in the current
             preview; it does not promise an account-level grace period. Firebase
             or infrastructure backups may follow provider-level retention that
-            is not yet stated as an AURA production policy. A named controller,
+            is not yet stated as a {PRODUCT_BRAND.name} production policy. A named controller,
             postal address, rights-request inbox, backup-retention decision, and
             formal privacy policy are still required before production use.
           </p>
@@ -800,7 +816,7 @@ function MvpDataNotice() {
             className="button button--dark"
             onClick={() => navigate("/create")}
           >
-            Return to builder
+            Return to Studio
           </button>
           <a
             className="text-link"
@@ -838,7 +854,7 @@ function TemplatePicker({
     <main className="picker">
       <Header light />
       <div className="picker-heading">
-        <p className="eyebrow">AURA Light Preview · Free now · Step 1 of 3</p>
+        <p className="eyebrow">{PRODUCT_BRAND.previewLabel} · Free now · Step 1 of 3</p>
         <h1>
           Choose your <em>space.</em>
         </h1>
@@ -887,7 +903,7 @@ function TemplatePicker({
                       {projects.length} local project{projects.length === 1 ? "" : "s"}
                     </b>
                   )}
-                  <span>Start new exhibition ↗</span>
+                  <span>Start new Project ↗</span>
                 </div>
               </button>
               <p>{template.label}</p>
@@ -915,7 +931,7 @@ function TemplatePicker({
         })}
       </div>
       <p className="picker-footnote">
-        Concept direction imagery · Every room opens in the live browser builder.
+        Concept direction imagery · Every template opens in {PRODUCT_BRAND.name} Studio.
       </p>
     </main>
   );
@@ -1503,7 +1519,7 @@ function Studio({
       }
       if (!remaining)
         failures.push(
-          `This gallery already contains the maximum of ${maxArtworks} artworks.`,
+          `This Project already contains the maximum of ${maxArtworks} works.`,
         );
       else if (!supported.length)
         failures.push(
@@ -1618,7 +1634,7 @@ function Studio({
         )?.dataUrl;
       } catch (captureError) {
         console.warn(
-          "Room cover capture unavailable; using artwork fallback.",
+          "Space cover capture unavailable; using work fallback.",
           captureError,
         );
       }
@@ -1714,7 +1730,7 @@ function Studio({
     if (!source) return;
     if (draftRef.current.artworks.length >= maxArtworks) {
       setPlacementError(
-        `This room already contains its maximum of ${maxArtworks} artworks.`,
+        `This Project already contains its maximum of ${maxArtworks} works.`,
       );
       return;
     }
@@ -1805,7 +1821,7 @@ function Studio({
         >
           <Logo />
           <div className="publish-success__copy">
-            <p className="eyebrow">{wasUpdate ? "Room updated" : "Published successfully"}</p>
+            <p className="eyebrow">{wasUpdate ? "Space updated" : "Published successfully"}</p>
             <h1 id="publish-success-title">
               {wasUpdate ? "Your changes are" : "Your space is"}
               <br />
@@ -1813,14 +1829,14 @@ function Studio({
             </h1>
             <p>
               {published.visibility === "public"
-                ? `Your room is listed in Discover and live until ${expiry}.`
+                ? `Your Space is listed in Discover and live until ${expiry}.`
                 : published.visibility === "unlisted"
-                  ? `Only people with this link can find the room. It is live until ${expiry}.`
+                  ? `Only people with this link can find the Space. It is live until ${expiry}.`
                   : `Only the owner and invited accounts can enter. It is live until ${expiry}.`}
             </p>
             <div className="share-field">
               <input
-                aria-label="Shareable gallery URL"
+                aria-label="Shareable Space URL"
                 readOnly
                 spellCheck={false}
                 value={url}
@@ -1836,17 +1852,17 @@ function Studio({
                       setCopied(true);
                       window.setTimeout(() => setCopied(false), 1800);
                     })
-                    .catch(() => window.prompt("Copy your gallery link:", url));
+                    .catch(() => window.prompt("Copy your Space link:", url));
                 }}
               >
                 {copied ? "Copied ✓" : "Copy link"}
               </button>
             </div>
             <p className="publish-success__copy-status" aria-live="polite">
-              {copied ? "Gallery link copied to the clipboard." : ""}
+              {copied ? "Space link copied to the clipboard." : ""}
             </p>
             <p className="publish-access-label">
-              AURA Light Preview · {visibilityLabel[published.visibility]} · Account preview
+              {PRODUCT_BRAND.previewLabel} · {visibilityLabel[published.visibility]} · Account preview
             </p>
             {isVerifiedAccount(accountSession) && editTarget?.role === "owner" && (
               <GalleryAccessManager
@@ -1857,7 +1873,7 @@ function Studio({
             )}
             <div className="success-actions">
               <a className="button button--light" href={url}>
-                Enter the room <span aria-hidden="true">↗</span>
+                Enter the Space <span aria-hidden="true">↗</span>
               </a>
               {published.visibility === "public" && (
                 <button className="text-link" onClick={() => navigate("/")}>
@@ -1878,7 +1894,7 @@ function Studio({
         </section>
         <section
           className="publish-success__preview"
-          aria-label="Published gallery cover"
+          aria-label="Published Space cover"
         >
           {coverSrc ? (
             <img src={coverSrc} alt={`Published view of ${published.title}`} />
@@ -1907,14 +1923,14 @@ function Studio({
         <Logo />
         <div className="studio-title">
           <input
-            aria-label="Gallery title"
+            aria-label="Project title"
             maxLength={100}
             value={draft.title}
             onChange={(event) => update("title", event.target.value)}
           />
           <span>by</span>
           <input
-            aria-label="Artist name"
+            aria-label="Creator name"
             maxLength={100}
             value={draft.artist}
             onChange={(event) => update("artist", event.target.value)}
@@ -1975,7 +1991,7 @@ function Studio({
             disabled={!draft.artworks.length || curating || uploading}
             title={
               draft.artworks.length
-                ? "Automatically curate this exhibition"
+                ? "Automatically curate this Project"
                 : "Upload artwork first"
             }
           >
@@ -2036,9 +2052,9 @@ function Studio({
             </b>
           </button>
           <section className="mobile-exhibition">
-            <p className="tool-label">Exhibition details</p>
+            <p className="tool-label">Project details</p>
             <label>
-              Gallery title
+              Project title
               <input
                 maxLength={100}
                 value={draft.title}
@@ -2046,7 +2062,7 @@ function Studio({
               />
             </label>
             <label>
-              Artist name
+              Creator name
               <input
                 maxLength={100}
                 value={draft.artist}
@@ -2080,7 +2096,7 @@ function Studio({
               </strong>
               <small>
                 {uploading
-                  ? "Optimizing for the gallery"
+                  ? "Optimizing for your Project"
                   : `JPG, PNG, WebP or HEIC · up to ${maxArtworks}`}
               </small>
             </label>
@@ -2855,10 +2871,10 @@ function PublishReviewDialog({
           {coverSrc ? (
             <img
               src={coverSrc}
-              alt="Room cover captured from the current editor view"
+              alt="Space cover captured from the current Studio view"
             />
           ) : (
-            <span aria-live="polite">Rendering room cover…</span>
+            <span aria-live="polite">Rendering Space cover…</span>
           )}
           <p>
             <strong>Share cover</strong>Current editor view. Close this review
@@ -2883,15 +2899,15 @@ function PublishReviewDialog({
         )}
         {!accountEligible ? (
           <div className="publish-account-gate">
-            <span aria-hidden="true">A</span>
+            <span aria-hidden="true">L</span>
             <div>
               <strong>Sign in to publish.</strong>
-              <p>Build and Walk Preview stay available without an account. Use Google or create and verify an AURA account when you are ready to share.</p>
+              <p>Build and Walk Preview stay available without an account. Use Google or create and verify a {PRODUCT_BRAND.name} account when you are ready to publish.</p>
             </div>
           </div>
         ) : editing ? (
           <div className="publish-edit-target">
-            <strong>Same room. Same share URL.</strong>
+            <strong>Same Space. Same share URL.</strong>
             <span>{visibilityLabel[editing.visibility]} · Revision {editing.revision + 1} · Visibility and expiry stay unchanged.</span>
           </div>
         ) : <fieldset className="publish-visibility">
@@ -2918,7 +2934,7 @@ function PublishReviewDialog({
               );
             },
           )}
-          <small>Billing is not active. Account rooms use an extended preview period for now.</small>
+          <small>Billing is not active. Account Spaces use an extended preview period for now.</small>
         </fieldset>}
         {publishError && (
           <p className="publish-review-error" role="alert">
@@ -2932,7 +2948,7 @@ function PublishReviewDialog({
             disabled={publishing || (accountEligible && blockers > 0)}
           >
             {publishStatus === "preparing"
-              ? "Preparing room cover…"
+              ? "Preparing Space cover…"
               : publishStatus === "publishing"
                 ? "Publishing…"
                 : !accountEligible
@@ -2940,8 +2956,8 @@ function PublishReviewDialog({
                 : publishStatus === "error"
                   ? "Retry publishing"
                   : editing
-                    ? "Update live gallery"
-                    : `Publish ${visibilityLabel[visibility].toLowerCase()} gallery`}
+                    ? "Update live Space"
+                    : `Publish ${visibilityLabel[visibility].toLowerCase()} Space`}
           </button>
           <button className="text-link" onClick={onClose} disabled={publishing}>
             Back to editor
@@ -3741,7 +3757,7 @@ function PublishedGallery({ id }: { id: string }) {
   }, [id, loadAttempt]);
   useEffect(() => {
     if (loadState.status === "ready")
-      document.title = `${loadState.gallery.title} — ${loadState.gallery.artist} | AURA`;
+      document.title = productTitle(`${loadState.gallery.title} — ${loadState.gallery.artist}`);
   }, [loadState]);
   if (loadState.status === "loading")
     return (
@@ -3754,7 +3770,7 @@ function PublishedGallery({ id }: { id: string }) {
       <main className="not-found not-found--error">
         <Logo />
         <p className="eyebrow">Connection interrupted</p>
-        <h1>We couldn't open this gallery.</h1>
+        <h1>We couldn't open this Space.</h1>
         <p>
           The exhibition may still be live. Check your connection and try again.
         </p>
@@ -3778,7 +3794,7 @@ function PublishedGallery({ id }: { id: string }) {
     return (
       <main className="not-found not-found--private">
         <Logo />
-        <p className="eyebrow">Private AURA room</p>
+        <p className="eyebrow">Private {PRODUCT_BRAND.name} Space</p>
         <h1>Sign in to enter.</h1>
         <p>Use the verified email or Google account invited by the owner.</p>
         <div className="not-found-actions">
@@ -3797,13 +3813,13 @@ function PublishedGallery({ id }: { id: string }) {
     return (
       <main className="not-found">
         <Logo />
-        <h1>This gallery isn't available.</h1>
+        <h1>This Space isn't available.</h1>
         <p>The exhibition may have expired or been removed by its owner.</p>
         <button
           className="button button--light"
           onClick={() => navigate("/create")}
         >
-          Create a gallery
+          {PRODUCT_BRAND.primaryCta}
         </button>
       </main>
     );
@@ -3900,18 +3916,18 @@ export default function App() {
   useEffect(() => {
     document.title =
       route.page === "home"
-        ? "AURA — Virtual galleries for artists"
+        ? productTitle()
         : route.page === "create"
-          ? "Create a gallery | AURA"
+          ? productTitle("Create a Space")
           : route.page === "demo"
-            ? "Threshold — Danny Hirsch Arts | AURA"
+            ? productTitle("Threshold — Danny Hirsch Arts")
             : route.page === "data"
-              ? "MVP data and rights | AURA"
+              ? productTitle("MVP data and rights")
               : route.page === "account"
-                ? "Your rooms and account | AURA"
+                ? productTitle("Your Projects and account")
               : route.page === "auth-action"
-                ? "Account action | AURA"
-              : "Virtual exhibition | AURA";
+                ? productTitle("Account action")
+              : productTitle("Immersive Space");
     if (previousRoute.current === routeKey) return;
     previousRoute.current = routeKey;
     const frame = requestAnimationFrame(() =>

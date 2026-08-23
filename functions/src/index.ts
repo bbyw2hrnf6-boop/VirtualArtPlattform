@@ -31,14 +31,14 @@ if (!getApps().length) initializeApp();
 const REGION = "europe-west1";
 const PUBLIC_APP_URL = defineString("AURA_PUBLIC_APP_URL", {
   default: "https://lieuva.com",
-  description: "Public AURA URL without a trailing slash.",
+  description: "Legacy-named parameter for the public LIEUVA URL without a trailing slash.",
 });
 const REPLY_TO = defineString("AURA_REPLY_TO", {
   default: "not-configured@invalid.example",
-  description: "Public support/reply-to email shown in AURA emails.",
+  description: "Legacy-named parameter for the public support/reply-to email shown in LIEUVA emails.",
 });
 const LEGAL_FOOTER = defineString("AURA_LEGAL_FOOTER", {
-  default: "AURA preview — legal sender details not configured",
+  default: "LIEUVA preview — legal sender details not configured",
   description: "Legal sender name and postal address shown in marketing emails.",
 });
 
@@ -50,6 +50,7 @@ const galleryRoles = new Set(["viewer", "editor"]);
 
 function brand(): AuraMailBrand {
   return {
+    name: "LIEUVA",
     appUrl: PUBLIC_APP_URL.value().replace(/\/$/, ""),
     replyTo: REPLY_TO.value(),
     legalFooter: LEGAL_FOOTER.value(),
@@ -58,7 +59,7 @@ function brand(): AuraMailBrand {
 
 function requireMailConfiguration() {
   if (REPLY_TO.value().endsWith("@invalid.example") || LEGAL_FOOTER.value().includes("not configured"))
-    throw new HttpsError("failed-precondition", "AURA email delivery is not configured yet.");
+    throw new HttpsError("failed-precondition", "LIEUVA email delivery is not configured yet.");
 }
 
 function requireAccount(auth: { uid: string; token: Record<string, unknown> } | undefined) {
@@ -74,7 +75,7 @@ function requireAccount(auth: { uid: string; token: Record<string, unknown> } | 
 }
 
 function requireSignedIn(auth: { uid: string; token: Record<string, unknown> } | undefined) {
-  if (!auth) throw new HttpsError("unauthenticated", "Sign in before changing a room.");
+  if (!auth) throw new HttpsError("unauthenticated", "Sign in before changing a Space.");
   return auth.uid;
 }
 
@@ -93,7 +94,7 @@ function verifiedAccount(auth: { uid: string; token: Record<string, unknown> } |
 
 function galleryIdFrom(value: unknown) {
   const id = parseGalleryId(value);
-  if (!id) throw new HttpsError("invalid-argument", "Invalid gallery id.");
+  if (!id) throw new HttpsError("invalid-argument", "Invalid Space ID.");
   return id;
 }
 
@@ -312,7 +313,7 @@ export const beginAuraGalleryPublication = onCall(
     const galleryId = galleryIdFrom(request.data?.galleryId);
     const visibility = request.data?.visibility;
     if (typeof visibility !== "string" || !galleryVisibilities.has(visibility))
-      throw new HttpsError("invalid-argument", "Invalid room visibility.");
+      throw new HttpsError("invalid-argument", "Invalid Space visibility.");
     const now = Date.now();
     const terms = publicationTerms(true, visibility as GalleryVisibility, now);
     if (!terms)
@@ -338,7 +339,7 @@ export const beginAuraGalleryPublication = onCall(
         throw new HttpsError("already-exists", "This publication id is already in use.");
       const data = quota.data() ?? {};
       if (activeRooms.size >= 30)
-        throw new HttpsError("resource-exhausted", "Archive or remove a live room before publishing another.");
+        throw new HttpsError("resource-exhausted", "Archive or remove a live Space before publishing another.");
       const day = new Date(now).toISOString().slice(0, 10);
       const dailyCount = data.day === day ? Number(data.dailyCount ?? 0) : 0;
       if (dailyCount >= 20)
@@ -373,7 +374,7 @@ export const abortAuraGalleryPublication = onCall(
       db.collection("galleries").doc(galleryId).get(),
     ]);
     if (gallery.exists)
-      throw new HttpsError("failed-precondition", "A published room cannot be aborted.");
+      throw new HttpsError("failed-precondition", "A published Space cannot be aborted.");
     if (!permit.exists) return { status: "clean" };
     if (permit.data()?.ownerId !== uid)
       throw new HttpsError("permission-denied", "This publication permit belongs to another account.");
@@ -397,15 +398,15 @@ export const manageAuraGalleryLifecycle = onCall(
     const galleryId = galleryIdFrom(request.data?.galleryId);
     const action = request.data?.action;
     if (typeof action !== "string" || !galleryLifecycleActions.has(action))
-      throw new HttpsError("invalid-argument", "Invalid room action.");
+      throw new HttpsError("invalid-argument", "Invalid Space action.");
     const visibility = request.data?.visibility;
     const galleryReference = db.collection("galleries").doc(galleryId);
     await db.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(galleryReference);
-      if (!snapshot.exists) throw new HttpsError("not-found", "This room no longer exists.");
+      if (!snapshot.exists) throw new HttpsError("not-found", "This Space no longer exists.");
       const data = snapshot.data()!;
       if (data.ownerId !== uid)
-        throw new HttpsError("permission-denied", "Only the room owner can change its lifecycle.");
+        throw new HttpsError("permission-denied", "Only the Space Owner can change its lifecycle.");
       const status = typeof data.lifecycleStatus === "string" ? data.lifecycleStatus : "active";
       const now = new Date();
       if (action === "trash") {
@@ -418,7 +419,7 @@ export const manageAuraGalleryLifecycle = onCall(
         return;
       }
       if (action === "restore") {
-        if (status !== "trashed") throw new HttpsError("failed-precondition", "This room is not in Trash.");
+        if (status !== "trashed") throw new HttpsError("failed-precondition", "This Space is not in Trash.");
         const purgeAt = data.purgeAt?.toMillis?.() ?? 0;
         if (purgeAt <= Date.now()) throw new HttpsError("failed-precondition", "The restore window has ended.");
         transaction.update(galleryReference, {
@@ -430,9 +431,9 @@ export const manageAuraGalleryLifecycle = onCall(
         return;
       }
       if (!verifiedAccount(request.auth))
-        throw new HttpsError("failed-precondition", "Use a verified account for this room action.");
+        throw new HttpsError("failed-precondition", "Use a verified account for this Space action.");
       if (status === "trashed")
-        throw new HttpsError("failed-precondition", "Restore this room before changing it.");
+        throw new HttpsError("failed-precondition", "Restore this Space before changing it.");
       if (action === "archive") {
         transaction.update(galleryReference, {
           lifecycleStatus: status === "archived" ? "active" : "archived",
@@ -440,14 +441,14 @@ export const manageAuraGalleryLifecycle = onCall(
         });
       } else if (action === "renew") {
         if (data.retention !== "account-preview")
-          throw new HttpsError("failed-precondition", "Guest rooms cannot be renewed.");
+          throw new HttpsError("failed-precondition", "Guest Spaces cannot be renewed.");
         transaction.update(galleryReference, {
           expiresAt: new Date(Date.now() + 365 * 86_400_000),
           updatedAt: FieldValue.serverTimestamp(),
         });
       } else {
         if (typeof visibility !== "string" || !galleryVisibilities.has(visibility))
-          throw new HttpsError("invalid-argument", "Invalid room visibility.");
+          throw new HttpsError("invalid-argument", "Invalid Space visibility.");
         transaction.update(galleryReference, {
           visibility,
           updatedAt: FieldValue.serverTimestamp(),
@@ -467,9 +468,9 @@ export const purgeAuraGallery = onCall(
     const snapshot = await galleryReference.get();
     if (!snapshot.exists) return { status: "deleted" };
     const data = snapshot.data()!;
-    if (data.ownerId !== uid) throw new HttpsError("permission-denied", "Only the room owner can purge it.");
+    if (data.ownerId !== uid) throw new HttpsError("permission-denied", "Only the Space Owner can purge it.");
     if (data.lifecycleStatus !== "trashed")
-      throw new HttpsError("failed-precondition", "Move the room to Trash first.");
+      throw new HttpsError("failed-precondition", "Move the Space to Trash first.");
     const purgeAt = data.purgeAt?.toMillis?.() ?? Number.POSITIVE_INFINITY;
     if (purgeAt > Date.now())
       throw new HttpsError("failed-precondition", "The seven-day recovery period is still active.");
@@ -492,7 +493,7 @@ export const createAuraGalleryInvite = onCall(
     const email = memberEmailFrom(request.data?.email);
     const role = request.data?.role;
     if (typeof role !== "string" || !galleryRoles.has(role))
-      throw new HttpsError("invalid-argument", "Invalid room role.");
+      throw new HttpsError("invalid-argument", "Invalid Space role.");
     if (request.auth?.token.email === email)
       throw new HttpsError("failed-precondition", "The owner already has full access.");
     const galleryReference = db.collection("galleries").doc(galleryId);
@@ -503,16 +504,16 @@ export const createAuraGalleryInvite = onCall(
         transaction.get(inviteReference),
         transaction.get(db.collection("galleryInvites").where("ownerId", "==", uid).limit(100)),
       ]);
-      if (!gallery.exists) throw new HttpsError("not-found", "This room no longer exists.");
+      if (!gallery.exists) throw new HttpsError("not-found", "This Space no longer exists.");
       if (gallery.data()?.ownerId !== uid)
-        throw new HttpsError("permission-denied", "Only the room owner can invite collaborators.");
+        throw new HttpsError("permission-denied", "Only the Space Owner can invite collaborators.");
       if ((gallery.data()?.lifecycleStatus ?? "active") === "trashed")
-        throw new HttpsError("failed-precondition", "Restore the room before inviting collaborators.");
+        throw new HttpsError("failed-precondition", "Restore the Space before inviting collaborators.");
       if (!invite.exists && ownerInvites.docs.filter((item) => item.data().status === "pending").length >= 50)
         throw new HttpsError("resource-exhausted", "Resolve an existing invitation before adding another.");
       transaction.set(inviteReference, {
         galleryId,
-        galleryTitle: String(gallery.data()?.title ?? "AURA room").slice(0, 100),
+        galleryTitle: String(gallery.data()?.title ?? "Untitled Space").slice(0, 100),
         ownerId: uid,
         email,
         role,
@@ -545,7 +546,7 @@ export const acceptAuraGalleryInvite = onCall(
         throw new HttpsError("deadline-exceeded", "This invitation has expired.");
       const gallery = await transaction.get(db.collection("galleries").doc(data.galleryId));
       if (!gallery.exists || (gallery.data()?.lifecycleStatus ?? "active") !== "active")
-        throw new HttpsError("failed-precondition", "This room is not currently available.");
+        throw new HttpsError("failed-precondition", "This Space is not currently available.");
       transaction.set(
         db.collection("galleries").doc(data.galleryId).collection("members").doc(email),
         {
@@ -578,7 +579,7 @@ export const revokeAuraGalleryAccess = onCall(
     const gallery = await galleryReference.get();
     if (!gallery.exists) return { status: "removed" };
     if (gallery.data()?.ownerId !== uid)
-      throw new HttpsError("permission-denied", "Only the room owner can revoke access.");
+      throw new HttpsError("permission-denied", "Only the Space Owner can revoke access.");
     await Promise.all([
       galleryReference.collection("members").doc(email).delete(),
       db.collection("galleryInvites").doc(inviteIdFor(galleryId, email)).delete(),
@@ -700,7 +701,7 @@ export const setAuraNewsletterPreference = onCall(
 
 function responsePage(message: string) {
   const appUrl = brand().appUrl;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Newsletter preference | AURA</title></head><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#151613;color:#efeee8;font-family:Arial,sans-serif"><main style="width:min(560px,calc(100% - 48px));padding:42px;background:#efeee8;color:#1b1c19"><p style="font-size:10px;letter-spacing:2px;text-transform:uppercase">AURA account</p><h1 style="font:48px/1 Georgia,serif">You are in control.</h1><p style="color:#63655d;line-height:1.7">${message}</p><a href="${appUrl}" style="display:inline-block;margin-top:18px;padding:15px 20px;background:#1b1c19;color:#fff;text-decoration:none;font-size:11px;text-transform:uppercase;letter-spacing:1px">Return to AURA →</a></main></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Newsletter preference | LIEUVA</title></head><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#151613;color:#efeee8;font-family:Arial,sans-serif"><main style="width:min(560px,calc(100% - 48px));padding:42px;background:#efeee8;color:#1b1c19"><p style="font-size:10px;letter-spacing:2px;text-transform:uppercase">LIEUVA account</p><h1 style="font:48px/1 Georgia,serif">You are in control.</h1><p style="color:#63655d;line-height:1.7">${message}</p><a href="${appUrl}" style="display:inline-block;margin-top:18px;padding:15px 20px;background:#1b1c19;color:#fff;text-decoration:none;font-size:11px;text-transform:uppercase;letter-spacing:1px">Return to LIEUVA →</a></main></body></html>`;
 }
 
 export const unsubscribeAuraNewsletter = onRequest(
@@ -709,7 +710,7 @@ export const unsubscribeAuraNewsletter = onRequest(
     try {
       requireMailConfiguration();
     } catch {
-      response.status(503).send("AURA email preferences are not configured yet.");
+      response.status(503).send("LIEUVA email preferences are not configured yet.");
       return;
     }
     response.set("Cache-Control", "no-store");
@@ -739,7 +740,7 @@ export const unsubscribeAuraNewsletter = onRequest(
       changed = true;
     });
     response.status(200).send(responsePage(changed
-      ? "You will no longer receive AURA product letters. Your account and rooms stay untouched."
-      : "This preference was already handled. Your account and rooms stay untouched."));
+      ? "You will no longer receive LIEUVA product letters. Your account and Spaces stay untouched."
+      : "This preference was already handled. Your account and Spaces stay untouched."));
   },
 );

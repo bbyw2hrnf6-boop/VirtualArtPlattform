@@ -1,6 +1,6 @@
-# Firebase setup for AURA — Firestore + Storage MVP
+# Firebase setup for LIEUVA — Firestore + Storage MVP
 
-AURA uses Anonymous, Email/Password, and Google Authentication; Firestore for room metadata and access roles; and Firebase Storage for artwork images and room covers. Firebase requires the Blaze pay-as-you-go plan for Storage access as of 3 February 2026. No-cost quotas still apply, but configure billing alerts.
+LIEUVA uses Anonymous, Email/Password, and Google Authentication; Firestore for Space metadata and access roles; and Firebase Storage for work images and Space covers. Legacy AURA/gallery identifiers remain intentionally unchanged. Firebase requires the Blaze pay-as-you-go plan for Storage access as of 3 February 2026. No-cost quotas still apply, but configure billing alerts.
 
 ## Services
 
@@ -10,7 +10,7 @@ AURA uses Anonymous, Email/Password, and Google Authentication; Firestore for ro
 | Firestore | Gallery metadata, layout, visibility, ACL, Discover, expiry |
 | Storage | Compressed artwork images and covers |
 | Cloud Functions | Publication permits, quotas, lifecycle and safe Trash |
-| App Check | Blocks scripts that are not running in the registered AURA app |
+| App Check | Blocks scripts that are not running in the registered LIEUVA app |
 | GitHub Action | Physical cleanup after expiry or the Trash recovery window |
 
 New publications use schema v3. Existing schema-v1/v2 galleries remain public and readable; new rooms do not create legacy `galleryArtworks` documents.
@@ -27,10 +27,12 @@ The app targets project `virtualartplattform` and bucket `virtualartplattform.fi
 4. Enable **Google**, choose the public support email, and save.
 5. Under **Authentication → Settings → Authorized domains**, add:
    - `localhost`
+   - `lieuva.com`
+   - `www.lieuva.com`
    - `bbyw2hrnf6-boop.github.io`
-   - any future custom domain
+   - any future replacement domain before it becomes active
 
-### Branded account email and AURA Preview Letter
+### Branded account email and LIEUVA Preview Letter
 
 The web app now requests a branded verification email from trusted Cloud
 Functions. Newsletter consent is separate, optional, unchecked by default, and
@@ -40,7 +42,7 @@ account. Client code cannot write email jobs or consent records.
 Before deployment, choose a transactional email provider with SMTP support
 (for example Postmark, Mailgun, SendGrid, or another provider you control),
 verify the sending domain, and create a real sender address such as
-`hello@your-aura-domain.example`. Do not use a personal mailbox password.
+`hello@your-lieuva-domain.example`. Do not use a personal mailbox password.
 
 1. Install the official **Trigger Email from Firestore** extension:
 
@@ -52,7 +54,7 @@ verify the sending domain, and create a real sender address such as
 2. During extension setup use:
    - Firestore collection: `mail`
    - SMTP connection URI: the provider's TLS SMTP URI
-   - Default from address: a verified AURA sender
+   - Default from address: a verified LIEUVA sender
    - Default reply-to: the public support address
    - Users/templates collection: leave blank unless the extension explicitly requires a value
 3. Deploy the repository's Cloud Functions:
@@ -63,15 +65,15 @@ verify the sending domain, and create a real sender address such as
    ```
 
 4. Supply these prompted parameters with real public information:
-   - `AURA_PUBLIC_APP_URL`: `https://bbyw2hrnf6-boop.github.io/VirtualArtPlattform`
+   - `AURA_PUBLIC_APP_URL`: `https://lieuva.com`
    - `AURA_REPLY_TO`: the monitored support email
    - `AURA_LEGAL_FOOTER`: legal sender name and full postal address
 5. In **Authentication → Templates → Email address verification**, set the
    custom action URL to:
-   `https://bbyw2hrnf6-boop.github.io/VirtualArtPlattform/`
-   Firebase appends `mode`, `oobCode`, and continuation parameters. The AURA
+   `https://lieuva.com/`
+   Firebase appends `mode`, `oobCode`, and continuation parameters. The LIEUVA
    route verifies the code and returns the visitor to the product.
-6. Set the fallback Firebase sender name to **AURA**, use the same reply-to,
+6. Set the fallback Firebase sender name to **LIEUVA**, use the same reply-to,
    and update the public-facing project name. The fallback is used only while
    the branded function is unavailable.
 7. Publish the repository's current `firestore.rules` manually. No Storage-rule
@@ -87,10 +89,10 @@ Live email acceptance test:
 
 1. Create a new Email/Password test account without ticking the letter box.
    Confirm exactly one branded verification email and no welcome letter.
-2. Open the verification link and confirm the AURA result page completes the
+2. Open the verification link and confirm the LIEUVA result page completes the
    action and returns to the account.
 3. Create another test account with the checkbox ticked. Confirm one
-   verification email and one AURA Preview Letter.
+   verification email and one LIEUVA Preview Letter.
 4. Sign out and in again with the same account. Confirm no second welcome
    edition is sent.
 5. Use the one-click unsubscribe link and confirm the Profile & settings toggle
@@ -167,8 +169,9 @@ The current client initializes App Check only when
 lifecycle Functions require a valid App Check token.
 
 1. Open **Firebase Console → App Check → Apps → Web app**.
-2. Register the existing AURA web app with **reCAPTCHA Enterprise** and create
-   a site key for `bbyw2hrnf6-boop.github.io` plus the future custom domain.
+2. Register the existing LIEUVA web app with **reCAPTCHA Enterprise** and create
+   a site key for `lieuva.com`, `www.lieuva.com`, and the retained
+   `bbyw2hrnf6-boop.github.io` origin.
 3. Add a GitHub repository variable named
    `VITE_FIREBASE_APPCHECK_SITE_KEY` containing that public site key.
 4. Deploy only the trusted room Functions (email remains independent):

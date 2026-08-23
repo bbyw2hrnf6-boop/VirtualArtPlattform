@@ -941,7 +941,7 @@ export function ScrollGalleryStory() {
         </div>
 
         <div className="sgs__chrome" aria-hidden="true">
-          <span>AURA / DANNY HIRSCH ARTS</span>
+          <span>LIEUVA / DANNY HIRSCH ARTS</span>
           <i><b /></i>
           <span>SCROLL TO BUILD</span>
         </div>

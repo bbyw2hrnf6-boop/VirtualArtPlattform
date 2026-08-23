@@ -139,7 +139,7 @@ async function createThumbnail(source?: string) {
     canvas.height = Math.max(1, Math.round(image.height * ratio));
     const context = canvas.getContext("2d");
     if (!context)
-      throw new Error("The gallery cover could not be prepared in this browser.");
+      throw new Error("The Space cover could not be prepared in this browser.");
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     for (const quality of [0.76, 0.64, 0.52, 0.42]) {
       candidate = canvas.toDataURL("image/webp", quality);
@@ -358,7 +358,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       const visibility = options.visibility ?? "public";
       if (!verifiedAccount)
         throw new Error(
-          "Sign in with Google or create and verify an AURA account before publishing. Your draft and Walk Preview remain available.",
+          "Sign in with Google or create and verify a LIEUVA account before publishing. Your Project and Walk Preview remain available.",
         );
       const retention = "account-preview" as const;
       const base = slugify(`${validatedDraft.artist}-${validatedDraft.title}`) || "gallery";
@@ -478,18 +478,18 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       const user = await this.authenticatedUser();
       const galleryReference = doc(firebaseDb, "galleries", target.id);
       const currentSnapshot = await getDoc(galleryReference);
-      if (!currentSnapshot.exists()) throw new Error("This room no longer exists.");
+      if (!currentSnapshot.exists()) throw new Error("This Space no longer exists.");
       const current = fromFirestore(currentSnapshot.id, currentSnapshot.data());
       const role = await this.editableRole(current, user);
       if (current.ownerId !== target.ownerId)
-        throw new Error("The published room owner changed. Reload the room before editing.");
+        throw new Error("The published Space owner changed. Reload the Space before editing.");
       if (current.revision !== target.revision)
         throw new Error(
-          "This room was changed in another session. Reopen it from Account to load the latest version; your local draft stays saved.",
+          "This Space was changed in another session. Reopen it from Account to load the latest version; your local Project stays saved.",
         );
-      if (!current.ownerId) throw new Error("This room has no editable owner record.");
+      if (!current.ownerId) throw new Error("This Space has no editable Owner record.");
       if (new Date(current.expiresAt).getTime() <= Date.now() + 60_000)
-        throw new Error("This room has expired and can no longer be updated.");
+        throw new Error("This Space has expired and can no longer be updated.");
 
       const currentArtworks = new Map(
         current.artworks.map((artwork, index) => [artwork.id, { artwork, index }]),
@@ -576,11 +576,11 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       const updatedAt = new Date();
       await runTransaction(firebaseDb, async (transaction) => {
         const latestSnapshot = await transaction.get(galleryReference);
-        if (!latestSnapshot.exists()) throw new Error("This room no longer exists.");
+        if (!latestSnapshot.exists()) throw new Error("This Space no longer exists.");
         const latest = fromFirestore(latestSnapshot.id, latestSnapshot.data());
         if (latest.revision !== target.revision)
           throw new Error(
-            "This room was changed in another session. Reopen it from Account to load the latest version; your local draft stays saved.",
+            "This Space was changed in another session. Reopen it from Account to load the latest version; your local Project stays saved.",
           );
         transaction.set(galleryReference, {
           ...validatedDraft,
@@ -779,7 +779,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
   async mine(): Promise<GalleryRecord[]> {
     const owner = await this.authenticatedUser();
     if (owner.isAnonymous)
-      throw new Error("Sign in to see rooms saved to your account.");
+      throw new Error("Sign in to see Spaces saved to your account.");
     // Owner-only listing does not need a composite index. Filtering expiry in
     // the client also lets the account screen survive while an index is being
     // created and avoids coupling the whole list to one Storage cover.
@@ -866,7 +866,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
   ): Promise<Extract<GalleryRole, "owner" | "editor">> {
     if (gallery.ownerId === user.uid) return "owner";
     if (!user.email || !user.emailVerified)
-      throw new Error("Use a verified invited account to edit this room.");
+      throw new Error("Use a verified invited account to edit this Space.");
     const membership = await getDoc(doc(
       firebaseDb,
       "galleries",
@@ -875,16 +875,16 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       user.email.toLowerCase(),
     ));
     if (!membership.exists() || membership.data().role !== "editor")
-      throw new Error("This account does not have Editor access to the room.");
+      throw new Error("This account does not have Editor access to the Space.");
     return "editor";
   }
 
   async editableDraft(id: string) {
     const user = await this.authenticatedUser();
     const gallery = await this.find(id);
-    if (!gallery) throw new Error("This room no longer exists.");
+    if (!gallery) throw new Error("This Space no longer exists.");
     if (!gallery.ownerId)
-      throw new Error("This legacy room cannot be edited in place.");
+      throw new Error("This legacy Space cannot be edited in place.");
     const role = await this.editableRole(gallery, user);
     const artworks = await mapWithConcurrency(
       gallery.artworks,
@@ -936,13 +936,13 @@ export class FirebaseGalleryRepository implements GalleryRepository {
   private async ownedGallery(id: string) {
     const owner = await this.authenticatedUser();
     if (owner.isAnonymous || !owner.emailVerified)
-      throw new Error("Use a verified account to manage room access.");
+      throw new Error("Use a verified account to manage Space access.");
     const reference = doc(firebaseDb, "galleries", id);
     const snapshot = await getDoc(reference);
-    if (!snapshot.exists()) throw new Error("This room no longer exists.");
+    if (!snapshot.exists()) throw new Error("This Space no longer exists.");
     const gallery = fromFirestore(snapshot.id, snapshot.data());
     if (gallery.ownerId !== owner.uid)
-      throw new Error("Only the room owner can manage access.");
+      throw new Error("Only the Space Owner can manage access.");
     return owner;
   }
 

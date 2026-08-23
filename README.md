@@ -1,10 +1,12 @@
-# AURA — Virtual Art Platform MVP
+# LIEUVA — Immersive 3D presentation platform
 
-AURA is a browser-based platform for creating, curating, publishing, and sharing immersive 3D art exhibitions. This repository contains the standalone MVP: a React and Three.js editor, three gallery architectures, a visitor experience, Discover, account access, and a Firebase publishing lifecycle.
+LIEUVA is a browser-based platform for creating, publishing, sharing and discovering immersive 3D presentations. This repository contains the current MVP: LIEUVA Studio, three Space templates, a visitor experience, Discover, account access, and a Firebase publishing lifecycle.
+
+> **Compatibility firewall:** LIEUVA is the visible brand. Existing AURA/gallery identifiers in Firebase, Storage, callable Functions, local persistence, `.aura.json`, routes and GLB metadata are intentional compatibility contracts and must not be casually renamed.
 
 Live MVP: [lieuva.com](https://lieuva.com/)
 
-> **MVP status:** AURA is a concept-validation showcase, not yet a production marketplace. Read [Security, privacy, and current limitations](#security-privacy-and-current-limitations) before inviting public uploads.
+> **MVP status:** LIEUVA is a concept-validation product, not yet a production marketplace. Read [Security, privacy, and current limitations](#security-privacy-and-current-limitations) before inviting public uploads.
 
 ## What the MVP includes
 
@@ -32,8 +34,8 @@ Live MVP: [lieuva.com](https://lieuva.com/)
 - Discover keeps the Danny reference exhibition visible when the live community feed is empty or unavailable.
 - Account-free building and Walk Preview; publishing uses verified Email/Password or Google accounts with public, unlisted, or private account-preview rooms.
 - Owner, Editor, and Viewer ACL records. Owners and Editors can update room content under the existing share URL; only Owners manage access and deletion.
-- A separate optional AURA Preview Letter opt-in for Email and Google accounts, with one welcome edition, account-level withdrawal, and one-click unsubscribe. Branded verification/newsletter delivery requires the documented Cloud Functions and SMTP extension setup.
-- Clear **AURA Light Preview** status throughout account, picker, publishing, and plan surfaces; future paid professional tools remain visibly planned and inactive.
+- A separate optional LIEUVA Preview Letter opt-in for Email and Google accounts, with one welcome edition, account-level withdrawal, and one-click unsubscribe. Branded verification/newsletter delivery requires the documented Cloud Functions and SMTP extension setup.
+- Clear **LIEUVA Light Preview** status throughout account, picker, publishing, and plan surfaces; future paid professional tools remain visibly planned and inactive.
 
 ## Requirements
 
@@ -75,7 +77,7 @@ npm run preview
 | `npm run preview` | Serve `dist/` locally for production verification. |
 | `npm run check` | Run lint, all tests, type-checking, and the complete production build; this is the deployment quality gate. |
 | `npm run check:functions` | Test and type-check the trusted branded-email/newsletter Functions. |
-| `npm run validate:glb -- path/to/template.glb` | Validate a future template export against the documented AURA GLB contract. |
+| `npm run validate:glb -- path/to/template.glb` | Validate a future template export against the documented legacy `aura_*` GLB contract. |
 
 The supported production path is `.github/workflows/deploy.yml`.
 
@@ -88,14 +90,14 @@ The intended creation flow is:
 1. Choose one of the three spaces.
 2. Upload one or more artwork images.
 3. Select an artwork in the left panel.
-4. Choose a wall; the camera moves to it and AURA finds an available position.
+4. Choose a wall; the camera moves to it and LIEUVA Studio finds an available position.
 5. Click the wall for an exact location, drag the artwork directly, or use the fine-placement sliders.
 6. Use the translucent side arrows to rotate around the room, or use the numeric metre controls, 3 cm placement grid, exact centimetre readout, framing, lock/hide, alignment, 1.75 m eye-line, and **Space this wall** actions.
 7. Use **Reset view** whenever orientation is lost. In the Grand Forum, use the five-zone floor-plan navigator to jump between the central axis and four side galleries.
 8. Keep **Arrange** and **Open roof** enabled while editing, then enter **Walk Preview** and **Preview ceiling** to inspect the visitor experience. The same canvas and camera session stay alive; a selected visible artwork becomes the Walk Preview start focus.
 9. Add and position objects by dragging them or clicking an empty floor location.
 10. Optionally run **AI Curator**. Re-running it intentionally produces a new proposal, and its result can be undone during the current editing session.
-11. Open **Review & publish**. AURA validates every visible artwork and object, shows the captured share cover, blocks invalid geometry, and publishes only after the review passes.
+11. Open **Review & publish**. LIEUVA validates every visible work and object, shows the captured share cover, blocks invalid geometry, and publishes only after the review passes.
 
 Drafts autosave per template in IndexedDB. Direct template routes survive refresh and offer recovery before editing continues.
 
@@ -107,14 +109,14 @@ Drafts autosave per template in IndexedDB. Direct template routes survive refres
 | Artwork | Click an artwork to open its information card; it closes when the visitor turns away. |
 | Overview | Orbit the room, zoom with the mouse wheel or a supported pinch gesture, and use the fading cutaway walls to inspect the interior. |
 | Cinematic intro | Allow the room-specific camera path to finish or use the on-screen skip control. |
-| Danny guided tour | Start or skip the optional 45-second authored tour; use **Smart view** to cycle exhibition anchors and **Reset view** to return to the authored start. |
+| Danny guided tour | Start or skip the optional 45-second authored tour; use **Focus view** to cycle exhibition anchors and **Reset view** to return to the authored start. |
 | Accessible directory | Open **Artworks** for images, metadata, and descriptions without navigating the canvas. It opens automatically if WebGL fails. |
 
 Touch behavior depends on the browser and device. If a HEIC/HEIF image cannot be decoded, convert it to JPG, PNG, or WebP and upload it again.
 
 ## Routing and GitHub Pages compatibility
 
-AURA uses hash-based routes, so refreshing a gallery does not require server-side rewrites:
+LIEUVA currently uses legacy hash-based routes, so refreshing a Space does not require server-side rewrites:
 
 - `#/` — landing page and Discover
 - `#/create` — gallery picker and editor
@@ -150,7 +152,7 @@ src/
 
 functions/
 ├── src/index.ts                    Authenticated mail, consent, and unsubscribe endpoints
-└── src/emailTemplates.ts           Responsive AURA transactional and welcome emails
+└── src/emailTemplates.ts           Responsive LIEUVA transactional and welcome emails
 
 public/assets/                      Runtime demo and material assets
 blender/templates/                  Editable concept/reference Blender files
@@ -250,8 +252,8 @@ Use a current browser, enable hardware acceleration, and verify WebGL is availab
 - Simultaneous co-editing, a user-facing revision history, multiplayer, chat, analytics, payments, sales, events, marketplace features, and community moderation are intentionally outside this MVP.
 - This repository currently has no general code license. Do not infer permission for downstream reuse from public repository access.
 
-Review [ASSET_LICENSES.md](./ASSET_LICENSES.md) before reusing artwork, models, textures, fonts, or Blender files outside this AURA deployment.
+Review [ASSET_LICENSES.md](./ASSET_LICENSES.md) before reusing artwork, models, textures, fonts, or Blender files outside this LIEUVA deployment.
 
 ## Asset notice
 
-The project owner has confirmed permission to display and distribute the Danny Hirsch artwork and gallery assets as part of the AURA demo. That project-specific permission does not automatically grant third parties a reusable asset license. See [ASSET_LICENSES.md](./ASSET_LICENSES.md) for the current notice and items that still require formal provenance records.
+The project owner has confirmed permission to display and distribute the Danny Hirsch artwork and gallery assets as part of the LIEUVA demo. That project-specific permission does not automatically grant third parties a reusable asset license. See [ASSET_LICENSES.md](./ASSET_LICENSES.md) for the current notice and items that still require formal provenance records.

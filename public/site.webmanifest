@@ -1,7 +1,7 @@
 {
-  "name": "AURA — Virtual Art Platform",
-  "short_name": "AURA",
-  "description": "Build and share immersive 3D art exhibitions in the browser.",
+  "name": "LIEUVA — Immersive 3D presentation platform",
+  "short_name": "LIEUVA",
+  "description": "Create, publish, share and discover immersive 3D presentations in the browser.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
