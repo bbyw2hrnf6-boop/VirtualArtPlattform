@@ -39,7 +39,7 @@ The recommended positioning is:
 
 The best beachhead is **independent visual artists and small galleries with a real collection or exhibition to launch**, supported by a small number of curated graduate-show pilots. This matches the current product, generates beautiful public examples and shareable links, and avoids promising architecture/brand workflows before the content model supports models, video, documents, free-form surfaces and richer spatial storytelling.
 
-The launch blockers are not another visual redesign. They are: production trust/legal completeness; account and data deletion/export; verified live Firebase security and abuse controls; a real LIEUVA domain and email identity; clean crawlable URLs with per-space metadata; a controlled visible rebrand; and repeatable pilot evidence. The hash-routed GitHub Pages shell currently gives every route the same static AURA metadata, so it cannot support the proposed SEO/discovery flywheel.
+The launch blockers are not another visual redesign. They are: production trust/legal completeness; deployment and external verification of the locally implemented account data-rights lifecycle; verified live Firebase security and abuse controls; a real LIEUVA email identity; clean crawlable URLs with per-space metadata; a controlled visible rebrand; and repeatable pilot evidence. The hash-routed GitHub Pages shell currently gives every route the same static AURA metadata, so it cannot support the proposed SEO/discovery flywheel.
 
 **Overall maturity:**
 
@@ -47,7 +47,7 @@ The launch blockers are not another visual redesign. They are: production trust/
 |---|---:|---|
 | Visitor 3D reference | 4/5 | DannyHirschArts is a persuasive quality benchmark; template output does not yet consistently match it. |
 | Creator workflow | 3/5 | Strong local drafting and preview; mobile density, general-purpose content and cloud continuity remain weak. |
-| Publishing/account | 3/5 | Sensible architecture and ACL model; live matrix, lifecycle communications and deletion/export need production proof. |
+| Publishing/account | 3/5 | Sensible architecture and ACL model; WP1/WP2 are locally green with conditions, but live Firebase/App Check and deployed data-rights behavior still need external proof. |
 | Brand/positioning | 1/5 | Live product is entirely AURA and art-gallery-specific; LIEUVA direction is sound but unimplemented. |
 | SEO/distribution | 1/5 | Static metadata, fragment routes and no per-space indexable documents block acquisition. |
 | Operations/trust | 2/5 | Rules/tests exist; monitoring, moderation, legal identity, lifecycle email and operational runbooks are incomplete. |
@@ -74,7 +74,7 @@ The launch blockers are not another visual redesign. They are: production trust/
 
 - Local drafts do not provide cross-device/cloud draft continuity. Browser eviction, private mode and device loss remain user risks.
 - Optimistic revision checks are conflict protection, not a restorable version history or collaborative editor.
-- Account deletion and complete user-data deletion/export are not a coherent, user-facing workflow.
+- Account export/deletion is now implemented locally with deterministic coverage; deployment, real App Check/Firebase verification, browser QA and legal retention/controller decisions remain open (`audit/DATA-RIGHTS-ACCOUNT-DELETION.md`).
 - Newsletter/lifecycle functions and sender/legal configuration are not production-complete.
 - App Check is conditional and core Functions request it, but live enforcement, metrics and abuse response are not demonstrated.
 - Analytics, RUM/error monitoring, funnel definitions and operational alerts are missing.
@@ -228,7 +228,7 @@ Prices require storage/egress/rendering/support cost telemetry and willingness-t
 | 1 | Broad promise outruns art-bound product | Strategic | `gallery/artwork/exhibition` permeate model, UI and templates | Architecture/brand prospects churn after the claim. |
 | 2 | LIEUVA not legally cleared | Brand/P0 | `lieuva.com` is live, but open-web screening is not a professional similarity search | Forced rename after investment if an earlier right is found. |
 | 3 | Hash/static hosting blocks search/share identity | Technical/SEO/P0 | `#/g/...`; one AURA `index.html` OG/JSON-LD for all routes | No per-Space SERP, weak social sharing, broken flywheel. |
-| 4 | Trust/privacy lifecycle incomplete | Product/legal/P0 | No coherent account deletion/export; incomplete legal sender/operator details | Cannot responsibly invite public UGC or paid pilots. |
+| 4 | Trust/privacy lifecycle not production-verified | Product/legal/P0 | Account deletion/export is locally implemented, but deployment, external verification and legal sender/operator/retention decisions remain open | Cannot responsibly claim production-complete data rights yet. |
 | 5 | Live security/abuse posture not demonstrated | Technical/P0 | App Check conditional; no new full role matrix; no moderation/alert evidence | Data exposure, cost abuse or incident without response. |
 | 6 | Reference-quality gap | 3D/P1 | Authored Danny visibly exceeds procedural templates; live texture warnings | Marketing raises expectations the builder output cannot meet. |
 | 7 | Mobile creation overload | UX/P1 | 390×844 Studio toolbar/panel crowd canvas and truncate context | Mobile visitors succeed; mobile creators abandon. |
@@ -525,14 +525,16 @@ Properties: route/use-case/template, visibility, device class, referrer campaign
 
 ### 10.6 Privacy, export and deletion
 
-Before public onboarding, provide:
+WP2 is locally implemented and evidenced in `audit/DATA-RIGHTS-ACCOUNT-DELETION.md`: authenticated account-wide export, recent-auth irreversible deletion, owner-versus-member handling, Storage/Firestore/Auth cleanup ordering, conservative local-draft cleanup and regression coverage are present. This is **not** a claim that the Functions/rule or live Firebase/App Check matrix has been deployed and verified.
+
+Before public onboarding, complete the remaining external/legal layer:
 
 - actual legal operator/controller/contact and jurisdiction;
 - privacy notice covering Firebase/Google, hosting/CDN, monitoring, analytics, email, retention, international transfers and rights;
 - terms/content license clarifying creator ownership, LIEUVA hosting/display license and takedown;
 - cookie/consent behavior driven by actual non-essential tools, not a generic banner;
-- project/space export in an open documented bundle plus media manifest;
-- account deletion with re-authentication, ownership/collaborator consequences, pending grace period where appropriate, recursive data/assets/consents/invites cleanup and confirmation;
+- deploy and externally verify `exportAuraAccountData` and `deleteAuraAccount`, App Check enforcement, exact cleanup and the account browser flow with isolated fixtures;
+- decide provider backup/log retention, legal receipt/audit retention and whether a grace period is required (the current implementation is immediate and irreversible);
 - separate delete, unpublish, trash and account deletion semantics.
 
 ### 10.7 Scalability and cost
@@ -568,9 +570,11 @@ Three rules:
 
 ## 12. LIEUVA Brand Validation
 
+**WP3 authority:** the final frozen decision, current 23 August 2026 desk check, exact language contract and protected technical identifiers are in `audit/LIEUVA-BRAND-CONTRACT.md`. This section preserves the broader audit evidence; where wording differs, the Brand Contract governs WP4.
+
 ### 12.1 Result
 
-**Preliminary verdict: PASS WITH CONDITIONS.** No obvious exact-name company, spatial-platform competitor, severe multilingual meaning or indexed exact-handle conflict surfaced in the 23 August 2026 open-web screen. Exact-name results are mostly historical misspellings of Lithuanian `Lietuva`, including philatelic records, rather than an active technology brand. No finding justifies reopening naming. This is **not trademark clearance** and not legal advice.
+**Frozen WP3 verdict: PASS WITH CONDITIONS.** No obvious exact-name company, spatial-platform competitor, severe multilingual meaning or indexed exact-handle conflict surfaced in the 23 August 2026 open-web screen. Exact-name results are mostly historical misspellings of Lithuanian `Lietuva`, including philatelic records, rather than an active technology brand. Active LIEVA technology uses are a concrete similarity-search condition, but no finding justifies reopening naming without counsel finding overlapping earlier rights. This is **not trademark clearance** and not legal advice.
 
 Conditions before public exposure:
 
@@ -639,7 +643,7 @@ The Step 1 inventory found **388 matching lines across 58 files** for AURA/Aura/
 | Transactional/marketing email | `functions/src/emailTemplates.ts`; unsubscribe HTML in `functions/src/index.ts` | LIEUVA sender, wordmark, subjects, links, legal footer and consent copy. |
 | Firebase Auth/OAuth-facing templates | Firebase console/action URLs/authorized-domain brand | Update only after final domain; test verification/reset/Google flows. |
 | Data/privacy/support/legal | `src/App.tsx` data page, README/setup/docs and live sender footer | LIEUVA legal entity/operator, contacts, service list and rights flows. |
-| Export display name/extension | user-visible `.aura.json` and format labels | Export new LIEUVA format/extension while retaining import compatibility. |
+| Export display name/filename | user-visible `.aura.json`, `aura-account-data-*` and labels | WP4 may use LIEUVA-visible download names/copy, but must preserve embedded `aura-gallery-export`/`aura-account-export` schema identifiers and all legacy compatibility. |
 | Repository/hosting presentation | README, repository description, GitHub Pages labels | Public-facing docs/descriptions become LIEUVA; preserve technical history. |
 | Demo/sample copy | AURA example titles/status/alt text | Rename unless it is explicitly migration history. |
 
@@ -689,20 +693,20 @@ Do not rename the existing Firebase project, Firestore collections, deployed cal
 3. Freeze LIEUVA messaging hierarchy and visible terminology.
 4. Inventory all public URLs, email templates, OAuth/Auth action links, Firebase authorized domains, App Check, Analytics and Search Console properties.
 
-**Phase 1 — compatibility foundation (P0)**
+**Phase 1 — compatibility-first visible rebrand / WP4 (P0)**
 
 5. Add a centralized `brand` configuration and copy/metadata source; do not bulk-rename internals.
-6. Add clean server-resolvable route architecture and legacy redirects/resolvers.
-7. Build dynamic metadata/social-card service for homepage, audience pages, creator profiles and public Spaces.
-8. Add LIEUVA export v2 reader/writer while retaining AURA v1 import tests.
-9. Add neutral Project/Space view models over legacy gallery repositories.
+6. Replace customer-visible UI/PWA/base metadata/email identity and terminology using `audit/LIEUVA-BRAND-CONTRACT.md`.
+7. Preserve all legacy data, callable, Storage, local-persistence, export, GLB and route contracts behind the visible layer.
+8. Coordinate Auth/OAuth/sender identity externally and verify legacy links; do not rename deployed endpoints.
+9. Gate with a zero-unintended-visible-AURA scan and compatibility matrix.
 
-**Phase 2 — visible switch (P0/P1)**
+**Phase 2 — clean URLs, dynamic metadata and SEO delivery / WP5 (P0/P1)**
 
-10. Replace logo/icons/manifest/public copy/metadata/JSON-LD/social assets.
-11. Update Auth/OAuth/email/unsubscribe/support/legal sender surfaces in a coordinated release.
-12. Launch canonical LIEUVA domain; 301 old indexable URLs, resolve legacy hashes client-side and preserve all share IDs.
-13. Submit sitemap/Search Console change signals; verify canonical, Open Graph, email links and PWA install identity.
+10. Add clean server-resolvable routes and permanent legacy hash resolvers.
+11. Build dynamic metadata/social-card delivery for eligible public Spaces and future audience pages without leaking private/unlisted content.
+12. Preserve immutable share IDs separately from slugs and verify canonical/redirect behavior.
+13. Submit sitemap/Search Console signals and verify canonical, Open Graph, robots and index eligibility.
 
 **Phase 3 — observe and clean (P1/P2)**
 
@@ -1002,11 +1006,13 @@ The work-package table below is the actionable backlog. Each row contains eviden
 
 Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream/unknown. “Impact” is expected user/business impact. Estimates assume the current architecture is preserved.
 
+**Current execution status (23 August 2026):** WP1 is locally complete with conditions (`audit/PUBLISH-UPDATE-RELEASE-GATE.md`); WP2 is locally complete with conditions (`audit/DATA-RIGHTS-ACCOUNT-DELETION.md`); WP3 is complete with legal/external conditions (`audit/LIEUVA-BRAND-CONTRACT.md`). External Firebase/App Check/browser verification for WP1/WP2 and legal decisions are not represented as complete. The next repository package is WP4, followed by WP5. The numbered table below remains the evidence-backed broader backlog, not a second work-package sequence.
+
 | # / Pri. | Concrete problem + evidence | User/business impact | Concrete solution | Files/systems | Effort / impact | Risk | Dependencies | Decision needed | Measurable acceptance criterion |
 |---|---|---|---|---|---|---|---|---|---|
-| **1 P0** | Unit tests pass, but this audit could not re-run live owner/editor/viewer publish and update flows; prior user reports centered on these paths | A single regression blocks the product’s core promise or loses trust | Create a release-gate harness and execute new publish, in-place update, recovery, visibility, role, invite, retry and media-path tests without mutating unrelated live data | `App.tsx`, publish/update state, repositories, Functions, rules, Storage, E2E fixtures | M / high | Test-data leakage or false confidence | Two isolated test accounts, test galleries, Firebase project access | Which environment may hold test data; cleanup policy | All matrix cases pass twice; stable URLs/revisions preserved; failures are recoverable and logged; test data removed by documented cleanup |
-| **2 P0** | Legal operator, content terms, export/delete and account-wide erasure are incomplete | Unsafe public UGC and paid pilots | Complete privacy/terms/content/takedown; build export plus callable soft-delete/purge workflow | Legal pages, Account, Auth, Firestore/Storage/Functions/email | L / high | Incomplete or over-broad deletion | Legal counsel; verified data map | Retention/grace/license/controller policy | Test account exports readable data, then deletes all owned data after grace; legal pages identify operator and match behavior |
-| **3 P0** | `lieuva.com` is live, but the name has only preliminary screening and no frozen terminology/pronunciation contract | Rework, inconsistency or later rights conflict | Professional exact/similarity clearance; reserve priority handles; approve one-page category/claim/terms/pronunciation contract | Counsel/registers, social accounts, brand decision record | S / high | Adverse legal result | Owner/legal | Territories, classes, pronunciation | Written counsel result; handles recorded; one signed vocabulary/claim contract with no unresolved customer-facing noun |
+| **1 P0 · local PASS WITH CONDITIONS** | The deterministic release gate now passes locally; deployed Firebase/App Check/browser parity remains unverified | A deployment mismatch can still block the product’s core promise or lose trust | Execute the documented external owner/editor/viewer matrix with isolated fixtures and exact cleanup; fix only reproduced defects | Functions, rules, Storage, App Check, browser QA; `audit/PUBLISH-UPDATE-RELEASE-GATE.md` | M / high | Test-data leakage or false confidence | Two isolated test accounts, test Spaces, Firebase project access | Which environment may hold test data; cleanup policy | External matrix passes twice; stable URLs/revisions preserved; failures are recoverable and logged; prefixed data removed |
+| **2 P0 · local PASS WITH CONDITIONS** | Account export/deletion is implemented and locally tested; deployment, provider behavior and legal operator/retention decisions remain open | Unsafe claims or incomplete production data rights | Deploy and externally verify the existing flow; complete privacy/terms/content/takedown and retention/controller decisions | Legal pages, Account, Auth, Firestore/Storage/Functions/email; `audit/DATA-RIGHTS-ACCOUNT-DELETION.md` | M / high | Incomplete or over-broad deletion | Legal counsel; isolated accounts; deployed Functions/rule | Retention/grace/license/controller policy | Isolated account exports readable data and deletes exact owned resources; legal pages identify operator and match behavior |
+| **3 P0 · WP3 complete with conditions** | LIEUVA category, claim, audience, terminology and protected technical contracts are frozen; professional similarity clearance and handle reservation remain external | Rework or later rights conflict if external conditions are ignored | Use `audit/LIEUVA-BRAND-CONTRACT.md`; counsel searches LIEUVA/LIEVA/LIUVA variants and owner reserves handles | Counsel/registers, social accounts, brand contract | S / high | Adverse legal result | Owner/legal | Territories, classes, filing applicant | Written counsel result and handle custody record; WP4 follows the frozen contract without reopening strategy |
 | **4 P0** | Visible AURA remains across UI, metadata, PWA, email and errors; Step 1 found 388 matching lines in 58 files | Brand launch is incoherent despite LIEUVA domain | Centralize visible brand config and migrate customer-facing surfaces only; preserve legacy technical identifiers | `Logo.tsx`, `App.tsx`, account/access/errors, `index.html`, manifest/icons, email | M / high | Missed surface or accidental persistent rename | #3; approved assets/legal identity | Logo/icons/beta label | Automated scan plus route/email/PWA matrix finds zero unintended visible AURA; all legacy drafts/URLs/data still open |
 | **5 P0** | Hash routes return one static AURA document; Google explicitly advises History API rather than fragments for distinct content | Public Spaces cannot earn unique search or reliable social previews | Select clean-route hosting/edge strategy; server-generate per-route HTML metadata; retain permanent hash resolver | Hosting, DNS, router, metadata/card service, Firebase authorized domains | L / high | Route/auth outage or private metadata leak | #3–4; host choice | Hosting architecture and slug policy | `/spaces/{id}` returns unique title/OG/canonical without JS; legacy `#/g/{id}` resolves; unlisted/private output contains no sensitive metadata |
 | **6 P0** | App Check exists in code and callable Functions enforce it, but live enforcement, ACL state matrix, revision-upload abuse limits and alerts are not evidenced | Exposure, lockout or cost incident | Execute role/state tests; verify Enterprise App Check; add bounded revision/upload quotas, billing alerts and incident rollback | Firebase console, rules, Functions, Storage, QA/runbooks | M / high | False rejection or accidental access | #1; two accounts; console access | Quotas, alert thresholds, supported roles | Matrix passes; invalid token and excess quota reject safely; alert test reaches owner; rollback is documented |
@@ -1040,11 +1046,11 @@ Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream
 
 ### 20.1 Days 0–30 — prove the core and freeze the contract
 
-- Execute the publish/update/access release matrix (#1).
-- Complete legal/data map and account deletion/export policy/specification (#2).
-- Complete LIEUVA clearance, handles, pronunciation and brand contract (#3).
-- Write the visible rebrand inventory and compatibility test plan (#4).
-- Decide hosting/clean-URL architecture and migration/rollback design (#5).
+- **WP1 locally complete with conditions:** release matrix and regressions are recorded; external Firebase/App Check/browser execution remains.
+- **WP2 locally complete with conditions:** export/deletion and data map are implemented; deployment, external verification and legal policy remain.
+- **WP3 complete with conditions:** category, claim, pronunciation, language and compatibility contract are frozen; counsel/handle/asset actions remain external.
+- Begin WP4 only: compatibility-first visible rebrand with no persistent identifier or route migration.
+- Prepare—but do not merge into WP4—the WP5 hosting/clean-URL/dynamic-metadata migration design.
 - Run live Firebase access/App Check/quota audit (#6).
 - Define telemetry schema/vendor/privacy controls (#8).
 - Fix the observed texture warnings and establish the first 3D budget baseline (#11 partial).
@@ -1054,7 +1060,7 @@ Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream
 
 ### 20.2 Days 31–60 — build the trustworthy LIEUVA surface
 
-- Implement deletion/export and production trust pages (#2).
+- Deploy/externally verify the existing WP2 flow and complete production trust/legal pages (#2).
 - Complete visible LIEUVA switch in staging (#4).
 - Implement clean routes/dynamic metadata and legacy URL compatibility (#5).
 - Complete email/Auth identity and delivery tests (#7).
@@ -1117,41 +1123,22 @@ Legend: effort S ≤3 focused days, M ≤2 weeks, L 2–5 weeks, XL multi-stream
 
 ---
 
-### 20.5 Exact next five implementation tasks
+### 20.5 Current five-package sequence
 
-1. **Prove the core:** implement and run the isolated publish/update/access E2E release gate, then fix only confirmed blockers.
-2. **Close data rights:** implement account export, soft-delete/purge and the approved retention/legal surfaces.
-3. **Freeze LIEUVA:** complete professional similarity clearance and approve category, claim, terminology, pronunciation and migration non-goals.
-4. **Build the compatibility-first visible rebrand:** central brand layer, LIEUVA UI/PWA/email identity and zero-visible-AURA checks without renaming persistent contracts.
-5. **Move to crawlable Space delivery:** clean URLs, server/edge metadata, unique share cards, canonical/sitemap policy and permanent legacy-hash compatibility.
+1. **WP1 — Publish / Update / Access Release Gate:** locally complete with conditions. External Firebase/App Check/browser matrix remains (`audit/PUBLISH-UPDATE-RELEASE-GATE.md`).
+2. **WP2 — Data Rights / Export / Account Deletion:** locally complete with conditions. Deployment, external matrix and legal decisions remain (`audit/DATA-RIGHTS-ACCOUNT-DELETION.md`).
+3. **WP3 — LIEUVA Brand & Product Language Contract:** complete with conditions. Trademark counsel, handle reservation, asset approval and pronunciation test remain external (`audit/LIEUVA-BRAND-CONTRACT.md`).
+4. **WP4 — Compatibility-first visible AURA → LIEUVA rebrand:** next repository package. Follow the Brand Contract; preserve persistent contracts and routes.
+5. **WP5 — Clean URLs / dynamic metadata / SEO delivery:** starts only after WP4 acceptance. Preserve all legacy hash links and private/unlisted metadata boundaries.
 
 ---
 
-### 20.6 Ready-to-use implementation prompt for Work Package 1
+### 20.6 Status evidence and non-claims
 
-```text
-Work on /Users/uhorizon/Documents/VirtualArtPlattform.
-
-First read completely:
-- AGENTS.md
-- audit/FULL-PRODUCT-EXPERIENCE-AUDIT.md, especially §§12, 13 and work package 1
-- README.md
-
-Task: implement Work Package 1, the isolated publish/update/access release gate. First inspect the existing publish state machine, repository, validation, Functions, rules, Storage paths, recovery and current tests. Reuse those systems; do not create a parallel publisher.
-
-Requirements:
-1. Add deterministic E2E/integration coverage for a new public, unlisted and private Space; an in-place update that keeps ID/share URL/ACL; reload recovery; visibility change; owner/editor/viewer permissions; invite accept/revoke; stale revision; App Check/function rejection; upload failure and retry.
-2. Use isolated test accounts and uniquely prefixed test data. Never touch unrelated live data. Add a documented, exact cleanup procedure.
-3. Reproduce failures before changing behavior. Fix only confirmed defects with the smallest coherent architectural change.
-4. Preserve local backup after every failed publish/update. Never delete working drafts or old revisions during a failed attempt.
-5. Assert artwork images remain valid across initial publish and revision updates, including normalized JPG/PNG/WebP blobs and existing Storage-backed assets.
-6. Record clear Saving/Saved/Error/Publishing/Published states and actionable errors; no stuck modal or contradictory live status.
-7. Do not deploy Functions/rules, mutate production configuration, rebrand, change routes or begin other audit work.
-
-Verification: run `npm run check` and `npm run check:functions`; run the new matrix against the authorized isolated environment; document cases/results, test-data identifiers and cleanup in `audit/PUBLISH-UPDATE-RELEASE-GATE.md`.
-
-Acceptance: every matrix case passes twice; initial and updated visitor URLs load; update increments revision without changing URL/visibility/ACL; editor can update but viewer cannot; rejected operations preserve recovery; cleanup removes only prefixed fixtures. End with changed files, commands, evidence and remaining risks. Do not commit, push or deploy.
-```
+- “Locally complete” means deterministic repository tests/builds and evidence documents pass; it does not mean Functions/rules were deployed or production data was exercised.
+- WP1 and WP2 external steps remain exactly those listed in their evidence documents.
+- WP3 does not claim legal trademark clearance.
+- WP4 must not absorb WP5 route/hosting work; separating the visible rebrand from URL delivery keeps rollback and compatibility bounded.
 
 ---
 
