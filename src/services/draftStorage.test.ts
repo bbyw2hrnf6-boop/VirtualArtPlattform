@@ -182,6 +182,30 @@ describe("versioned multi-project draft storage", () => {
     });
   });
 
+  it("keeps recoverable local work and its live target after a failed update", async () => {
+    const publication = {
+      id: "wp1-release-gate-room",
+      ownerId: "wp1-owner",
+      publishedAt: "2026-08-14T10:00:00.000Z",
+      expiresAt: "2027-08-14T10:00:00.000Z",
+      visibility: "unlisted" as const,
+      retention: "account-preview" as const,
+      accessVersion: 1,
+      revision: 4,
+      role: "owner" as const,
+    };
+    const working = draft("white-cube", "Unsaved cloud update");
+    await saveGalleryDraft("published-wp1-release-gate-room", working, 8, publication);
+
+    await expect(Promise.reject(new Error("simulated cloud rejection"))).rejects.toThrow();
+
+    expect(await loadGalleryDraft("published-wp1-release-gate-room")).toMatchObject({
+      revision: 8,
+      draft: { title: "Unsaved cloud update" },
+      publication,
+    });
+  });
+
   it("creates a stable local project id for a published room", () => {
     expect(publishedGalleryProjectId("room-1")).toBe("published-room-1");
     expect(() => publishedGalleryProjectId("../room")).toThrow();

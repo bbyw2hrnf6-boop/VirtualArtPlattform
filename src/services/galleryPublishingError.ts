@@ -1,4 +1,5 @@
 export type GalleryPublishingErrorCode =
+  | 'app-check'
   | 'authentication-disabled'
   | 'configuration'
   | 'quota'
@@ -33,6 +34,13 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
     return new GalleryPublishingError(
       'configuration',
       `Firestore rejected the authenticated room write in “${projectId}”. Copy the current firestore.rules into the Firebase Rules editor, publish them there manually, then retry. Your room is still saved locally.`,
+      error
+    );
+  }
+  if (code === 'functions/unauthenticated' || code === 'functions/permission-denied') {
+    return new GalleryPublishingError(
+      'app-check',
+      'Firebase could not verify this publishing request. Reload the page, sign in again if needed, then retry. Your room is still saved locally.',
       error
     );
   }
@@ -95,6 +103,7 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
   if (
     code === 'resource-exhausted'
     || code === 'firestore/resource-exhausted'
+    || code === 'functions/resource-exhausted'
     || code === 'auth/too-many-requests'
     || code === 'storage/quota-exceeded'
   ) {
@@ -107,6 +116,8 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
   if (
     code === 'unavailable'
     || code === 'firestore/unavailable'
+    || code === 'functions/unavailable'
+    || code === 'functions/deadline-exceeded'
     || code === 'auth/network-request-failed'
     || code === 'storage/retry-limit-exceeded'
     || code === 'storage/unknown'

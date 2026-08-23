@@ -13,11 +13,16 @@ describe('gallery publishing errors', () => {
     ['auth/operation-not-allowed', 'authentication-disabled', 'Email/Password and Google Authentication'],
     ['auth/configuration-not-found', 'authentication-disabled', 'Email/Password and Google Authentication'],
     ['auth/unauthorized-domain', 'unauthorized-domain', 'Authorized domains'],
+    ['functions/unauthenticated', 'app-check', 'verify this publishing request'],
+    ['functions/permission-denied', 'app-check', 'verify this publishing request'],
     ['functions/internal', 'configuration', 'reached the room service'],
     ['functions/not-found', 'configuration', 'core Firebase Functions'],
     ['resource-exhausted', 'quota', 'quota'],
+    ['functions/resource-exhausted', 'quota', 'quota'],
     ['storage/quota-exceeded', 'quota', 'quota'],
-    ['unavailable', 'unavailable', 'cannot reach Firebase']
+    ['unavailable', 'unavailable', 'cannot reach Firebase'],
+    ['functions/unavailable', 'unavailable', 'cannot reach Firebase'],
+    ['functions/deadline-exceeded', 'unavailable', 'cannot reach Firebase']
   ])('maps %s to an actionable error', (firebaseCode, expectedCode, copy) => {
     const result = normalizeGalleryPublishingError({ code: firebaseCode }, 'test-project');
     expect(result).toBeInstanceOf(GalleryPublishingError);

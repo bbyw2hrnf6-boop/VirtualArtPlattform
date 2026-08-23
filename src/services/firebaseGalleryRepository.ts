@@ -309,7 +309,7 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-class FirebaseGalleryRepository implements GalleryRepository {
+export class FirebaseGalleryRepository implements GalleryRepository {
   private async authenticatedUser(): Promise<User> {
     await firebaseAuth.authStateReady();
     const currentUser = firebaseAuth.currentUser;
