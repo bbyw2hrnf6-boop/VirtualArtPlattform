@@ -26,15 +26,7 @@
     ],
     "rewrites": [
       {
-        "source": "/spaces",
-        "function": {
-          "functionId": "spaceDocument",
-          "region": "europe-west1",
-          "pinTag": true
-        }
-      },
-      {
-        "source": "/spaces/**",
+        "source": "/spaces{,/**}",
         "function": {
           "functionId": "spaceDocument",
           "region": "europe-west1",

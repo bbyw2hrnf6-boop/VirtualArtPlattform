@@ -1,21 +1,23 @@
-name: Deploy to GitHub Pages
+name: Deploy to Firebase Hosting
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
-  pages: write
-  id-token: write
+
 concurrency:
-  group: pages
+  group: firebase-production
   cancel-in-progress: true
+
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    environment:
+      name: firebase-production
+      url: https://virtualartplattform.web.app
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,13 +28,18 @@ jobs:
       - run: npm ci --prefix functions
       - run: npm run check
         env:
-          LEGACY_GITHUB_PAGES: true
           VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
       - run: npm run check:functions
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Authenticate Firebase deployer
+        uses: google-github-actions/auth@v3
         with:
-          path: dist
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+          credentials_json: ${{ secrets.FIREBASE_DEPLOY_SERVICE_ACCOUNT }}
+          project_id: virtualartplattform
+      - name: Deploy Hosting and Functions
+        env:
+          VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
+        run: >-
+          npx --yes firebase-tools@latest deploy
+          --only "hosting,functions"
+          --project virtualartplattform
+          --non-interactive
