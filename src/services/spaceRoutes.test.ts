@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import legacyFallbackSource from "../../public/404.html?raw";
 import {
   applicationRootUrl,
+  canonicalHostRedirectUrl,
   matchSpaceRoute,
   spaceCanonicalUrl,
   spacePath,
@@ -18,6 +19,24 @@ describe("Space route contract", () => {
     expect(spaceCanonicalUrl("room-123", "http://localhost:5173/#/g/room-123")).toBe(
       "http://localhost:5173/spaces/room-123",
     );
+  });
+
+  it("moves Firebase default-host sessions to the canonical production origin", () => {
+    expect(
+      canonicalHostRedirectUrl(
+        "https://virtualartplattform.web.app/#/account",
+      ),
+    ).toBe("https://lieuva.com/#/account");
+    expect(
+      canonicalHostRedirectUrl(
+        "https://virtualartplattform.firebaseapp.com/spaces/room-123?preview=1#details",
+      ),
+    ).toBe("https://lieuva.com/spaces/room-123?preview=1#details");
+  });
+
+  it("does not redirect the canonical or local development origins", () => {
+    expect(canonicalHostRedirectUrl("https://lieuva.com/#/account")).toBeNull();
+    expect(canonicalHostRedirectUrl("http://localhost:5173/#/account")).toBeNull();
   });
 
   it("matches direct and refreshed clean Space routes", () => {

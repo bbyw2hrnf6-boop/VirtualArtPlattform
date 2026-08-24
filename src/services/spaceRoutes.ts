@@ -1,5 +1,9 @@
 export const CANONICAL_APP_ORIGIN = "https://lieuva.com";
 export const SPACE_IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+const FIREBASE_DEFAULT_HOSTS = new Set([
+  "virtualartplattform.web.app",
+  "virtualartplattform.firebaseapp.com",
+]);
 
 export type SpaceRouteMatch =
   | { kind: "space"; id: string; legacy: boolean }
@@ -23,6 +27,16 @@ export function appOrigin(currentHref?: string): string {
   if (!currentHref) return CANONICAL_APP_ORIGIN;
   const current = new URL(currentHref);
   return isLocalHost(current.hostname) ? current.origin : CANONICAL_APP_ORIGIN;
+}
+
+export function canonicalHostRedirectUrl(currentHref: string): string | null {
+  const current = new URL(currentHref);
+  if (!FIREBASE_DEFAULT_HOSTS.has(current.hostname)) return null;
+  const canonical = new URL(CANONICAL_APP_ORIGIN);
+  canonical.pathname = current.pathname;
+  canonical.search = current.search;
+  canonical.hash = current.hash;
+  return canonical.href;
 }
 
 export function spaceCanonicalUrl(spaceId: string, currentHref?: string): string {
