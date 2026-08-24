@@ -30,6 +30,13 @@ jobs:
         env:
           VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
       - run: npm run check:functions
+      - name: Prepare Firebase Functions parameters
+        env:
+          AURA_PUBLIC_APP_URL: ${{ vars.AURA_PUBLIC_APP_URL }}
+          AURA_REPLY_TO: ${{ vars.AURA_REPLY_TO }}
+          AURA_LEGAL_FOOTER: ${{ vars.AURA_LEGAL_FOOTER }}
+        run: |
+          node -e 'const fs = require("node:fs"); const values = { AURA_PUBLIC_APP_URL: process.env.AURA_PUBLIC_APP_URL, AURA_REPLY_TO: process.env.AURA_REPLY_TO, AURA_LEGAL_FOOTER: process.env.AURA_LEGAL_FOOTER }; fs.writeFileSync("functions/.env.virtualartplattform", Object.entries(values).map(([key, value]) => key + "=" + JSON.stringify(value || "")).join("\n") + "\n");'
       - name: Authenticate Firebase deployer
         uses: google-github-actions/auth@v3
         with:
