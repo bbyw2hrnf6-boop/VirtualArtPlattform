@@ -2,6 +2,8 @@
 
 > **Compatibility firewall:** LIEUVA is the customer-facing brand. Legacy AURA/gallery technical identifiers—including Firebase collections and project IDs, Storage paths, callable names, Function parameters, IndexedDB/localStorage keys, `.aura.json`, routes and GLB `aura_*` metadata—are compatibility contracts. Never rename them for cosmetic consistency without an explicit migration plan and regression coverage.
 
+> **Clean URL boundary:** `/spaces/{existing-galleryId}` is a delivery route over the existing publication identity. Clean customer URLs never authorize renaming `galleries`, gallery IDs, Storage paths, callable Functions, revisions, ACL or export/local-draft contracts.
+
 ## Product goal
 
 - Build a pitch-ready browser platform for creating, curating, previewing, publishing, and sharing premium virtual art exhibitions.

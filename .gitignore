@@ -1,6 +1,7 @@
 node_modules/
 dist/
 functions/lib/
+functions/generated/app-shell.html
 artifacts/
 *.tsbuildinfo
 .env

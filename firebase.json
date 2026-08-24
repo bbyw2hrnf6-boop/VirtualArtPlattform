@@ -3,6 +3,7 @@
     "source": "functions",
     "runtime": "nodejs22",
     "predeploy": [
+      "npm --prefix \"$PROJECT_DIR\" run build",
       "npm --prefix \"$RESOURCE_DIR\" run check"
     ]
   },
@@ -12,5 +13,74 @@
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "dist",
+    "predeploy": [
+      "npm run build"
+    ],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/spaces",
+        "function": {
+          "functionId": "spaceDocument",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
+        "source": "/spaces/**",
+        "function": {
+          "functionId": "spaceDocument",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
+        "source": "/space-cards/**",
+        "function": {
+          "functionId": "spaceCard",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
+        "source": "/sitemap.xml",
+        "function": {
+          "functionId": "spaceSitemap",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public,max-age=31536000,immutable"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
+    ]
   }
 }

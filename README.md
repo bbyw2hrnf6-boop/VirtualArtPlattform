@@ -73,13 +73,13 @@ npm run preview
 | `npm run dev` | Start the Vite development server with hot reload. |
 | `npm run lint` | Run ESLint across the project. |
 | `npm test` | Run the editor, placement, review, storage, and runtime-quality tests. |
-| `npm run build` | Type-check the app and create the production bundle in `dist/`. |
+| `npm run build` | Type-check the app, create `dist/`, and prepare the generated HTML shell used by privacy-aware Space delivery. |
 | `npm run preview` | Serve `dist/` locally for production verification. |
 | `npm run check` | Run lint, all tests, type-checking, and the complete production build; this is the deployment quality gate. |
 | `npm run check:functions` | Test and type-check the trusted branded-email/newsletter Functions. |
 | `npm run validate:glb -- path/to/template.glb` | Validate a future template export against the documented legacy `aura_*` GLB contract. |
 
-The supported production path is `.github/workflows/deploy.yml`.
+The WP5 production target is Firebase Hosting plus the repository's three public delivery Functions. The existing GitHub Pages workflow remains available as a reviewed rollback/legacy-host path and is not the clean-URL production architecture.
 
 ## Editor workflow
 
@@ -114,20 +114,26 @@ Drafts autosave per template in IndexedDB. Direct template routes survive refres
 
 Touch behavior depends on the browser and device. If a HEIC/HEIF image cannot be decoded, convert it to JPG, PNG, or WebP and upload it again.
 
-## Routing and GitHub Pages compatibility
+## Routing and clean-Space delivery
 
-LIEUVA currently uses legacy hash-based routes, so refreshing a Space does not require server-side rewrites:
+Published Spaces use one durable customer URL backed by their existing publication ID:
+
+- `/spaces/{gallery-id}` — canonical published Space URL
+
+All new share and Discover links use the canonical `https://lieuva.com/spaces/{gallery-id}` form. Title, Creator and revision changes keep the same URL. Firebase Hosting rewrites direct requests to a privacy-aware HTTP Function, which returns route-specific initial metadata and then boots the normal React visitor application.
+
+Existing product areas keep their compatibility hash routes:
 
 - `#/` — landing page and Discover
 - `#/create` — gallery picker and editor
 - `#/create/{white-cube|nocturne|pavilion}` — persistent editor route for one template
 - `#/create/{white-cube|nocturne|pavilion}/demo` — instant sandbox preloaded with three fictional demo artworks
 - `#/demo` — Danny Hirsch live demo
-- `#/g/{gallery-id}` — published gallery
+- `#/g/{gallery-id}` — legacy published-Space entry; resolves the same ID and replaces it with the clean canonical URL
 - `#/data` — factual MVP data and rights notice
 - `?mode={verifyEmail|resetPassword}&oobCode=…` — Firebase account action handler; query parameters precede the hash route
 
-The Vite production base is relative, allowing the built bundle to run from both the custom domain and the legacy `/VirtualArtPlattform/` repository path. Runtime assets also use relative URLs.
+The default production build uses root-relative assets for Firebase Hosting and direct clean-route refreshes. Setting `LEGACY_GITHUB_PAGES=true` creates the relative-base rollback bundle used by the retained Pages workflow.
 
 ## Architecture
 
@@ -151,7 +157,8 @@ src/
 └── styles/global.css               Application and responsive styling
 
 functions/
-├── src/index.ts                    Authenticated mail, consent, and unsubscribe endpoints
+├── src/index.ts                    Trusted product APIs plus Space HTML/card/sitemap delivery
+├── src/spaceSeo.ts                 Privacy-aware metadata, cache and sitemap policy
 └── src/emailTemplates.ts           Responsive LIEUVA transactional and welcome emails
 
 public/assets/                      Runtime demo and material assets
@@ -188,7 +195,20 @@ The Firebase web-client configuration currently lives in `src/services/firebase.
 
 To use another Firebase project, replace that web configuration and the default project in `.firebaserc`, then deploy the repository's rules and indexes to the new project. Never place a service-account JSON or private key in source code.
 
-## Deploy to GitHub Pages
+## Deploy the clean-URL architecture
+
+Do not cut production DNS before the preview checks in [`FIREBASE_SETUP.md`](./FIREBASE_SETUP.md) pass. The reviewed deployment unit is the built site plus `spaceDocument`, `spaceCard`, and `spaceSitemap` in the same Firebase project:
+
+```bash
+npm run check
+npm run check:functions
+```
+
+During the separately approved external preview window, deploy the three new Functions first, then create the Hosting preview channel that rewrites to them. Exact commands/order, raw-HTTP checks, DNS handoff and rollback are documented in `FIREBASE_SETUP.md` and `audit/CLEAN-SPACE-URL-SEO-IMPLEMENTATION.md`.
+
+Clean customer URLs do not imply renamed Firebase/data identifiers. `galleries`, `galleryId`, Storage paths, callable names, `.aura.json`, local draft keys and GLB `aura_*` metadata remain compatibility contracts.
+
+## Legacy GitHub Pages rollback
 
 1. Push the repository to GitHub with the application on `main`.
 2. Open **Repository Settings → Pages**.
@@ -207,7 +227,7 @@ npm run build
 
 Then test the landing page, all three room editors, the Danny demo, one publication, the resulting share link in a private browser window, and its Discover card.
 
-For a custom domain, also add the hostname under **Firebase Authentication → Settings → Authorized domains** and update the hardcoded Open Graph image URL in `index.html`.
+The Pages workflow sets `LEGACY_GITHUB_PAGES=true`, preserving the previous repository-subpath asset behavior. It cannot provide per-Space raw metadata, dynamic cards or privacy-aware status codes and is therefore a rollback path, not the WP5 production target.
 
 ## Troubleshooting
 

@@ -2,14 +2,14 @@
   "name": "LIEUVA — Immersive 3D presentation platform",
   "short_name": "LIEUVA",
   "description": "Create, publish, share and discover immersive 3D presentations in the browser.",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0b0b0b",
   "theme_color": "#0b0b0b",
   "icons": [
     {
-      "src": "./favicon.svg",
+      "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Opening Space | LIEUVA</title>
+  </head>
+  <body>
+    <p>Opening LIEUVA…</p>
+    <script>
+      (() => {
+        const match = /\/spaces\/([A-Za-z0-9_-]{1,128})\/?$/.exec(location.pathname);
+        const project = location.hostname.endsWith(".github.io")
+          ? `/${location.pathname.split("/").filter(Boolean)[0]}/`
+          : "/";
+        location.replace(match
+          ? `${project}?legacy=1#/g/${match[1]}`
+          : project);
+      })();
+    </script>
+  </body>
+</html>

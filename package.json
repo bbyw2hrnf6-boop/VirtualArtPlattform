@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/prepare-space-delivery.mjs",
     "preview": "vite preview",
     "validate:glb": "node scripts/validate-glb-contract.mjs",
     "test": "vitest run",

@@ -1,6 +1,6 @@
+import { spaceCanonicalUrl } from "./spaceRoutes";
+
+/** Legacy function name retained as a compatibility boundary for existing UI code. */
 export function galleryShareUrl(galleryId: string, currentHref: string) {
-  const url = new URL(currentHref);
-  url.search = "";
-  url.hash = `/g/${encodeURIComponent(galleryId)}`;
-  return url.toString();
+  return spaceCanonicalUrl(galleryId, currentHref);
 }

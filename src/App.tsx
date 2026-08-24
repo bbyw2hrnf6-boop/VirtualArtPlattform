@@ -66,6 +66,13 @@ import {
   type GalleryRecord,
 } from "./services/galleryRepository";
 import { galleryShareUrl } from "./services/galleryShareUrl";
+import {
+  applicationRootUrl,
+  hashApplicationUrl,
+  matchSpaceRoute,
+  spaceCanonicalUrl,
+  spacePath,
+} from "./services/spaceRoutes";
 import { useDialogFocus } from "./hooks/useDialogFocus";
 import { AccountButton, AccountPage } from "./features/account/AccountDialog";
 import { GalleryAccessManager } from "./features/account/GalleryAccessManager";
@@ -97,11 +104,12 @@ const ScrollGalleryStory = lazy(() =>
 const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
 
 type Route = {
-  page: "home" | "create" | "demo" | "gallery" | "data" | "auth-action" | "account";
+  page: "home" | "create" | "demo" | "gallery" | "data" | "auth-action" | "account" | "space-not-found";
   id?: string;
   template?: TemplateId;
   demoArt?: boolean;
   projectId?: string;
+  legacySpace?: boolean;
 };
 type ViewMode = "walk" | "overview";
 type ArtworkFocus = {
@@ -240,9 +248,17 @@ const DANNY_ARTWORKS: DirectoryArtwork[] = [
       "Complete front view of the painted wARTrobe installation by Danny Hirsch",
   },
 ];
-const routeFromHash = (): Route => {
+const routeFromLocation = (): Route => {
   const actionMode = new URLSearchParams(location.search).get("mode");
   if (actionMode) return { page: "auth-action" };
+  const spaceRoute = matchSpaceRoute(location.pathname, location.hash);
+  if (spaceRoute?.kind === "malformed") return { page: "space-not-found" };
+  if (spaceRoute?.kind === "space")
+    return {
+      page: "gallery",
+      id: spaceRoute.id,
+      legacySpace: spaceRoute.legacy,
+    };
   const hash = location.hash.replace(/^#/, "");
   if (hash === "/create") return { page: "create" };
   const templateMatch =
@@ -262,11 +278,23 @@ const routeFromHash = (): Route => {
   if (hash === "/demo") return { page: "demo" };
   if (hash === "/data") return { page: "data" };
   if (hash === "/account") return { page: "account" };
-  if (hash.startsWith("/g/")) return { page: "gallery", id: hash.slice(3) };
   return { page: "home" };
 };
 const navigate = (path: string) => {
-  location.hash = path;
+  if (path.startsWith("/spaces/")) {
+    const id = path.slice("/spaces/".length);
+    const target = spaceCanonicalUrl(id, location.href);
+    location.assign(target);
+    return;
+  } else {
+    const target = hashApplicationUrl(path, location.href);
+    if (location.pathname !== new URL(applicationRootUrl(location.href)).pathname) {
+      location.assign(target);
+      return;
+    }
+    history.pushState(null, "", target);
+  }
+  dispatchEvent(new PopStateEvent("popstate"));
   window.scrollTo(0, 0);
 };
 
@@ -510,7 +538,7 @@ function DiscoverGalleries() {
             >
               <button
                 className="discover-card-main"
-                onClick={() => navigate(`/g/${gallery.id}`)}
+                onClick={() => navigate(spacePath(gallery.id))}
               >
                 <div className="discover-cover">
                   {cover ? (
@@ -3683,9 +3711,14 @@ function Demo() {
 function PublishedGallery({ id }: { id: string }) {
   const viewer = useRef<HTMLElement>(null);
   const directoryButton = useRef<HTMLButtonElement>(null);
-  const [loadState, setLoadState] = useState<GalleryLoadState>({
-    status: "loading",
-  });
+  const serverSpaceState = document
+    .querySelector('meta[name="lieuva:space-state"]')
+    ?.getAttribute("content");
+  const [loadState, setLoadState] = useState<GalleryLoadState>(() =>
+    serverSpaceState === "not-found"
+      ? { status: "not-found" }
+      : { status: "loading" },
+  );
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("walk");
   const [artworkFocus, setArtworkFocus] = useState<ArtworkFocus | null>(null);
@@ -3708,6 +3741,7 @@ function PublishedGallery({ id }: { id: string }) {
     openFallbackDirectory,
   );
   useEffect(() => {
+    if (serverSpaceState === "not-found") return;
     let stale = false;
     galleryRepository
       .findManifest(id)
@@ -3742,7 +3776,8 @@ function PublishedGallery({ id }: { id: string }) {
         }
       })
       .catch((error) => {
-        console.error("Gallery request failed", error);
+        if (!(error instanceof GalleryAccessDeniedError))
+          console.error("Gallery request failed", error);
         if (!stale)
           setLoadState({
             status:
@@ -3754,9 +3789,9 @@ function PublishedGallery({ id }: { id: string }) {
     return () => {
       stale = true;
     };
-  }, [id, loadAttempt]);
+  }, [id, loadAttempt, serverSpaceState]);
   useEffect(() => {
-    if (loadState.status === "ready")
+    if (loadState.status === "ready" && loadState.gallery.visibility === "public")
       document.title = productTitle(`${loadState.gallery.title} — ${loadState.gallery.artist}`);
   }, [loadState]);
   if (loadState.status === "loading")
@@ -3905,16 +3940,29 @@ function PublishedGallery({ id }: { id: string }) {
 }
 
 export default function App() {
-  const [route, setRoute] = useState(routeFromHash);
+  const [route, setRoute] = useState(routeFromLocation);
   const routeKey = `${route.page}:${route.id ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`;
   const previousRoute = useRef(routeKey);
   useEffect(() => {
-    const handler = () => setRoute(routeFromHash());
+    const handler = () => setRoute(routeFromLocation());
     addEventListener("hashchange", handler);
-    return () => removeEventListener("hashchange", handler);
+    addEventListener("popstate", handler);
+    return () => {
+      removeEventListener("hashchange", handler);
+      removeEventListener("popstate", handler);
+    };
   }, []);
   useEffect(() => {
-    document.title =
+    if (route.page !== "gallery" || !route.id || !route.legacySpace) return;
+    if (new URLSearchParams(location.search).get("legacy") === "1") return;
+    const target = galleryShareUrl(route.id, location.href);
+    if (target !== location.href) location.replace(target);
+  }, [route]);
+  useEffect(() => {
+    const deliveredSpaceMetadata =
+      route.page === "gallery" &&
+      document.querySelector('meta[name="lieuva:space-state"]');
+    if (!deliveredSpaceMetadata) document.title =
       route.page === "home"
         ? productTitle()
         : route.page === "create"
@@ -3957,6 +4005,15 @@ export default function App() {
     if (route.page === "data") return <MvpDataNotice />;
     if (route.page === "account") return <AccountPage />;
     if (route.page === "auth-action") return <AuthActionPage />;
+    if (route.page === "space-not-found")
+      return (
+        <main className="not-found">
+          <Logo />
+          <h1>This Space isn't available.</h1>
+          <p>The link is malformed or no longer valid.</p>
+          <button className="button button--light" onClick={() => navigate("/")}>Return home</button>
+        </main>
+      );
     if (route.page === "gallery" && route.id)
       return <PublishedGallery key={route.id} id={route.id} />;
     return <Landing />;

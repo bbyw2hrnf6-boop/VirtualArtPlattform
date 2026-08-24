@@ -9,7 +9,8 @@ LIEUVA uses Anonymous, Email/Password, and Google Authentication; Firestore for 
 | Authentication | Guest identity plus Email/Password and Google accounts |
 | Firestore | Gallery metadata, layout, visibility, ACL, Discover, expiry |
 | Storage | Compressed artwork images and covers |
-| Cloud Functions | Publication permits, quotas, lifecycle and safe Trash |
+| Cloud Functions | Publication permits, quotas, lifecycle, safe Trash, canonical Space HTML, cards and sitemap |
+| Firebase Hosting | Root application plus clean `/spaces/{id}` delivery rewrites |
 | App Check | Blocks scripts that are not running in the registered LIEUVA app |
 | GitHub Action | Physical cleanup after expiry or the Trash recovery window |
 
@@ -253,7 +254,81 @@ Do not enable Firestore TTL as a replacement without redesigning cleanup: Firest
 13. Open one owned room from Account, edit and update it, and confirm the original share URL now shows the revision.
 14. Invite a second account as Editor and confirm it can update that same room but cannot manage access or delete it. Confirm a Viewer cannot edit.
 
-## Optional: migrate still-active legacy rooms
+## 10. Clean Space URL delivery (WP5)
+
+The canonical URL uses the existing Firestore publication ID:
+
+`https://lieuva.com/spaces/{galleryId}`
+
+No Firestore ID, collection, Storage path, callable name, ACL or revision migration is involved. The default root build prepares `functions/generated/app-shell.html`; it is generated, ignored by Git, and included in the Functions upload after the predeploy build.
+
+### Preview and cutover order
+
+1. Run the local gates:
+
+   ```bash
+   npm ci
+   npm ci --prefix functions
+   npm run check
+   npm run check:functions
+   ```
+
+2. Confirm the generated shell exists after the build:
+
+   ```bash
+   test -f functions/generated/app-shell.html
+   ```
+
+3. Review `firebase.json`. It rewrites `/spaces/**`, `/space-cards/**`, and `/sitemap.xml` to the three `europe-west1` Functions and leaves other paths on the Vite shell.
+4. During the explicitly approved external preview window, deploy only the three new delivery Functions. This does not change DNS or the currently served site:
+
+   ```bash
+   npx --yes firebase-tools@latest deploy \
+     --only functions:spaceDocument,functions:spaceCard,functions:spaceSitemap \
+     --project virtualartplattform
+   ```
+
+5. Create a Firebase Hosting preview channel that can now resolve those rewrites. Do not change DNS:
+
+   ```bash
+   npx --yes firebase-tools@latest hosting:channel:deploy wp5-review \
+     --project virtualartplattform
+   ```
+
+6. Before DNS changes, test the printed preview-channel host with one public, one unlisted and one private fixture. Inspect raw responses with `curl`, not only the rendered browser:
+
+   ```bash
+   curl -i https://PREVIEW_HOST/spaces/PUBLIC_ID
+   curl -i https://PREVIEW_HOST/spaces/UNLISTED_ID
+   curl -i https://PREVIEW_HOST/spaces/PRIVATE_ID
+   curl -i https://PREVIEW_HOST/spaces/does-not-exist
+   curl -i https://PREVIEW_HOST/sitemap.xml
+   ```
+
+   Public HTML must contain the Space title and self-canonical LIEUVA URL. Unlisted/private HTML must be generic and `noindex`. Missing Spaces must return 404. The sitemap must contain only active, unexpired public canonical URLs.
+7. After preview acceptance, deploy production Hosting while the custom domain still points at its current host, then repeat the checks on the Firebase `web.app` host:
+
+   ```bash
+   npx --yes firebase-tools@latest deploy --only hosting \
+     --project virtualartplattform
+   ```
+
+8. Add `lieuva.com` and `www.lieuva.com` to Firebase Hosting, complete its ownership/DNS instructions, and keep both in Firebase Auth authorized domains. Do not remove the GitHub hostname during the rollback window.
+9. After the certificate and DNS are healthy, repeat the raw checks on `https://lieuva.com`, verify `#/g/{id}` redirects to the same clean Space, and test Auth verification, Google OAuth, invitations, private access, PWA launch, refresh, back and forward.
+10. Only after that, submit `https://lieuva.com/sitemap.xml` in Search Console.
+
+### Cache and privacy behavior
+
+- Public Space HTML, cards and sitemap use a 60-second shared-cache lifetime and must revalidate.
+- Unlisted/private/error responses use `private, no-store`.
+- Public-to-private changes can remain in an already-populated edge cache for at most 60 seconds; protected media access is rechecked independently by `spaceCard`.
+- The card endpoint never emits a Storage URL and refuses non-public content.
+
+### Rollback
+
+Repoint the custom domain to the previous GitHub Pages delivery, run the retained Pages workflow if required, and remove/disable only the new Hosting rewrites after traffic is back. Do not delete Functions, Firestore documents, Storage objects, IDs, revisions or ACL. Existing `#/g/{id}` links retain the durable publication ID and remain compatible with the legacy build.
+
+## 11. Optional: migrate still-active legacy rooms
 
 New rooms need no migration. To move old schema-v1 artwork Data URLs out of Firestore, first export/backup Firestore, then run the guarded script manually:
 
@@ -265,7 +340,7 @@ node scripts/migrate-gallery-assets-to-storage.mjs --execute
 
 Without `--execute`, the script exits before any network request. Review credentials, project and backup first. The script keeps legacy artwork documents until their normal scheduled expiry cleanup, providing a rollback window. Do not place the service-account JSON in a shell-history file or commit it.
 
-## 10. Troubleshooting
+## 12. Troubleshooting
 
 - `storage/unauthorized`: publish current `storage.rules`; confirm the authenticated UID matches the object path.
 - `storage/bucket-not-found`: confirm Blaze and the exact default bucket name.

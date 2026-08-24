@@ -26,6 +26,7 @@ jobs:
       - run: npm ci --prefix functions
       - run: npm run check
         env:
+          LEGACY_GITHUB_PAGES: true
           VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
       - run: npm run check:functions
       - uses: actions/configure-pages@v5

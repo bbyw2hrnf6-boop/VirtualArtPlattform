@@ -3,9 +3,12 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ command }) => ({
   plugins: [react()],
-  // Root-relative URLs keep imported fonts/assets valid in the dev server, while
-  // the relative production base keeps the bundle portable on GitHub Pages.
-  base: command === 'build' ? './' : '/',
+  // Firebase Hosting and clean deep links use root-relative assets. The retained
+  // Pages rollback workflow opts into a relative repository-subpath bundle.
+  base:
+    command === 'build' && process.env.LEGACY_GITHUB_PAGES === 'true'
+      ? './'
+      : '/',
   build: {
     target: 'es2020',
     // Public source maps add several megabytes to every Pages deployment and

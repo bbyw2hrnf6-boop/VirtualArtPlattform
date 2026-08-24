@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AccountSession } from "../../services/accountTypes";
 import { galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
 import { galleryShareUrl } from "../../services/galleryShareUrl";
+import { hashApplicationUrl } from "../../services/spaceRoutes";
 import { visibilityLabel } from "../../services/galleryAccess";
 import type { GalleryInvite } from "../../services/galleryAccess";
 import {
@@ -81,7 +82,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
         );
       }
       window.location.assign(
-        `#/create/${editable.draft.templateId}/${projectId}`,
+        hashApplicationUrl(`/create/${editable.draft.templateId}/${projectId}`, window.location.href),
       );
     } catch (caught) {
       console.error("Published Space could not be opened for editing", caught);
@@ -623,7 +624,7 @@ export function AccountDialog({
                     setSession(null);
                     onSessionChange?.(null);
                     onClose();
-                    window.location.hash = "/";
+                    window.location.assign(hashApplicationUrl("/", window.location.href));
                     window.scrollTo(0, 0);
                   } catch (caught) {
                     setError(service.accountErrorMessage(caught));
@@ -795,7 +796,7 @@ export function AccountButton({
         className={`account-entry ${light ? "account-entry--light" : ""} ${signedIn ? "is-signed-in" : ""}`}
         onClick={() => {
           if (signedIn && controlledOpen === undefined) {
-            window.location.hash = "/account";
+            window.location.assign(hashApplicationUrl("/account", window.location.href));
             window.scrollTo(0, 0);
             return;
           }
@@ -828,7 +829,7 @@ export function AccountPage() {
         open
         presentation="page"
         onClose={() => {
-          window.location.hash = "/";
+          window.location.assign(hashApplicationUrl("/", window.location.href));
           window.scrollTo(0, 0);
         }}
       />

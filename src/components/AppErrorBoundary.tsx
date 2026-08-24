@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { applicationRootUrl } from '../services/spaceRoutes';
 
 type AppErrorBoundaryProps = { children: ReactNode };
 type AppErrorBoundaryState = { error: Error | null };
@@ -15,12 +16,11 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   }
 
   private returnHome = () => {
-    if (location.hash === '' || location.hash === '#/' || location.hash === '#') {
+    if (location.pathname === '/' && (location.hash === '' || location.hash === '#/' || location.hash === '#')) {
       location.reload();
       return;
     }
-    location.hash = '/';
-    this.setState({ error: null });
+    location.assign(applicationRootUrl(location.href));
   };
 
   render() {

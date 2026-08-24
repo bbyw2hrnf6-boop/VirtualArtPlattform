@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { FieldPath, FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { defineString } from "firebase-functions/params";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
@@ -25,6 +26,16 @@ import {
   portableValue,
   type AccountDeletionPlan,
 } from "./accountDataRights.js";
+import {
+  SPACE_CARD_FALLBACK,
+  cacheControlForSpace,
+  classifySpaceForDelivery,
+  metadataForSpace,
+  renderPublicSitemap,
+  renderSpaceDocument,
+  type PublicSpaceDelivery,
+  type SpaceDelivery,
+} from "./spaceSeo.js";
 
 if (!getApps().length) initializeApp();
 
@@ -47,6 +58,19 @@ const sources = new Set(["email-create", "email-signin", "google-create", "googl
 const galleryVisibilities = new Set<string>(GALLERY_VISIBILITIES);
 const galleryLifecycleActions = new Set(["archive", "restore", "renew", "trash", "visibility"]);
 const galleryRoles = new Set(["viewer", "editor"]);
+const publicDeliveryFields = [
+  "schemaVersion",
+  "title",
+  "artist",
+  "visibility",
+  "lifecycleStatus",
+  "expiresAt",
+  "publishedAt",
+  "updatedAt",
+  "revision",
+  "ownerId",
+  "coverPath",
+] as const;
 
 function brand(): AuraMailBrand {
   return {
@@ -110,6 +134,34 @@ function inviteIdFor(galleryId: string, email: string) {
 
 function uniqueDocumentPaths(documents: Array<{ ref: { path: string } }>) {
   return [...new Set(documents.map((document) => document.ref.path))];
+}
+
+function generatedAppShell() {
+  return readFileSync(new URL("../generated/app-shell.html", import.meta.url), "utf8");
+}
+
+function requestSpaceId(path: string, route: "spaces" | "space-cards") {
+  const match = new RegExp(`/${route}/([^/]+)/?$`).exec(path);
+  if (!match) return undefined;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return undefined;
+  }
+}
+
+async function publicDeliveryManifest(spaceId: string) {
+  const snapshot = await db.collection("galleries")
+    .where(FieldPath.documentId(), "==", spaceId)
+    .select(...publicDeliveryFields)
+    .limit(1)
+    .get();
+  return snapshot.docs[0]?.data();
+}
+
+function genericErrorShell(delivery: SpaceDelivery) {
+  const metadata = metadataForSpace(delivery);
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="${metadata.robots}"><title>${metadata.title}</title></head><body><main><h1>Space temporarily unavailable</h1><p>Please try again later.</p></main></body></html>`;
 }
 
 async function accountMediaFootprint(ownerId: string, galleryId: string) {
@@ -742,5 +794,134 @@ export const unsubscribeAuraNewsletter = onRequest(
     response.status(200).send(responsePage(changed
       ? "You will no longer receive LIEUVA product letters. Your account and Spaces stay untouched."
       : "This preference was already handled. Your account and Spaces stay untouched."));
+  },
+);
+
+/** Privacy-aware HTML delivery for canonical customer-facing Space URLs. */
+export const spaceDocument = onRequest(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
+  async (request, response) => {
+    response.set("Content-Type", "text/html; charset=utf-8");
+    response.set("Vary", "Accept-Encoding");
+    response.set("X-Content-Type-Options", "nosniff");
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("Allow", "GET, HEAD");
+      response.status(405).send("Method not allowed");
+      return;
+    }
+    const spaceId = requestSpaceId(request.path, "spaces");
+    let delivery: SpaceDelivery = { kind: "not-found", ...(spaceId ? { id: spaceId } : {}) };
+    try {
+      if (spaceId) {
+        delivery = classifySpaceForDelivery(spaceId, await publicDeliveryManifest(spaceId));
+      }
+      const metadata = metadataForSpace(delivery);
+      response.set("Cache-Control", cacheControlForSpace(delivery));
+      response.set("X-Robots-Tag", metadata.robots);
+      response.status(metadata.status).send(renderSpaceDocument(generatedAppShell(), delivery));
+      console.info("space_document", { spaceId: spaceId ?? "invalid", outcome: delivery.kind });
+    } catch {
+      delivery = { kind: "temporary-error", ...(spaceId ? { id: spaceId } : {}) };
+      const metadata = metadataForSpace(delivery);
+      response.set("Cache-Control", cacheControlForSpace(delivery));
+      response.set("X-Robots-Tag", metadata.robots);
+      response.status(503).send(genericErrorShell(delivery));
+      console.error("space_document_failed", { spaceId: spaceId ?? "invalid" });
+    }
+  },
+);
+
+/** Public cover proxy. Storage paths and protected Space media never enter metadata. */
+export const spaceCard = onRequest(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
+  async (request, response) => {
+    response.set("X-Content-Type-Options", "nosniff");
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("Allow", "GET, HEAD");
+      response.status(405).send("Method not allowed");
+      return;
+    }
+    const spaceId = requestSpaceId(request.path, "space-cards");
+    if (!spaceId) {
+      response.set("Cache-Control", "private, no-store, max-age=0");
+      response.status(404).send("Not found");
+      return;
+    }
+    try {
+      const delivery = classifySpaceForDelivery(spaceId, await publicDeliveryManifest(spaceId));
+      if (delivery.kind !== "public") {
+        response.set("Cache-Control", "private, no-store, max-age=0");
+        response.status(404).send("Not found");
+        console.info("space_card_rejected", { spaceId, outcome: delivery.kind });
+        return;
+      }
+      if (!delivery.coverPath) {
+        response.set("Cache-Control", "public, max-age=60, s-maxage=60, must-revalidate");
+        response.redirect(302, SPACE_CARD_FALLBACK);
+        return;
+      }
+      const file = getStorage().bucket().file(delivery.coverPath);
+      const [metadata] = await file.getMetadata();
+      const contentType = metadata.contentType ?? "";
+      const size = Number(metadata.size ?? 0);
+      if (!new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]).has(contentType) || size > 2 * 1024 * 1024)
+        throw new Error("Invalid public cover metadata.");
+      const [image] = await file.download();
+      response.set("Content-Type", contentType);
+      response.set("Content-Length", String(image.length));
+      response.set("Cache-Control", "public, max-age=60, s-maxage=60, must-revalidate");
+      if (metadata.etag) response.set("ETag", metadata.etag);
+      response.status(200).send(image);
+      console.info("space_card", { spaceId, outcome: "public" });
+    } catch {
+      response.set("Cache-Control", "private, no-store, max-age=0");
+      response.status(404).send("Not found");
+      console.error("space_card_failed", { spaceId });
+    }
+  },
+);
+
+/** Canonical, public-only sitemap generated from the current publication state. */
+export const spaceSitemap = onRequest(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
+  async (request, response) => {
+    response.set("Content-Type", "application/xml; charset=utf-8");
+    response.set("X-Content-Type-Options", "nosniff");
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("Allow", "GET, HEAD");
+      response.status(405).send("Method not allowed");
+      return;
+    }
+    try {
+      const expiryFloor = new Date();
+      const [modern, legacy] = await Promise.all([
+        db.collection("galleries")
+          .where("visibility", "==", "public")
+          .where("expiresAt", ">", expiryFloor)
+          .orderBy("expiresAt", "desc")
+          .limit(500)
+          .select(...publicDeliveryFields)
+          .get(),
+        db.collection("galleries")
+          .where("schemaVersion", "in", [1, 2])
+          .where("expiresAt", ">", expiryFloor)
+          .orderBy("expiresAt", "desc")
+          .limit(500)
+          .select(...publicDeliveryFields)
+          .get(),
+      ]);
+      const documents = new Map([...modern.docs, ...legacy.docs].map((document) => [document.id, document]));
+      const spaces = [...documents.values()]
+        .map((document) => classifySpaceForDelivery(document.id, document.data()))
+        .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public");
+      response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
+      response.status(200).send(renderPublicSitemap(spaces));
+      console.info("space_sitemap", { publicSpaceCount: spaces.length });
+    } catch {
+      response.set("Cache-Control", "private, no-store, max-age=0");
+      response.set("X-Robots-Tag", "noindex");
+      response.status(503).send(renderPublicSitemap([]));
+      console.error("space_sitemap_failed");
+    }
   },
 );
