@@ -193,20 +193,26 @@ Browser/production-preview QA:
 - Firebase Hosting/Firestore Functions emulator: not run because this Mac has no Java runtime;
 - production Hosting/Functions/raw-live metadata/card: not run because WP5 prohibits deployment.
 
+Post-approval production cutover verification (2026-08-24):
+
+- Firebase Hosting and `spaceDocument`, `spaceCard`, and `spaceSitemap` deployed successfully through the GitHub Actions Firebase workflow;
+- `https://lieuva.com/`: HTTP 200 with HTTPS/HSTS;
+- `https://www.lieuva.com/`: HTTP 301 to `https://lieuva.com/`;
+- `https://lieuva.com/robots.txt`: HTTP 200;
+- `https://lieuva.com/sitemap.xml`: HTTP 200, XML, canonical LIEUVA URLs;
+- sampled clean public Space documents: HTTP 200 with route-specific title, canonical, Open Graph metadata, and card URL;
+- Wix DNS now targets Firebase (`lieuva.com` A → `199.36.158.100`; `www` CNAME → `virtualartplattform.web.app`);
+- Firebase reports both custom domains connected and certificates provisioned;
+- the obsolete GitHub Pages custom-domain binding was removed after successful cutover;
+- downloaded local service-account JSON files were moved to Trash after CI deployment succeeded.
+
 ## 19. External deployment steps
 
-No external step was executed. Required owner-approved sequence:
+The owner-approved Hosting/Functions deployment, DNS cutover, certificates, canonical-domain checks, and GitHub Pages detachment were completed on 2026-08-24. Remaining operational follow-up:
 
-1. Review these repository changes and retain a known-good GitHub Pages deployment.
-2. Run `npm ci`, `npm ci --prefix functions`, `npm run check`, and `npm run check:functions` in the release environment.
-3. Deploy only `spaceDocument`, `spaceCard`, and `spaceSitemap` to `virtualartplattform` during the approved window.
-4. Deploy Firebase Hosting to a preview channel/domain without changing production DNS.
-5. Using isolated test Spaces, `curl -i` public, unlisted, private, missing, card and sitemap endpoints. Confirm actual public Storage cover delivery and a public→private transition after the 60-second cache window.
-6. Verify clean refresh, legacy redirect, back/forward, Auth verification/reset, Google OAuth, invitations, private owner/editor/viewer access, PWA launch and current publication/update flows on the Firebase domain.
-7. Add `lieuva.com` and `www.lieuva.com` in Firebase Hosting. Follow the exact DNS records Firebase supplies; keep both Firebase Auth authorized.
-8. Move Wix DNS only after Firebase shows domain ownership/certificate readiness. Do not remove the GitHub host during the rollback window.
-9. Repeat raw HTTP/card/sitemap and browser checks on `https://lieuva.com`.
-10. Submit `https://lieuva.com/sitemap.xml` to Search Console only after acceptance.
+1. Run the remaining authenticated browser matrix on production: Auth verification/reset, Google OAuth, invitations, private owner/editor/viewer access, publication/update, and visibility transitions.
+2. Verify real social previews in the target crawler tools and refresh their caches where necessary.
+3. Submit `https://lieuva.com/sitemap.xml` to Google Search Console.
 
 Commands and detailed checks are also recorded in `FIREBASE_SETUP.md`. Firestore rules, Storage rules and existing indexes need no WP5 change.
 
@@ -232,6 +238,6 @@ Do not delete Functions first, and never delete/migrate Firestore records, Stora
 
 ## 22. Verdict
 
-**PASS WITH CONDITIONS.** WP5 is locally complete. Clean canonical Space URLs, initial server metadata, privacy-safe cards, public-only sitemap, deterministic status behavior, legacy compatibility, root PWA delivery and rollback support are implemented without changing persistent identity or access contracts.
+**PASS.** WP5 implementation and production delivery are complete. Clean canonical Space URLs, initial server metadata, privacy-safe cards, public-only sitemap, deterministic status behavior, legacy compatibility, root PWA delivery, Firebase Hosting, custom-domain HTTPS, `www` redirect, CI deployment, and rollback support are in place without changing persistent identity or access contracts.
 
-The conditions are the external preview/deployment, real Firebase fixture, social crawler, custom-domain and DNS verification listed above. The repository is ready for WP6 locally after owner review; WP6 must not be used to skip the WP5 production cutover checks.
+Authenticated lifecycle QA, real crawler preview refreshes, and Search Console submission remain operational follow-up rather than WP5 implementation blockers. The repository is ready for WP6.

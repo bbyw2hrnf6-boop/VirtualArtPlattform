@@ -26,6 +26,7 @@ import {
   selectDannyAuthoredLights,
 } from "./scene/dannyLighting";
 import { VisitorControls } from "./VisitorControls";
+import { trackTelemetry } from "../../services/telemetry";
 import {
   IDLE_VISITOR_TOUR,
   type VisitorTourState,
@@ -3490,8 +3491,17 @@ function GallerySceneRenderer({
           quality.tier === "low" ? "default" : "high-performance",
       });
     } catch {
+      trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "renderer_failed" });
       return showSceneError(element);
     }
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "context_lost" });
+    };
+    const handleContextRestored = () =>
+      trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "context_restored" });
+    renderer.domElement.addEventListener("webglcontextlost", handleContextLost);
+    renderer.domElement.addEventListener("webglcontextrestored", handleContextRestored);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const updateMotionPreference = () => {
       element.dataset.motion = reducedMotion.matches ? "reduced" : "full";
@@ -5039,6 +5049,12 @@ function GallerySceneRenderer({
       smartView,
       capture,
     };
+    trackTelemetry("three_milestone", {
+      runtime: initial.visitor ? "published_viewer" : "studio",
+      stage: "interactive",
+      template: currentDraft.templateId,
+      quality: quality.tier,
+    });
     const overviewCenter = new THREE.Vector3(0, h * 0.34, 0);
     const overviewDirection = new THREE.Vector3();
     const wallNormals: Record<string, THREE.Vector3> = {
@@ -5085,6 +5101,7 @@ function GallerySceneRenderer({
     observer.observe(element);
     resize();
     const adaptiveDpr = createAdaptiveDpr(renderer, quality, () => {
+      trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "quality_downgrade", quality: "low" });
       // Preserve the room's directional contact shadow when performance drops.
       // Removing every shadow made the procedural rooms look flat precisely on
       // the devices that already receive the lowest material/reflection budget.
@@ -5094,6 +5111,7 @@ function GallerySceneRenderer({
       renderer.shadowMap.needsUpdate = true;
       element.dataset.quality = "low";
     }, () => {
+      trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "quality_recovery", quality: "balanced" });
       lighting.installations.forEach((installation, index) => {
         installation.spot.castShadow = index < 2;
       });
@@ -5343,6 +5361,8 @@ function GallerySceneRenderer({
       renderer.domElement.removeEventListener("pointerup", editorPointerUp);
       renderer.domElement.removeEventListener("pointercancel", editorPointerUp);
       renderer.domElement.removeEventListener("click", handlePointer);
+      renderer.domElement.removeEventListener("webglcontextlost", handleContextLost);
+      renderer.domElement.removeEventListener("webglcontextrestored", handleContextRestored);
       intro?.dispose();
       navigation.dispose();
       controls.dispose();
@@ -5737,8 +5757,17 @@ export function DannyDemoScene({
           quality.tier === "low" ? "default" : "high-performance",
       });
     } catch {
+      trackTelemetry("three_runtime_health", { runtime: "danny", outcome: "renderer_failed" });
       return showSceneError(element);
     }
+    const handleDannyContextLost = (event: Event) => {
+      event.preventDefault();
+      trackTelemetry("three_runtime_health", { runtime: "danny", outcome: "context_lost" });
+    };
+    const handleDannyContextRestored = () =>
+      trackTelemetry("three_runtime_health", { runtime: "danny", outcome: "context_restored" });
+    renderer.domElement.addEventListener("webglcontextlost", handleDannyContextLost);
+    renderer.domElement.addEventListener("webglcontextrestored", handleDannyContextRestored);
     renderer.setPixelRatio(quality.dpr);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -7000,6 +7029,7 @@ export function DannyDemoScene({
         }
         status.ready("Danny Hirsch exhibition ready");
         setSceneReady(true);
+        trackTelemetry("three_milestone", { runtime: "danny", stage: "interactive", quality: quality.tier });
         latest.current.onLoadProgress?.(100);
       },
       (event) => {
@@ -7017,6 +7047,7 @@ export function DannyDemoScene({
       () => {
         if (destroyed) return;
         element.dataset.error = "true";
+        trackTelemetry("three_runtime_health", { runtime: "danny", outcome: "model_failed" });
         status.update("Exhibition failed to load");
         modelErrorCleanup = showSceneError(
           element,
@@ -7056,11 +7087,13 @@ export function DannyDemoScene({
     observer.observe(element);
     resize();
     const adaptiveDpr = createAdaptiveDpr(renderer, quality, () => {
+      trackTelemetry("three_runtime_health", { runtime: "danny", outcome: "quality_downgrade", quality: "low" });
       effectiveQualityTier = "low";
       applyAuthoredLightBudget();
       element.dataset.quality = "low";
       element.dataset.tourAutoplay = "disabled-low-tier";
     }, () => {
+      trackTelemetry("three_runtime_health", { runtime: "danny", outcome: "quality_recovery", quality: "balanced" });
       effectiveQualityTier = "balanced";
       applyAuthoredLightBudget();
       element.dataset.quality = "balanced";
@@ -7188,6 +7221,8 @@ export function DannyDemoScene({
       observer.disconnect();
       reducedMotion.removeEventListener("change", updateMotionPreference);
       renderer.domElement.removeEventListener("click", handlePointer);
+      renderer.domElement.removeEventListener("webglcontextlost", handleDannyContextLost);
+      renderer.domElement.removeEventListener("webglcontextrestored", handleDannyContextRestored);
       intro?.dispose();
       mixer?.stopAllAction();
       modelErrorCleanup?.();

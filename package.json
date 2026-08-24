@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && node scripts/prepare-space-delivery.mjs",
+    "build": "tsc -b && vite build && node scripts/prepare-space-delivery.mjs && node scripts/check-performance-budgets.mjs",
     "preview": "vite preview",
     "validate:glb": "node scripts/validate-glb-contract.mjs",
     "test": "vitest run",
     "test:release-gate": "vitest run src/services/firebaseGalleryRepository.releaseGate.test.ts src/services/draftStorage.test.ts src/services/galleryPublishingError.test.ts src/services/galleryStoragePaths.test.ts src/services/galleryValidation.test.ts src/services/imageBlob.test.ts src/features/gallery/editor/publishReview.test.ts src/features/gallery/editor/publishState.test.ts",
     "lint": "eslint .",
     "check": "npm run lint && npm test && npm run build",
-    "check:functions": "npm --prefix functions run check"
+    "check:functions": "npm --prefix functions run check",
+    "check:performance": "node scripts/check-performance-budgets.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

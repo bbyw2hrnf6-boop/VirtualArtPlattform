@@ -85,6 +85,13 @@ import {
   type GalleryEditTarget,
   type GalleryVisibility,
 } from "./services/galleryAccess";
+import {
+  classifyTelemetryError,
+  getTelemetryConsent,
+  setTelemetryConsent,
+  trackTelemetry,
+  type TelemetryConsent,
+} from "./services/telemetry";
 
 const GalleryScene = lazy(() =>
   import("./features/gallery/GalleryScene").then((module) => ({
@@ -361,6 +368,7 @@ function DiscoverGalleries() {
   const section = useRef<HTMLElement>(null);
   const requested = useRef(false);
   const load = useCallback(() => {
+    trackTelemetry("discover_viewed", { source: "landing" });
     requested.current = true;
     setStatus("loading");
     void galleryRepository
@@ -728,6 +736,11 @@ function Footer() {
 }
 
 function MvpDataNotice() {
+  const [telemetryConsent, setConsent] = useState<TelemetryConsent>(getTelemetryConsent);
+  const updateConsent = (consent: TelemetryConsent) => {
+    setTelemetryConsent(consent);
+    setConsent(consent);
+  };
   return (
     <main className="info-page">
       <Header light />
@@ -789,6 +802,18 @@ function MvpDataNotice() {
             controller details, retention choices, rights terms, support, and a
             signed scope before confidential use.
           </p>
+        </section>
+        <section>
+          <h2>Optional product measurement</h2>
+          <p>
+            LIEUVA can collect anonymous funnel timing, Web Vitals, and 3D readiness signals.
+            It never sends Project IDs, titles, creator names, email addresses, artwork text,
+            image URLs, or Storage paths. Operational errors remain available without this choice.
+          </p>
+          <div className="info-actions" role="group" aria-label="Product measurement preference">
+            <button className="button button--light" onClick={() => updateConsent("granted")} aria-pressed={telemetryConsent === "granted"}>Allow anonymous measurement</button>
+            <button className="text-link" onClick={() => updateConsent("denied")} aria-pressed={telemetryConsent === "denied"}>Keep optional measurement off</button>
+          </div>
         </section>
         <section>
           <h2>Optional {PRODUCT_BRAND.name} letters</h2>
@@ -1155,6 +1180,7 @@ function Studio({
     [draft.artist, draft.artworks],
   );
   const handleEditorModeChange = useCallback((mode: "arrange" | "walk") => {
+    if (mode === "walk") trackTelemetry("walk_preview_entered", { template: initialTemplate });
     if (!usesCompactInteractionLayout()) return;
     if (mode === "walk") {
       setToolSheet((current) => {
@@ -1166,7 +1192,7 @@ function Studio({
         current === "peek" ? previousToolSheet.current : current,
       );
     }
-  }, []);
+  }, [initialTemplate]);
 
   useEffect(() => {
     let active = true;
@@ -1525,6 +1551,7 @@ function Studio({
     const prepared: Artwork[] = [];
     const failures: string[] = [];
     setUploading(true);
+    trackTelemetry("artwork_upload_started", { template: draft.templateId, count: supported.length });
     setUploadError(undefined);
     try {
       for (const file of supported) {
@@ -1602,6 +1629,11 @@ function Studio({
         requestWallFocus(placed[0].wall);
       }
       if (failures.length) setUploadError(failures.join(" "));
+      trackTelemetry("artwork_upload_completed", {
+        template: draft.templateId,
+        count: placed.length,
+        outcome: failures.length ? "partial" : "success",
+      });
     } finally {
       setUploading(false);
     }
@@ -1619,6 +1651,7 @@ function Studio({
     [],
   );
   const openPublishReview = () => {
+    trackTelemetry("publish_review_opened", { template: draft.templateId, is_update: Boolean(editTarget) });
     setPublishError(undefined);
     transitionPublish({ type: "RESET" });
     setPublishCover(undefined);
@@ -1634,6 +1667,7 @@ function Studio({
   const publish = async () => {
     if (publishAttemptInFlight.current) return;
     if (!isVerifiedAccount(accountSession)) {
+      trackTelemetry("account_gate_opened", { source: "publish" });
       resumePublishAfterAccount.current = true;
       setPublishReviewOpen(false);
       setAccountOpen(true);
@@ -1648,6 +1682,11 @@ function Studio({
     const title = draftRef.current.title.trim();
     const artist = draftRef.current.artist.trim();
     publishAttemptInFlight.current = true;
+    trackTelemetry(editTarget ? "published_update_started" : "publish_started", {
+      template: draftRef.current.templateId,
+      visibility: publishVisibility,
+      is_update: Boolean(editTarget),
+    });
     setPublishError(undefined);
     transitionPublish({ type: "PREPARE" });
     try {
@@ -1703,10 +1742,21 @@ function Studio({
         nextTarget,
       );
       setPublished(publishedGallery);
+      trackTelemetry(editTarget ? "published_update_succeeded" : "publish_succeeded", {
+        template: finalDraft.templateId,
+        visibility: publishedGallery.visibility,
+        is_update: Boolean(editTarget),
+      });
       transitionPublish({ type: "SUCCEED" });
       setPublishReviewOpen(false);
     } catch (error) {
       console.error(error);
+      trackTelemetry(editTarget ? "published_update_failed" : "publish_failed", {
+        template: draftRef.current.templateId,
+        visibility: publishVisibility,
+        error_class: classifyTelemetryError(error),
+        is_update: Boolean(editTarget),
+      });
       setPublishError(
         error instanceof Error
           ? error.message
@@ -1873,6 +1923,7 @@ function Studio({
               <button
                 type="button"
                 onClick={() => {
+                  trackTelemetry("share_action", { source: "publish_success", visibility: published.visibility });
                   const copy =
                     navigator.clipboard?.writeText(url) ?? Promise.reject();
                   void copy
@@ -3794,6 +3845,14 @@ function PublishedGallery({ id }: { id: string }) {
     if (loadState.status === "ready" && loadState.gallery.visibility === "public")
       document.title = productTitle(`${loadState.gallery.title} — ${loadState.gallery.artist}`);
   }, [loadState]);
+  useEffect(() => {
+    if (loadState.status !== "ready") return;
+    if (artworkLoad.total > 0 && artworkLoad.loaded < artworkLoad.total) return;
+    trackTelemetry("published_space_ready", {
+      visibility: loadState.gallery.visibility,
+      count: artworkLoad.total,
+    });
+  }, [artworkLoad.loaded, artworkLoad.total, loadState]);
   if (loadState.status === "loading")
     return (
       <main className="loading" role="status" aria-live="polite">
@@ -3982,6 +4041,18 @@ export default function App() {
       document.getElementById("main-content")?.focus({ preventScroll: true }),
     );
     return () => cancelAnimationFrame(frame);
+  }, [route, routeKey]);
+  useEffect(() => {
+    const { page, template, projectId } = route;
+    if (page === "home") trackTelemetry("landing_view");
+    if (page === "create" && !template) trackTelemetry("create_started", { source: "route" });
+    if (page === "create" && template) {
+      trackTelemetry("template_selected", { template });
+      trackTelemetry("studio_ready", { template });
+      if (projectId?.startsWith("published-"))
+        trackTelemetry("published_edit_started", { template });
+    }
+    if (page === "gallery") trackTelemetry("published_space_opened");
   }, [route, routeKey]);
   const page = useMemo(() => {
     if (route.page === "create")

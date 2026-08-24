@@ -24,6 +24,7 @@ import {
 } from "../gallery/visitorKeyboard";
 import "./scrollGalleryStory.css";
 import { usesCompactInteractionLayout } from "../../utils/mobileLayout";
+import { trackTelemetry } from "../../services/telemetry";
 
 const CHAPTERS = [
   {
@@ -168,6 +169,7 @@ export function ScrollGalleryStory() {
       });
     } catch (error) {
       console.error("Danny Hirsch Arts scroll story could not start.", error);
+      trackTelemetry("three_runtime_health", { runtime: "emil_scroll", outcome: "renderer_failed" });
       section.dataset.roomState = "error";
       section.dataset.motion = "reduced";
       visitor.setAttribute("aria-hidden", "false");
@@ -535,6 +537,7 @@ export function ScrollGalleryStory() {
         modelRoot.add(root);
         modelReady = true;
         section.dataset.roomState = "ready";
+        trackTelemetry("three_milestone", { runtime: "emil_scroll", stage: "interactive", quality: compact ? "low" : "balanced" });
         if (statusRef.current) statusRef.current.textContent = "Danny Hirsch Arts is ready. Scroll to build and enter the exhibition.";
         requestRender();
       },
@@ -544,6 +547,7 @@ export function ScrollGalleryStory() {
       },
       (error) => {
         console.error("Danny Hirsch Arts scroll room could not load.", error);
+        trackTelemetry("three_runtime_health", { runtime: "emil_scroll", outcome: "model_failed" });
         section.dataset.roomState = "error";
         visitor.setAttribute("aria-hidden", "false");
         const fallbackLink = visitor.querySelector<HTMLAnchorElement>("a");
@@ -857,10 +861,15 @@ export function ScrollGalleryStory() {
       event.preventDefault();
       setInteractive(false);
       section.dataset.roomState = "error";
+      trackTelemetry("three_runtime_health", { runtime: "emil_scroll", outcome: "context_lost" });
       visitor.setAttribute("aria-hidden", "false");
       const fallbackLink = visitor.querySelector<HTMLAnchorElement>("a");
       if (fallbackLink) fallbackLink.tabIndex = 0;
       if (statusRef.current) statusRef.current.textContent = "The 3D preview stopped. Open the full room to continue.";
+    };
+    const handleContextRestored = () => {
+      trackTelemetry("three_runtime_health", { runtime: "emil_scroll", outcome: "context_restored" });
+      requestRender();
     };
 
     const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(requestRender);
@@ -875,6 +884,7 @@ export function ScrollGalleryStory() {
     canvas.addEventListener("pointercancel", handlePointerUp);
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     canvas.addEventListener("webglcontextlost", handleContextLost);
+    canvas.addEventListener("webglcontextrestored", handleContextRestored);
     visitor.addEventListener("click", handleMoveControl);
     measureStory(true);
     document.fonts?.ready.then(() => {
@@ -897,6 +907,7 @@ export function ScrollGalleryStory() {
       canvas.removeEventListener("pointercancel", handlePointerUp);
       canvas.removeEventListener("wheel", handleWheel);
       canvas.removeEventListener("webglcontextlost", handleContextLost);
+      canvas.removeEventListener("webglcontextrestored", handleContextRestored);
       visitor.removeEventListener("click", handleMoveControl);
       resizeObserver?.disconnect();
       if (frameRequest) window.cancelAnimationFrame(frameRequest);

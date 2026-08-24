@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { applicationRootUrl } from '../services/spaceRoutes';
+import { reportApplicationError } from '../services/telemetry';
 
 type AppErrorBoundaryProps = { children: ReactNode };
 type AppErrorBoundaryState = { error: Error | null };
@@ -13,6 +14,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('LIEUVA could not render the current view.', error, info);
+    reportApplicationError(error, 'react_error_boundary');
   }
 
   private returnHome = () => {

@@ -6,6 +6,13 @@ import { FieldPath, FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { defineString } from "firebase-functions/params";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
+import { logger } from "firebase-functions";
+import {
+  classifyServerError,
+  logOperation,
+  parseClientTelemetry,
+  safeResourceRef,
+} from "./observability.js";
 import {
   verificationMail,
   welcomeMail,
@@ -71,6 +78,26 @@ const publicDeliveryFields = [
   "ownerId",
   "coverPath",
 ] as const;
+
+/** App Check protected, allow-listed observability boundary. No content or raw IDs are accepted. */
+export const recordLieuvaTelemetry = onCall(
+  { region: REGION, timeoutSeconds: 15, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const startedAt = Date.now();
+    try {
+      const events = parseClientTelemetry(request.data?.events);
+      for (const event of events) logger.info("lieuva_client_event", {
+        schema: "lieuva_client_telemetry_v1",
+        ...event,
+      });
+      logOperation("client_telemetry", "success", startedAt, { count: events.length });
+      return { accepted: events.length };
+    } catch (error) {
+      logOperation("client_telemetry", "rejected", startedAt, { errorClass: classifyServerError(error) });
+      throw new HttpsError("invalid-argument", "Invalid telemetry batch.");
+    }
+  },
+);
 
 function brand(): AuraMailBrand {
   return {
@@ -801,6 +828,7 @@ export const unsubscribeAuraNewsletter = onRequest(
 export const spaceDocument = onRequest(
   { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
   async (request, response) => {
+    const startedAt = Date.now();
     response.set("Content-Type", "text/html; charset=utf-8");
     response.set("Vary", "Accept-Encoding");
     response.set("X-Content-Type-Options", "nosniff");
@@ -819,14 +847,14 @@ export const spaceDocument = onRequest(
       response.set("Cache-Control", cacheControlForSpace(delivery));
       response.set("X-Robots-Tag", metadata.robots);
       response.status(metadata.status).send(renderSpaceDocument(generatedAppShell(), delivery));
-      console.info("space_document", { spaceId: spaceId ?? "invalid", outcome: delivery.kind });
-    } catch {
+      logOperation("space_document", "success", startedAt, { resourceRef: safeResourceRef(spaceId), delivery: delivery.kind });
+    } catch (error) {
       delivery = { kind: "temporary-error", ...(spaceId ? { id: spaceId } : {}) };
       const metadata = metadataForSpace(delivery);
       response.set("Cache-Control", cacheControlForSpace(delivery));
       response.set("X-Robots-Tag", metadata.robots);
       response.status(503).send(genericErrorShell(delivery));
-      console.error("space_document_failed", { spaceId: spaceId ?? "invalid" });
+      logOperation("space_document", "failure", startedAt, { resourceRef: safeResourceRef(spaceId), errorClass: classifyServerError(error) });
     }
   },
 );
@@ -835,6 +863,7 @@ export const spaceDocument = onRequest(
 export const spaceCard = onRequest(
   { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
   async (request, response) => {
+    const startedAt = Date.now();
     response.set("X-Content-Type-Options", "nosniff");
     if (request.method !== "GET" && request.method !== "HEAD") {
       response.set("Allow", "GET, HEAD");
@@ -852,7 +881,7 @@ export const spaceCard = onRequest(
       if (delivery.kind !== "public") {
         response.set("Cache-Control", "private, no-store, max-age=0");
         response.status(404).send("Not found");
-        console.info("space_card_rejected", { spaceId, outcome: delivery.kind });
+        logOperation("space_card", "rejected", startedAt, { resourceRef: safeResourceRef(spaceId), delivery: delivery.kind });
         return;
       }
       if (!delivery.coverPath) {
@@ -872,11 +901,11 @@ export const spaceCard = onRequest(
       response.set("Cache-Control", "public, max-age=60, s-maxage=60, must-revalidate");
       if (metadata.etag) response.set("ETag", metadata.etag);
       response.status(200).send(image);
-      console.info("space_card", { spaceId, outcome: "public" });
-    } catch {
+      logOperation("space_card", "success", startedAt, { resourceRef: safeResourceRef(spaceId), delivery: "public" });
+    } catch (error) {
       response.set("Cache-Control", "private, no-store, max-age=0");
       response.status(404).send("Not found");
-      console.error("space_card_failed", { spaceId });
+      logOperation("space_card", "failure", startedAt, { resourceRef: safeResourceRef(spaceId), errorClass: classifyServerError(error) });
     }
   },
 );
@@ -885,6 +914,7 @@ export const spaceCard = onRequest(
 export const spaceSitemap = onRequest(
   { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
   async (request, response) => {
+    const startedAt = Date.now();
     response.set("Content-Type", "application/xml; charset=utf-8");
     response.set("X-Content-Type-Options", "nosniff");
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -916,12 +946,12 @@ export const spaceSitemap = onRequest(
         .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public");
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
       response.status(200).send(renderPublicSitemap(spaces));
-      console.info("space_sitemap", { publicSpaceCount: spaces.length });
-    } catch {
+      logOperation("space_sitemap", "success", startedAt, { count: spaces.length });
+    } catch (error) {
       response.set("Cache-Control", "private, no-store, max-age=0");
       response.set("X-Robots-Tag", "noindex");
       response.status(503).send(renderPublicSitemap([]));
-      console.error("space_sitemap_failed");
+      logOperation("space_sitemap", "failure", startedAt, { errorClass: classifyServerError(error) });
     }
   },
 );

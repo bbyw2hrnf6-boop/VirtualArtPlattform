@@ -45,6 +45,8 @@ jobs:
       - name: Deploy Hosting and Functions
         env:
           VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
+          VITE_TELEMETRY_MODE: functions
+          VITE_TELEMETRY_ENVIRONMENT: production
           AURA_PUBLIC_APP_URL: ${{ vars.AURA_PUBLIC_APP_URL }}
           AURA_REPLY_TO: ${{ vars.AURA_REPLY_TO }}
           AURA_LEGAL_FOOTER: ${{ vars.AURA_LEGAL_FOOTER }}
