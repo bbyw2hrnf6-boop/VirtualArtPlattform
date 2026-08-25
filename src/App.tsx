@@ -10,7 +10,8 @@ import {
   useState,
 } from "react";
 import { Logo } from "./components/Logo";
-import { PRODUCT_BRAND, productTitle } from "./config/brand";
+import { SpaceShareMenu } from "./components/SpaceShareMenu";
+import { PRODUCT_BRAND } from "./config/brand";
 import { PitchSections } from "./features/landing/PitchSections";
 import "./features/landing/landingConversion.css";
 import { TEMPLATES } from "./features/gallery/templates";
@@ -93,6 +94,12 @@ import {
   trackTelemetry,
   type TelemetryConsent,
 } from "./services/telemetry";
+import {
+  applyPageMetadata,
+  pageMetadataPolicy,
+  publishedSpaceMetadataPolicy,
+} from "./services/pageMetadata";
+import { isDiscoverEligible } from "./services/discoverEligibility";
 
 const GalleryScene = lazy(() =>
   import("./features/gallery/GalleryScene").then((module) => ({
@@ -535,8 +542,8 @@ function DiscoverGalleries() {
         </div>
         <div className="discover-intro">
           <p>
-            New Spaces created by visual artists and small galleries using {PRODUCT_BRAND.name}.
-            Enter while each presentation is live.
+            Selected public Spaces by creators, studios and institutions using {PRODUCT_BRAND.name}.
+            Enter each presentation directly in your browser.
           </p>
           {galleries.length > 3 && (
             <div
@@ -1201,7 +1208,6 @@ function Studio({
   const [accountSession, setAccountSession] =
     useState<AccountSession | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{
     current: number;
@@ -2050,34 +2056,13 @@ function Studio({
                   ? `Only people with this link can find the Space. It is live until ${expiry}.`
                   : `Only the owner and invited accounts can enter. It is live until ${expiry}.`}
             </p>
-            <div className="share-field">
-              <input
-                aria-label="Shareable Space URL"
-                readOnly
-                spellCheck={false}
-                value={url}
-                onFocus={(event) => event.currentTarget.select()}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  trackTelemetry("share_action", { source: "publish_success", visibility: published.visibility });
-                  const copy =
-                    navigator.clipboard?.writeText(url) ?? Promise.reject();
-                  void copy
-                    .then(() => {
-                      setCopied(true);
-                      window.setTimeout(() => setCopied(false), 1800);
-                    })
-                    .catch(() => window.prompt("Copy your Space link:", url));
-                }}
-              >
-                {copied ? "Copied ✓" : "Copy link"}
-              </button>
-            </div>
-            <p className="publish-success__copy-status" aria-live="polite">
-              {copied ? "Space link copied to the clipboard." : ""}
-            </p>
+            <SpaceShareMenu
+              url={url}
+              title={published.title}
+              creator={published.artist}
+              visibility={published.visibility}
+              source="publish_success"
+            />
             <p className="publish-access-label">
               {PRODUCT_BRAND.previewLabel} · {visibilityLabel[published.visibility]} · Account preview
             </p>
@@ -3886,11 +3871,21 @@ function Demo() {
     <main ref={viewer} className="viewer">
       <header className="viewer-header">
         <Logo />
-        <div>
+        <div className="viewer-header__identity">
           <p>Danny Hirsch Arts</p>
           <span>Threshold · 2026</span>
         </div>
-        <button onClick={() => navigate("/create")}>Create your own ↗</button>
+        <div className="viewer-header__actions">
+          <SpaceShareMenu
+            compact
+            url={hashApplicationUrl("/demo", window.location.href)}
+            title="Threshold"
+            creator="Danny Hirsch Arts"
+            visibility="public"
+            source="reference_demo"
+          />
+          <button onClick={() => navigate("/create")}>Create a Space ↗</button>
+        </div>
       </header>
       <div className="viewer-scene-layer">
         <Suspense fallback={<DemoLoadingPoster />}>
@@ -4031,8 +4026,15 @@ function PublishedGallery({ id }: { id: string }) {
     };
   }, [id, loadAttempt, serverSpaceState]);
   useEffect(() => {
-    if (loadState.status === "ready" && loadState.gallery.visibility === "public")
-      document.title = productTitle(`${loadState.gallery.title} — ${loadState.gallery.artist}`);
+    if (loadState.status !== "ready") return;
+    applyPageMetadata(publishedSpaceMetadataPolicy({
+      id: loadState.gallery.id,
+      visibility: loadState.gallery.visibility,
+      title: loadState.gallery.title,
+      artist: loadState.gallery.artist,
+      coverSrc: loadState.gallery.coverSrc,
+      indexEligible: isDiscoverEligible(loadState.gallery),
+    }));
   }, [loadState]);
   useEffect(() => {
     if (loadState.status !== "ready") return;
@@ -4126,11 +4128,21 @@ function PublishedGallery({ id }: { id: string }) {
     <main ref={viewer} className="viewer">
       <header className="viewer-header">
         <Logo />
-        <div>
+        <div className="viewer-header__identity">
           <p>{gallery.title}</p>
           <span>{gallery.artist}</span>
         </div>
-        <button onClick={() => navigate("/create")}>Create your own ↗</button>
+        <div className="viewer-header__actions">
+          <SpaceShareMenu
+            compact
+            url={galleryShareUrl(gallery.id, window.location.href)}
+            title={gallery.title}
+            creator={gallery.artist}
+            visibility={gallery.visibility}
+            source="published_viewer"
+          />
+          <button onClick={() => navigate("/create")}>Create a Space ↗</button>
+        </div>
       </header>
       <GalleryScene
         draft={gallery}
@@ -4160,7 +4172,7 @@ function PublishedGallery({ id }: { id: string }) {
         />
       )}
       <div className="viewer-caption">
-        <p className="eyebrow">Virtual exhibition</p>
+        <p className="eyebrow">Immersive Space</p>
         <h1>{gallery.title}</h1>
         <p>by {gallery.artist}</p>
       </div>
@@ -4210,20 +4222,9 @@ export default function App() {
     const deliveredSpaceMetadata =
       route.page === "gallery" &&
       document.querySelector('meta[name="lieuva:space-state"]');
-    if (!deliveredSpaceMetadata) document.title =
-      route.page === "home"
-        ? productTitle()
-        : route.page === "create"
-          ? productTitle("Create a Space")
-          : route.page === "demo"
-            ? productTitle("Threshold — Danny Hirsch Arts")
-            : route.page === "data"
-              ? productTitle("MVP data and rights")
-              : route.page === "account"
-                ? productTitle("Your Projects and account")
-              : route.page === "auth-action"
-                ? productTitle("Account action")
-              : productTitle("Immersive Space");
+    if (!deliveredSpaceMetadata) applyPageMetadata(pageMetadataPolicy(
+      route.page === "gallery" ? "other" : route.page,
+    ));
     if (previousRoute.current === routeKey) return;
     previousRoute.current = routeKey;
     const frame = requestAnimationFrame(() =>

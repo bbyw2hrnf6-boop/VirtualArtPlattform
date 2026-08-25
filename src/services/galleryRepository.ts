@@ -27,6 +27,8 @@ export interface GalleryRecord extends GalleryDraft {
   lifecycleStatus: GalleryLifecycleStatus;
   trashedAt?: string;
   purgeAt?: string;
+  /** Optional moderation override. Missing legacy values use the quality gate. */
+  discoverEligible?: boolean;
 }
 
 export type EditableGalleryProject = {

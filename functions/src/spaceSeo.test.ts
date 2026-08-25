@@ -36,6 +36,7 @@ function record(overrides: Record<string, unknown> = {}) {
     revision: 4,
     ownerId: "owner-safe",
     coverPath: "published/owner-safe/material-futures-abc123/revisions/r4-safe/cover.webp",
+    artworks: [{ storagePath: "published/owner-safe/material-futures-abc123/revisions/r4-safe/artwork-1.webp" }],
     ...overrides,
   };
 }
@@ -190,6 +191,37 @@ describe("Space SEO delivery policy", () => {
     expect(sitemap).not.toContain("private-space-123");
     expect(sitemap).not.toContain("unlisted-space-123");
     expect(sitemap).not.toContain("#/g/");
+  });
+
+  it("keeps ineligible public Spaces shareable but out of indexing and sitemap", () => {
+    const moderated = classifySpaceForDelivery(
+      "moderated-space-123",
+      record({ discoverEligible: false }),
+      NOW,
+    );
+    const incomplete = classifySpaceForDelivery(
+      "incomplete-space-123",
+      record({ artworks: [] }),
+      NOW,
+    );
+    const placeholder = classifySpaceForDelivery(
+      "placeholder-space-123",
+      record({ title: "Untitled Space" }),
+      NOW,
+    );
+    for (const delivery of [moderated, incomplete, placeholder]) {
+      expect(delivery.kind).toBe("public");
+      expect(metadataForSpace(delivery).status).toBe(200);
+      expect(metadataForSpace(delivery).robots).toContain("noindex");
+    }
+    const sitemap = renderPublicSitemap(
+      [moderated, incomplete, placeholder].filter(
+        (item): item is PublicSpaceDelivery => item.kind === "public",
+      ),
+    );
+    expect(sitemap).not.toContain("moderated-space-123");
+    expect(sitemap).not.toContain("incomplete-space-123");
+    expect(sitemap).not.toContain("placeholder-space-123");
   });
 
   it("does not approve a cover path owned by another publication", () => {

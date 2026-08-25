@@ -77,6 +77,8 @@ const publicDeliveryFields = [
   "revision",
   "ownerId",
   "coverPath",
+  "discoverEligible",
+  "artworks",
 ] as const;
 
 /** App Check protected, allow-listed observability boundary. No content or raw IDs are accepted. */

@@ -8,10 +8,31 @@ export type PublicSpaceDelivery = {
   id: string;
   title: string;
   creator: string;
+  indexEligible: boolean;
   revision: number;
   updatedAt?: string;
   coverPath?: string;
 };
+
+const PLACEHOLDER_TITLE = /^(?:untitled|test|demo)(?:\b|[-_\s])/i;
+const PLACEHOLDER_CREATOR = /^(?:your(?:[-_\s]*name|\d)|test(?:\b|[-_\s])|demo(?:\b|[-_\s]))/i;
+
+function publicSpaceIndexEligibility(
+  data: Record<string, unknown>,
+  title: string,
+  creator: string,
+): boolean {
+  if (data.discoverEligible === false) return false;
+  if (PLACEHOLDER_TITLE.test(title) || PLACEHOLDER_CREATOR.test(creator)) return false;
+  if (!Array.isArray(data.artworks)) return false;
+  return data.artworks.some((value) => {
+    const artwork = recordValue(value);
+    return artwork?.hidden !== true
+      && [artwork?.src, artwork?.storagePath, artwork?.assetId].some(
+        (source) => typeof source === "string" && source.length > 0,
+      );
+  });
+}
 
 export type SpaceDelivery =
   | PublicSpaceDelivery
@@ -112,6 +133,7 @@ export function classifySpaceForDelivery(
     id,
     title,
     creator,
+    indexEligible: publicSpaceIndexEligibility(data, title, creator),
     revision,
     ...(updatedMilliseconds !== null ? { updatedAt: new Date(updatedMilliseconds).toISOString() } : {}),
     ...(coverPath ? { coverPath } : {}),
@@ -139,7 +161,9 @@ export function metadataForSpace(delivery: SpaceDelivery): SpaceDocumentMetadata
       title,
       description,
       canonical,
-      robots: "index,follow,max-image-preview:large",
+      robots: delivery.indexEligible
+        ? "index,follow,max-image-preview:large"
+        : "noindex,follow,noarchive",
       ogType: "website",
       ogTitle: title,
       ogDescription: description,
@@ -147,7 +171,7 @@ export function metadataForSpace(delivery: SpaceDelivery): SpaceDocumentMetadata
       ogImage: image,
       ogImageAlt: `${delivery.title}, an immersive Space by ${delivery.creator}`,
       twitterCard: "summary_large_image",
-      structuredData: {
+      ...(delivery.indexEligible ? { structuredData: {
         "@context": "https://schema.org",
         "@type": "WebPage",
         name: delivery.title,
@@ -155,7 +179,7 @@ export function metadataForSpace(delivery: SpaceDelivery): SpaceDocumentMetadata
         url: canonical,
         isPartOf: { "@type": "WebSite", name: "LIEUVA", url: `${PUBLIC_SITE_ORIGIN}/` },
         ...(delivery.updatedAt ? { dateModified: delivery.updatedAt } : {}),
-      },
+      } } : {}),
     };
   }
 
@@ -248,7 +272,9 @@ function escapeXml(value: string): string {
 }
 
 export function renderPublicSitemap(spaces: PublicSpaceDelivery[]): string {
-  const unique = [...new Map(spaces.map((space) => [space.id, space])).values()]
+  const unique = [...new Map(
+    spaces.filter((space) => space.indexEligible).map((space) => [space.id, space]),
+  ).values()]
     .sort((left, right) => left.id.localeCompare(right.id));
   const urls = [
     `  <url><loc>${PUBLIC_SITE_ORIGIN}/</loc><changefreq>weekly</changefreq></url>`,

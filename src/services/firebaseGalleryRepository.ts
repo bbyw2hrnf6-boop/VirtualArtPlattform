@@ -60,6 +60,7 @@ import type {
 } from "./galleryAccess";
 import type { AccountSession } from "./accountTypes";
 import { normalizedImageBlob } from "./imageBlob";
+import { isDiscoverEligible } from "./discoverEligibility";
 
 const MAX_ARTWORK_DOWNLOAD_BYTES = 2 * 1024 * 1024;
 const MAX_COVER_DOWNLOAD_BYTES = 1024 * 1024;
@@ -698,14 +699,14 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       where("visibility", "==", "public"),
       where("expiresAt", ">", safelyActiveAt),
       orderBy("expiresAt", "desc"),
-      limit(12),
+      limit(30),
     );
     const legacyActive = query(
       collection(firebaseDb, "galleries"),
       where("schemaVersion", "in", [1, 2]),
       where("expiresAt", ">", safelyActiveAt),
       orderBy("expiresAt", "desc"),
-      limit(12),
+      limit(30),
     );
     const snapshotResults = await Promise.allSettled([
       getDocs(publicActive),
@@ -726,7 +727,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       new Map(
         snapshots.flatMap((snapshot) => snapshot.docs).map((item) => [item.id, item]),
       ).values(),
-    ).slice(0, 12);
+    );
     const records: GalleryRecord[] = [];
     const discovered = await mapWithConcurrency(
       items,
@@ -734,11 +735,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       async (item) => {
         try {
           const record = fromFirestore(item.id, item.data());
-          if (
-            record.visibility !== "public" ||
-            record.lifecycleStatus !== "active" ||
-            new Date(record.expiresAt).getTime() <= Date.now()
-          )
+          if (!isDiscoverEligible(record))
             return null;
           let coverSrc = record.coverSrc;
           if (record.coverPath) {
@@ -773,7 +770,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
             new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
         ),
     );
-    return records;
+    return records.slice(0, 12);
   }
 
   async mine(): Promise<GalleryRecord[]> {

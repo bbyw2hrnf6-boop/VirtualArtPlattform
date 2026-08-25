@@ -74,6 +74,7 @@ export interface ParsedGalleryDocument extends GalleryDraft {
   lifecycleStatus: GalleryLifecycleStatus;
   trashedAt?: string;
   purgeAt?: string;
+  discoverEligible?: boolean;
 }
 
 export interface ParsedArtworkAsset {
@@ -106,6 +107,12 @@ function stringValue(value: unknown, recordId: string, field: string, maximum: n
 
 function optionalString(value: unknown, recordId: string, field: string, maximum: number): string | undefined {
   return value === undefined ? undefined : stringValue(value, recordId, field, maximum);
+}
+
+function optionalBoolean(value: unknown, recordId: string, field: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'boolean') invalid(recordId, field, 'expected a boolean');
+  return value;
 }
 
 function numberValue(value: unknown, recordId: string, field: string, minimum: number, maximum: number): number {
@@ -309,6 +316,7 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
   const ownerId = optionalString(data.ownerId, recordId, 'ownerId', 128);
   const coverSrc = optionalImageSource(data.coverSrc, recordId, 'coverSrc', MAX_LEGACY_COVER_SOURCE_LENGTH);
   const coverPath = optionalStoragePath(data.coverPath, recordId, 'coverPath');
+  const discoverEligible = optionalBoolean(data.discoverEligible, recordId, 'discoverEligible');
   const lifecycleStatus = data.lifecycleStatus === undefined
     ? 'active'
     : enumValue(data.lifecycleStatus, GALLERY_LIFECYCLE_STATUSES, recordId, 'lifecycleStatus');
@@ -337,6 +345,7 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
     lifecycleStatus,
     ...(trashedAt ? { trashedAt } : {}),
     ...(purgeAt ? { purgeAt } : {}),
+    ...(discoverEligible !== undefined ? { discoverEligible } : {}),
   };
 }
 
