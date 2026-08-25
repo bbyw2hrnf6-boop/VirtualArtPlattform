@@ -11,7 +11,10 @@ export type TelemetryEventName =
   | 'studio_ready'
   | 'artwork_upload_started'
   | 'artwork_upload_completed'
+  | 'artwork_upload_failed'
+  | 'artwork_placed'
   | 'walk_preview_entered'
+  | 'walk_preview_exited'
   | 'publish_review_opened'
   | 'account_gate_opened'
   | 'publish_started'
@@ -48,7 +51,8 @@ const SESSION_KEY = 'lieuva-telemetry-session-v1';
 const OPTIONAL_EVENTS = new Set<TelemetryEventName>([
   'landing_view', 'landing_product_proof_engaged', 'landing_example_entered',
   'landing_create_cta_clicked', 'create_started', 'template_selected', 'studio_ready',
-  'artwork_upload_started', 'artwork_upload_completed', 'walk_preview_entered',
+  'artwork_upload_started', 'artwork_upload_completed', 'artwork_upload_failed',
+  'artwork_placed', 'walk_preview_entered', 'walk_preview_exited',
   'publish_review_opened', 'account_gate_opened', 'publish_started',
   'publish_succeeded', 'share_action', 'published_space_opened',
   'published_space_ready', 'discover_viewed', 'published_edit_started',
@@ -65,7 +69,8 @@ const SAFE_VALUE = /^[a-z0-9_.:-]{1,64}$/i;
 const EVENT_NAMES = new Set<TelemetryEventName>([
   'landing_view', 'landing_product_proof_engaged', 'landing_example_entered',
   'landing_create_cta_clicked', 'create_started', 'template_selected', 'studio_ready',
-  'artwork_upload_started', 'artwork_upload_completed', 'walk_preview_entered',
+  'artwork_upload_started', 'artwork_upload_completed', 'artwork_upload_failed',
+  'artwork_placed', 'walk_preview_entered', 'walk_preview_exited',
   'publish_review_opened', 'account_gate_opened', 'publish_started',
   'publish_succeeded', 'publish_failed', 'share_action', 'published_space_opened',
   'published_space_ready', 'discover_viewed', 'published_edit_started',

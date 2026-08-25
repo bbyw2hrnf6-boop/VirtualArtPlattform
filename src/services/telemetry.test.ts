@@ -77,6 +77,22 @@ describe('privacy-safe telemetry boundary', () => {
     expect(received.every((event) => Object.keys(event.properties).length === 1)).toBe(true);
   });
 
+  it('records Studio funnel events without artwork content', async () => {
+    setTelemetryConsent('granted');
+    trackTelemetry('artwork_placed', {
+      template: 'nocturne', source: 'upload', count: 2, title: 'Private artwork',
+    });
+    trackTelemetry('walk_preview_exited', { template: 'nocturne' });
+    await __flushTelemetryForTests();
+    expect(received.map((event) => event.name)).toEqual([
+      'artwork_placed',
+      'walk_preview_exited',
+    ]);
+    expect(received[0].properties).toEqual({
+      template: 'nocturne', source: 'upload', count: 2,
+    });
+  });
+
   it('normalizes dynamic customer routes', () => {
     expect(telemetryRoute('/spaces/private-id', '')).toBe('published_space');
     expect(telemetryRoute('/', '#/create/nocturne/published-secret-id')).toBe('published_edit');

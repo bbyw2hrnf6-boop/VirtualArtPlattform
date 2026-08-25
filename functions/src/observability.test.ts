@@ -38,4 +38,15 @@ describe('server observability contract', () => {
       'landing_create_cta_clicked',
     ]);
   });
+
+  it('accepts privacy-safe Studio funnel events', () => {
+    const parsed = parseClientTelemetry([
+      { ...validEvent, name: 'artwork_placed', route: 'studio', properties: { template: 'nocturne', source: 'upload', count: 2 } },
+      { ...validEvent, name: 'walk_preview_exited', route: 'studio', properties: { template: 'nocturne' } },
+    ]);
+    expect(parsed.map((event) => event.name)).toEqual([
+      'artwork_placed',
+      'walk_preview_exited',
+    ]);
+  });
 });

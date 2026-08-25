@@ -1203,6 +1203,10 @@ function Studio({
   const [accountOpen, setAccountOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+  }>();
   const [uploadError, setUploadError] = useState<string>();
   const [curating, setCurating] = useState(false);
   const [curationPhase, setCurationPhase] = useState<CurationPhase>("palette");
@@ -1217,7 +1221,9 @@ function Studio({
   const [saveStatus, setSaveStatus] = useState<
     "checking" | "ready" | "saving" | "saved" | "error"
   >("checking");
-  const [toolSheet, setToolSheet] = useState<"peek" | "half" | "full">("half");
+  const [toolSheet, setToolSheet] = useState<"peek" | "half" | "full">(() =>
+    usesCompactInteractionLayout() ? "peek" : "half",
+  );
   const [editorDirectoryOpen, setEditorDirectoryOpen] = useState(false);
   const wallFocusToken = useRef(0);
   const decorInsertion = useRef({ x: 0, z: 1 });
@@ -1227,7 +1233,10 @@ function Studio({
   const resumePublishAfterAccount = useRef(false);
   const publishButton = useRef<HTMLButtonElement>(null);
   const editorDirectoryButton = useRef<HTMLButtonElement>(null);
-  const previousToolSheet = useRef<"peek" | "half" | "full">("half");
+  const previousToolSheet = useRef<"peek" | "half" | "full">(
+    usesCompactInteractionLayout() ? "peek" : "half",
+  );
+  const editorMode = useRef<"arrange" | "walk">("arrange");
   const sceneCapture = useRef<GallerySceneCapture | null>(null);
   const selected = draft.artworks.find((item) => item.id === selectedId);
   const selectedDecor = draft.decor.find((item) => item.id === selectedDecorId);
@@ -1270,11 +1279,17 @@ function Studio({
     [draft.artist, draft.artworks],
   );
   const handleEditorModeChange = useCallback((mode: "arrange" | "walk") => {
-    if (mode === "walk") trackTelemetry("walk_preview_entered", { template: initialTemplate });
+    if (editorMode.current === mode) return;
+    const previousMode = editorMode.current;
+    editorMode.current = mode;
+    if (mode === "walk")
+      trackTelemetry("walk_preview_entered", { template: initialTemplate });
+    else if (previousMode === "walk")
+      trackTelemetry("walk_preview_exited", { template: initialTemplate });
     if (!usesCompactInteractionLayout()) return;
     if (mode === "walk") {
       setToolSheet((current) => {
-        previousToolSheet.current = current === "peek" ? "half" : current;
+        previousToolSheet.current = current;
         return "peek";
       });
     } else {
@@ -1398,6 +1413,13 @@ function Studio({
     setSelectedId(undefined);
     setPlacementNotice(undefined);
     setToolSheet("half");
+  }, []);
+  const closeSelectionInspector = useCallback(() => {
+    setSelectedId(undefined);
+    setSelectedDecorId(undefined);
+    setPlacementNotice(undefined);
+    setPlacementError(undefined);
+    if (usesCompactInteractionLayout()) setToolSheet("peek");
   }, []);
   const update = <K extends keyof GalleryDraft>(
     key: K,
@@ -1641,10 +1663,11 @@ function Studio({
     const prepared: Artwork[] = [];
     const failures: string[] = [];
     setUploading(true);
+    setUploadProgress({ current: 0, total: supported.length });
     trackTelemetry("artwork_upload_started", { template: draft.templateId, count: supported.length });
     setUploadError(undefined);
     try {
-      for (const file of supported) {
+      for (const [index, file] of supported.entries()) {
         try {
           const image = await imageFromFile(file);
           const slot = draft.artworks.length + prepared.length;
@@ -1661,6 +1684,7 @@ function Studio({
               : `${file.name} could not be prepared.`,
           );
         }
+        setUploadProgress({ current: index + 1, total: supported.length });
       }
       if (!remaining)
         failures.push(
@@ -1717,15 +1741,39 @@ function Studio({
         setCurationSnapshot(undefined);
         selectArtwork(placed[0].id);
         requestWallFocus(placed[0].wall);
+        trackTelemetry("artwork_placed", {
+          template: draft.templateId,
+          count: placed.length,
+          source: "upload",
+        });
       }
       if (failures.length) setUploadError(failures.join(" "));
-      trackTelemetry("artwork_upload_completed", {
+      if (placed.length)
+        trackTelemetry("artwork_upload_completed", {
+          template: draft.templateId,
+          count: placed.length,
+          outcome: failures.length ? "partial" : "success",
+        });
+      else
+        trackTelemetry("artwork_upload_failed", {
+          template: draft.templateId,
+          reason: !remaining
+            ? "capacity"
+            : !supported.length
+              ? "unsupported"
+              : "processing",
+        });
+    } catch {
+      setUploadError(
+        "The artwork could not be prepared. Your existing Project is unchanged.",
+      );
+      trackTelemetry("artwork_upload_failed", {
         template: draft.templateId,
-        count: placed.length,
-        outcome: failures.length ? "partial" : "success",
+        reason: "unexpected",
       });
     } finally {
       setUploading(false);
+      setUploadProgress(undefined);
     }
   };
   const handleAccountSessionChange = useCallback(
@@ -2111,15 +2159,20 @@ function Studio({
             role="status"
             aria-live="polite"
           >
-            {saveStatus === "checking"
-              ? "Checking draft…"
-              : saveStatus === "saving"
-                ? "Saving…"
-                : saveStatus === "saved"
-                  ? "Saved locally"
-                  : saveStatus === "error"
-                    ? "Save error"
-                    : "Autosave ready"}
+            <strong className="draft-save-status__scope">
+              {editTarget ? "Live edits" : "Draft"}
+            </strong>
+            <span className="draft-save-status__state">
+              {saveStatus === "checking"
+                ? "Checking…"
+                : saveStatus === "saving"
+                  ? "Saving…"
+                  : saveStatus === "saved"
+                    ? "Saved"
+                    : saveStatus === "error"
+                      ? "Save issue"
+                      : "Ready"}
+            </span>
           </span>
           <AccountButton
             open={accountOpen}
@@ -2211,7 +2264,13 @@ function Studio({
             aria-expanded={toolSheet === "full"}
           >
             <i aria-hidden="true" />
-            <span>Editor tools</span>
+            <span>
+              {selected
+                ? `Artwork · ${selected.title}`
+                : selectedDecor
+                  ? `Object · ${decorName(selectedDecor.type)}`
+                  : "Add & customize"}
+            </span>
             <b>
               {toolSheet === "peek"
                 ? "Open"
@@ -2239,6 +2298,25 @@ function Studio({
               />
             </label>
           </section>
+          <section className="studio-mobile-actions" aria-label="Studio actions">
+            <div className="studio-mobile-actions__history" role="group" aria-label="Draft history">
+              <button type="button" onClick={undoDraft} disabled={!canUndo}>
+                Undo
+              </button>
+              <button type="button" onClick={redoDraft} disabled={!canRedo}>
+                Redo
+              </button>
+            </div>
+            <button
+              type="button"
+              className="studio-mobile-actions__curate"
+              onClick={() => void curateWithAi()}
+              disabled={!draft.artworks.length || curating || uploading}
+            >
+              <span aria-hidden="true">✦</span>{" "}
+              {curating ? "Curating…" : "Curate with AI"}
+            </button>
+          </section>
           <section>
             <p className="tool-label">01 · Artwork</p>
             <label
@@ -2265,9 +2343,16 @@ function Studio({
               </strong>
               <small>
                 {uploading
-                  ? "Optimizing for your Project"
+                  ? `Preparing ${uploadProgress?.current ?? 0} of ${uploadProgress?.total ?? 0}`
                   : `JPG, PNG, WebP or HEIC · up to ${maxArtworks}`}
               </small>
+              {uploading && uploadProgress && uploadProgress.total > 0 && (
+                <progress
+                  value={uploadProgress.current}
+                  max={uploadProgress.total}
+                  aria-label={`Preparing artwork ${uploadProgress.current} of ${uploadProgress.total}`}
+                />
+              )}
             </label>
             {uploadError && (
               <p className="upload-error" role="alert">
@@ -2298,6 +2383,13 @@ function Studio({
             </div>
             {selected && (
               <div className="placement">
+                <button
+                  type="button"
+                  className="inspector-done"
+                  onClick={closeSelectionInspector}
+                >
+                  Done editing artwork
+                </button>
                 <WallPicker
                   templateId={draft.templateId}
                   artworks={draft.artworks}
@@ -2700,6 +2792,13 @@ function Studio({
             </div>
             {selectedDecor && (
               <div className="placement">
+                <button
+                  type="button"
+                  className="inspector-done"
+                  onClick={closeSelectionInspector}
+                >
+                  Done editing object
+                </button>
                 <p className="direct-place-note">
                   <span>Direct placement active</span>
                   {placementNotice ??
