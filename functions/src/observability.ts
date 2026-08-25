@@ -59,7 +59,8 @@ export function observeCallable<TRequest, TResult>(
 }
 
 const CLIENT_EVENTS = new Set([
-  "landing_view", "create_started", "template_selected", "studio_ready",
+  "landing_view", "landing_product_proof_engaged", "landing_example_entered",
+  "landing_create_cta_clicked", "create_started", "template_selected", "studio_ready",
   "artwork_upload_started", "artwork_upload_completed", "walk_preview_entered",
   "publish_review_opened", "account_gate_opened", "publish_started",
   "publish_succeeded", "publish_failed", "share_action", "published_space_opened",

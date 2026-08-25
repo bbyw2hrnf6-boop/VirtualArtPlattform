@@ -27,7 +27,7 @@ export const smoothstep = (value: number) => {
 export const range = (value: number, start: number, end: number) =>
   smoothstep((value - start) / (end - start));
 
-const CHAPTER_CENTERS = [0.06, 0.23, 0.4, 0.57, 0.75, 0.96] as const;
+const CHAPTER_CENTERS = [0.045, 0.17, 0.3, 0.44, 0.57, 0.7, 0.84, 0.975] as const;
 
 export function storyFrame(rawProgress: number): StoryFrame {
   const progress = clamp01(rawProgress);
@@ -42,14 +42,14 @@ export function storyFrame(rawProgress: number): StoryFrame {
   });
   return {
     chapter,
-    blueprint: 1 - range(progress, 0.3, 0.45),
-    floor: range(progress, 0.18, 0.32),
-    wall: range(progress, 0.29, 0.44),
-    ceiling: range(progress, 0.41, 0.55),
-    detail: range(progress, 0.5, 0.65),
-    artwork: range(progress, 0.59, 0.73),
-    lighting: range(progress, 0.52, 0.72),
-    finale: range(progress, 0.9, 0.985),
+    blueprint: 1 - range(progress, 0.22, 0.34),
+    floor: range(progress, 0.1, 0.2),
+    wall: range(progress, 0.18, 0.3),
+    ceiling: range(progress, 0.27, 0.38),
+    detail: range(progress, 0.35, 0.48),
+    artwork: range(progress, 0.44, 0.58),
+    lighting: range(progress, 0.52, 0.67),
+    finale: range(progress, 0.91, 0.985),
   };
 }
 
@@ -91,14 +91,14 @@ const DESKTOP_BUILD: Array<{ at: number; pose: CameraPose }> = [
   { at: 0, pose: { position: [10.2, 9.6, 14.6], target: [0, 0.7, -0.8] } },
   { at: 0.23, pose: { position: [8.8, 8.8, 13.2], target: [0, 0.9, -0.8] } },
   { at: 0.44, pose: { position: [0, 3.55, 6.15], target: [0, 1.35, -1.8] } },
-  { at: 0.66, pose: { position: [0, 2.75, 4.1], target: [0, 1.75, -1] } },
+  { at: 0.64, pose: { position: [0, 2.75, 4.1], target: [0, 1.75, -1] } },
 ];
 
 const MOBILE_BUILD: Array<{ at: number; pose: CameraPose }> = [
   { at: 0, pose: { position: [8.7, 8.2, 13.8], target: [0, 1.2, -0.8] } },
   { at: 0.23, pose: { position: [7.4, 7.6, 12.4], target: [0, 1, -0.8] } },
   { at: 0.44, pose: { position: [0, 3.35, 6.15], target: [0, 1.35, -1.8] } },
-  { at: 0.66, pose: { position: [0, 2.9, 3.6], target: [0, 1.75, -1.2] } },
+  { at: 0.64, pose: { position: [0, 2.9, 3.6], target: [0, 1.75, -1.2] } },
 ];
 
 /** A continuous build-to-orbit camera. The 360-degree flight starts and ends
@@ -106,19 +106,20 @@ const MOBILE_BUILD: Array<{ at: number; pose: CameraPose }> = [
 export function storyCamera(rawProgress: number, compact = false): CameraPose {
   const progress = clamp01(rawProgress);
   const build = compact ? MOBILE_BUILD : DESKTOP_BUILD;
-  if (progress < 0.66) {
+  const buildEnd = 0.64;
+  if (progress < buildEnd) {
     const nextIndex = Math.max(1, build.findIndex(({ at }) => at >= progress));
     const previous = build[nextIndex - 1];
     const next = build[nextIndex];
     return mixPose(previous.pose, next.pose, range(progress, previous.at, next.at));
   }
 
-  const orbitEnd = 0.9;
-  const orbit = range(progress, 0.66, orbitEnd);
+  const orbitEnd = 0.85;
+  const orbit = range(progress, buildEnd, orbitEnd);
   const angle = orbit * Math.PI * 2;
   const radius = compact ? 4.8 : 5.1;
   const centerZ = compact ? -1.2 : -1;
-  return {
+  const orbitPose: CameraPose = {
     position: [
       Math.sin(angle) * radius,
       (compact ? 2.9 : 2.75) + Math.sin(angle * 2) * 0.22,
@@ -126,6 +127,12 @@ export function storyCamera(rawProgress: number, compact = false): CameraPose {
     ],
     target: [0, 1.75, centerZ],
   };
+  if (progress <= orbitEnd) return orbitPose;
+  const visitorPose: CameraPose = {
+    position: [0, 1.75, compact ? 3.6 : 4.1],
+    target: [0, 1.75, centerZ],
+  };
+  return mixPose(orbitPose, visitorPose, range(progress, orbitEnd, 0.96));
 }
 
 type DannyPartInput = {

@@ -12,6 +12,7 @@ import {
 import { Logo } from "./components/Logo";
 import { PRODUCT_BRAND, productTitle } from "./config/brand";
 import { PitchSections } from "./features/landing/PitchSections";
+import "./features/landing/landingConversion.css";
 import { TEMPLATES } from "./features/gallery/templates";
 import {
   autoCurateGallery,
@@ -305,15 +306,24 @@ const navigate = (path: string) => {
   window.scrollTo(0, 0);
 };
 
+const landingNavigate = (
+  path: string,
+  event: "landing_create_cta_clicked" | "landing_example_entered",
+  source: string,
+) => {
+  trackTelemetry(event, { source });
+  navigate(path);
+};
+
 function Header({ light = false }: { light?: boolean }) {
   return (
     <header className={`site-header ${light ? "site-header--light" : ""}`}>
       <Logo dark={light} />
       <nav>
         <span className="preview-status">{PRODUCT_BRAND.previewLabel}</span>
-        <button className="site-header__demo" onClick={() => navigate("/demo")}>{PRODUCT_BRAND.secondaryCta}</button>
+        <button className="site-header__demo" onClick={() => landingNavigate("/demo", "landing_example_entered", "header")}>{PRODUCT_BRAND.secondaryCta}</button>
         <AccountButton light={light} />
-        <button className="site-header__create" onClick={() => navigate("/create")}>
+        <button className="site-header__create" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "header")}>
           <span className="site-header__create-wide">{PRODUCT_BRAND.primaryCta}</span>
           <span className="site-header__create-compact">Create</span>
           <i>↗</i>
@@ -330,8 +340,87 @@ function BrandHero() {
       <h1 id="brand-hero-title">{PRODUCT_BRAND.claim}</h1>
       <p>{PRODUCT_BRAND.heroCopy}</p>
       <div className="brand-hero__actions">
-        <button className="button button--light" onClick={() => navigate("/create")}>{PRODUCT_BRAND.primaryCta} <span>↗</span></button>
-        <button className="text-link" onClick={() => navigate("/demo")}>{PRODUCT_BRAND.secondaryCta} →</button>
+        <button className="button button--light" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "hero")}>{PRODUCT_BRAND.primaryCta} <span>↗</span></button>
+        <button className="text-link" onClick={() => landingNavigate("/demo", "landing_example_entered", "hero")}>{PRODUCT_BRAND.secondaryCta} →</button>
+      </div>
+      <div className="brand-hero__signal" aria-hidden="true">
+        <span>Browser Studio</span>
+        <i />
+        <span>One link to enter</span>
+      </div>
+    </section>
+  );
+}
+
+const LANDING_WORKFLOW = [
+  ["01", "Create", "Choose a spatial starting point."],
+  ["02", "Arrange", "Place images, objects, and surfaces."],
+  ["03", "Preview", "Walk the room before visitors do."],
+  ["04", "Publish", "Set public, unlisted, or private access."],
+  ["05", "Share", "Send one link people can explore."],
+] as const;
+
+function LandingProductProof() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const tracked = useRef(false);
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section || tracked.current) return undefined;
+    const record = () => {
+      if (tracked.current) return;
+      tracked.current = true;
+      trackTelemetry("landing_product_proof_engaged", { source: "workflow" });
+    };
+    if (!("IntersectionObserver" in window)) {
+      record();
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.35)) return;
+        observer.disconnect();
+        record();
+      },
+      { threshold: [0.35] },
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <section ref={sectionRef} className="landing-proof" aria-labelledby="landing-proof-title">
+      <div className="landing-proof__heading">
+        <p className="eyebrow">From work to place</p>
+        <h2 id="landing-proof-title">A spatial presentation.<br /><em>Built in your browser.</em></h2>
+        <p>Start with a room, shape the visitor experience, and publish without opening traditional 3D software.</p>
+      </div>
+      <div className="landing-proof__stage">
+        <button
+          className="landing-proof__visual"
+          type="button"
+          onClick={() => landingNavigate("/create/nocturne/demo", "landing_create_cta_clicked", "product_proof")}
+          aria-label="Open a working LIEUVA Studio Space"
+        >
+          <img
+            src="./assets/templates/nocturne-preview.webp"
+            width="965"
+            height="752"
+            loading="eager"
+            decoding="async"
+            alt="Nocturne Space concept shown from visitor eye level"
+          />
+          <span className="landing-proof__status"><i /> Walk preview ready</span>
+          <span className="landing-proof__open">Open working Studio <b>↗</b></span>
+          <span className="landing-proof__frame" aria-hidden="true" />
+        </button>
+        <ol className="landing-proof__workflow" aria-label="How LIEUVA works">
+          {LANDING_WORKFLOW.map(([number, title, body]) => (
+            <li key={title}>
+              <span>{number}</span>
+              <div><strong>{title}</strong><p>{body}</p></div>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );
@@ -487,7 +576,7 @@ function DiscoverGalleries() {
             <article className="discover-card discover-card--reference">
               <button
                 className="discover-card-main"
-                onClick={() => navigate("/demo")}
+                onClick={() => landingNavigate("/demo", "landing_example_entered", "discover_reference")}
               >
                 <div className="discover-cover">
                   <img
@@ -520,7 +609,7 @@ function DiscoverGalleries() {
               </p>
               <button
                 className="text-link"
-                onClick={status === "error" ? load : () => navigate("/create")}
+                onClick={status === "error" ? load : () => landingNavigate("/create", "landing_create_cta_clicked", "discover_empty")}
               >
                 {status === "error"
                   ? "Retry live feed →"
@@ -587,8 +676,8 @@ function Landing() {
     <main className="landing">
       <Header />
       <BrandHero />
+      <LandingProductProof />
       <DeferredScrollStory />
-      <RoomShowcase />
       <section className="demo-tease">
         <div>
           <p className="eyebrow">Working reference case</p>
@@ -619,14 +708,14 @@ function Landing() {
           </dl>
           <button
             className="button button--light"
-            onClick={() => navigate("/demo")}
+            onClick={() => landingNavigate("/demo", "landing_example_entered", "case_study")}
           >
             {PRODUCT_BRAND.secondaryCta} <span>→</span>
           </button>
         </div>
         <button
           className="demo-image"
-          onClick={() => navigate("/demo")}
+          onClick={() => landingNavigate("/demo", "landing_example_entered", "case_study_image")}
           aria-label="Explore in 3D — Danny Hirsch Threshold live demo"
         >
           <img
@@ -640,6 +729,7 @@ function Landing() {
           <span>Explore in 3D ↗</span>
         </button>
       </section>
+      <RoomShowcase />
       <PitchSections />
       <DiscoverGalleries />
       <section className="closing">
@@ -651,7 +741,7 @@ function Landing() {
         </h2>
         <button
           className="button button--dark"
-          onClick={() => navigate("/create")}
+          onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "closing")}
         >
           {PRODUCT_BRAND.primaryCta} <span>↗</span>
         </button>
@@ -687,7 +777,7 @@ function RoomShowcase() {
           <article key={template.id}>
             <button
               type="button"
-              onClick={() => navigate(`/create/${template.id}/demo`)}
+              onClick={() => landingNavigate(`/create/${template.id}/demo`, "landing_create_cta_clicked", `template_${template.id}`)}
               aria-label={`Try ${template.name} with sample artwork`}
             >
               <img

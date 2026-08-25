@@ -33,27 +33,37 @@ const CHAPTERS = [
     body: "Scale, thresholds, sightlines, and visitor circulation establish this exhibition—not a random template.",
   },
   {
-    eyebrow: "02 · Foundation",
-    title: "Set the floor first.",
-    body: "The black marble floor establishes the footprint and the visitor route.",
+    eyebrow: "02 · Build",
+    title: "Raise the room in layers.",
+    body: "Floor, walls, ceiling, and thresholds establish the spatial rhythm one construction step at a time.",
   },
   {
-    eyebrow: "03 · Architecture",
-    title: "Build in real layers.",
-    body: "Matte plaster walls, ceiling, thresholds, and architectural details follow in sequence.",
+    eyebrow: "03 · Material",
+    title: "Give every surface one job.",
+    body: "Black marble stays on the floor. Quiet plaster holds the art. Bronze guides the eye.",
   },
   {
-    eyebrow: "04 · Materials",
-    title: "Let every surface do one job.",
-    body: "Marble stays on the floor. Quiet plaster holds the art. Bronze guides the eye.",
+    eyebrow: "04 · Artwork",
+    title: "Compose the exhibition.",
+    body: "Works arrive at a consistent eye line, then spacing and focus are tuned around the room.",
   },
   {
-    eyebrow: "05 · Curation",
-    title: "Circle the finished exhibition.",
-    body: "Art, light, eye line, and spacing settle during one continuous 360° flight.",
+    eyebrow: "05 · Studio",
+    title: "Arrange. Preview. Refine.",
+    body: "The browser Studio keeps the room editable while a visitor-ready view remains one switch away.",
   },
   {
-    eyebrow: "06 · DannyHirschArts",
+    eyebrow: "06 · Camera and visitor",
+    title: "Check every angle.",
+    body: "A continuous 360° flight checks circulation, artwork sightlines, and the arrival at visitor height.",
+  },
+  {
+    eyebrow: "07 · Result",
+    title: "Resolve one complete place.",
+    body: "Architecture, artwork, light, and route settle into one sharp, stable browser experience.",
+  },
+  {
+    eyebrow: "08 · DannyHirschArts",
     title: "Enter Danny Hirsch Arts.",
     body: "The live room resolves at visitor height. Drag to look, then walk the completed exhibition.",
   },
@@ -81,10 +91,10 @@ const BUILD_COPY = {
 } as const;
 
 function buildStage(progress: number): keyof typeof BUILD_COPY {
-  if (progress < 0.18) return "plan";
-  if (progress < 0.32) return "floor";
-  if (progress < 0.44) return "walls";
-  if (progress < 0.55) return "ceiling";
+  if (progress < 0.1) return "plan";
+  if (progress < 0.2) return "floor";
+  if (progress < 0.29) return "walls";
+  if (progress < 0.38) return "ceiling";
   return "details";
 }
 
@@ -564,25 +574,31 @@ export function ScrollGalleryStory() {
       section.style.setProperty("--sgs-blueprint", state.blueprint.toFixed(4));
       section.style.setProperty(
         "--sgs-materials",
-        (range(progress, 0.5, 0.57) * (1 - range(progress, 0.67, 0.73))).toFixed(4),
+        (range(progress, 0.27, 0.34) * (1 - range(progress, 0.43, 0.49))).toFixed(4),
       );
       section.style.setProperty(
         "--sgs-curation",
-        (range(progress, 0.65, 0.72) * (1 - range(progress, 0.86, 0.91))).toFixed(4),
+        (range(progress, 0.41, 0.48) * (1 - range(progress, 0.51, 0.55))).toFixed(4),
+      );
+      section.style.setProperty(
+        "--sgs-studio",
+        (range(progress, 0.5, 0.54) * (1 - range(progress, 0.7, 0.76))).toFixed(4),
       );
       section.style.setProperty("--sgs-finale", state.finale.toFixed(4));
       section.dataset.buildStage = stage;
-      section.dataset.panel = progress < 0.48
+      section.dataset.panel = progress < 0.28
         ? "build"
-        : progress < 0.68
+        : progress < 0.45
           ? "materials"
-          : progress < 0.88
+          : progress < 0.52
             ? "curation"
-            : "none";
+            : progress < 0.74
+              ? "studio"
+              : "none";
       updateChapter(state.chapter);
       if (buildLabelRef.current) buildLabelRef.current.textContent = BUILD_COPY[stage];
 
-      const blueprintDraw = range(progress + 0.055, 0, 0.22);
+      const blueprintDraw = range(progress + 0.04, 0, 0.2);
       blueprintRoot.visible = modelReady && state.blueprint > 0.002;
       blueprintLines.forEach((lines, index) => {
         const local = range(blueprintDraw, index * 0.018, 0.58 + index * 0.018);
@@ -1006,6 +1022,16 @@ export function ScrollGalleryStory() {
           </dl>
         </div>
 
+        <div className="sgs__studio-card" aria-hidden="true">
+          <p>Browser Studio</p>
+          <ol>
+            <li><span>Arrange</span><b>Active</b></li>
+            <li><span>Walk preview</span><b>Ready</b></li>
+            <li><span>Share state</span><b>Draft</b></li>
+          </ol>
+          <small>No specialist 3D software required.</small>
+        </div>
+
         <div className="sgs__visitor" ref={visitorRef} aria-hidden="true">
           <div>
             <p><i /> Live walk preview</p>
@@ -1013,7 +1039,11 @@ export function ScrollGalleryStory() {
               <span className="sgs__desktop-controls">{VISITOR_KEYBOARD_HINT}</span>
               <span className="sgs__mobile-controls">Drag to look · Tap floor to walk · Pinch to zoom</span>
             </strong>
-            <a href="#/demo" tabIndex={-1}>Open full room <span>→</span></a>
+            <a
+              href="#/demo"
+              tabIndex={-1}
+              onClick={() => trackTelemetry("landing_example_entered", { source: "emil_finale" })}
+            >Open full room <span>→</span></a>
           </div>
           <div className="sgs__visitor-pad" aria-label="Walk controls">
             <button type="button" data-story-move="forward" aria-label="Move forward" tabIndex={-1}>↑</button>

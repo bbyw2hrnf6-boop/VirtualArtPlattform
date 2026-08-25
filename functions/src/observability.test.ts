@@ -25,4 +25,17 @@ describe('server observability contract', () => {
     expect(classifyServerError({ code: 'resource-exhausted' })).toBe('quota');
     expect(classifyServerError({ code: 'deadline-exceeded' })).toBe('availability');
   });
+
+  it('accepts the landing conversion events without content properties', () => {
+    const parsed = parseClientTelemetry([
+      { ...validEvent, name: 'landing_product_proof_engaged', route: 'home', properties: { source: 'workflow' } },
+      { ...validEvent, name: 'landing_example_entered', route: 'home', properties: { source: 'hero' } },
+      { ...validEvent, name: 'landing_create_cta_clicked', route: 'home', properties: { source: 'closing' } },
+    ]);
+    expect(parsed.map((event) => event.name)).toEqual([
+      'landing_product_proof_engaged',
+      'landing_example_entered',
+      'landing_create_cta_clicked',
+    ]);
+  });
 });

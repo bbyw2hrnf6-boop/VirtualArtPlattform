@@ -1,10 +1,9 @@
 import './pitchSections.css';
 
-const USE_CASES = [
-  ['Artists', 'Turn a focused body of work into a spatial exhibition and share it through one browser link.'],
-  ['Galleries', 'Prototype a hang, present a programme, or give remote collectors a stronger sense of scale.'],
-  ['Art schools', 'Give a focused graduate show or department collection one browser-based place.'],
-  ['Designers', 'Present a considered image-led project with spatial context and one shareable link.']
+const CREATOR_VALUE = [
+  ['Scale people understand', 'Let visitors experience distance, sequence, and relationships that disappear inside a flat image grid.'],
+  ['A visit, not a slide deck', 'Guide attention through a room while leaving people free to pause, look closer, and move at their own pace.'],
+  ['One link to return to', 'Publish a presentation that opens in the browser and can be shared with collaborators, clients, or an audience.']
 ] as const;
 
 const FAQS = [
@@ -20,12 +19,12 @@ export function PitchSections() {
     <div className="aura-pitch">
       <section className="aura-use-cases" aria-labelledby="aura-use-cases-title">
         <div className="aura-section-heading">
-          <p>Made for more than a portfolio</p>
-          <h2 id="aura-use-cases-title">One platform.<br /><em>Four perspectives.</em></h2>
-          <span>LIEUVA is an early working product. Each use case starts with the same proof: a Space you can enter, edit, and share.</span>
+          <p>Why creators use space</p>
+          <h2 id="aura-use-cases-title">More than an image grid.<br /><em>Work people can enter.</em></h2>
+          <span>LIEUVA gives visual work a sense of place while keeping the path from first upload to shareable Space direct.</span>
         </div>
         <div className="aura-use-case-grid">
-          {USE_CASES.map(([title, body], index) => (
+          {CREATOR_VALUE.map(([title, body], index) => (
             <article key={title}>
               <span>{String(index + 1).padStart(2, '0')}</span>
               <h3>{title}</h3>

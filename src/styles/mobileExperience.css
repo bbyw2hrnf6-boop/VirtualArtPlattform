@@ -181,8 +181,8 @@
 
 @media (max-width: 620px) {
   .site-header .account-entry {
-    width: 44px;
-    min-width: 44px;
+    width: 64px;
+    min-width: 64px;
     justify-content: center;
     padding: 0 !important;
     font-size: 0;
@@ -190,8 +190,9 @@
 
   .site-header .account-entry > span:last-child { display: none; }
   .site-header .account-entry:not(.is-signed-in)::after {
-    content: "ID";
-    font-size: 11px;
+    content: "Account";
+    font-size: 9px;
+    letter-spacing: .08em;
   }
 
   .site-header,

@@ -86,7 +86,7 @@
 
 .aura-use-case-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
   margin-top: clamp(58px, 9vh, 96px);
   border-top: 1px solid #b9bab4;
@@ -94,7 +94,7 @@
 }
 
 .aura-use-case-grid article {
-  min-height: 300px;
+  min-height: 280px;
   padding: 28px 24px 32px;
   background: #e9e8e3;
 }
@@ -305,7 +305,7 @@
 }
 
 @media (max-width: 1000px) {
-  .aura-use-case-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aura-use-case-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .aura-pilot,
 .aura-trust,
 .aura-faq { grid-template-columns: 1fr; }

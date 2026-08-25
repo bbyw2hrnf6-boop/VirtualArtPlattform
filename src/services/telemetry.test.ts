@@ -63,6 +63,20 @@ describe('privacy-safe telemetry boundary', () => {
     });
   });
 
+  it('records the privacy-safe landing conversion sequence after consent', async () => {
+    setTelemetryConsent('granted');
+    trackTelemetry('landing_product_proof_engaged', { source: 'workflow' });
+    trackTelemetry('landing_example_entered', { source: 'hero' });
+    trackTelemetry('landing_create_cta_clicked', { source: 'closing' });
+    await __flushTelemetryForTests();
+    expect(received.map((event) => event.name)).toEqual([
+      'landing_product_proof_engaged',
+      'landing_example_entered',
+      'landing_create_cta_clicked',
+    ]);
+    expect(received.every((event) => Object.keys(event.properties).length === 1)).toBe(true);
+  });
+
   it('normalizes dynamic customer routes', () => {
     expect(telemetryRoute('/spaces/private-id', '')).toBe('published_space');
     expect(telemetryRoute('/', '#/create/nocturne/published-secret-id')).toBe('published_edit');

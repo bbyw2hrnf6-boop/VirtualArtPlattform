@@ -3,11 +3,14 @@
   --sgs-blueprint: 0;
   --sgs-materials: 0;
   --sgs-curation: 0;
+  --sgs-studio: 0;
   --sgs-finale: 0;
   position: relative;
-  height: 1000svh;
-  min-height: 7600px;
-  overflow: clip;
+  height: 1200svh;
+  min-height: 9000px;
+  /* The sticky frame clips its own visuals. Keeping the long parent visible
+     avoids a Chromium mobile bug where overflow: clip disables sticky. */
+  overflow: visible;
   color: #f2f0e9;
   background: #0c0f0d;
 }
@@ -148,6 +151,7 @@
 .sgs__build-card > p,
 .sgs__material-card > p,
 .sgs__curate-card > p,
+.sgs__studio-card > p,
 .sgs__visitor p {
   margin: 0;
   color: #d8ff36;
@@ -177,7 +181,8 @@
 
 .sgs__build-card,
 .sgs__material-card,
-.sgs__curate-card {
+.sgs__curate-card,
+.sgs__studio-card {
   position: absolute;
   z-index: 6;
   right: clamp(24px, 5vw, 82px);
@@ -192,7 +197,8 @@
 
 .sgs:not([data-panel="build"]) .sgs__build-card,
 .sgs:not([data-panel="materials"]) .sgs__material-card,
-.sgs:not([data-panel="curation"]) .sgs__curate-card {
+.sgs:not([data-panel="curation"]) .sgs__curate-card,
+.sgs:not([data-panel="studio"]) .sgs__studio-card {
   visibility: hidden;
 }
 
@@ -278,7 +284,8 @@
 }
 
 .sgs__material-card,
-.sgs__curate-card {
+.sgs__curate-card,
+.sgs__studio-card {
   top: 50%;
   padding: 22px;
   transform: translateY(-50%);
@@ -343,6 +350,44 @@
 
 .sgs__curate-card {
   opacity: var(--sgs-curation);
+}
+
+.sgs__studio-card {
+  opacity: var(--sgs-studio);
+}
+
+.sgs__studio-card ol {
+  display: grid;
+  gap: 1px;
+  margin: 18px 0 14px;
+  padding: 0;
+  list-style: none;
+  background: rgb(242 240 233 / 12%);
+}
+
+.sgs__studio-card li {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 13px;
+  background: #121512;
+  color: #f2f0e9;
+  font: 500 11px/1.2 var(--font-sans, Arial, sans-serif);
+}
+
+.sgs__studio-card li b {
+  color: #d8ff36;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.sgs__studio-card small {
+  color: rgb(242 240 233 / 48%);
+  font: 400 11px/1.45 var(--font-sans, Arial, sans-serif);
 }
 
 .sgs__curate-card > p {
@@ -497,8 +542,8 @@
 
 @media (max-width: 900px), (max-height: 520px) and (pointer: coarse) {
   .sgs {
-    height: 1100svh;
-    min-height: 7800px;
+    height: 1300svh;
+    min-height: 9200px;
   }
 
   .sgs__sticky {
@@ -549,7 +594,8 @@
 
   .sgs__build-card,
   .sgs__material-card,
-  .sgs__curate-card {
+  .sgs__curate-card,
+  .sgs__studio-card {
     top: max(112px, calc(env(safe-area-inset-top) + 96px));
     right: 14px;
     width: min(248px, calc(100vw - 28px));
@@ -584,6 +630,14 @@
 
   .sgs__curate-card > div {
     margin: 12px 0;
+  }
+
+  .sgs__studio-card ol {
+    margin: 12px 0 10px;
+  }
+
+  .sgs__studio-card li {
+    min-height: 37px;
   }
 
   .sgs__visitor {
@@ -642,6 +696,7 @@
   .sgs__build-card,
   .sgs__material-card,
   .sgs__curate-card,
+  .sgs__studio-card,
   .sgs__visitor {
     transition: none;
   }
