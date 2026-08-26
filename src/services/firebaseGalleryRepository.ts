@@ -737,25 +737,12 @@ export class FirebaseGalleryRepository implements GalleryRepository {
           const record = fromFirestore(item.id, item.data());
           if (!isDiscoverEligible(record))
             return null;
-          let coverSrc = record.coverSrc;
-          if (record.coverPath) {
-            try {
-              coverSrc = await storageObjectUrl(
-                validateStoragePathOwnership(
-                  record.coverPath,
-                  record.ownerId,
-                  record.id,
-                  "coverPath",
-                ),
-                MAX_COVER_DOWNLOAD_BYTES,
-              );
-            } catch (error) {
-              // A missing or inaccessible cover must not hide an otherwise
-              // valid exhibition from Discover. The card has a room fallback.
-              console.warn("Discover cover unavailable.", record.id, error);
-            }
-          }
-          return { ...record, ...(coverSrc ? { coverSrc } : {}) };
+          // Discover is a directory request, not a media-hydration request.
+          // Waiting for Storage retries here used to hold the complete feed for
+          // minutes when one cover was unavailable. Legacy embedded covers are
+          // still rendered; Storage-backed covers use the existing room fallback
+          // so the Space remains immediately discoverable.
+          return record;
         } catch (error) {
           console.warn("Skipping invalid Discover gallery.", error);
           return null;

@@ -26,6 +26,7 @@ import {
   selectDannyAuthoredLights,
 } from "./scene/dannyLighting";
 import { roomLightingProfile } from "./scene/roomLighting";
+import { premiumQualityForTier } from "./scene/premiumQuality";
 import { VisitorControls } from "./VisitorControls";
 import { publicAssetUrl } from "../../services/publicAssetUrl";
 import { trackTelemetry } from "../../services/telemetry";
@@ -196,13 +197,13 @@ const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
   "dark-stone": "./assets/materials/aura-green-stone-v4.webp",
 };
 
-function createSurfaceTexture(kind: SurfaceKind, base: string) {
+function createSurfaceTexture(kind: SurfaceKind, base: string, anisotropy = 8) {
   const asset = surfaceAssets[kind];
   if (asset) {
     const texture = new THREE.TextureLoader().load(publicAssetUrl(asset));
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.anisotropy = 8;
+    texture.anisotropy = anisotropy;
     if (kind === "marble" || kind === "black-marble" || kind === "marble-wall")
       texture.repeat.set(1.45, 1.45);
     else if (kind === "walnut" || kind === "oak") texture.repeat.set(1.75, 2.4);
@@ -1344,12 +1345,14 @@ function buildRoom(
   selectedDecorId?: string,
   dollhouse = false,
   editorCutaway = false,
+  qualityTier: ReturnType<typeof getRenderQuality>["tier"] = "balanced",
 ) {
   const template = getTemplate(draft.templateId);
   const [w, d] = template.dimensions;
   const h = template.height;
   const dividerWidth = template.dividerWidth ?? PAVILION_DIVIDER_WIDTH;
   const cutaway = dollhouse || editorCutaway;
+  const premiumQuality = premiumQualityForTier(qualityTier);
   const ceilingFinish = draft.ceiling ?? "gallery";
   const ceilingProfiles = {
     gallery: {
@@ -1393,14 +1396,20 @@ function buildRoom(
       glow: 0.04,
     },
   }[ceilingFinish];
-  const wallTexture = createSurfaceTexture(draft.wall, wallColors[draft.wall]);
+  const wallTexture = createSurfaceTexture(
+    draft.wall,
+    wallColors[draft.wall],
+    premiumQuality.surfaceAnisotropy,
+  );
   const floorTexture = createSurfaceTexture(
     draft.floor,
     floorColors[draft.floor],
+    premiumQuality.surfaceAnisotropy,
   );
   const ceilingTexture = createSurfaceTexture(
     ceilingProfiles.surface,
     ceilingProfiles.color,
+    premiumQuality.surfaceAnisotropy,
   );
   const roomTextureScale = Math.max(1, Math.max(w, d) / 18);
   floorTexture.repeat.multiplyScalar(roomTextureScale);
@@ -1624,6 +1633,54 @@ function buildRoom(
         -d / 2 + wingDepth + 0.17,
       );
       architecture.add(reveal);
+    });
+    // A restrained shadow-gap and skirting profile gives the procedural room
+    // the readable wall thickness and floor contact of an authored interior.
+    const skirtingMaterial = new THREE.MeshPhysicalMaterial({
+      color: "#e8e5dc",
+      roughness: 0.58,
+      clearcoat: 0.09,
+      clearcoatRoughness: 0.62,
+      envMapIntensity: 0.34,
+    });
+    const shadowGapMaterial = new THREE.MeshPhysicalMaterial({
+      color: "#5a5c56",
+      roughness: 0.78,
+      envMapIntensity: 0.12,
+    });
+    const addTrim = (
+      width: number,
+      height: number,
+      depth: number,
+      x: number,
+      y: number,
+      z: number,
+      material: THREE.Material,
+      name: string,
+    ) => {
+      const trim = new THREE.Mesh(
+        new RoundedBoxGeometry(width, height, depth, 3, 0.012),
+        material,
+      );
+      trim.position.set(x, y, z);
+      trim.name = name;
+      trim.castShadow = true;
+      trim.receiveShadow = true;
+      architecture.add(trim);
+    };
+    addTrim(w - 0.12, 0.13, 0.055, 0, 0.065, -d / 2 + 0.028, skirtingMaterial, "white-cube-skirting-north");
+    addTrim(w - 0.12, 0.13, 0.055, 0, 0.065, d / 2 - 0.028, skirtingMaterial, "white-cube-skirting-south");
+    addTrim(0.055, 0.13, d - 0.12, -w / 2 + 0.028, 0.065, 0, skirtingMaterial, "white-cube-skirting-west");
+    addTrim(0.055, 0.13, d - 0.12, w / 2 - 0.028, 0.065, 0, skirtingMaterial, "white-cube-skirting-east");
+    addTrim(w - 0.18, 0.035, 0.045, 0, h - 0.085, -d / 2 + 0.024, shadowGapMaterial, "white-cube-shadow-gap-north");
+    addTrim(w - 0.18, 0.035, 0.045, 0, h - 0.085, d / 2 - 0.024, shadowGapMaterial, "white-cube-shadow-gap-south");
+    addTrim(0.045, 0.035, d - 0.18, -w / 2 + 0.024, h - 0.085, 0, shadowGapMaterial, "white-cube-shadow-gap-west");
+    addTrim(0.045, 0.035, d - 0.18, w / 2 - 0.024, h - 0.085, 0, shadowGapMaterial, "white-cube-shadow-gap-east");
+    architecture.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
     });
   }
   if (draft.templateId === "nocturne") {
@@ -2212,9 +2269,10 @@ function captureRoomEnvironment(
   baseEnvironment: THREE.Texture,
   position: THREE.Vector3,
   far: number,
+  probeSize: 64 | 128 | 256 = 128,
 ) {
   const previousEnvironment = scene.environment;
-  const cubeTarget = new THREE.WebGLCubeRenderTarget(128, {
+  const cubeTarget = new THREE.WebGLCubeRenderTarget(probeSize, {
     type: THREE.HalfFloatType,
     generateMipmaps: true,
     minFilter: THREE.LinearMipmapLinearFilter,
@@ -3161,16 +3219,20 @@ function createArtworkObject(
   selected: boolean,
   w: number,
   d: number,
+  anisotropy = 8,
 ) {
   const group = new THREE.Group() as ArtworkObject;
   group.userData.artworkId = artwork.id;
   group.name = `artwork-${artwork.id}`;
   const frame = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 0.07),
-    new THREE.MeshStandardMaterial({
+    new RoundedBoxGeometry(1, 1, 0.085, 4, 0.018),
+    new THREE.MeshPhysicalMaterial({
       color: "#1c1b19",
-      metalness: 0.18,
-      roughness: 0.48,
+      metalness: 0.12,
+      roughness: 0.38,
+      clearcoat: 0.18,
+      clearcoatRoughness: 0.52,
+      envMapIntensity: 0.58,
     }),
   );
   frame.name = "artwork-frame";
@@ -3180,12 +3242,14 @@ function createArtworkObject(
     new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }),
   );
   canvas.name = "artwork-canvas";
-  canvas.position.z = 0.041;
+  // Keep the print surface just proud of the physical frame so thicker,
+  // bevelled frames never occlude or z-fight with the artwork.
+  canvas.position.z = 0.046;
   group.add(frame, canvas);
   group.traverse((item) => {
     item.userData.artworkId = artwork.id;
   });
-  syncArtworkObject(group, artwork, selected, w, d);
+  syncArtworkObject(group, artwork, selected, w, d, anisotropy);
   return group;
 }
 
@@ -3195,10 +3259,11 @@ function syncArtworkObject(
   selected: boolean,
   w: number,
   d: number,
+  anisotropy = 8,
 ) {
   const frame = group.getObjectByName("artwork-frame") as THREE.Mesh<
-    THREE.BoxGeometry,
-    THREE.MeshStandardMaterial
+    RoundedBoxGeometry,
+    THREE.MeshPhysicalMaterial
   >;
   const canvas = group.getObjectByName("artwork-canvas") as THREE.Mesh<
     THREE.PlaneGeometry,
@@ -3211,7 +3276,13 @@ function syncArtworkObject(
     group.userData.scale !== artwork.scale
   ) {
     frame.geometry.dispose();
-    frame.geometry = new THREE.BoxGeometry(width + 0.12, height + 0.12, 0.07);
+    frame.geometry = new RoundedBoxGeometry(
+      width + 0.12,
+      height + 0.12,
+      0.085,
+      4,
+      0.018,
+    );
     canvas.geometry.dispose();
     canvas.geometry = new THREE.PlaneGeometry(width, height);
     group.userData.aspect = artwork.aspect;
@@ -3247,7 +3318,7 @@ function syncArtworkObject(
       },
     );
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 8;
+    texture.anisotropy = anisotropy;
     canvas.material.map = texture;
     canvas.material.needsUpdate = true;
     previous?.dispose();
@@ -3260,6 +3331,10 @@ function syncArtworkObject(
         : "#1c1b19";
   frame.visible = artwork.frame !== "none";
   frame.material.color.set(selected ? "#b8945f" : frameColor);
+  frame.material.metalness = artwork.frame === "black" ? 0.16 : 0.025;
+  frame.material.roughness = artwork.frame === "oak" ? 0.48 : artwork.frame === "white" ? 0.34 : 0.38;
+  frame.material.clearcoat = artwork.frame === "oak" ? 0.12 : 0.2;
+  frame.material.clearcoatRoughness = artwork.frame === "oak" ? 0.58 : 0.46;
   group.visible = !artwork.hidden;
   group.userData.locked = Boolean(artwork.locked);
   const config = WALLS[artwork.wall];
@@ -3431,6 +3506,7 @@ function GallerySceneRenderer({
   useEffect(() => {
     if (!host.current) return;
     const element = host.current;
+    const sceneStartedAt = performance.now();
     const initial = latest.current;
     let currentDraft = initial.draft;
     let currentSelectedId = initial.selectedId;
@@ -3445,6 +3521,7 @@ function GallerySceneRenderer({
     const [templateW, templateD] = template.dimensions;
     const dividerWidth = template.dividerWidth ?? PAVILION_DIVIDER_WIDTH;
     const quality = getRenderQuality();
+    const premiumQuality = premiumQualityForTier(quality.tier);
     const camera = new THREE.PerspectiveCamera(
       mode === "walk" ? 62 : initial.visitor ? 46 : 48,
       1,
@@ -3478,6 +3555,9 @@ function GallerySceneRenderer({
     reducedMotion.addEventListener("change", updateMotionPreference);
     renderer.setPixelRatio(quality.dpr);
     renderer.shadowMap.enabled = quality.shadows;
+    // PCFSoftShadowMap is deprecated in current Three.js and aliases to PCF.
+    // Keep one supported filtered path; tier differences live in map size,
+    // light count and material/probe resolution instead.
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -3498,6 +3578,10 @@ function GallerySceneRenderer({
     renderer.domElement.dataset.sceneCanvas = "room";
     renderer.domElement.dataset.interaction = mode === "walk" ? "walk" : mode;
     element.dataset.quality = quality.tier;
+    element.dataset.shadowFiltering = "pcf";
+    element.dataset.surfaceAnisotropy = String(premiumQuality.surfaceAnisotropy);
+    element.dataset.artworkAnisotropy = String(premiumQuality.artworkAnisotropy);
+    element.dataset.reflectionProbeSize = String(premiumQuality.reflectionProbeSize);
     updateMotionPreference();
     element.dataset.sceneMode = mode;
     element.dataset.editing =
@@ -3574,6 +3658,7 @@ function GallerySceneRenderer({
       mode === "arrange" ? currentSelectedDecorId : undefined,
       initial.visitor && mode === "overview",
       editorOpenTop,
+      quality.tier,
     );
     const isCutawayActive = () =>
       initial.visitor
@@ -3823,6 +3908,7 @@ function GallerySceneRenderer({
           baseEnvironment,
           new THREE.Vector3(0, h * 0.48, 0),
           Math.max(w, d) * 1.8,
+          premiumQuality.reflectionProbeSize,
         );
       } catch {
         element.dataset.reflections = "light-card-pmrem";
@@ -3992,6 +4078,7 @@ function GallerySceneRenderer({
             mode === "arrange" && currentSelectedId === artwork.id,
             w,
             d,
+            premiumQuality.artworkAnisotropy,
           );
       });
       decorById.forEach((object, id) => {
@@ -4483,6 +4570,7 @@ function GallerySceneRenderer({
             currentSelectedId === placement.id,
             w,
             d,
+            premiumQuality.artworkAnisotropy,
           );
         latest.current.onSelect?.(placement.id);
         if (pointerTravel > 2)
@@ -4631,6 +4719,7 @@ function GallerySceneRenderer({
             isArranging() && nextSelectedId === artwork.id,
             w,
             d,
+            premiumQuality.artworkAnisotropy,
           );
           scene.add(object);
           artworkObjects.push(object);
@@ -4641,6 +4730,7 @@ function GallerySceneRenderer({
             isArranging() && nextSelectedId === artwork.id,
             w,
             d,
+            premiumQuality.artworkAnisotropy,
           );
         artworkById.set(artwork.id, artwork);
       });
@@ -4762,6 +4852,7 @@ function GallerySceneRenderer({
     syncDraft(currentDraft, currentSelectedId, currentSelectedDecorId);
     rebuildCollision();
     status.ready();
+    element.dataset.sceneReadyMs = String(Math.round(performance.now() - sceneStartedAt));
     const capture: GallerySceneCapture = async (options = {}) => {
       if (disposed) throw new Error("The 3D Space is no longer available.");
       const sourceWidth = Math.max(1, renderer.domElement.width);
@@ -5093,6 +5184,7 @@ function GallerySceneRenderer({
     const editorCameraOffset = new THREE.Vector3();
     let placementFrame = 0;
     let lastDiagnosticsAt = Number.NEGATIVE_INFINITY;
+    let lastPerformanceDiagnosticsAt = Number.NEGATIVE_INFINITY;
     let renderRunning = false;
     const renderActivity: ReturnType<typeof observeRenderActivity> = {
       active: () => true,
@@ -5299,6 +5391,12 @@ function GallerySceneRenderer({
         else delete element.dataset.cameraTarget;
         element.dataset.intro =
           intro && !intro.isComplete() ? "active" : "complete";
+      }
+      if (now - lastPerformanceDiagnosticsAt >= 1000) {
+        lastPerformanceDiagnosticsAt = now;
+        element.dataset.drawCalls = String(renderer.info.render.calls);
+        element.dataset.triangles = String(renderer.info.render.triangles);
+        element.dataset.textureCount = String(renderer.info.memory.textures);
       }
       adaptiveDpr.update(now);
       renderer.render(scene, camera);

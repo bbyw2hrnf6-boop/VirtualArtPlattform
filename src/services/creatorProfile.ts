@@ -25,6 +25,16 @@ export type PublicCreatorPayload = {
   profile: CreatorProfile;
   spaces: CreatorSpaceCard[];
 };
+export type PublicCreatorDirectoryEntry = {
+  handle: string;
+  displayName: string;
+  bio: string;
+  imagePresent: boolean;
+};
+export type PublicCreatorDirectoryPayload = {
+  schemaVersion: 1;
+  creators: PublicCreatorDirectoryEntry[];
+};
 export type CreatorAttribution = {
   schemaVersion: 1;
   displayName: string;
@@ -44,6 +54,15 @@ export async function loadPublicCreatorProfile(handle: string, signal?: AbortSig
   if (response.status === 404) return null;
   if (!response.ok) throw new Error("Creator profile is temporarily unavailable.");
   return await response.json() as PublicCreatorPayload;
+}
+
+export async function loadPublicCreatorDirectory(signal?: AbortSignal) {
+  const response = await fetch("/creator-directory.json", {
+    headers: { Accept: "application/json" },
+    signal,
+  });
+  if (!response.ok) throw new Error("Creator search is temporarily unavailable.");
+  return await response.json() as PublicCreatorDirectoryPayload;
 }
 
 export async function loadCreatorAttribution(spaceId: string, signal?: AbortSignal) {

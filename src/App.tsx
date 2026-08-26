@@ -80,6 +80,12 @@ import {
 import { useDialogFocus } from "./hooks/useDialogFocus";
 import { AccountButton, AccountPage } from "./features/account/AccountDialog";
 import { CreatorAttributionLink } from "./features/creator/CreatorAttributionLink";
+import {
+  creatorImageUrl,
+  loadPublicCreatorDirectory,
+  type PublicCreatorDirectoryEntry,
+} from "./services/creatorProfile";
+import { searchPublicDirectory } from "./services/publicDirectorySearch";
 import { GalleryAccessManager } from "./features/account/GalleryAccessManager";
 import type { AccountSession } from "./services/accountTypes";
 import { usesCompactInteractionLayout } from "./utils/mobileLayout";
@@ -467,6 +473,8 @@ function DeferredScrollStory() {
 
 function DiscoverGalleries() {
   const [galleries, setGalleries] = useState<GalleryRecord[]>([]);
+  const [creators, setCreators] = useState<PublicCreatorDirectoryEntry[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string>();
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
@@ -476,6 +484,7 @@ function DiscoverGalleries() {
   const [discoveredAt] = useState(Date.now);
   const section = useRef<HTMLElement>(null);
   const requested = useRef(false);
+  const searchId = useId();
   const load = useCallback(() => {
     trackTelemetry("discover_viewed", { source: "landing" });
     requested.current = true;
@@ -494,6 +503,9 @@ function DiscoverGalleries() {
         console.error("Discover unavailable", error);
         setStatus("error");
       });
+    void loadPublicCreatorDirectory()
+      .then(({ creators: publicCreators }) => setCreators(publicCreators))
+      .catch((error) => console.error("Creator search unavailable", error));
   }, []);
   useEffect(() => {
     const target = section.current;
@@ -514,12 +526,22 @@ function DiscoverGalleries() {
     observer.observe(target);
     return () => observer.disconnect();
   }, [load]);
-  const pageCount = Math.max(1, Math.ceil(galleries.length / 3));
+  const directory = useMemo(
+    () => searchPublicDirectory(galleries, creators, searchQuery),
+    [creators, galleries, searchQuery],
+  );
+  const updateSearch = (value: string) => {
+    setSearchQuery(value);
+    setPage(0);
+  };
+  const pageCount = Math.max(1, Math.ceil(directory.spaces.length / 3));
   const visiblePage = Math.min(page, pageCount - 1);
-  const visibleGalleries = galleries.slice(
+  const visibleGalleries = directory.spaces.slice(
     visiblePage * 3,
     visiblePage * 3 + 3,
   );
+  const searching = searchQuery.trim().length > 0;
+  const showReference = !searching && !galleries.length;
   const removeGallery = async (gallery: GalleryRecord) => {
     if (
       !window.confirm(
@@ -558,7 +580,7 @@ function DiscoverGalleries() {
             Selected public Spaces by creators, studios and institutions using {PRODUCT_BRAND.name}.
             Enter each presentation directly in your browser.
           </p>
-          {galleries.length > 3 && (
+          {directory.spaces.length > 3 && (
             <div
               className="discover-controls"
               role="group"
@@ -588,10 +610,46 @@ function DiscoverGalleries() {
           )}
         </div>
       </div>
+      <div className="discover-search">
+        <label htmlFor={searchId}>Search public Spaces or Creators</label>
+        <div>
+          <input
+            id={searchId}
+            type="search"
+            value={searchQuery}
+            onChange={(event) => updateSearch(event.target.value)}
+            placeholder="Space title, creator name or @handle"
+            autoComplete="off"
+          />
+          {searching && (
+            <button type="button" onClick={() => updateSearch("")} aria-label="Clear search">×</button>
+          )}
+        </div>
+        <p role="status" aria-live="polite">
+          {searching
+            ? `${directory.spaces.length} Space${directory.spaces.length === 1 ? "" : "s"} · ${directory.creators.length} Creator${directory.creators.length === 1 ? "" : "s"}`
+            : "Search across the public LIEUVA directory."}
+        </p>
+      </div>
+      {searching && directory.creators.length > 0 && (
+        <div className="discover-creators" aria-label="Creator search results">
+          {directory.creators.map((creator) => (
+            <a key={creator.handle} href={creatorCanonicalUrl(creator.handle, location.href)}>
+              <span aria-hidden="true">
+                {creator.imagePresent
+                  ? <img src={creatorImageUrl(creator.handle)} alt="" loading="lazy" decoding="async" />
+                  : creator.displayName.slice(0, 1).toUpperCase()}
+              </span>
+              <div><strong>{creator.displayName}</strong><small>@{creator.handle}</small></div>
+              <b aria-hidden="true">→</b>
+            </a>
+          ))}
+        </div>
+      )}
       <div
-        className={`discover-grid ${!galleries.length ? "discover-grid--reference" : ""}`}
+        className={`discover-grid ${showReference ? "discover-grid--reference" : ""}`}
       >
-        {!galleries.length && (
+        {showReference && (
           <>
             <article className="discover-card discover-card--reference">
               <button
@@ -637,6 +695,13 @@ function DiscoverGalleries() {
               </button>
             </div>
           </>
+        )}
+        {searching && !directory.spaces.length && !directory.creators.length && (
+          <div className="discover-empty discover-empty--search">
+            <span>No public results.</span>
+            <p>Try a Space title, Creator name or public @handle.</p>
+            <button className="text-link" onClick={() => updateSearch("")}>Clear search →</button>
+          </div>
         )}
         {visibleGalleries.map((gallery) => {
           const cover =

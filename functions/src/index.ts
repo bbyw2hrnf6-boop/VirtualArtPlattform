@@ -49,6 +49,7 @@ import {
   isValidCreatorWebp,
   normalizeCreatorHandle,
   parseCreatorProfileInput,
+  publicCreatorDirectoryEntry,
   renderCreatorDocument,
   type CreatorDelivery,
   type PublicCreatorSpace,
@@ -235,7 +236,7 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
     .get();
   const spaces: PublicCreatorSpace[] = spacesSnapshot.docs
     .map((document) => classifySpaceForDelivery(document.id, document.data()))
-    .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public" && delivery.indexEligible)
+    .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public")
     .sort((left, right) => (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
     .map((space) => ({
       id: space.id,
@@ -1175,6 +1176,39 @@ export const creatorProfileData = onRequest(
       }
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
       response.status(200).json(payload);
+    } catch {
+      response.set("Cache-Control", "private, no-store, max-age=0");
+      response.status(503).json({ error: "temporary-error" });
+    }
+  },
+);
+
+/** Public, minimal Creator directory used by the shared Space/Creator search.
+ * Private profiles and internal Creator/account identifiers never leave this boundary. */
+export const creatorDirectoryData = onRequest(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
+  async (request, response) => {
+    response.set("Content-Type", "application/json; charset=utf-8");
+    response.set("X-Content-Type-Options", "nosniff");
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("Allow", "GET, HEAD");
+      response.status(405).json({ error: "method-not-allowed" });
+      return;
+    }
+    try {
+      const snapshot = await db.collection("creatorProfiles")
+        .where("profilePublic", "==", true)
+        .select("handle", "displayName", "bio", "links", "profilePublic", "imagePresent")
+        .limit(500)
+        .get();
+      const creators = snapshot.docs
+        .flatMap((document) => {
+          const entry = publicCreatorDirectoryEntry(document.data());
+          return entry ? [entry] : [];
+        })
+        .sort((left, right) => left.displayName.localeCompare(right.displayName));
+      response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
+      response.status(200).json({ schemaVersion: 1, creators });
     } catch {
       response.set("Cache-Control", "private, no-store, max-age=0");
       response.status(503).json({ error: "temporary-error" });

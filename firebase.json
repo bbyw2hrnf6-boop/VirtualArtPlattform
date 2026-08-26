@@ -42,6 +42,14 @@
         }
       },
       {
+        "source": "/creator-directory.json",
+        "function": {
+          "functionId": "creatorDirectoryData",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
         "source": "/creator-images/**",
         "function": {
           "functionId": "creatorImage",

@@ -5,6 +5,7 @@ import {
   isValidCreatorWebp,
   normalizeCreatorHandle,
   parseCreatorProfileInput,
+  publicCreatorDirectoryEntry,
   renderCreatorDocument,
 } from "./creatorIdentity.js";
 
@@ -45,6 +46,23 @@ describe("Creator identity contract", () => {
       handle: "studio-north", displayName: "Studio North", bio: "", profilePublic: true,
       links: [{ label: "Bad", url: "http://example.com" }],
     })).toBeNull();
+  });
+
+  it("lists only public profiles through the Creator directory projection", () => {
+    const profile = {
+      handle: "studio-north",
+      displayName: "Studio North",
+      bio: "Spatial work.",
+      links: [],
+      imagePresent: true,
+    };
+    expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: true })).toEqual({
+      handle: "studio-north",
+      displayName: "Studio North",
+      bio: "Spatial work.",
+      imagePresent: true,
+    });
+    expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: false })).toBeNull();
   });
 
   it("renders public metadata without an internal identifier", () => {

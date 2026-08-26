@@ -57,13 +57,13 @@ const TEMPLATE_LIGHTS: Record<
   }
 > = {
   "white-cube": {
-    ambient: 1.8,
-    hemi: 1.35,
-    key: 1,
+    ambient: 1.48,
+    hemi: 1.18,
+    key: 1.12,
     spot: 1,
-    bounce: 1,
-    toneMappingExposure: 0.96,
-    environmentIntensity: { low: 0.72, balanced: 0.8, high: 0.84 },
+    bounce: 1.16,
+    toneMappingExposure: 0.98,
+    environmentIntensity: { low: 0.74, balanced: 0.82, high: 0.88 },
   },
   nocturne: {
     ambient: 1.6,

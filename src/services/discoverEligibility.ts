@@ -6,7 +6,7 @@ export type DiscoverEligibilityReason =
   | "not-active"
   | "expired"
   | "moderation-disabled"
-  | "placeholder-identity"
+  | "invalid-identity"
   | "no-visible-content";
 
 export type DiscoverEligibility = {
@@ -14,16 +14,10 @@ export type DiscoverEligibility = {
   reason: DiscoverEligibilityReason;
 };
 
-const PLACEHOLDER_TITLE = /^(?:untitled|test|demo)(?:\b|[-_\s])/i;
-const PLACEHOLDER_CREATOR = /^(?:your(?:[-_\s]*name|\d)|test(?:\b|[-_\s])|demo(?:\b|[-_\s]))/i;
-
 function hasPublicIdentity(record: Pick<GalleryRecord, "title" | "artist">) {
   const title = record.title.trim();
   const creator = record.artist.trim();
-  return title.length >= 3
-    && creator.length >= 2
-    && !PLACEHOLDER_TITLE.test(title)
-    && !PLACEHOLDER_CREATOR.test(creator);
+  return title.length >= 3 && creator.length >= 2;
 }
 
 function hasVisibleMedia(record: Pick<GalleryRecord, "artworks">) {
@@ -36,8 +30,8 @@ function hasVisibleMedia(record: Pick<GalleryRecord, "artworks">) {
  * Public access and Discover eligibility are deliberately separate concepts.
  * A public Space remains reachable by URL even when it is held out of the
  * curated Discover surface. An optional persisted `discoverEligible: false`
- * is a backwards-compatible moderation switch; missing legacy values fall
- * back to deterministic quality checks.
+ * is a backwards-compatible moderation switch. Published public Spaces are
+ * not silently hidden just because their creator has not renamed starter text.
  */
 export function discoverEligibility(
   record: Pick<
@@ -62,7 +56,7 @@ export function discoverEligibility(
   if (record.discoverEligible === false)
     return { eligible: false, reason: "moderation-disabled" };
   if (!hasPublicIdentity(record))
-    return { eligible: false, reason: "placeholder-identity" };
+    return { eligible: false, reason: "invalid-identity" };
   if (!hasVisibleMedia(record))
     return { eligible: false, reason: "no-visible-content" };
   return { eligible: true, reason: "eligible" };

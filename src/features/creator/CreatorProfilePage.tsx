@@ -129,7 +129,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
             ))}
           </div>
         ) : (
-          <p className="creator-profile__empty">No eligible public Spaces yet.</p>
+          <p className="creator-profile__empty">No active public Spaces yet.</p>
         )}
       </section>
       <footer className="creator-profile__footer"><span>Give your work a place.</span><a href="/#/create">Create a Space →</a></footer>

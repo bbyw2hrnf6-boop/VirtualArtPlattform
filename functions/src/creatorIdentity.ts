@@ -29,6 +29,13 @@ export type PublicCreatorSpace = {
   updatedAt?: string;
 };
 
+export type PublicCreatorDirectoryEntry = {
+  handle: string;
+  displayName: string;
+  bio: string;
+  imagePresent: boolean;
+};
+
 export type CreatorDelivery =
   | { kind: "public"; profile: PublicCreatorProfile; spaces: PublicCreatorSpace[] }
   | { kind: "not-found"; handle?: string }
@@ -91,6 +98,18 @@ export function parseCreatorProfileInput(value: unknown): PublicCreatorProfile |
   if (!handle || !displayName || bio === null || !links || typeof record.profilePublic !== "boolean")
     return null;
   return { handle, displayName, bio, links, profilePublic: record.profilePublic, imagePresent: record.imagePresent === true };
+}
+
+/** Minimal allow-listed projection used by public Creator search. */
+export function publicCreatorDirectoryEntry(value: unknown): PublicCreatorDirectoryEntry | null {
+  const profile = parseCreatorProfileInput(value);
+  if (!profile?.profilePublic) return null;
+  return {
+    handle: profile.handle,
+    displayName: profile.displayName,
+    bio: profile.bio,
+    imagePresent: profile.imagePresent,
+  };
 }
 
 export function creatorCanonicalUrl(handle: string): string {
