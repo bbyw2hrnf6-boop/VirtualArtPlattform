@@ -27,7 +27,9 @@ const totals = {
   largestLazyGzip: Math.max(0, ...js.filter((asset) => !asset.file.startsWith('assets/index-')).map((asset) => asset.gzip)),
   entryGzip: Math.max(0, ...js.filter((asset) => asset.file.startsWith('assets/index-')).map((asset) => asset.gzip)),
 };
-const budgets = { jsGzip: 550_000, cssGzip: 35_000, largestLazyGzip: 195_000, entryGzip: 120_000 };
+// WP11/Creator directory adds the global accessible search dialog and public
+// follow controls. Keep a tight explicit ceiling instead of hiding that UI cost.
+const budgets = { jsGzip: 550_000, cssGzip: 37_000, largestLazyGzip: 195_000, entryGzip: 120_000 };
 const failures = Object.entries(budgets).filter(([key, limit]) => totals[key] > limit);
 
 console.log('LIEUVA performance budget (warning-only baseline)');

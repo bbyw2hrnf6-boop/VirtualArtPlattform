@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  creatorFollowTransition,
   creatorCanonicalUrl,
   isReservedCreatorHandle,
   isValidCreatorWebp,
@@ -61,6 +62,7 @@ describe("Creator identity contract", () => {
       displayName: "Studio North",
       bio: "Spatial work.",
       imagePresent: true,
+      followerCount: 0,
     });
     expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: false })).toBeNull();
   });
@@ -68,7 +70,7 @@ describe("Creator identity contract", () => {
   it("renders public metadata without an internal identifier", () => {
     const html = renderCreatorDocument(SHELL, {
       kind: "public",
-      profile: { handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [], profilePublic: true, imagePresent: false },
+      profile: { handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [], profilePublic: true, imagePresent: false, followerCount: 0 },
       spaces: [{ id: "space-safe", title: "Material Futures", creator: "Studio North", coverUrl: "https://lieuva.com/space-cards/space-safe" }],
     });
     expect(html).toContain(creatorCanonicalUrl("studio-north"));
@@ -81,5 +83,12 @@ describe("Creator identity contract", () => {
     const html = renderCreatorDocument(SHELL, { kind: "not-found", handle: "hidden-name" });
     expect(html).toContain("noindex,nofollow,noarchive");
     expect(html).not.toContain("hidden-name");
+  });
+
+  it("keeps follow and unfollow transitions idempotent and non-negative", () => {
+    expect(creatorFollowTransition("follow", false, 2)).toEqual({ following: true, followerCount: 3, changed: true });
+    expect(creatorFollowTransition("follow", true, 3)).toEqual({ following: true, followerCount: 3, changed: false });
+    expect(creatorFollowTransition("unfollow", true, 0)).toEqual({ following: false, followerCount: 0, changed: true });
+    expect(creatorFollowTransition("unfollow", false, 0)).toEqual({ following: false, followerCount: 0, changed: false });
   });
 });

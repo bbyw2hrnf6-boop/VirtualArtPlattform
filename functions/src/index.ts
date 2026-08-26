@@ -45,6 +45,7 @@ import {
 } from "./spaceSeo.js";
 import {
   CREATOR_HANDLE_CHANGE_COOLDOWN_MS,
+  creatorFollowTransition,
   creatorCanonicalUrl,
   isValidCreatorWebp,
   normalizeCreatorHandle,
@@ -376,6 +377,9 @@ export const saveLieuvaCreatorProfile = onCall(
         links: input.links,
         profilePublic: input.profilePublic,
         imagePresent: profileSnapshot.data()?.imagePresent === true,
+        followerCount: typeof profileSnapshot.data()?.followerCount === "number"
+          ? Math.max(0, profileSnapshot.data()!.followerCount)
+          : 0,
         updatedAt: FieldValue.serverTimestamp(),
         schemaVersion: 1,
       });
@@ -431,6 +435,65 @@ export const setLieuvaCreatorProfileImage = onCall(
     });
     await profileReference.set({ imagePresent: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     return { imagePresent: true };
+  },
+);
+
+/** Authenticated Creator-to-Creator follows. Public profiles expose only an
+ * aggregate count; account and Creator identifiers remain server-side. */
+export const manageLieuvaCreatorFollow = onCall(
+  { region: REGION, timeoutSeconds: 20, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const handle = normalizeCreatorHandle(request.data?.handle);
+    const action = request.data?.action;
+    if (!handle || !["status", "follow", "unfollow"].includes(action))
+      throw new HttpsError("invalid-argument", "Choose a valid public Creator and follow action.");
+    const [ownerSnapshot, handleSnapshot] = await Promise.all([
+      db.collection("creatorAccountOwners").doc(uid).get(),
+      db.collection("creatorHandles").doc(handle).get(),
+    ]);
+    const followerCreatorId = ownerSnapshot.data()?.creatorId;
+    const followedCreatorId = handleSnapshot.data()?.creatorId;
+    if (typeof followedCreatorId !== "string") throw new HttpsError("not-found", "Creator profile not found.");
+    const targetReference = db.collection("creatorProfiles").doc(followedCreatorId);
+    const targetSnapshot = await targetReference.get();
+    const target = parseCreatorProfileInput(targetSnapshot.data());
+    if (!target?.profilePublic) throw new HttpsError("not-found", "Creator profile not found.");
+    if (typeof followerCreatorId !== "string")
+      return { following: false, followerCount: target.followerCount, canFollow: false, isSelf: false };
+    const isSelf = followerCreatorId === followedCreatorId;
+    const followReference = db.collection("creatorFollows").doc(`${followerCreatorId}_${followedCreatorId}`);
+    if (action === "status" || isSelf) {
+      const follow = isSelf ? undefined : await followReference.get();
+      return { following: follow?.exists === true, followerCount: target.followerCount, canFollow: !isSelf, isSelf };
+    }
+    const following = await db.runTransaction(async (transaction) => {
+      const [followSnapshot, currentTarget] = await Promise.all([
+        transaction.get(followReference),
+        transaction.get(targetReference),
+      ]);
+      const exists = followSnapshot.exists;
+      const count = typeof currentTarget.data()?.followerCount === "number" ? currentTarget.data()!.followerCount : 0;
+      const transition = creatorFollowTransition(action, exists, count);
+      if (action === "follow" && transition.changed) {
+        transaction.create(followReference, {
+          followerCreatorId,
+          followedCreatorId,
+          createdAt: FieldValue.serverTimestamp(),
+          schemaVersion: 1,
+        });
+        transaction.set(targetReference, { followerCount: transition.followerCount }, { merge: true });
+        return true;
+      }
+      if (action === "unfollow" && transition.changed) {
+        transaction.delete(followReference);
+        transaction.set(targetReference, { followerCount: transition.followerCount }, { merge: true });
+        return false;
+      }
+      return exists;
+    });
+    const updated = parseCreatorProfileInput((await targetReference.get()).data());
+    return { following, followerCount: updated?.followerCount ?? 0, canFollow: true, isSelf: false };
   },
 );
 
@@ -560,6 +623,12 @@ export const deleteAuraAccount = onCall(
       const creatorHandles = typeof creatorId === "string"
         ? await db.collection("creatorHandles").where("creatorId", "==", creatorId).get()
         : undefined;
+      const [creatorFollowers, creatorFollowing] = typeof creatorId === "string"
+        ? await Promise.all([
+            db.collection("creatorFollows").where("followedCreatorId", "==", creatorId).get(),
+            db.collection("creatorFollows").where("followerCreatorId", "==", creatorId).get(),
+          ])
+        : [undefined, undefined];
       const plan: AccountDeletionPlan = {
         uid,
         ownedGalleryIds: owned.docs.map((gallery) => gallery.id),
@@ -582,6 +651,10 @@ export const deleteAuraAccount = onCall(
             { ref: db.collection("creatorProfiles").doc(creatorId) },
           ] : []),
           ...(creatorHandles?.docs ?? []),
+          ...uniqueDocumentPaths([
+            ...(creatorFollowers?.docs ?? []),
+            ...(creatorFollowing?.docs ?? []),
+          ]).map((path) => ({ ref: db.doc(path) })),
         ]),
       };
       const summary = await executeAccountDeletion(plan, {
@@ -1198,7 +1271,7 @@ export const creatorDirectoryData = onRequest(
     try {
       const snapshot = await db.collection("creatorProfiles")
         .where("profilePublic", "==", true)
-        .select("handle", "displayName", "bio", "links", "profilePublic", "imagePresent")
+        .select("handle", "displayName", "bio", "links", "profilePublic", "imagePresent", "followerCount")
         .limit(500)
         .get();
       const creators = snapshot.docs

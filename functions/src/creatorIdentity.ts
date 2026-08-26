@@ -18,6 +18,7 @@ export type PublicCreatorProfile = {
   links: CreatorLink[];
   profilePublic: boolean;
   imagePresent: boolean;
+  followerCount: number;
   updatedAt?: string;
 };
 
@@ -34,6 +35,7 @@ export type PublicCreatorDirectoryEntry = {
   displayName: string;
   bio: string;
   imagePresent: boolean;
+  followerCount: number;
 };
 
 export type CreatorDelivery =
@@ -97,7 +99,10 @@ export function parseCreatorProfileInput(value: unknown): PublicCreatorProfile |
   const links = parseCreatorLinks(record.links);
   if (!handle || !displayName || bio === null || !links || typeof record.profilePublic !== "boolean")
     return null;
-  return { handle, displayName, bio, links, profilePublic: record.profilePublic, imagePresent: record.imagePresent === true };
+  const followerCount = typeof record.followerCount === "number" && Number.isSafeInteger(record.followerCount)
+    ? Math.max(0, record.followerCount)
+    : 0;
+  return { handle, displayName, bio, links, profilePublic: record.profilePublic, imagePresent: record.imagePresent === true, followerCount };
 }
 
 /** Minimal allow-listed projection used by public Creator search. */
@@ -109,7 +114,19 @@ export function publicCreatorDirectoryEntry(value: unknown): PublicCreatorDirect
     displayName: profile.displayName,
     bio: profile.bio,
     imagePresent: profile.imagePresent,
+    followerCount: profile.followerCount,
   };
+}
+
+export function creatorFollowTransition(
+  action: "follow" | "unfollow",
+  exists: boolean,
+  followerCount: number,
+) {
+  const count = Math.max(0, Number.isSafeInteger(followerCount) ? followerCount : 0);
+  if (action === "follow" && !exists) return { following: true, followerCount: count + 1, changed: true };
+  if (action === "unfollow" && exists) return { following: false, followerCount: Math.max(0, count - 1), changed: true };
+  return { following: exists, followerCount: count, changed: false };
 }
 
 export function creatorCanonicalUrl(handle: string): string {

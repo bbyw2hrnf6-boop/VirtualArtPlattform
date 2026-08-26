@@ -14,6 +14,7 @@ import { SpaceShareMenu } from "./components/SpaceShareMenu";
 import { PRODUCT_BRAND } from "./config/brand";
 import { PitchSections } from "./features/landing/PitchSections";
 import "./features/landing/landingConversion.css";
+import "./features/landing/directoryExperience.css";
 import { TEMPLATES } from "./features/gallery/templates";
 import {
   autoCurateGallery,
@@ -341,12 +342,13 @@ const landingNavigate = (
   navigate(path);
 };
 
-function Header({ light = false }: { light?: boolean }) {
+function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () => void }) {
   return (
     <header className={`site-header ${light ? "site-header--light" : ""}`}>
       <Logo dark={light} />
       <nav>
         <span className="preview-status">{PRODUCT_BRAND.previewLabel}</span>
+        {onSearch && <button className="site-header__search" onClick={onSearch} aria-label="Search public Spaces and Creators"><span>Search</span> <i aria-hidden="true">⌕</i></button>}
         <button className="site-header__demo" onClick={() => landingNavigate("/demo", "landing_example_entered", "header")}>{PRODUCT_BRAND.secondaryCta}</button>
         <AccountButton light={light} />
         <button className="site-header__create" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "header")}>
@@ -359,7 +361,7 @@ function Header({ light = false }: { light?: boolean }) {
   );
 }
 
-function BrandHero() {
+function BrandHero({ onSearch }: { onSearch: () => void }) {
   return (
     <section className="brand-hero" aria-labelledby="brand-hero-title">
       <p className="eyebrow">{PRODUCT_BRAND.category}</p>
@@ -368,7 +370,14 @@ function BrandHero() {
       <div className="brand-hero__actions">
         <button className="button button--light" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "hero")}>{PRODUCT_BRAND.primaryCta} <span>↗</span></button>
         <button className="text-link" onClick={() => landingNavigate("/demo", "landing_example_entered", "hero")}>{PRODUCT_BRAND.secondaryCta} →</button>
+        <button className="text-link brand-hero__search" onClick={onSearch}>Search Spaces &amp; Creators ⌕</button>
       </div>
+      <button className="brand-hero__media" onClick={() => landingNavigate("/demo", "landing_example_entered", "hero_visual")} aria-label="Enter the Threshold reference Space">
+        <img src="./assets/demo/danny-cover.webp" alt="Threshold immersive Space by Danny Hirsch Arts" width="1440" height="1000" decoding="async" />
+        <span><i /> Live reference Space</span>
+        <strong>Threshold <small>Danny Hirsch Arts</small></strong>
+        <b>Enter ↗</b>
+      </button>
       <div className="brand-hero__signal" aria-hidden="true">
         <span>Browser Studio</span>
         <i />
@@ -377,6 +386,48 @@ function BrandHero() {
     </section>
   );
 }
+
+function GlobalDirectorySearch({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const dialog = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
+  const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
+  const [creators, setCreators] = useState<PublicCreatorDirectoryEntry[]>([]);
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const close = useCallback(() => { setQuery(""); if (status === "error") setStatus("idle"); onClose(); }, [onClose, status]);
+  useDialogFocus(dialog, close, undefined, open);
+  useEffect(() => {
+    if (!open || status !== "idle") return;
+    void Promise.all([galleryRepository.discover(), loadPublicCreatorDirectory()])
+      .then(([publicSpaces, directory]) => {
+        setSpaces(publicSpaces);
+        setCreators(directory.creators);
+        setStatus("ready");
+      })
+      .catch(() => setStatus("error"));
+  }, [open, status]);
+  const results = useMemo(() => searchPublicDirectory(spaces, creators, query), [creators, query, spaces]);
+  if (!open) return null;
+  const searching = query.trim().length > 0;
+  return (
+    <div className="directory-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
+      <div ref={dialog} className="directory-dialog" role="dialog" aria-modal="true" aria-labelledby="directory-dialog-title" tabIndex={-1}>
+        <header><div><p className="eyebrow">Public LIEUVA directory</p><h2 id="directory-dialog-title">Find a Space.<br /><em>Meet a Creator.</em></h2></div><button onClick={close} aria-label="Close search">×</button></header>
+        <label className="directory-dialog__field">
+          <span>Search by title, name or @handle</span>
+          <input autoFocus type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Start typing…" autoComplete="off" />
+        </label>
+        <p className="directory-dialog__status" role="status">{status === "idle" || status === "loading" ? "Opening public directory…" : status === "error" ? "Directory temporarily unavailable." : searching ? `${results.spaces.length} Spaces · ${results.creators.length} Creators` : "Search all public Spaces and Creator profiles."}</p>
+        {searching && <div className="directory-dialog__results">
+          <section aria-labelledby="directory-creators-title"><h3 id="directory-creators-title">Creators</h3>{results.creators.slice(0, 6).map((creator) => <a key={creator.handle} href={creatorCanonicalUrl(creator.handle, location.href)}><span>{creator.imagePresent ? <img src={creatorImageUrl(creator.handle)} alt="" /> : creator.displayName[0]}</span><div><strong>{creator.displayName}</strong><small>@{creator.handle} · {creator.followerCount ?? 0} followers</small></div><b>→</b></a>)}</section>
+          <section aria-labelledby="directory-spaces-title"><h3 id="directory-spaces-title">Spaces</h3>{results.spaces.slice(0, 6).map((space) => <button key={space.id} onClick={() => navigate(spacePath(space.id))}><span>{space.title[0]}</span><div><strong>{space.title}</strong><small>{space.artist}</small></div><b>→</b></button>)}</section>
+          {!results.spaces.length && !results.creators.length && <p className="directory-dialog__empty">No public result. Try another title, Creator or @handle.</p>}
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+const templatePreview = (templateId: TemplateId) => `./assets/templates/${templateId === "pavilion" ? "pavilion" : templateId}-preview.webp`;
 
 const LANDING_WORKFLOW = [
   ["01", "Create", "Choose a spatial starting point."],
@@ -640,7 +691,7 @@ function DiscoverGalleries() {
                   ? <img src={creatorImageUrl(creator.handle)} alt="" loading="lazy" decoding="async" />
                   : creator.displayName.slice(0, 1).toUpperCase()}
               </span>
-              <div><strong>{creator.displayName}</strong><small>@{creator.handle}</small></div>
+              <div><strong>{creator.displayName}</strong><small>@{creator.handle} · {creator.followerCount ?? 0} followers</small></div>
               <b aria-hidden="true">→</b>
             </a>
           ))}
@@ -726,11 +777,7 @@ function DiscoverGalleries() {
                   {cover ? (
                     <img src={cover} alt="" loading="lazy" decoding="async" />
                   ) : (
-                    <div className="mini-room">
-                      <i />
-                      <i />
-                      <i />
-                    </div>
+                    <img src={templatePreview(gallery.templateId)} alt="" loading="lazy" decoding="async" />
                   )}
                   <span>{days} days left</span>
                 </div>
@@ -762,10 +809,12 @@ function DiscoverGalleries() {
 }
 
 function Landing() {
+  const [directoryOpen, setDirectoryOpen] = useState(false);
   return (
     <main className="landing">
-      <Header />
-      <BrandHero />
+      <Header onSearch={() => setDirectoryOpen(true)} />
+      <BrandHero onSearch={() => setDirectoryOpen(true)} />
+      <GlobalDirectorySearch open={directoryOpen} onClose={() => setDirectoryOpen(false)} />
       <LandingProductProof />
       <DeferredScrollStory />
       <section className="demo-tease">

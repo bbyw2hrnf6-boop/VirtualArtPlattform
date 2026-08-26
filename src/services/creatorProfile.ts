@@ -11,6 +11,7 @@ export type CreatorProfile = {
   links: CreatorLink[];
   profilePublic: boolean;
   imagePresent: boolean;
+  followerCount?: number;
   updatedAt?: string;
 };
 export type CreatorSpaceCard = {
@@ -30,6 +31,7 @@ export type PublicCreatorDirectoryEntry = {
   displayName: string;
   bio: string;
   imagePresent: boolean;
+  followerCount?: number;
 };
 export type PublicCreatorDirectoryPayload = {
   schemaVersion: 1;
@@ -118,4 +120,19 @@ export async function saveCreatorProfileImage(file?: File, remove = false) {
     "setLieuvaCreatorProfileImage",
   )({ ...(base64 ? { base64 } : {}), ...(remove ? { remove: true } : {}) });
   return result.data.imagePresent;
+}
+
+export type CreatorFollowState = {
+  following: boolean;
+  followerCount: number;
+  canFollow: boolean;
+  isSelf: boolean;
+};
+
+export async function manageCreatorFollow(handle: string, action: "status" | "follow" | "unfollow") {
+  const result = await httpsCallable<
+    { handle: string; action: "status" | "follow" | "unfollow" },
+    CreatorFollowState
+  >(firebaseFunctions, "manageLieuvaCreatorFollow")({ handle, action });
+  return result.data;
 }

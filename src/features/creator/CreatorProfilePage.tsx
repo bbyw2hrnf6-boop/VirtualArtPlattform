@@ -6,8 +6,11 @@ import {
   creatorProfileUrl,
   creatorImageUrl,
   loadPublicCreatorProfile,
+  manageCreatorFollow,
+  type CreatorFollowState,
   type PublicCreatorPayload,
 } from "../../services/creatorProfile";
+import type { AccountSession } from "../../services/accountTypes";
 import { spaceCanonicalUrl } from "../../services/spaceRoutes";
 import { trackTelemetry } from "../../services/telemetry";
 import "./creatorProfile.css";
@@ -26,6 +29,10 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
     serverState === "unavailable" ? { status: "not-found" } : { status: "loading" },
   );
   const [attempt, setAttempt] = useState(0);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [session, setSession] = useState<AccountSession | null>(null);
+  const [followState, setFollowState] = useState<CreatorFollowState>();
+  const [followBusy, setFollowBusy] = useState(false);
 
   useEffect(() => {
     if (serverState === "unavailable") return;
@@ -40,6 +47,14 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
   }, [attempt, handle, serverState]);
 
   const profile = state.status === "ready" ? state.payload.profile : null;
+  useEffect(() => {
+    if (!profile || !session || session.isAnonymous) return;
+    let active = true;
+    void manageCreatorFollow(profile.handle, "status")
+      .then((result) => { if (active) setFollowState(result); })
+      .catch(() => { if (active) setFollowState(undefined); });
+    return () => { active = false; };
+  }, [profile, session]);
   useEffect(() => {
     if (state.status === "ready") trackTelemetry("creator_profile_viewed", { outcome: "ready" });
   }, [state.status]);
@@ -84,7 +99,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
             source="creator_profile"
             subject="Creator profile"
           />
-          <AccountButton light />
+          <AccountButton light open={accountOpen} onOpenChange={setAccountOpen} onSessionChange={(next) => { setSession(next); if (!next || next.isAnonymous) setFollowState(undefined); }} />
         </div>
       </header>
       <section className="creator-profile__hero" aria-labelledby="creator-profile-title">
@@ -97,6 +112,32 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
           <p className="eyebrow">LIEUVA Creator</p>
           <h1 id="creator-profile-title">{profile.displayName}</h1>
           <span>@{profile.handle}</span>
+          <div className="creator-profile__social">
+            <strong>{followState?.followerCount ?? profile.followerCount ?? 0} followers</strong>
+            {!followState?.isSelf && (
+              <button
+                type="button"
+                className={followState?.following ? "is-following" : ""}
+                disabled={followBusy || (Boolean(session && !session.isAnonymous) && followState?.canFollow === false)}
+                onClick={() => {
+                  if (!session || session.isAnonymous) {
+                    setAccountOpen(true);
+                    return;
+                  }
+                  if (!followState?.canFollow) return;
+                  setFollowBusy(true);
+                  void manageCreatorFollow(profile.handle, followState.following ? "unfollow" : "follow")
+                    .then(setFollowState)
+                    .finally(() => setFollowBusy(false));
+                }}
+              >
+                {followBusy ? "Updating…" : followState?.following ? "Following" : "Follow"}
+              </button>
+            )}
+            {session && !session.isAnonymous && followState?.canFollow === false && !followState.isSelf && (
+              <small>Create your Creator profile to follow.</small>
+            )}
+          </div>
           {profile.bio && <p className="creator-profile__bio">{profile.bio}</p>}
           {profile.links.length > 0 && (
             <nav className="creator-profile__links" aria-label={`${profile.displayName} links`}>
