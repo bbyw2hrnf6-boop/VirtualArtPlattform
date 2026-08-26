@@ -5,7 +5,8 @@ export type ServerOperation =
   | "account_export" | "account_delete" | "publication_permit"
   | "publication_abort" | "space_lifecycle" | "space_purge"
   | "acl_invite" | "acl_accept" | "acl_revoke" | "email"
-  | "space_document" | "space_card" | "space_sitemap" | "client_telemetry";
+  | "space_document" | "space_card" | "space_sitemap" | "creator_document"
+  | "client_telemetry";
 
 export function safeResourceRef(value: string | undefined): string | undefined {
   return value ? createHash("sha256").update(value).digest("hex").slice(0, 12) : undefined;
@@ -66,6 +67,7 @@ const CLIENT_EVENTS = new Set([
   "publish_review_opened", "account_gate_opened", "publish_started",
   "publish_succeeded", "publish_failed", "share_action", "published_space_opened",
   "published_space_ready", "discover_viewed", "published_edit_started",
+  "creator_profile_viewed", "creator_profile_saved",
   "published_update_started", "published_update_succeeded", "published_update_failed",
   "web_vital", "three_milestone", "three_runtime_health", "application_error",
 ]);

@@ -1,0 +1,197 @@
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  checkCreatorHandle,
+  creatorImageUrl,
+  creatorProfileUrl,
+  loadMyCreatorProfile,
+  saveCreatorProfile,
+  saveCreatorProfileImage,
+  type CreatorLink,
+  type CreatorProfile,
+} from "../../services/creatorProfile";
+import { isValidCreatorHandle } from "../../services/spaceRoutes";
+import type { AccountSession } from "../../services/accountTypes";
+import { trackTelemetry } from "../../services/telemetry";
+
+type SaveState = "loading" | "idle" | "checking" | "saving" | "saved" | "error";
+
+function errorMessage(error: unknown): string {
+  const code = typeof error === "object" && error && "code" in error
+    ? String((error as { code?: unknown }).code)
+    : "";
+  if (code.includes("already-exists")) return "That handle is already taken. Try another.";
+  if (code.includes("failed-precondition")) return "Handle changes are limited to once every seven days.";
+  if (code.includes("invalid-argument")) return "Check the handle, bio, and public links.";
+  if (code.includes("unauthenticated")) return "Sign in again to save your public profile.";
+  return "The public profile could not be saved. Your existing profile is unchanged.";
+}
+
+const emptyLink = (): CreatorLink => ({ label: "", url: "" });
+
+export function CreatorProfileSettings({ account }: { account: AccountSession }) {
+  const [profile, setProfile] = useState<CreatorProfile>({
+    handle: "",
+    displayName: account.displayName ?? "",
+    bio: "",
+    links: [],
+    profilePublic: false,
+    imagePresent: false,
+  });
+  const [links, setLinks] = useState<CreatorLink[]>([emptyLink()]);
+  const [originalHandle, setOriginalHandle] = useState("");
+  const [state, setState] = useState<SaveState>("loading");
+  const [message, setMessage] = useState("Loading public profile…");
+  const [image, setImage] = useState<File>();
+  const [removeImage, setRemoveImage] = useState(false);
+  const handleValid = isValidCreatorHandle(profile.handle);
+  const publicUrl = handleValid ? creatorProfileUrl(profile.handle) : "";
+  const completeLinks = useMemo(() => links.filter((link) => link.label.trim() || link.url.trim()), [links]);
+
+  useEffect(() => {
+    let active = true;
+    void loadMyCreatorProfile()
+      .then((existing) => {
+        if (!active) return;
+        if (existing) {
+          setProfile(existing);
+          setLinks(existing.links.length ? existing.links : [emptyLink()]);
+          setOriginalHandle(existing.handle);
+        }
+        setState("idle");
+        setMessage(existing ? "Profile settings loaded." : "Public profile is off by default.");
+      })
+      .catch((error) => {
+        if (!active) return;
+        setState("error");
+        setMessage(errorMessage(error));
+      });
+    return () => { active = false; };
+  }, [account.uid]);
+
+  const checkHandle = async () => {
+    if (!handleValid) {
+      setState("error");
+      setMessage("Use 3–30 lowercase letters, numbers, or single hyphens.");
+      return;
+    }
+    if (profile.handle === originalHandle) {
+      setState("idle");
+      setMessage("This is your current handle.");
+      return;
+    }
+    setState("checking");
+    setMessage("Checking handle…");
+    try {
+      const result = await checkCreatorHandle(profile.handle);
+      setState(result.available ? "idle" : "error");
+      setMessage(result.available ? `@${result.handle} is available.` : `@${result.handle} is already taken.`);
+    } catch (error) {
+      setState("error");
+      setMessage(errorMessage(error));
+    }
+  };
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!handleValid) {
+      setState("error");
+      setMessage("Choose a valid handle before saving.");
+      return;
+    }
+    if (completeLinks.some((link) => !link.label.trim() || !/^https:\/\//i.test(link.url.trim()))) {
+      setState("error");
+      setMessage("Each public link needs a label and a full HTTPS URL.");
+      return;
+    }
+    setState("saving");
+    setMessage("Saving public profile…");
+    try {
+      const result = await saveCreatorProfile({
+        ...profile,
+        displayName: profile.displayName.trim(),
+        bio: profile.bio.trim(),
+        links: completeLinks.map((link) => ({ label: link.label.trim(), url: link.url.trim() })),
+      });
+      let imagePresent = result.profile.imagePresent;
+      if (image || removeImage) {
+        try {
+          imagePresent = await saveCreatorProfileImage(image, removeImage);
+        } catch {
+          setProfile(result.profile);
+          setLinks(result.profile.links.length ? result.profile.links : [emptyLink()]);
+          setOriginalHandle(result.profile.handle);
+          setState("error");
+          setMessage("Profile saved. The image update failed, so the previous public image is unchanged. Retry when ready.");
+          trackTelemetry("creator_profile_saved", {
+            mode: result.profile.profilePublic ? "public" : "private",
+            outcome: "image_failed",
+          });
+          return;
+        }
+      }
+      setProfile({ ...result.profile, imagePresent });
+      setImage(undefined);
+      setRemoveImage(false);
+      setLinks(result.profile.links.length ? result.profile.links : [emptyLink()]);
+      setOriginalHandle(result.profile.handle);
+      setState("saved");
+      setMessage(result.profile.profilePublic ? "Public profile saved and live." : "Profile saved privately.");
+      trackTelemetry("creator_profile_saved", {
+        mode: result.profile.profilePublic ? "public" : "private",
+        outcome: originalHandle ? "updated" : "created",
+      });
+    } catch (error) {
+      setState("error");
+      setMessage(errorMessage(error));
+    }
+  };
+
+  return (
+    <form className="creator-settings" onSubmit={(event) => void submit(event)}>
+      <div className="account-profile__heading">
+        <div><p className="eyebrow">Public Creator profile</p><h3>Your public place.</h3></div>
+        <span>{profile.profilePublic ? "Public" : "Private"}</span>
+      </div>
+      <section className="creator-settings__visibility">
+        <div><strong>Public profile</strong><p>Off by default. Only the fields below and eligible owned public Spaces can appear.</p></div>
+        <label className="creator-settings__switch"><input type="checkbox" checked={profile.profilePublic} onChange={(event) => setProfile((current) => ({ ...current, profilePublic: event.target.checked }))} /><span>{profile.profilePublic ? "On" : "Off"}</span></label>
+      </section>
+      <fieldset disabled={state === "loading" || state === "saving"}>
+        <legend>Public identity</legend>
+        <label>Public display name<input required maxLength={60} value={profile.displayName} onChange={(event) => setProfile((current) => ({ ...current, displayName: event.target.value }))} /></label>
+        <label>Handle<div className="creator-settings__handle"><span>lieuva.com/creators/</span><input required minLength={3} maxLength={30} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={profile.handle} onChange={(event) => setProfile((current) => ({ ...current, handle: event.target.value }))} /></div><small>Lowercase letters, numbers and single hyphens. Changing it is limited to once every seven days; the old URL redirects.</small></label>
+        <button type="button" className="account-reset" disabled={!handleValid || state === "checking"} onClick={() => void checkHandle()}>{state === "checking" ? "Checking…" : "Check availability"}</button>
+        <label>Short bio<textarea maxLength={320} rows={5} value={profile.bio} onChange={(event) => setProfile((current) => ({ ...current, bio: event.target.value }))} /><small>{profile.bio.length}/320 · plain text</small></label>
+      </fieldset>
+      <fieldset disabled={state === "loading" || state === "saving"}>
+        <legend>Public links</legend>
+        <p className="creator-settings__help">Add up to four deliberate links. HTTPS only.</p>
+        {links.map((link, index) => (
+          <div className="creator-settings__link" key={index}>
+            <label>Label<input maxLength={24} placeholder="Website" value={link.label} onChange={(event) => setLinks((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} /></label>
+            <label>HTTPS URL<input type="url" placeholder="https://example.com" value={link.url} onChange={(event) => setLinks((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, url: event.target.value } : item))} /></label>
+            {links.length > 1 && <button type="button" aria-label={`Remove link ${index + 1}`} onClick={() => setLinks((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button>}
+          </div>
+        ))}
+        {links.length < 4 && <button type="button" className="account-reset" onClick={() => setLinks((current) => [...current, emptyLink()])}>Add link</button>}
+      </fieldset>
+      <section className="creator-settings__media">
+        <div className="creator-settings__portrait" aria-hidden="true">
+          {profile.profilePublic && profile.imagePresent && !removeImage
+            ? <img src={creatorImageUrl(profile.handle)} alt="" />
+            : <span>{(profile.displayName || "L").slice(0, 1).toUpperCase()}</span>}
+        </div>
+        <div><strong>Public profile image</strong><p>Separate from your private Account image. Cropped to WebP and served only while this profile is public.</p>
+          <label className="account-profile__upload">Choose image<input type="file" accept="image/avif,image/jpeg,image/png,image/webp" onChange={(event) => { const next = event.target.files?.[0]; setImage(next); if (next) setRemoveImage(false); }} /></label>
+          {image && <small>{image.name}</small>}
+          {(profile.imagePresent || image) && <button type="button" className="account-profile__remove" onClick={() => { setImage(undefined); setRemoveImage(true); }}>Remove image</button>}
+        </div>
+      </section>
+      <div className="creator-settings__actions">
+        <button className="account-primary" disabled={state === "loading" || state === "saving"}>{state === "saving" ? "Saving…" : "Save public profile"}</button>
+        {profile.profilePublic && publicUrl && <a href={publicUrl}>View live profile ↗</a>}
+      </div>
+      <p className={`creator-settings__status ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>
+    </form>
+  );
+}

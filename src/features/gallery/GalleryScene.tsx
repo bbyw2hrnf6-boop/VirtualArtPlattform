@@ -25,7 +25,9 @@ import {
   normalizeDannyLight,
   selectDannyAuthoredLights,
 } from "./scene/dannyLighting";
+import { roomLightingProfile } from "./scene/roomLighting";
 import { VisitorControls } from "./VisitorControls";
+import { publicAssetUrl } from "../../services/publicAssetUrl";
 import { trackTelemetry } from "../../services/telemetry";
 import {
   IDLE_VISITOR_TOUR,
@@ -197,7 +199,7 @@ const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
 function createSurfaceTexture(kind: SurfaceKind, base: string) {
   const asset = surfaceAssets[kind];
   if (asset) {
-    const texture = new THREE.TextureLoader().load(asset);
+    const texture = new THREE.TextureLoader().load(publicAssetUrl(asset));
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.anisotropy = 8;
@@ -2265,50 +2267,13 @@ function addLighting(
   h: number,
   dollhouse = false,
   shadowMapSize = 1024,
+  qualityTier: ReturnType<typeof getRenderQuality>["tier"] = "balanced",
 ) {
-  const settings = {
-    daylight: {
-      hemi: 0.58,
-      ambient: 0.18,
-      key: 3.15,
-      spot: 46,
-      bounce: 2.4,
-      color: "#fff8e9",
-    },
-    museum: {
-      hemi: 0.34,
-      ambient: 0.13,
-      key: 2.7,
-      spot: 72,
-      bounce: 1.65,
-      color: "#ffe6bd",
-    },
-    evening: {
-      hemi: 0.22,
-      ambient: 0.09,
-      key: 2.25,
-      spot: 64,
-      bounce: 1.2,
-      color: "#ffc987",
-    },
-  }[draft.lighting];
-  const templateTuning = {
-    "white-cube": { hemi: 1, ambient: 1, key: 1, spot: 1, bounce: 1 },
-    nocturne: {
-      hemi: 0.58,
-      ambient: 0.62,
-      key: 0.78,
-      spot: 1.18,
-      bounce: 0.72,
-    },
-    pavilion: {
-      hemi: 0.7,
-      ambient: 0.64,
-      key: 0.96,
-      spot: 1,
-      bounce: 0.72,
-    },
-  }[draft.templateId];
+  const settings = roomLightingProfile(
+    draft.templateId,
+    draft.lighting,
+    qualityTier,
+  );
   // The environment stays neutral; only this room-owned rig changes presets.
   scene.background = new THREE.Color(
     draft.templateId === "nocturne"
@@ -2324,24 +2289,28 @@ function addLighting(
     draft.templateId === "nocturne"
       ? "#070807"
       : draft.templateId === "pavilion"
-        ? "#4a453e"
+        ? "#81796d"
         : "#77746b";
   rig.add(
     new THREE.AmbientLight(
       "#fffdf8",
-      settings.ambient * templateTuning.ambient,
+      settings.ambient,
     ),
     new THREE.HemisphereLight(
       "#f4f2ea",
       hemisphereGround,
-      settings.hemi * templateTuning.hemi,
+      settings.hemi,
     ),
   );
   const main = new THREE.DirectionalLight(
     settings.color,
-    settings.key * templateTuning.key,
+    settings.key,
   );
-  main.position.set(-w * 0.28, h + 3.2, d * 0.22);
+  // This is an interior rig. Keeping the key above a closed ceiling made the
+  // published visitor view shadow the whole room while Arrange's cutaway
+  // looked correctly exposed. Place it just below the ceiling so both modes
+  // resolve the same authored light without disabling architectural shadows.
+  main.position.set(-w * 0.28, Math.max(1.8, h - 0.32), d * 0.22);
   main.target.position.set(w * 0.05, 0.35, -d * 0.08);
   main.castShadow = true;
   main.shadow.mapSize.set(shadowMapSize, shadowMapSize);
@@ -2358,7 +2327,7 @@ function addLighting(
   main.shadow.camera.updateProjectionMatrix();
   rig.add(main, main.target);
 
-  const bounceStrength = settings.bounce * templateTuning.bounce;
+  const bounceStrength = settings.bounce;
   const bounceLights = [
     new THREE.RectAreaLight(
       draft.lighting === "evening" ? "#ffd2a4" : "#edf5ff",
@@ -2450,7 +2419,7 @@ function addLighting(
     });
     const spot = new THREE.SpotLight(
       settings.color,
-      settings.spot * templateTuning.spot,
+      settings.spot,
       Math.max(12, h * 1.8),
       0.33,
       0.72,
@@ -3258,7 +3227,7 @@ function syncArtworkObject(
       return;
     }
     const texture = new THREE.TextureLoader().load(
-      artwork.src,
+      publicAssetUrl(artwork.src),
       (loadedTexture) => {
         if (group.userData.source !== artwork.src) {
           loadedTexture.dispose();
@@ -3512,12 +3481,12 @@ function GallerySceneRenderer({
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure =
-      currentDraft.templateId === "white-cube"
-        ? 0.82
-        : currentDraft.templateId === "nocturne"
-          ? 0.78
-          : 0.76;
+    const initialLightingProfile = roomLightingProfile(
+      currentDraft.templateId,
+      currentDraft.lighting,
+      quality.tier,
+    );
+    renderer.toneMappingExposure = initialLightingProfile.toneMappingExposure;
     configureSceneCanvas(
       renderer.domElement,
       initial.visitor
@@ -3535,6 +3504,9 @@ function GallerySceneRenderer({
       !initial.visitor && mode === "arrange" ? "enabled" : "disabled";
     element.dataset.transition = "idle";
     element.dataset.rendererPersistent = "true";
+    element.dataset.lightingPreset = currentDraft.lighting;
+    element.dataset.toneMappingExposure =
+      renderer.toneMappingExposure.toFixed(2);
     if (currentDraft.templateId === "pavilion")
       element.dataset.pavilionZone = "central-axis";
     element.appendChild(renderer.domElement);
@@ -3547,18 +3519,9 @@ function GallerySceneRenderer({
     );
     const baseEnvironment = baseEnvironmentTarget.texture;
     scene.environment = baseEnvironment;
-    scene.environmentIntensity =
-      currentDraft.templateId === "nocturne"
-        ? quality.tier === "low"
-          ? 0.54
-          : 0.66
-        : currentDraft.templateId === "pavilion"
-          ? quality.tier === "low"
-            ? 0.48
-            : 0.62
-          : quality.tier === "low"
-            ? 0.52
-            : 0.72;
+    scene.environmentIntensity = initialLightingProfile.environmentIntensity;
+    element.dataset.environmentIntensity =
+      scene.environmentIntensity.toFixed(2);
     const controls = new OrbitControls(camera, renderer.domElement);
     const largestDimension = Math.max(templateW, templateD);
     controls.enableDamping = true;
@@ -3624,6 +3587,7 @@ function GallerySceneRenderer({
       h,
       isCutawayActive(),
       quality.shadowMapSize,
+      quality.tier,
     );
     const roomBounds = {
       minX: -w / 2 + 0.45,
@@ -4737,6 +4701,7 @@ function GallerySceneRenderer({
           h,
           isCutawayActive(),
           quality.shadowMapSize,
+          quality.tier,
         );
         applyCutawayMode();
       } else if (previousLayoutKey !== nextLayoutKey)
@@ -4747,6 +4712,7 @@ function GallerySceneRenderer({
       if (previousCollisionKey !== nextCollisionKey) rebuildCollision();
       if (reflectionChanged) scheduleRoomReflection();
       element.dataset.ceiling = next.ceiling ?? "gallery";
+      element.dataset.lightingPreset = next.lighting;
       element.dataset.artLights = String(lighting.count);
       element.dataset.lightScope = "room";
       element.dataset.wall = next.wall;
@@ -6474,7 +6440,7 @@ export function DannyDemoScene({
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     const dannyMarbleTexture = new THREE.TextureLoader().load(
-      "./assets/materials/aura-nero-marquina-v2.webp",
+      publicAssetUrl("./assets/materials/aura-nero-marquina-v2.webp"),
     );
     dannyMarbleTexture.flipY = false;
     dannyMarbleTexture.wrapS = dannyMarbleTexture.wrapT = THREE.RepeatWrapping;
@@ -6485,8 +6451,8 @@ export function DannyDemoScene({
     );
     const modelUrl =
       quality.tier === "low"
-        ? "./assets/demo/danny-gallery-mobile.glb"
-        : "./assets/demo/danny-gallery.glb";
+        ? publicAssetUrl("./assets/demo/danny-gallery-mobile.glb")
+        : publicAssetUrl("./assets/demo/danny-gallery.glb");
     element.dataset.modelVariant = quality.tier === "low" ? "mobile" : "full";
     element.dataset.meshoptWorkers = String(ensureMeshoptWorkers());
     loader.load(

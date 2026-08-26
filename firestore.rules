@@ -264,6 +264,25 @@ service cloud.firestore {
       allow delete: if signedIn() && request.auth.uid == userId;
     }
 
+    // Creator identity is projected only by trusted Functions. Keeping the
+    // handle index and owner mapping off the client prevents UID disclosure,
+    // handle races, and accidental publication of private account fields.
+    match /creatorAccountOwners/{userId} {
+      allow read, write: if false;
+    }
+
+    match /creatorAccounts/{creatorId} {
+      allow read, write: if false;
+    }
+
+    match /creatorProfiles/{creatorId} {
+      allow read, write: if false;
+    }
+
+    match /creatorHandles/{handle} {
+      allow read, write: if false;
+    }
+
     // Newsletter consent and mail delivery are written only by trusted Cloud
     // Functions. The account may read its own preference; no client can queue
     // arbitrary email or inspect delivery/rate-limit documents.

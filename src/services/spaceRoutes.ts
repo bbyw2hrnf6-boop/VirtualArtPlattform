@@ -1,5 +1,6 @@
 export const CANONICAL_APP_ORIGIN = "https://lieuva.com";
 export const SPACE_IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+export const CREATOR_HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])$/;
 const FIREBASE_DEFAULT_HOSTS = new Set([
   "virtualartplattform.web.app",
   "virtualartplattform.firebaseapp.com",
@@ -10,6 +11,11 @@ export type SpaceRouteMatch =
   | { kind: "malformed" }
   | null;
 
+export type CreatorRouteMatch =
+  | { kind: "creator"; handle: string }
+  | { kind: "malformed" }
+  | null;
+
 export function isValidSpaceIdentifier(value: string): boolean {
   return SPACE_IDENTIFIER_PATTERN.test(value);
 }
@@ -17,6 +23,19 @@ export function isValidSpaceIdentifier(value: string): boolean {
 export function spacePath(spaceId: string): string {
   if (!isValidSpaceIdentifier(spaceId)) throw new Error("Invalid Space ID.");
   return `/spaces/${spaceId}`;
+}
+
+export function isValidCreatorHandle(value: string): boolean {
+  return CREATOR_HANDLE_PATTERN.test(value);
+}
+
+export function creatorPath(handle: string): string {
+  if (!isValidCreatorHandle(handle)) throw new Error("Invalid Creator handle.");
+  return `/creators/${handle}`;
+}
+
+export function creatorCanonicalUrl(handle: string, currentHref?: string): string {
+  return `${appOrigin(currentHref)}${creatorPath(handle)}`;
 }
 
 function isLocalHost(hostname: string): boolean {
@@ -68,6 +87,19 @@ export function matchSpaceRoute(pathname: string, hash: string): SpaceRouteMatch
   return id && isValidSpaceIdentifier(id)
     ? { kind: "space", id, legacy: true }
     : { kind: "malformed" };
+}
+
+export function matchCreatorRoute(pathname: string): CreatorRouteMatch {
+  const match = /^\/creators\/([^/]+)\/?$/.exec(pathname);
+  if (match) {
+    const handle = safelyDecoded(match[1]);
+    return handle && isValidCreatorHandle(handle)
+      ? { kind: "creator", handle }
+      : { kind: "malformed" };
+  }
+  return pathname === "/creators" || pathname.startsWith("/creators/")
+    ? { kind: "malformed" }
+    : null;
 }
 
 export function applicationRootUrl(currentHref: string): string {

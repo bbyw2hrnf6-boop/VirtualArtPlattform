@@ -22,6 +22,7 @@ export type AccountExportInput = {
   receivedInvitations: Array<Record<string, unknown>>;
   sentInvitations: Array<Record<string, unknown>>;
   operationalState: Record<string, unknown>;
+  creatorIdentity?: Record<string, unknown>;
 };
 
 export type AccountDeletionPlan = {
@@ -143,6 +144,7 @@ export function buildAccountExport(input: AccountExportInput): PortableValue {
       sent: input.sentInvitations.map((invite) => invitationExport(invite, "sent")),
     },
     operationalState: input.operationalState,
+    creatorIdentity: input.creatorIdentity ?? null,
     localBrowserData: {
       includedByClient: true,
       note: "Account-linked drafts from this browser are appended when the file is downloaded.",

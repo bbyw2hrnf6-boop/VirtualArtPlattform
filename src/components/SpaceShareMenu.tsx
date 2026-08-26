@@ -7,7 +7,8 @@ type SpaceShareMenuProps = {
   title: string;
   creator: string;
   visibility: GalleryVisibility;
-  source: "publish_success" | "published_viewer" | "reference_demo";
+  source: "publish_success" | "published_viewer" | "reference_demo" | "creator_profile";
+  subject?: "Space" | "Creator profile";
   compact?: boolean;
 };
 
@@ -22,6 +23,7 @@ export function SpaceShareMenu({
   creator,
   visibility,
   source,
+  subject = "Space",
   compact = false,
 }: SpaceShareMenuProps) {
   const panelId = useId();
@@ -66,7 +68,9 @@ export function SpaceShareMenu({
     recordShare("native");
     void navigator.share({
       title: `${title} — ${creator}`,
-      text: `Enter ${title}, an immersive Space by ${creator}.`,
+      text: subject === "Space"
+        ? `Enter ${title}, an immersive Space by ${creator}.`
+        : `Explore ${creator}'s public Creator profile on LIEUVA.`,
       url,
     }).catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -108,9 +112,9 @@ export function SpaceShareMenu({
         Share <span aria-hidden="true">↗</span>
       </button>
       {open && (
-        <div id={panelId} className="space-share__panel" role="group" aria-label="Share this Space">
+        <div id={panelId} className="space-share__panel" role="group" aria-label={`Share this ${subject}`}>
           <div className="space-share__heading">
-            <span>Share this Space</span>
+            <span>Share this {subject}</span>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close sharing options">×</button>
           </div>
           <p>{visibility === "private" ? "Only invited accounts can open this link." : "One clean link, ready to send."}</p>
@@ -120,7 +124,7 @@ export function SpaceShareMenu({
             <button type="button" onClick={showQrCode}>QR code</button>
           </div>
           <input
-            aria-label="Shareable Space URL"
+            aria-label={`Shareable ${subject} URL`}
             readOnly
             spellCheck={false}
             value={url}

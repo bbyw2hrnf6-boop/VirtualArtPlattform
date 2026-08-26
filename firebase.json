@@ -26,6 +26,38 @@
     ],
     "rewrites": [
       {
+        "source": "/creators{,/**}",
+        "function": {
+          "functionId": "creatorDocument",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
+        "source": "/creator-profiles/**",
+        "function": {
+          "functionId": "creatorProfileData",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
+        "source": "/creator-images/**",
+        "function": {
+          "functionId": "creatorImage",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
+        "source": "/creator-attributions/**",
+        "function": {
+          "functionId": "creatorAttribution",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
         "source": "/spaces{,/**}",
         "function": {
           "functionId": "spaceDocument",

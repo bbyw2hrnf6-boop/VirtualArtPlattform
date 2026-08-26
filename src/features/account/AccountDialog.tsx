@@ -7,13 +7,16 @@ import { visibilityLabel } from "../../services/galleryAccess";
 import type { GalleryInvite } from "../../services/galleryAccess";
 import {
   createGalleryProjectId,
+  listGalleryDrafts,
   loadGalleryDraft,
   publishedGalleryProjectId,
   saveGalleryDraft,
+  type StoredGalleryDraft,
 } from "../../services/draftStorage";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { GalleryAccessManager } from "./GalleryAccessManager";
 import { firebaseActionErrorMessage } from "../../services/firebaseActionError";
+import { CreatorProfileSettings } from "./CreatorProfileSettings";
 import "./accountDialog.css";
 
 type AccountModule = typeof import("../../services/accountService");
@@ -21,6 +24,7 @@ type AccountModule = typeof import("../../services/accountService");
 function AccountRooms({ session }: { session: AccountSession }) {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [rooms, setRooms] = useState<GalleryRecord[]>([]);
+  const [drafts, setDrafts] = useState<StoredGalleryDraft[]>([]);
   const [invites, setInvites] = useState<GalleryInvite[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [lifecycleBusyId, setLifecycleBusyId] = useState<string>();
@@ -32,12 +36,14 @@ function AccountRooms({ session }: { session: AccountSession }) {
     setStatus("loading");
     setError(undefined);
     try {
-      const [next, pending] = await Promise.all([
+      const [next, pending, localDrafts] = await Promise.all([
         galleryRepository.mine(),
         galleryRepository.listInvites(),
+        listGalleryDrafts(),
       ]);
       setRooms(next);
       setInvites(pending);
+      setDrafts(localDrafts.filter((draft) => !draft.publication));
       setStatus("ready");
     } catch (caught) {
       console.error("Account Spaces unavailable", caught);
@@ -156,10 +162,24 @@ function AccountRooms({ session }: { session: AccountSession }) {
         <span>{rooms.length}</span>
       </div>
       <div className="account-room-stats" aria-label="Space overview">
+        <article><span>Drafts here</span><strong>{drafts.length}</strong></article>
         <article><span>Live</span><strong>{activeRooms.length}</strong></article>
         <article><span>In Discover</span><strong>{publicRooms.length}</strong></article>
         <article><span>Shared with you</span><strong>{sharedRooms.length}</strong></article>
       </div>
+      {drafts.length > 0 && (
+        <section className="account-local-drafts" aria-labelledby="account-local-drafts-title">
+          <div><strong id="account-local-drafts-title">Drafts on this device</strong><span>Private browser storage · not live</span></div>
+          <ul>
+            {drafts.map((draft) => (
+              <li key={draft.projectId}>
+                <div><small>{draft.templateId.replaceAll("-", " ")} · saved {new Date(draft.savedAt).toLocaleDateString()}</small><strong>{draft.draft.title || "Untitled Space"}</strong></div>
+                <a href={hashApplicationUrl(`/create/${draft.templateId}/${draft.projectId}`, window.location.href)}>Continue draft</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {invites.length > 0 && (
         <div className="account-invites" aria-label="Pending Space invitations">
           <strong>Invitations</strong>
@@ -446,7 +466,7 @@ export function AccountDialog({
   const [service, setService] = useState<AccountModule>();
   const [session, setSession] = useState<AccountSession | null>(null);
   const [mode, setMode] = useState<"signin" | "create">("create");
-  const [section, setSection] = useState<"rooms" | "profile" | "data">("rooms");
+  const [section, setSection] = useState<"rooms" | "creator" | "account" | "data">("rooms");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -532,7 +552,7 @@ export function AccountDialog({
         <p className="eyebrow">LIEUVA account</p>
         {account ? (
           <>
-            <h2 id="account-dialog-title">Your Spaces.<br /><em>One identity.</em></h2>
+            <h2 id="account-dialog-title">Your work.<br /><em>One place.</em></h2>
             <div className="account-overview-card">
               <div className="account-identity">
                 <div className="account-avatar" aria-hidden="true">
@@ -557,12 +577,14 @@ export function AccountDialog({
               </div>
             </div>
             <div className="account-tabs account-tabs--settings" role="tablist" aria-label="Account settings">
-              <button role="tab" aria-selected={section === "rooms"} onClick={() => setSection("rooms")}>Spaces</button>
-              <button role="tab" aria-selected={section === "profile"} onClick={() => setSection("profile")}>Profile &amp; settings</button>
+              <button role="tab" aria-selected={section === "rooms"} onClick={() => setSection("rooms")}>Projects &amp; Spaces</button>
+              <button role="tab" aria-selected={section === "creator"} onClick={() => setSection("creator")}>Public profile</button>
+              <button role="tab" aria-selected={section === "account"} onClick={() => setSection("account")}>Account &amp; security</button>
               <button role="tab" aria-selected={section === "data"} onClick={() => setSection("data")}>Data &amp; rights</button>
             </div>
             {account.emailVerified && section === "rooms" && <AccountRooms session={account} />}
-            {account.emailVerified && section === "profile" && (
+            {account.emailVerified && section === "creator" && <CreatorProfileSettings account={account} />}
+            {account.emailVerified && section === "account" && (
               <AccountProfileSettings
                 key={`${account.uid}:${account.displayName ?? ""}:${account.nickname ?? ""}:${account.avatarSrc ?? ""}`}
                 account={account}

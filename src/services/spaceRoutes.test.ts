@@ -3,6 +3,9 @@ import legacyFallbackSource from "../../public/404.html?raw";
 import {
   applicationRootUrl,
   canonicalHostRedirectUrl,
+  creatorCanonicalUrl,
+  creatorPath,
+  matchCreatorRoute,
   matchSpaceRoute,
   spaceCanonicalUrl,
   spacePath,
@@ -13,6 +16,21 @@ describe("Space route contract", () => {
     expect(spaceCanonicalUrl("threshold-a1b2c3d4e5f60708")).toBe(
       "https://lieuva.com/spaces/threshold-a1b2c3d4e5f60708",
     );
+  });
+
+  it("builds and matches a clean Creator profile without exposing an account ID", () => {
+    expect(creatorCanonicalUrl("studio-north")).toBe("https://lieuva.com/creators/studio-north");
+    expect(creatorPath("studio-north")).toBe("/creators/studio-north");
+    expect(matchCreatorRoute("/creators/studio-north")).toEqual({
+      kind: "creator",
+      handle: "studio-north",
+    });
+  });
+
+  it("rejects malformed Creator routes and handles", () => {
+    expect(matchCreatorRoute("/creators/Studio North")).toEqual({ kind: "malformed" });
+    expect(matchCreatorRoute("/creators/studio/extra")).toEqual({ kind: "malformed" });
+    expect(() => creatorPath("Firebase")).toThrow("Invalid Creator handle");
   });
 
   it("keeps clean routes on the local origin during development", () => {

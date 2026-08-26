@@ -271,7 +271,10 @@ function escapeXml(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
-export function renderPublicSitemap(spaces: PublicSpaceDelivery[]): string {
+export function renderPublicSitemap(
+  spaces: PublicSpaceDelivery[],
+  creators: Array<{ handle: string; updatedAt?: string }> = [],
+): string {
   const unique = [...new Map(
     spaces.filter((space) => space.indexEligible).map((space) => [space.id, space]),
   ).values()]
@@ -282,6 +285,12 @@ export function renderPublicSitemap(spaces: PublicSpaceDelivery[]): string {
       const modified = space.updatedAt ? `<lastmod>${escapeXml(space.updatedAt)}</lastmod>` : "";
       return `  <url><loc>${escapeXml(spaceCanonicalUrl(space.id))}</loc>${modified}</url>`;
     }),
+    ...[...new Map(creators.map((creator) => [creator.handle, creator])).values()]
+      .sort((left, right) => left.handle.localeCompare(right.handle))
+      .map((creator) => {
+        const modified = creator.updatedAt ? `<lastmod>${escapeXml(creator.updatedAt)}</lastmod>` : "";
+        return `  <url><loc>${PUBLIC_SITE_ORIGIN}/creators/${escapeXml(creator.handle)}</loc>${modified}</url>`;
+      }),
   ];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`;
 }

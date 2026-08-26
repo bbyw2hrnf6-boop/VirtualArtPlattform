@@ -70,13 +70,16 @@ import {
 import { galleryShareUrl } from "./services/galleryShareUrl";
 import {
   applicationRootUrl,
+  creatorCanonicalUrl,
   hashApplicationUrl,
+  matchCreatorRoute,
   matchSpaceRoute,
   spaceCanonicalUrl,
   spacePath,
 } from "./services/spaceRoutes";
 import { useDialogFocus } from "./hooks/useDialogFocus";
 import { AccountButton, AccountPage } from "./features/account/AccountDialog";
+import { CreatorAttributionLink } from "./features/creator/CreatorAttributionLink";
 import { GalleryAccessManager } from "./features/account/GalleryAccessManager";
 import type { AccountSession } from "./services/accountTypes";
 import { usesCompactInteractionLayout } from "./utils/mobileLayout";
@@ -117,10 +120,12 @@ const ScrollGalleryStory = lazy(() =>
   })),
 );
 const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
+const CreatorProfilePage = lazy(() => import("./features/creator/CreatorProfilePage"));
 
 type Route = {
-  page: "home" | "create" | "demo" | "gallery" | "data" | "auth-action" | "account" | "space-not-found";
+  page: "home" | "create" | "demo" | "gallery" | "creator" | "data" | "auth-action" | "account" | "space-not-found";
   id?: string;
+  handle?: string;
   template?: TemplateId;
   demoArt?: boolean;
   projectId?: string;
@@ -274,6 +279,10 @@ const routeFromLocation = (): Route => {
       id: spaceRoute.id,
       legacySpace: spaceRoute.legacy,
     };
+  const creatorRoute = matchCreatorRoute(location.pathname);
+  if (creatorRoute?.kind === "malformed") return { page: "space-not-found" };
+  if (creatorRoute?.kind === "creator")
+    return { page: "creator", handle: creatorRoute.handle };
   const hash = location.hash.replace(/^#/, "");
   if (hash === "/create") return { page: "create" };
   const templateMatch =
@@ -300,6 +309,10 @@ const navigate = (path: string) => {
     const id = path.slice("/spaces/".length);
     const target = spaceCanonicalUrl(id, location.href);
     location.assign(target);
+    return;
+  } else if (path.startsWith("/creators/")) {
+    const handle = path.slice("/creators/".length);
+    location.assign(creatorCanonicalUrl(handle, location.href));
     return;
   } else {
     const target = hashApplicationUrl(path, location.href);
@@ -660,6 +673,11 @@ function DiscoverGalleries() {
                 <h3>{gallery.title}</h3>
                 <small>Enter Space →</small>
               </button>
+              <CreatorAttributionLink
+                className="discover-creator-link"
+                spaceId={gallery.id}
+                fallback=""
+              />
               {gallery.ownerId === ownerId && (
                 <button
                   className="discover-delete"
@@ -4130,7 +4148,7 @@ function PublishedGallery({ id }: { id: string }) {
         <Logo />
         <div className="viewer-header__identity">
           <p>{gallery.title}</p>
-          <span>{gallery.artist}</span>
+          <CreatorAttributionLink spaceId={gallery.id} fallback={gallery.artist} />
         </div>
         <div className="viewer-header__actions">
           <SpaceShareMenu
@@ -4201,7 +4219,7 @@ function PublishedGallery({ id }: { id: string }) {
 
 export default function App() {
   const [route, setRoute] = useState(routeFromLocation);
-  const routeKey = `${route.page}:${route.id ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`;
+  const routeKey = `${route.page}:${route.id ?? route.handle ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`;
   const previousRoute = useRef(routeKey);
   useEffect(() => {
     const handler = () => setRoute(routeFromLocation());
@@ -4219,11 +4237,11 @@ export default function App() {
     if (target !== location.href) location.replace(target);
   }, [route]);
   useEffect(() => {
-    const deliveredSpaceMetadata =
-      route.page === "gallery" &&
-      document.querySelector('meta[name="lieuva:space-state"]');
-    if (!deliveredSpaceMetadata) applyPageMetadata(pageMetadataPolicy(
-      route.page === "gallery" ? "other" : route.page,
+    const deliveredServerMetadata =
+      (route.page === "gallery" && document.querySelector('meta[name="lieuva:space-state"]')) ||
+      (route.page === "creator" && document.querySelector('meta[name="lieuva:creator-state"]'));
+    if (!deliveredServerMetadata) applyPageMetadata(pageMetadataPolicy(
+      route.page === "gallery" || route.page === "creator" ? "other" : route.page,
     ));
     if (previousRoute.current === routeKey) return;
     previousRoute.current = routeKey;
@@ -4265,6 +4283,8 @@ export default function App() {
     if (route.page === "demo") return <Demo />;
     if (route.page === "data") return <MvpDataNotice />;
     if (route.page === "account") return <AccountPage />;
+    if (route.page === "creator" && route.handle)
+      return <CreatorProfilePage handle={route.handle} />;
     if (route.page === "auth-action") return <AuthActionPage />;
     if (route.page === "space-not-found")
       return (

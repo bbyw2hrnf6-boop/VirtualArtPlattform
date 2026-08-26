@@ -24,6 +24,8 @@ export type TelemetryEventName =
   | 'published_space_opened'
   | 'published_space_ready'
   | 'discover_viewed'
+  | 'creator_profile_viewed'
+  | 'creator_profile_saved'
   | 'published_edit_started'
   | 'published_update_started'
   | 'published_update_succeeded'
@@ -56,6 +58,7 @@ const OPTIONAL_EVENTS = new Set<TelemetryEventName>([
   'publish_review_opened', 'account_gate_opened', 'publish_started',
   'publish_succeeded', 'share_action', 'published_space_opened',
   'published_space_ready', 'discover_viewed', 'published_edit_started',
+  'creator_profile_viewed', 'creator_profile_saved',
   'published_update_started', 'published_update_succeeded', 'web_vital',
   'three_milestone',
 ]);
@@ -74,6 +77,7 @@ const EVENT_NAMES = new Set<TelemetryEventName>([
   'publish_review_opened', 'account_gate_opened', 'publish_started',
   'publish_succeeded', 'publish_failed', 'share_action', 'published_space_opened',
   'published_space_ready', 'discover_viewed', 'published_edit_started',
+  'creator_profile_viewed', 'creator_profile_saved',
   'published_update_started', 'published_update_succeeded',
   'published_update_failed', 'web_vital', 'three_milestone',
   'three_runtime_health', 'application_error',
@@ -97,6 +101,7 @@ export function telemetryRoute(pathname = location.pathname, hash = location.has
   const parts = candidate.split('/').filter(Boolean);
   if (!parts.length) return 'home';
   if (parts[0] === 'spaces') return 'published_space';
+  if (parts[0] === 'creators') return 'creator_profile';
   if (parts[0] === 'create') {
     if (parts.length === 1) return 'template_picker';
     return parts[2]?.startsWith('published-') ? 'published_edit' : 'studio';

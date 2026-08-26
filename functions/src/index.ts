@@ -43,6 +43,16 @@ import {
   type PublicSpaceDelivery,
   type SpaceDelivery,
 } from "./spaceSeo.js";
+import {
+  CREATOR_HANDLE_CHANGE_COOLDOWN_MS,
+  creatorCanonicalUrl,
+  isValidCreatorWebp,
+  normalizeCreatorHandle,
+  parseCreatorProfileInput,
+  renderCreatorDocument,
+  type CreatorDelivery,
+  type PublicCreatorSpace,
+} from "./creatorIdentity.js";
 
 if (!getApps().length) initializeApp();
 
@@ -179,6 +189,77 @@ function requestSpaceId(path: string, route: "spaces" | "space-cards") {
   }
 }
 
+function requestRouteValue(path: string, route: string, suffix = "") {
+  const match = new RegExp(`/${route}/([^/]+)${suffix.replace(".", "[.]")}/?$`).exec(path);
+  if (!match) return undefined;
+  try { return decodeURIComponent(match[1]); } catch { return undefined; }
+}
+
+function timestampMilliseconds(value: unknown): number | undefined {
+  if (value instanceof Date) return value.getTime();
+  if (value && typeof value === "object" && "toMillis" in value && typeof value.toMillis === "function")
+    return value.toMillis();
+  if (typeof value === "string" || typeof value === "number") {
+    const time = new Date(value).getTime();
+    return Number.isFinite(time) ? time : undefined;
+  }
+  return undefined;
+}
+
+async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDelivery> {
+  const requestedHandle = normalizeCreatorHandle(handleValue);
+  if (!requestedHandle) return { kind: "not-found" };
+  const handleSnapshot = await db.collection("creatorHandles").doc(requestedHandle).get();
+  const handleData = handleSnapshot.data();
+  if (!handleData || typeof handleData.creatorId !== "string")
+    return { kind: "not-found", handle: requestedHandle };
+  const creatorId = handleData.creatorId;
+  const [profileSnapshot, accountSnapshot] = await Promise.all([
+    db.collection("creatorProfiles").doc(creatorId).get(),
+    db.collection("creatorAccounts").doc(creatorId).get(),
+  ]);
+  const profileData = profileSnapshot.data();
+  const accountData = accountSnapshot.data();
+  if (
+    !profileData || profileData.profilePublic !== true ||
+    typeof profileData.handle !== "string" ||
+    typeof profileData.displayName !== "string" ||
+    typeof accountData?.ownerId !== "string"
+  ) return { kind: "not-found", handle: requestedHandle };
+  const profile = parseCreatorProfileInput(profileData);
+  if (!profile || !profile.profilePublic) return { kind: "not-found", handle: requestedHandle };
+  const spacesSnapshot = await db.collection("galleries")
+    .where("ownerId", "==", accountData.ownerId)
+    .limit(100)
+    .select(...publicDeliveryFields)
+    .get();
+  const spaces: PublicCreatorSpace[] = spacesSnapshot.docs
+    .map((document) => classifySpaceForDelivery(document.id, document.data()))
+    .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public" && delivery.indexEligible)
+    .sort((left, right) => (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
+    .map((space) => ({
+      id: space.id,
+      title: space.title,
+      creator: space.creator,
+      coverUrl: `${PUBLIC_APP_URL.value().replace(/\/$/, "")}/space-cards/${space.id}?v=${space.revision}`,
+      ...(space.updatedAt ? { updatedAt: space.updatedAt } : {}),
+    }));
+  const updated = timestampMilliseconds(profileData.updatedAt);
+  return {
+    kind: "public",
+    profile: {
+      ...profile,
+      ...(updated !== undefined ? { updatedAt: new Date(updated).toISOString() } : {}),
+    },
+    spaces,
+  };
+}
+
+function publicCreatorPayload(delivery: CreatorDelivery) {
+  if (delivery.kind !== "public") return undefined;
+  return { schemaVersion: 1, profile: delivery.profile, spaces: delivery.spaces };
+}
+
 async function publicDeliveryManifest(spaceId: string) {
   const snapshot = await db.collection("galleries")
     .where(FieldPath.documentId(), "==", spaceId)
@@ -210,6 +291,148 @@ async function accountMediaFootprint(ownerId: string, galleryId: string) {
   }));
 }
 
+/** Server-authoritative handle availability. The response never exposes a UID
+ * or the private Creator mapping. */
+export const checkLieuvaCreatorHandle = onCall(
+  { region: REGION, timeoutSeconds: 15, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const handle = normalizeCreatorHandle(request.data?.handle);
+    if (!handle) throw new HttpsError("invalid-argument", "Use 3–30 lowercase letters, numbers, or single dashes.");
+    const [candidate, owner] = await Promise.all([
+      db.collection("creatorHandles").doc(handle).get(),
+      db.collection("creatorAccountOwners").doc(uid).get(),
+    ]);
+    const creatorId = owner.data()?.creatorId;
+    return { handle, available: !candidate.exists || candidate.data()?.creatorId === creatorId };
+  },
+);
+
+export const getMyLieuvaCreatorProfile = onCall(
+  { region: REGION, timeoutSeconds: 15, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const owner = await db.collection("creatorAccountOwners").doc(uid).get();
+    const creatorId = owner.data()?.creatorId;
+    if (typeof creatorId !== "string") return { profile: null };
+    const profile = await db.collection("creatorProfiles").doc(creatorId).get();
+    const parsed = parseCreatorProfileInput(profile.data());
+    return { profile: parsed };
+  },
+);
+
+/** Creates or updates the narrow public Creator projection. Handle ownership is
+ * decided atomically; old handles remain aliases and never become silently
+ * available to another account. */
+export const saveLieuvaCreatorProfile = onCall(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const input = parseCreatorProfileInput(request.data);
+    if (!input) throw new HttpsError("invalid-argument", "Check the public profile fields and HTTPS links.");
+    const proposedCreatorId = randomBytes(16).toString("hex");
+    const now = Date.now();
+    await db.runTransaction(async (transaction) => {
+      const ownerReference = db.collection("creatorAccountOwners").doc(uid);
+      const ownerSnapshot = await transaction.get(ownerReference);
+      const creatorId = typeof ownerSnapshot.data()?.creatorId === "string"
+        ? ownerSnapshot.data()!.creatorId as string
+        : proposedCreatorId;
+      const accountReference = db.collection("creatorAccounts").doc(creatorId);
+      const profileReference = db.collection("creatorProfiles").doc(creatorId);
+      const handleReference = db.collection("creatorHandles").doc(input.handle);
+      const [accountSnapshot, handleSnapshot, profileSnapshot] = await Promise.all([
+        transaction.get(accountReference),
+        transaction.get(handleReference),
+        transaction.get(profileReference),
+      ]);
+      const account = accountSnapshot.data();
+      const currentHandle = typeof account?.currentHandle === "string" ? account.currentHandle : undefined;
+      if (handleSnapshot.exists && handleSnapshot.data()?.creatorId !== creatorId)
+        throw new HttpsError("already-exists", "That public handle is already in use.");
+      if (currentHandle && currentHandle !== input.handle) {
+        const lastChanged = timestampMilliseconds(account?.handleChangedAt);
+        if (lastChanged !== undefined && now - lastChanged < CREATOR_HANDLE_CHANGE_COOLDOWN_MS)
+          throw new HttpsError("failed-precondition", "Public handles can be changed once every seven days.");
+      }
+      transaction.set(ownerReference, {
+        creatorId,
+        currentHandle: input.handle,
+        updatedAt: FieldValue.serverTimestamp(),
+        schemaVersion: 1,
+      }, { merge: true });
+      transaction.set(accountReference, {
+        ownerId: uid,
+        currentHandle: input.handle,
+        ...(currentHandle !== input.handle ? { handleChangedAt: FieldValue.serverTimestamp() } : {}),
+        updatedAt: FieldValue.serverTimestamp(),
+        schemaVersion: 1,
+      }, { merge: true });
+      transaction.set(profileReference, {
+        handle: input.handle,
+        displayName: input.displayName,
+        bio: input.bio,
+        links: input.links,
+        profilePublic: input.profilePublic,
+        imagePresent: profileSnapshot.data()?.imagePresent === true,
+        updatedAt: FieldValue.serverTimestamp(),
+        schemaVersion: 1,
+      });
+      transaction.set(handleReference, {
+        creatorId,
+        canonicalHandle: input.handle,
+        kind: "current",
+        updatedAt: FieldValue.serverTimestamp(),
+        schemaVersion: 1,
+      });
+      if (currentHandle && currentHandle !== input.handle) {
+        transaction.set(db.collection("creatorHandles").doc(currentHandle), {
+          creatorId,
+          canonicalHandle: input.handle,
+          kind: "alias",
+          updatedAt: FieldValue.serverTimestamp(),
+          schemaVersion: 1,
+        });
+      }
+    });
+    const savedProfile = parseCreatorProfileInput((await db.collection("creatorProfiles")
+      .where("handle", "==", input.handle).limit(1).get()).docs[0]?.data()) ?? input;
+    return { profile: savedProfile, publicUrl: creatorCanonicalUrl(input.handle) };
+  },
+);
+
+/** Updates the optional public Creator image without exposing Storage paths or
+ * account identifiers. The public image is always mediated by creatorImage. */
+export const setLieuvaCreatorProfileImage = onCall(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const owner = await db.collection("creatorAccountOwners").doc(uid).get();
+    const creatorId = owner.data()?.creatorId;
+    if (typeof creatorId !== "string") throw new HttpsError("failed-precondition", "Save the public profile first.");
+    const profileReference = db.collection("creatorProfiles").doc(creatorId);
+    if (!(await profileReference.get()).exists) throw new HttpsError("failed-precondition", "Save the public profile first.");
+    const object = getStorage().bucket().file(`creator-public/${creatorId}/avatar.webp`);
+    if (request.data?.remove === true) {
+      await object.delete({ ignoreNotFound: true });
+      await profileReference.set({ imagePresent: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      return { imagePresent: false };
+    }
+    const encoded = typeof request.data?.base64 === "string" ? request.data.base64 : "";
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded) || encoded.length > 720_000)
+      throw new HttpsError("invalid-argument", "Choose a supported profile image under 512 KB.");
+    const bytes = Buffer.from(encoded, "base64");
+    if (!isValidCreatorWebp(bytes))
+      throw new HttpsError("invalid-argument", "Choose a supported profile image under 512 KB.");
+    await object.save(bytes, {
+      resumable: false,
+      metadata: { contentType: "image/webp", cacheControl: "private, no-store", metadata: { kind: "creator-avatar", schemaVersion: "1" } },
+    });
+    await profileReference.set({ imagePresent: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return { imagePresent: true };
+  },
+);
+
 /** Account-wide portability export. Media binaries stay in Storage; exact paths
  * and metadata make the data footprint inspectable without exposing signed URLs. */
 export const exportAuraAccountData = onCall(
@@ -220,7 +443,7 @@ export const exportAuraAccountData = onCall(
     const email = user.email?.trim().toLowerCase();
     const ownedSnapshot = await db.collection("galleries").where("ownerId", "==", uid).get();
     const [profile, newsletter, publicationUsage, sharedMemberships, receivedInvites, sentInvites,
-      permits, unsubscribeTokens, verificationLimit] = await Promise.all([
+      permits, unsubscribeTokens, verificationLimit, creatorOwner] = await Promise.all([
       db.collection("profiles").doc(uid).get(),
       db.collection("newsletterSubscriptions").doc(uid).get(),
       db.collection("galleryPublicationQuotas").doc(uid).get(),
@@ -234,7 +457,16 @@ export const exportAuraAccountData = onCall(
       db.collection("galleryPublishPermits").where("ownerId", "==", uid).get(),
       db.collection("newsletterUnsubscribeTokens").where("uid", "==", uid).get(),
       db.collection("verificationMailRateLimits").doc(uid).get(),
+      db.collection("creatorAccountOwners").doc(uid).get(),
     ]);
+    const creatorId = creatorOwner.data()?.creatorId;
+    const [creatorProfile, creatorAccount, creatorHandles] = typeof creatorId === "string"
+      ? await Promise.all([
+          db.collection("creatorProfiles").doc(creatorId).get(),
+          db.collection("creatorAccounts").doc(creatorId).get(),
+          db.collection("creatorHandles").where("creatorId", "==", creatorId).get(),
+        ])
+      : [undefined, undefined, undefined];
     const ownedSpaces = await Promise.all(ownedSnapshot.docs.map(async (gallery) => {
       const [members, media] = await Promise.all([
         gallery.ref.collection("members").get(),
@@ -273,6 +505,13 @@ export const exportAuraAccountData = onCall(
         newsletterUnsubscribeRecords: unsubscribeTokens.size,
         verificationRateLimitRecord: verificationLimit.exists,
       },
+      ...(creatorProfile?.exists ? { creatorIdentity: {
+        publicProfile: creatorProfile.data(),
+        currentHandle: creatorAccount?.data()?.currentHandle ?? null,
+        aliases: creatorHandles?.docs
+          .filter((handle) => handle.data().kind === "alias")
+          .map((handle) => handle.id) ?? [],
+      } } : {}),
     });
   },
 );
@@ -302,7 +541,7 @@ export const deleteAuraAccount = onCall(
     let phase = "inventory";
     await job.set({ uid, status: "running", phase, startedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     try {
-      const [owned, memberships, ownedInvites, receivedInvites, permits, tokens, queuedMail] = await Promise.all([
+      const [owned, memberships, ownedInvites, receivedInvites, permits, tokens, queuedMail, creatorOwner] = await Promise.all([
         db.collection("galleries").where("ownerId", "==", uid).get(),
         email
           ? db.collectionGroup("members").where("email", "==", email).get()
@@ -314,7 +553,12 @@ export const deleteAuraAccount = onCall(
         db.collection("galleryPublishPermits").where("ownerId", "==", uid).get(),
         db.collection("newsletterUnsubscribeTokens").where("uid", "==", uid).get(),
         db.collection("mail").where("accountUid", "==", uid).get(),
+        db.collection("creatorAccountOwners").doc(uid).get(),
       ]);
+      const creatorId = creatorOwner.data()?.creatorId;
+      const creatorHandles = typeof creatorId === "string"
+        ? await db.collection("creatorHandles").where("creatorId", "==", creatorId).get()
+        : undefined;
       const plan: AccountDeletionPlan = {
         uid,
         ownedGalleryIds: owned.docs.map((gallery) => gallery.id),
@@ -331,6 +575,12 @@ export const deleteAuraAccount = onCall(
           ...permits.docs,
           ...tokens.docs,
           ...queuedMail.docs,
+          { ref: db.collection("creatorAccountOwners").doc(uid) },
+          ...(typeof creatorId === "string" ? [
+            { ref: db.collection("creatorAccounts").doc(creatorId) },
+            { ref: db.collection("creatorProfiles").doc(creatorId) },
+          ] : []),
+          ...(creatorHandles?.docs ?? []),
         ]),
       };
       const summary = await executeAccountDeletion(plan, {
@@ -359,6 +609,8 @@ export const deleteAuraAccount = onCall(
         removeInvitation: async (path) => { await db.doc(path).delete(); },
         deleteAvatar: async (ownerId) => {
           await getStorage().bucket().deleteFiles({ prefix: `profiles/${ownerId}/`, force: true });
+          if (typeof creatorId === "string")
+            await getStorage().bucket().deleteFiles({ prefix: `creator-public/${creatorId}/`, force: true });
         },
         removeLinkedDocument: async (path) => { await db.doc(path).delete(); },
         deleteAuthentication: async (ownerId) => { await getAuth().deleteUser(ownerId); },
@@ -861,6 +1113,143 @@ export const spaceDocument = onRequest(
   },
 );
 
+/** Server-rendered Creator route. Aliases redirect to one canonical handle and
+ * non-public profiles return generic, noindex HTML. */
+export const creatorDocument = onRequest(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
+  async (request, response) => {
+    const startedAt = Date.now();
+    response.set("Content-Type", "text/html; charset=utf-8");
+    response.set("X-Content-Type-Options", "nosniff");
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("Allow", "GET, HEAD");
+      response.status(405).send("Method not allowed");
+      return;
+    }
+    const requestedHandle = requestRouteValue(request.path, "creators");
+    try {
+      const delivery = await creatorDeliveryForHandle(requestedHandle);
+      if (delivery.kind === "public" && requestedHandle !== delivery.profile.handle) {
+        response.set("Cache-Control", "public, max-age=300, s-maxage=3600");
+        response.redirect(301, creatorCanonicalUrl(delivery.profile.handle));
+        return;
+      }
+      response.set("Cache-Control", delivery.kind === "public"
+        ? "public, max-age=0, s-maxage=60, must-revalidate"
+        : "private, no-store, max-age=0");
+      response.set("X-Robots-Tag", delivery.kind === "public"
+        ? "index,follow,max-image-preview:large"
+        : "noindex,nofollow,noarchive");
+      response.status(delivery.kind === "public" ? 200 : 404)
+        .send(renderCreatorDocument(generatedAppShell(), delivery));
+      logOperation("creator_document", "success", startedAt, { delivery: delivery.kind });
+    } catch (error) {
+      const delivery: CreatorDelivery = { kind: "temporary-error" };
+      response.set("Cache-Control", "private, no-store, max-age=0");
+      response.set("X-Robots-Tag", "noindex,nofollow,noarchive");
+      response.status(503).send(renderCreatorDocument(generatedAppShell(), delivery));
+      logOperation("creator_document", "failure", startedAt, { errorClass: classifyServerError(error) });
+    }
+  },
+);
+
+/** Narrow public JSON projection consumed by the lightweight Creator page. */
+export const creatorProfileData = onRequest(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
+  async (request, response) => {
+    response.set("Content-Type", "application/json; charset=utf-8");
+    response.set("X-Content-Type-Options", "nosniff");
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("Allow", "GET, HEAD");
+      response.status(405).json({ error: "method-not-allowed" });
+      return;
+    }
+    const handle = requestRouteValue(request.path, "creator-profiles", ".json");
+    try {
+      const delivery = await creatorDeliveryForHandle(handle);
+      const payload = publicCreatorPayload(delivery);
+      if (!payload) {
+        response.set("Cache-Control", "private, no-store, max-age=0");
+        response.status(404).json({ error: "not-found" });
+        return;
+      }
+      response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
+      response.status(200).json(payload);
+    } catch {
+      response.set("Cache-Control", "private, no-store, max-age=0");
+      response.status(503).json({ error: "temporary-error" });
+    }
+  },
+);
+
+/** Public image proxy. It checks current profile visibility before serving and
+ * never discloses the backing object path. */
+export const creatorImage = onRequest(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
+  async (request, response) => {
+    response.set("X-Content-Type-Options", "nosniff");
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("Allow", "GET, HEAD");
+      response.status(405).send("Method not allowed");
+      return;
+    }
+    const handle = requestRouteValue(request.path, "creator-images", ".webp");
+    try {
+      const normalized = normalizeCreatorHandle(handle);
+      if (!normalized) throw new Error("not-found");
+      const handleSnapshot = await db.collection("creatorHandles").doc(normalized).get();
+      const creatorId = handleSnapshot.data()?.creatorId;
+      if (typeof creatorId !== "string") throw new Error("not-found");
+      const profile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
+      if (!profile?.profilePublic || !profile.imagePresent) throw new Error("not-found");
+      const [bytes] = await getStorage().bucket().file(`creator-public/${creatorId}/avatar.webp`).download();
+      response.set("Content-Type", "image/webp");
+      response.set("Cache-Control", "public, max-age=300, s-maxage=3600");
+      response.status(200).send(request.method === "HEAD" ? undefined : bytes);
+    } catch {
+      response.set("Cache-Control", "private, no-store");
+      response.status(404).send("Not found");
+    }
+  },
+);
+
+/** Gallery attribution is resolved server-side so public UI never derives a
+ * Creator URL from an owner UID. */
+export const creatorAttribution = onRequest(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
+  async (request, response) => {
+    response.set("Content-Type", "application/json; charset=utf-8");
+    response.set("X-Content-Type-Options", "nosniff");
+    const spaceId = requestRouteValue(request.path, "creator-attributions", ".json");
+    if ((request.method !== "GET" && request.method !== "HEAD") || !spaceId) {
+      response.status(request.method === "GET" || request.method === "HEAD" ? 404 : 405).json({ error: "not-found" });
+      return;
+    }
+    try {
+      const gallery = await publicDeliveryManifest(spaceId);
+      const delivery = classifySpaceForDelivery(spaceId, gallery);
+      const ownerId = gallery?.ownerId;
+      if (delivery.kind !== "public" || typeof ownerId !== "string") throw new Error("not-public");
+      const owner = await db.collection("creatorAccountOwners").doc(ownerId).get();
+      const creatorId = owner.data()?.creatorId;
+      if (typeof creatorId !== "string") throw new Error("no-creator");
+      const profileSnapshot = await db.collection("creatorProfiles").doc(creatorId).get();
+      const profile = parseCreatorProfileInput(profileSnapshot.data());
+      if (!profile?.profilePublic) throw new Error("private-creator");
+      response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
+      response.status(200).json({
+        schemaVersion: 1,
+        displayName: profile.displayName,
+        handle: profile.handle,
+        profileUrl: creatorCanonicalUrl(profile.handle),
+      });
+    } catch {
+      response.set("Cache-Control", "private, no-store, max-age=0");
+      response.status(404).json({ error: "not-found" });
+    }
+  },
+);
+
 /** Public cover proxy. Storage paths and protected Space media never enter metadata. */
 export const spaceCard = onRequest(
   { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
@@ -946,9 +1335,22 @@ export const spaceSitemap = onRequest(
       const spaces = [...documents.values()]
         .map((document) => classifySpaceForDelivery(document.id, document.data()))
         .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public");
+      const creatorProfiles = await db.collection("creatorProfiles")
+        .where("profilePublic", "==", true)
+        .limit(500)
+        .get();
+      const creators = creatorProfiles.docs.flatMap((document) => {
+        const profile = parseCreatorProfileInput(document.data());
+        if (!profile?.profilePublic) return [];
+        const updated = timestampMilliseconds(document.data().updatedAt);
+        return [{
+          handle: profile.handle,
+          ...(updated !== undefined ? { updatedAt: new Date(updated).toISOString() } : {}),
+        }];
+      });
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
-      response.status(200).send(renderPublicSitemap(spaces));
-      logOperation("space_sitemap", "success", startedAt, { count: spaces.length });
+      response.status(200).send(renderPublicSitemap(spaces, creators));
+      logOperation("space_sitemap", "success", startedAt, { count: spaces.length + creators.length });
     } catch (error) {
       response.set("Cache-Control", "private, no-store, max-age=0");
       response.set("X-Robots-Tag", "noindex");
