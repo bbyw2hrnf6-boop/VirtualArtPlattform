@@ -19,6 +19,7 @@ describe("Space route contract", () => {
   });
 
   it("builds and matches a clean Creator profile without exposing an account ID", () => {
+    expect(matchCreatorRoute("/creators")).toEqual({ kind: "hub" });
     expect(creatorCanonicalUrl("studio-north")).toBe("https://lieuva.com/creators/studio-north");
     expect(creatorPath("studio-north")).toBe("/creators/studio-north");
     expect(matchCreatorRoute("/creators/studio-north")).toEqual({

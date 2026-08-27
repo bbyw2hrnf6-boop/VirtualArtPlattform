@@ -1644,7 +1644,8 @@ function buildRoom(
   const portalDepth = template.architecture.portalDepth;
   const portalWidth = template.architecture.entranceWidth;
   const portalHeight = Math.min(h - 0.55, draft.templateId === "pavilion" ? 4.35 : 3.72);
-  const portalZ = d / 2 - template.architecture.thresholdDepth;
+  // Seat the trim into the south wall instead of floating in front of it.
+  const portalZ = d / 2 - portalDepth / 2 - 0.018;
   [-1, 1].forEach((side) => {
     const jamb = new THREE.Mesh(
       new RoundedBoxGeometry(
@@ -1692,6 +1693,24 @@ function buildRoom(
   threshold.receiveShadow = true;
   threshold.userData.noWalkCollision = true;
   architecture.add(threshold);
+  const exitPortal = new THREE.Mesh(
+    new THREE.PlaneGeometry(
+      Math.max(1, portalWidth - template.architecture.trimScale * 1.3),
+      Math.max(1, portalHeight - template.architecture.trimScale * 0.75),
+    ),
+    new THREE.MeshStandardMaterial({
+      color: "#10110f",
+      roughness: 0.88,
+      emissive: "#11130f",
+      emissiveIntensity: 0.12,
+      side: THREE.DoubleSide,
+    }),
+  );
+  exitPortal.position.set(0, portalHeight / 2, d / 2 - 0.028);
+  exitPortal.rotation.y = Math.PI;
+  exitPortal.name = "lieuva-exit-portal";
+  exitPortal.userData.exitPortal = true;
+  architecture.add(exitPortal);
   if (draft.templateId === "white-cube") {
     const revealMaterial = wall.clone();
     const glowMaterial = new THREE.MeshStandardMaterial({
@@ -3237,6 +3256,7 @@ export interface GallerySceneProps {
   artworkDirectoryUnavailable?: boolean;
   artworkButtonRef?: RefObject<HTMLButtonElement | null>;
   onOpenArtworkDirectory?: () => void;
+  onExitSpace?: () => void;
 }
 
 function observeRenderActivity(
@@ -3652,6 +3672,7 @@ function GallerySceneRenderer({
   artworkDirectoryUnavailable,
   artworkButtonRef,
   onOpenArtworkDirectory,
+  onExitSpace,
 }: GallerySceneProps) {
   const host = useRef<HTMLDivElement>(null);
   const introPlayed = useRef(false);
@@ -3685,6 +3706,7 @@ function GallerySceneRenderer({
     onIntroComplete,
     onArtworkFocus,
     onViewModeChange,
+    onExitSpace,
   });
   const runtimeKey = `${draft.templateId}:${visitor ? "visitor" : "editor"}`;
   useEffect(() => {
@@ -3705,6 +3727,7 @@ function GallerySceneRenderer({
       onIntroComplete,
       onArtworkFocus,
       onViewModeChange,
+      onExitSpace,
     };
   }, [
     draft,
@@ -3723,6 +3746,7 @@ function GallerySceneRenderer({
     onIntroComplete,
     onArtworkFocus,
     onViewModeChange,
+    onExitSpace,
   ]);
   useEffect(() => {
     if (!host.current) return;
@@ -4891,6 +4915,16 @@ function GallerySceneRenderer({
             );
           }
         }
+        return;
+      }
+      const exitPortal = scene.getObjectByName("lieuva-exit-portal");
+      if (
+        mode === "walk" &&
+        exitPortal &&
+        raycaster.intersectObject(exitPortal, false).length > 0 &&
+        latest.current.onExitSpace
+      ) {
+        latest.current.onExitSpace();
         return;
       }
       if (artworkId) {

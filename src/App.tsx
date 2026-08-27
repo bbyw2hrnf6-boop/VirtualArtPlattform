@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Logo } from "./components/Logo";
 import { SpaceShareMenu } from "./components/SpaceShareMenu";
+import { FullscreenButton } from "./components/FullscreenButton";
 import { PRODUCT_BRAND } from "./config/brand";
 import { PitchSections } from "./features/landing/PitchSections";
 import "./features/landing/landingConversion.css";
@@ -135,9 +136,10 @@ const ScrollGalleryStory = lazy(() =>
 );
 const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
 const CreatorProfilePage = lazy(() => import("./features/creator/CreatorProfilePage"));
+const CreatorHubPage = lazy(() => import("./features/creator/CreatorHubPage"));
 
 type Route = {
-  page: "home" | "create" | "demo" | "gallery" | "creator" | "data" | "auth-action" | "account" | "space-not-found";
+  page: "home" | "create" | "demo" | "gallery" | "creator" | "creators" | "data" | "auth-action" | "account" | "space-not-found";
   id?: string;
   handle?: string;
   template?: TemplateId;
@@ -297,6 +299,7 @@ const routeFromLocation = (): Route => {
   if (creatorRoute?.kind === "malformed") return { page: "space-not-found" };
   if (creatorRoute?.kind === "creator")
     return { page: "creator", handle: creatorRoute.handle };
+  if (creatorRoute?.kind === "hub") return { page: "creators" };
   const hash = location.hash.replace(/^#/, "");
   if (hash === "/create") return { page: "create" };
   const templateMatch =
@@ -323,6 +326,9 @@ const navigate = (path: string) => {
     const id = path.slice("/spaces/".length);
     const target = spaceCanonicalUrl(id, location.href);
     location.assign(target);
+    return;
+  } else if (path === "/creators") {
+    location.assign(`${new URL(applicationRootUrl(location.href)).origin}/creators`);
     return;
   } else if (path.startsWith("/creators/")) {
     const handle = path.slice("/creators/".length);
@@ -356,6 +362,7 @@ function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () =>
       <nav>
         <span className="preview-status">{PRODUCT_BRAND.previewLabel}</span>
         {onSearch && <button className="site-header__search" onClick={onSearch} aria-label="Search public Spaces and Creators"><span>Search</span> <i aria-hidden="true">⌕</i></button>}
+        <button className="site-header__creators" onClick={() => navigate("/creators")}>Creators</button>
         <button className="site-header__demo" onClick={() => landingNavigate("/demo", "landing_example_entered", "header")}>{PRODUCT_BRAND.secondaryCta}</button>
         <AccountButton light={light} />
         <button className="site-header__create" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "header")}>
@@ -433,8 +440,6 @@ function GlobalDirectorySearch({ open, onClose }: { open: boolean; onClose: () =
     </div>
   );
 }
-
-const templatePreview = (templateId: TemplateId) => `./assets/templates/${templateId === "pavilion" ? "pavilion" : templateId}-preview.webp`;
 
 const LANDING_WORKFLOW = [
   ["01", "Create", "Choose a spatial starting point."],
@@ -740,9 +745,7 @@ function DiscoverGalleries() {
           </div>
         )}
         {visibleGalleries.map((gallery) => {
-          const cover =
-            gallery.coverSrc ||
-            gallery.artworks.find((artwork) => !artwork.hidden)?.src;
+          const cover = gallery.coverSrc;
           const days = Math.max(
             1,
             Math.ceil(
@@ -761,9 +764,7 @@ function DiscoverGalleries() {
                 <div className="discover-cover">
                   {cover ? (
                     <img src={cover} alt="" loading="lazy" decoding="async" />
-                  ) : (
-                    <img src={templatePreview(gallery.templateId)} alt="" loading="lazy" decoding="async" />
-                  )}
+                  ) : <div className="discover-cover__missing"><small>Room view unavailable</small><strong>{gallery.title}</strong></div>}
                   <span>{days <= 30 ? `${days} days left` : "Live Space"}</span>
                 </div>
                 <p>{gallery.artist} · {TEMPLATES.find((item) => item.id === gallery.templateId)?.name}</p>
@@ -798,10 +799,10 @@ function Landing() {
   return (
     <main className="landing">
       <Header onSearch={() => setDirectoryOpen(true)} />
+      <DeferredScrollStory />
       <BrandHero onSearch={() => setDirectoryOpen(true)} />
       <GlobalDirectorySearch open={directoryOpen} onClose={() => setDirectoryOpen(false)} />
       <LandingProductProof />
-      <DeferredScrollStory />
       <RoomShowcase />
       <PitchSections />
       <DiscoverGalleries />
@@ -4105,6 +4106,7 @@ function Demo() {
             visibility="public"
             source="reference_demo"
           />
+          <FullscreenButton target={viewer} />
           <button onClick={() => navigate("/create")}>Create a Space ↗</button>
         </div>
       </header>
@@ -4364,6 +4366,7 @@ function PublishedGallery({ id }: { id: string }) {
             visibility={gallery.visibility}
             source="published_viewer"
           />
+          <FullscreenButton target={viewer} />
           <button onClick={() => navigate("/create")}>Create a Space ↗</button>
         </div>
       </header>
@@ -4383,6 +4386,7 @@ function PublishedGallery({ id }: { id: string }) {
           setArtworkFocus(null);
           setDirectoryOpen(true);
         }}
+        onExitSpace={() => navigate("/")}
       />
       {sceneUnavailable && (
         <span className="visually-hidden" role="status">
@@ -4453,7 +4457,7 @@ export default function App() {
       (route.page === "gallery" && document.querySelector('meta[name="lieuva:space-state"]')) ||
       (route.page === "creator" && document.querySelector('meta[name="lieuva:creator-state"]'));
     if (!deliveredServerMetadata) applyPageMetadata(pageMetadataPolicy(
-      route.page === "gallery" || route.page === "creator" ? "other" : route.page,
+      route.page === "gallery" || route.page === "creator" || route.page === "creators" ? "other" : route.page,
     ));
     if (previousRoute.current === routeKey) return;
     previousRoute.current = routeKey;
@@ -4497,6 +4501,7 @@ export default function App() {
     if (route.page === "account") return <AccountPage />;
     if (route.page === "creator" && route.handle)
       return <CreatorProfilePage handle={route.handle} />;
+    if (route.page === "creators") return <CreatorHubPage />;
     if (route.page === "auth-action") return <AuthActionPage />;
     if (route.page === "space-not-found")
       return (

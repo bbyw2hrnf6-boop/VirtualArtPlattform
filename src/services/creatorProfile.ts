@@ -129,6 +129,20 @@ export type CreatorFollowState = {
   isSelf: boolean;
 };
 
+export type CreatorHomePayload = {
+  schemaVersion: 1;
+  following: PublicCreatorDirectoryEntry[];
+  updates: Array<CreatorSpaceCard & { handle: string; displayName: string }>;
+};
+
+export async function loadCreatorHome() {
+  const result = await httpsCallable<Record<string, never>, CreatorHomePayload>(
+    firebaseFunctions,
+    "getMyLieuvaCreatorHome",
+  )({});
+  return result.data;
+}
+
 export async function manageCreatorFollow(handle: string, action: "status" | "follow" | "unfollow") {
   const result = await httpsCallable<
     { handle: string; action: "status" | "follow" | "unfollow" },

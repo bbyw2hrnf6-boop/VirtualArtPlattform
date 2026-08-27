@@ -12,6 +12,7 @@ export type SpaceRouteMatch =
   | null;
 
 export type CreatorRouteMatch =
+  | { kind: "hub" }
   | { kind: "creator"; handle: string }
   | { kind: "malformed" }
   | null;
@@ -90,6 +91,7 @@ export function matchSpaceRoute(pathname: string, hash: string): SpaceRouteMatch
 }
 
 export function matchCreatorRoute(pathname: string): CreatorRouteMatch {
+  if (pathname === "/creators" || pathname === "/creators/") return { kind: "hub" };
   const match = /^\/creators\/([^/]+)\/?$/.exec(pathname);
   if (match) {
     const handle = safelyDecoded(match[1]);
@@ -97,7 +99,7 @@ export function matchCreatorRoute(pathname: string): CreatorRouteMatch {
       ? { kind: "creator", handle }
       : { kind: "malformed" };
   }
-  return pathname === "/creators" || pathname.startsWith("/creators/")
+  return pathname.startsWith("/creators/")
     ? { kind: "malformed" }
     : null;
 }

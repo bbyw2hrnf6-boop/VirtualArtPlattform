@@ -644,6 +644,9 @@ export function AccountDialog({
               <button role="tab" aria-selected={section === "account"} onClick={() => setSection("account")}>Account &amp; security</button>
               <button role="tab" aria-selected={section === "data"} onClick={() => setSection("data")}>Data &amp; rights</button>
             </div>
+            <a className="account-creator-space-link" href="/creators">
+              Open Creator Space <span aria-hidden="true">→</span>
+            </a>
             {account.emailVerified && section === "rooms" && <AccountRooms session={account} />}
             {account.emailVerified && section === "creator" && <CreatorProfileSettings account={account} />}
             {account.emailVerified && section === "account" && (

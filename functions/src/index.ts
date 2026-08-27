@@ -497,6 +497,45 @@ export const manageLieuvaCreatorFollow = onCall(
   },
 );
 
+/** Private home feed made only from already-public Creator profiles and their
+ * public Space updates. No post or private-Space data is projected. */
+export const getMyLieuvaCreatorHome = onCall(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const owner = await db.collection("creatorAccountOwners").doc(uid).get();
+    const creatorId = owner.data()?.creatorId;
+    if (typeof creatorId !== "string") return { schemaVersion: 1, following: [], updates: [] };
+    const follows = await db.collection("creatorFollows")
+      .where("followerCreatorId", "==", creatorId).limit(50).get();
+    const followedIds = follows.docs
+      .map((document) => document.data().followedCreatorId)
+      .filter((value): value is string => typeof value === "string");
+    const profiles = await Promise.all(followedIds.map((id) => db.collection("creatorProfiles").doc(id).get()));
+    const publicProfiles = profiles
+      .map((snapshot) => parseCreatorProfileInput(snapshot.data()))
+      .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile?.profilePublic));
+    const deliveries = await Promise.all(publicProfiles.map((profile) => creatorDeliveryForHandle(profile.handle)));
+    const following = publicProfiles.map((profile) => ({
+      handle: profile.handle,
+      displayName: profile.displayName,
+      bio: profile.bio,
+      imagePresent: profile.imagePresent,
+      followerCount: profile.followerCount,
+    }));
+    const updates = deliveries.flatMap((delivery) => delivery.kind === "public"
+      ? delivery.spaces.map((space) => ({
+          ...space,
+          handle: delivery.profile.handle,
+          displayName: delivery.profile.displayName,
+        }))
+      : [])
+      .sort((left, right) => (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
+      .slice(0, 24);
+    return { schemaVersion: 1, following, updates };
+  },
+);
+
 /** Account-wide portability export. Media binaries stay in Storage; exact paths
  * and metadata make the data footprint inspectable without exposing signed URLs. */
 export const exportAuraAccountData = onCall(
