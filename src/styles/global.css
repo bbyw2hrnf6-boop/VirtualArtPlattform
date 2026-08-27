@@ -24,6 +24,7 @@
 @media(max-width:900px){.manifesto{padding-left:6vw;padding-right:6vw}.difference,.horizon{grid-template-columns:1fr}.difference-list article{grid-template-columns:35px 1fr}.difference-list article p{grid-column:2}.horizon{gap:7vh}.artwork-info{top:138px}}
 @media(max-width:620px){.manifesto{padding:11vh 24px}.manifesto blockquote{font-size:13vw}.manifesto>div p{font-size:20px}.difference{padding:11vh 24px}.difference h2,.horizon h2{font-size:16vw}.difference-list article{gap:14px}.audience{padding:8vh 20px}.audience span{font-size:18px}.horizon{padding:11vh 24px}.artwork-info{right:12px;top:132px;width:calc(100vw - 24px)}.artwork-info>img{height:140px}.cinematic-intro>div{bottom:28px}.cinematic-intro button{right:12px;bottom:72px}}
 .upload.is-uploading{border-color:#8c9570;background:#20221c;cursor:wait}.upload.is-uploading>span{animation:upload-spin 1s linear infinite}.upload-error{margin:9px 0 0;color:#d79f87;font-size:8px;line-height:1.55}@keyframes upload-spin{to{transform:rotate(360deg)}}
+.upload-ready{margin:9px 0 0;padding:8px 10px;border-left:2px solid var(--acid);background:#d9ff430d;color:#c9ceba;font-size:10px;line-height:1.45}
 .wall-preview-note{margin:0;padding:8px 10px;background:#20211e;color:#898b82;font-size:8px;line-height:1.55}
 .swatches{grid-template-columns:repeat(auto-fit,minmax(48px,1fr))}
 .swatches button{min-width:0}.swatches i{border:1px solid #ffffff18;box-shadow:inset 0 0 18px #00000012}.swatches button span{display:block;overflow:hidden;text-overflow:ellipsis}

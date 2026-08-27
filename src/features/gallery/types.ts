@@ -69,7 +69,14 @@ export type DecorId =
   | "leather-bench"
   | "wood-stool"
   | "rope-barrier";
-export type ArtworkFrame = "black" | "white" | "oak" | "none";
+export type ArtworkFrame =
+  | "black"
+  | "white"
+  | "oak"
+  | "dark-wood"
+  | "metal"
+  | "none";
+export type ArtworkMat = "white" | "warm-white" | "black" | "none";
 
 export interface DecorPlacement {
   id: string;
@@ -87,6 +94,8 @@ export interface Artwork {
   storagePath?: string;
   title: string;
   year?: string;
+  medium?: string;
+  dimensions?: string;
   description?: string;
   src: string;
   aspect: number;
@@ -95,6 +104,7 @@ export interface Artwork {
   y: number;
   scale: number;
   frame?: ArtworkFrame;
+  mat?: ArtworkMat;
   locked?: boolean;
   hidden?: boolean;
 }

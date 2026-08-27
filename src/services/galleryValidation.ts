@@ -5,6 +5,7 @@ import {
   isShortGalleryWall,
   type Artwork,
   type ArtworkFrame,
+  type ArtworkMat,
   type CeilingFinish,
   type DecorId,
   type DecorPlacement,
@@ -32,7 +33,8 @@ const CEILING_FINISHES = ['gallery', 'warm', 'dark', 'skylight', 'vaulted'] as c
 const LIGHTING_PRESETS = ['daylight', 'museum', 'evening'] as const satisfies readonly LightingPreset[];
 const PLANT_POT_FINISHES = ['light', 'black'] as const satisfies readonly PlantPotFinish[];
 const DECOR_IDS = ['olive', 'monstera', 'arc-lamp', 'pedestal', 'gallery-bench', 'stone-sculpture', 'floor-vase', 'ficus', 'snake-plant', 'leather-bench', 'wood-stool', 'rope-barrier'] as const satisfies readonly DecorId[];
-const ARTWORK_FRAMES = ['black', 'white', 'oak', 'none'] as const satisfies readonly ArtworkFrame[];
+const ARTWORK_FRAMES = ['black', 'white', 'oak', 'dark-wood', 'metal', 'none'] as const satisfies readonly ArtworkFrame[];
+const ARTWORK_MATS = ['white', 'warm-white', 'black', 'none'] as const satisfies readonly ArtworkMat[];
 const GALLERY_VISIBILITIES = ['public', 'unlisted', 'private'] as const satisfies readonly GalleryVisibility[];
 const GALLERY_RETENTIONS = ['guest-10-days', 'account-preview'] as const satisfies readonly GalleryRetention[];
 const GALLERY_LIFECYCLE_STATUSES = ['active', 'archived', 'trashed'] as const satisfies readonly GalleryLifecycleStatus[];
@@ -202,6 +204,8 @@ function parseArtwork(value: unknown, index: number, templateId: TemplateId, rec
     ...(storagePathValue ? { storagePath: storagePathValue } : {}),
     title: stringValue(item.title, recordId, `${field}.title`, 80),
     ...(item.year !== undefined ? { year: stringValue(item.year, recordId, `${field}.year`, 12) } : {}),
+    ...(item.medium !== undefined ? { medium: stringValue(item.medium, recordId, `${field}.medium`, 80) } : {}),
+    ...(item.dimensions !== undefined ? { dimensions: stringValue(item.dimensions, recordId, `${field}.dimensions`, 80) } : {}),
     ...(item.description !== undefined ? { description: stringValue(item.description, recordId, `${field}.description`, 240) } : {}),
     src,
     aspect: numberValue(item.aspect, recordId, `${field}.aspect`, .08, 12),
@@ -211,6 +215,9 @@ function parseArtwork(value: unknown, index: number, templateId: TemplateId, rec
     scale: numberValue(item.scale, recordId, `${field}.scale`, .2, 3),
     ...(item.frame !== undefined
       ? { frame: enumValue(item.frame, ARTWORK_FRAMES, recordId, `${field}.frame`) }
+      : {}),
+    ...(item.mat !== undefined
+      ? { mat: enumValue(item.mat, ARTWORK_MATS, recordId, `${field}.mat`) }
       : {})
   };
 }

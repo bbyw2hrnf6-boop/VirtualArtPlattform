@@ -8,6 +8,7 @@ import {
   type GalleryDraft,
   type WallId,
 } from "../types";
+import { artworkPresentationMetrics } from "../artworkPresentation";
 
 const ARTWORK_HEIGHT_METRES = 1.5;
 const ARTWORK_EDGE_CLEARANCE = 0.22;
@@ -103,6 +104,13 @@ export function artworkSize(artwork: Pick<Artwork, "aspect" | "scale">) {
   return { width: height * artwork.aspect, height };
 }
 
+export function artworkOuterSize(
+  artwork: Pick<Artwork, "aspect" | "scale" | "frame" | "mat">,
+) {
+  const metrics = artworkPresentationMetrics(artwork);
+  return { width: metrics.outerWidth, height: metrics.outerHeight };
+}
+
 function wallDimensions(template: GalleryTemplate, wall: WallId) {
   return {
     width: isShortGalleryWall(wall)
@@ -118,7 +126,7 @@ function wallDimensions(template: GalleryTemplate, wall: WallId) {
 
 export function artworkHorizontalBounds(draft: GalleryDraft, artwork: Artwork) {
   const surface = wallDimensions(getTemplate(draft.templateId), artwork.wall);
-  const { width } = artworkSize(artwork);
+  const { width } = artworkOuterSize(artwork);
   return {
     min: minimumGridValue(
       -surface.width / 2 + width / 2 + ARTWORK_EDGE_CLEARANCE,
@@ -327,7 +335,7 @@ export function validateArtworkPlacement(
     };
   }
   const surface = wallDimensions(template, artwork.wall);
-  const size = artworkSize(artwork);
+  const size = artworkOuterSize(artwork);
   const rectangle = { x: artwork.x, y: artwork.y, ...size };
   if (
     size.width + ARTWORK_EDGE_CLEARANCE * 2 > surface.width ||
@@ -374,7 +382,7 @@ export function validateArtworkPlacement(
       item.wall === artwork.wall &&
       rectanglesOverlap(
         rectangle,
-        { x: item.x, y: item.y, ...artworkSize(item) },
+        { x: item.x, y: item.y, ...artworkOuterSize(item) },
         ARTWORK_GAP_X,
         ARTWORK_GAP_Y,
       ),
@@ -456,7 +464,7 @@ export function findAvailableArtworkPlacement(
   if (!artwork || !galleryWalls(draft.templateId).includes(wall)) return null;
   const template = getTemplate(draft.templateId);
   const surface = wallDimensions(template, wall);
-  const size = artworkSize(artwork);
+  const size = artworkOuterSize(artwork);
   if (
     size.width + ARTWORK_EDGE_CLEARANCE * 2 > surface.width ||
     size.height + ARTWORK_EDGE_CLEARANCE * 2 > surface.height

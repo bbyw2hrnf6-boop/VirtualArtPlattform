@@ -1,5 +1,9 @@
 import type { Artwork } from "../features/gallery/types";
 
+export const ARTWORK_IMAGE_MAXIMUM_DIMENSION = 2048;
+export const ARTWORK_IMAGE_MAXIMUM_BYTES = 570_000;
+const ARTWORK_IMAGE_MAXIMUM_DATA_URL_LENGTH = 779_000;
+
 async function workerImage(file: File) {
   return new Promise<{ blob: Blob; aspect: number }>((resolve, reject) => {
     const worker = new Worker(
@@ -29,7 +33,11 @@ async function workerImage(file: File) {
       worker.terminate();
       reject(new Error("Image worker unavailable."));
     });
-    worker.postMessage({ file, maximumDimension: 1200, maximumBytes: 540_000 });
+    worker.postMessage({
+      file,
+      maximumDimension: ARTWORK_IMAGE_MAXIMUM_DIMENSION,
+      maximumBytes: ARTWORK_IMAGE_MAXIMUM_BYTES,
+    });
   });
 }
 
@@ -60,21 +68,44 @@ async function mainThreadImage(file: File): Promise<Pick<Artwork, "src" | "aspec
       ));
       image.src = url;
     });
-    const scale = Math.min(1, 1200 / Math.max(image.naturalWidth, image.naturalHeight));
-    const canvas = document.createElement("canvas");
+    const scale = Math.min(
+      1,
+      ARTWORK_IMAGE_MAXIMUM_DIMENSION /
+        Math.max(image.naturalWidth, image.naturalHeight),
+    );
+    let canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
     canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Your browser could not prepare this image.");
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    let quality = 0.78;
-    let src = canvas.toDataURL("image/webp", quality);
-    if (!src.startsWith("data:image/webp")) src = canvas.toDataURL("image/jpeg", 0.82);
-    while (src.length > 720_000 && quality > 0.38) {
-      quality -= 0.08;
-      src = canvas.toDataURL(src.startsWith("data:image/webp") ? "image/webp" : "image/jpeg", quality);
+    let quality = 0.9;
+    let type = "image/webp";
+    let src = canvas.toDataURL(type, quality);
+    if (!src.startsWith("data:image/webp")) {
+      type = "image/jpeg";
+      src = canvas.toDataURL(type, quality);
     }
-    if (src.length > 780_000)
+    while (src.length > ARTWORK_IMAGE_MAXIMUM_DATA_URL_LENGTH && quality > 0.56) {
+      quality -= 0.06;
+      src = canvas.toDataURL(type, quality);
+    }
+    while (
+      src.length > ARTWORK_IMAGE_MAXIMUM_DATA_URL_LENGTH &&
+      Math.max(canvas.width, canvas.height) > 960
+    ) {
+      const resized = document.createElement("canvas");
+      resized.width = Math.max(1, Math.round(canvas.width * 0.86));
+      resized.height = Math.max(1, Math.round(canvas.height * 0.86));
+      const resizedContext = resized.getContext("2d");
+      if (!resizedContext)
+        throw new Error("Your browser could not resize this image.");
+      resizedContext.drawImage(canvas, 0, 0, resized.width, resized.height);
+      canvas = resized;
+      quality = 0.82;
+      src = canvas.toDataURL(type, quality);
+    }
+    if (src.length > ARTWORK_IMAGE_MAXIMUM_DATA_URL_LENGTH)
       throw new Error(`${file.name} could not be compressed below the gallery limit.`);
     return { src, aspect: canvas.width / canvas.height };
   } finally {
@@ -89,7 +120,7 @@ export async function imageFromFile(file: File): Promise<Pick<Artwork, "src" | "
     try {
       const prepared = await workerImage(file);
       const src = await blobAsDataUrl(prepared.blob);
-      if (src.length > 780_000)
+      if (src.length > ARTWORK_IMAGE_MAXIMUM_DATA_URL_LENGTH)
         throw new Error(`${file.name} could not be compressed below the gallery limit.`);
       return { src, aspect: prepared.aspect };
     } catch (error) {

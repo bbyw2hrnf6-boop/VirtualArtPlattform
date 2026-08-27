@@ -6,6 +6,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { isShortGalleryWall, type DecorPlacement, type GalleryDraft, type WallId } from "./types";
+import { artworkPresentationMetrics } from "./artworkPresentation";
 import { getTemplate } from "./templates";
 import {
   createAdaptiveDpr,
@@ -159,6 +160,36 @@ const wallColors = {
   "marble-wall": "#e8e6df",
   "dark-stone": "#24332d",
 };
+
+function createWoodFrameTexture(dark = false) {
+  const surface = document.createElement("canvas");
+  surface.width = 192;
+  surface.height = 48;
+  const context = surface.getContext("2d");
+  if (!context) return null;
+  context.fillStyle = dark ? "#33241c" : "#8b6748";
+  context.fillRect(0, 0, surface.width, surface.height);
+  for (let line = 0; line < 18; line += 1) {
+    const y = 2 + line * 2.7;
+    context.beginPath();
+    for (let x = 0; x <= surface.width; x += 4) {
+      const wave = Math.sin(x * 0.055 + line * 1.7) * (0.7 + (line % 3) * 0.35);
+      if (x === 0) context.moveTo(x, y + wave);
+      else context.lineTo(x, y + wave);
+    }
+    context.strokeStyle = dark
+      ? `rgba(15, 8, 5, ${0.12 + (line % 4) * 0.018})`
+      : `rgba(58, 31, 16, ${0.1 + (line % 4) * 0.018})`;
+    context.lineWidth = line % 5 === 0 ? 1.2 : 0.65;
+    context.stroke();
+  }
+  const texture = new THREE.CanvasTexture(surface);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(3.5, 1);
+  return texture;
+}
 const floorColors = {
   concrete: "#777672",
   oak: "#49382b",
@@ -3314,6 +3345,8 @@ type ArtworkObject = THREE.Group & {
     source?: string;
     aspect?: number;
     scale?: number;
+    presentationKey?: string;
+    frameStyle?: string;
     locked?: boolean;
   };
 };
@@ -3341,15 +3374,35 @@ function createArtworkObject(
   );
   frame.name = "artwork-frame";
   frame.castShadow = true;
+  frame.receiveShadow = true;
+  const mat = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshStandardMaterial({
+      color: "#f1efe8",
+      roughness: 0.88,
+      metalness: 0,
+      envMapIntensity: 0.24,
+      side: THREE.FrontSide,
+    }),
+  );
+  mat.name = "artwork-mat";
+  mat.receiveShadow = true;
   const canvas = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 1),
-    new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }),
+    new THREE.MeshBasicMaterial({
+      color: "#ffffff",
+      toneMapped: false,
+      transparent: true,
+      alphaTest: 0.002,
+      depthWrite: true,
+      side: THREE.FrontSide,
+    }),
   );
   canvas.name = "artwork-canvas";
   // Keep the print surface just proud of the physical frame so thicker,
   // bevelled frames never occlude or z-fight with the artwork.
-  canvas.position.z = 0.046;
-  group.add(frame, canvas);
+  canvas.position.z = 0.047;
+  group.add(frame, mat, canvas);
   group.traverse((item) => {
     item.userData.artworkId = artwork.id;
   });
@@ -3373,24 +3426,41 @@ function syncArtworkObject(
     THREE.PlaneGeometry,
     THREE.MeshBasicMaterial
   >;
-  const height = 1.5 * artwork.scale;
-  const width = height * artwork.aspect;
-  if (
-    group.userData.aspect !== artwork.aspect ||
-    group.userData.scale !== artwork.scale
-  ) {
+  const mat = group.getObjectByName("artwork-mat") as THREE.Mesh<
+    THREE.PlaneGeometry,
+    THREE.MeshStandardMaterial
+  >;
+  const metrics = artworkPresentationMetrics(artwork);
+  const presentationKey = [
+    artwork.aspect,
+    artwork.scale,
+    artwork.frame ?? "black",
+    artwork.mat ?? "none",
+  ].join(":");
+  if (group.userData.presentationKey !== presentationKey) {
     frame.geometry.dispose();
     frame.geometry = new RoundedBoxGeometry(
-      width + 0.12,
-      height + 0.12,
-      0.085,
+      metrics.outerWidth,
+      metrics.outerHeight,
+      metrics.depth,
       4,
-      0.018,
+      Math.min(0.018, metrics.frameBorder * 0.42),
+    );
+    mat.geometry.dispose();
+    mat.geometry = new THREE.PlaneGeometry(
+      metrics.imageWidth + metrics.matBorder * 2,
+      metrics.imageHeight + metrics.matBorder * 2,
     );
     canvas.geometry.dispose();
-    canvas.geometry = new THREE.PlaneGeometry(width, height);
+    canvas.geometry = new THREE.PlaneGeometry(
+      metrics.imageWidth,
+      metrics.imageHeight,
+    );
+    mat.position.z = metrics.depth / 2 + 0.001;
+    canvas.position.z = metrics.depth / 2 + 0.003;
     group.userData.aspect = artwork.aspect;
     group.userData.scale = artwork.scale;
+    group.userData.presentationKey = presentationKey;
   }
   if (group.userData.source !== artwork.src) {
     const previous = canvas.material.map;
@@ -3431,14 +3501,52 @@ function syncArtworkObject(
     artwork.frame === "white"
       ? "#eeeae0"
       : artwork.frame === "oak"
-        ? "#866142"
+        ? "#d8c4aa"
+        : artwork.frame === "dark-wood"
+          ? "#8b7a70"
+          : artwork.frame === "metal"
+            ? "#a9aaa7"
         : "#1c1b19";
-  frame.visible = artwork.frame !== "none";
-  frame.material.color.set(selected ? "#b8945f" : frameColor);
-  frame.material.metalness = artwork.frame === "black" ? 0.16 : 0.025;
-  frame.material.roughness = artwork.frame === "oak" ? 0.48 : artwork.frame === "white" ? 0.34 : 0.38;
-  frame.material.clearcoat = artwork.frame === "oak" ? 0.12 : 0.2;
-  frame.material.clearcoatRoughness = artwork.frame === "oak" ? 0.58 : 0.46;
+  const frameStyle = artwork.frame ?? "black";
+  if (group.userData.frameStyle !== frameStyle) {
+    frame.material.map?.dispose();
+    frame.material.map =
+      frameStyle === "oak"
+        ? createWoodFrameTexture(false)
+        : frameStyle === "dark-wood"
+          ? createWoodFrameTexture(true)
+          : null;
+    group.userData.frameStyle = frameStyle;
+  }
+  frame.visible = true;
+  frame.material.color.set(frameColor);
+  frame.material.emissive.set(selected ? "#282414" : "#000000");
+  frame.material.emissiveIntensity = selected ? 0.2 : 0;
+  frame.material.metalness = frameStyle === "metal" ? 0.74 : frameStyle === "black" ? 0.15 : 0.02;
+  frame.material.roughness =
+    frameStyle === "metal"
+      ? 0.27
+      : frameStyle === "oak" || frameStyle === "dark-wood"
+        ? 0.5
+        : frameStyle === "none"
+          ? 0.62
+          : 0.36;
+  frame.material.clearcoat =
+    frameStyle === "metal" ? 0.28 : frameStyle === "oak" || frameStyle === "dark-wood" ? 0.1 : 0.2;
+  frame.material.clearcoatRoughness = frameStyle === "metal" ? 0.32 : 0.52;
+  frame.material.envMapIntensity = frameStyle === "metal" ? 0.92 : 0.48;
+  const matStyle = artwork.mat ?? "none";
+  mat.visible = matStyle !== "none";
+  mat.material.color.set(
+    matStyle === "black"
+      ? "#171815"
+      : matStyle === "warm-white"
+        ? "#e8e0d1"
+        : "#f2f0e9",
+  );
+  mat.material.roughness = matStyle === "black" ? 0.8 : 0.9;
+  mat.material.needsUpdate = true;
+  frame.material.needsUpdate = true;
   group.visible = !artwork.hidden;
   group.userData.locked = Boolean(artwork.locked);
   const config = WALLS[artwork.wall];
@@ -4761,6 +4869,8 @@ function GallerySceneRenderer({
           description: artwork.description,
           year: artwork.year,
           image: artwork.src,
+          medium: artwork.medium,
+          dimensions: artwork.dimensions,
         });
         return;
       }

@@ -40,8 +40,18 @@ function draft(artworks: Artwork[]): GalleryDraft {
 
 describe('gallery publication payload', () => {
   it('keeps visitor-facing frame choices', () => {
-    const result = prepareGalleryDraftForPublication(draft([artwork({ frame: 'oak' })]));
-    expect(result.artworks[0].frame).toBe('oak');
+    const result = prepareGalleryDraftForPublication(draft([artwork({
+      frame: 'dark-wood',
+      mat: 'warm-white',
+      medium: 'Pigment and resin on aluminium',
+      dimensions: '120 × 90 cm'
+    })]));
+    expect(result.artworks[0]).toMatchObject({
+      frame: 'dark-wood',
+      mat: 'warm-white',
+      medium: 'Pigment and resin on aluminium',
+      dimensions: '120 × 90 cm'
+    });
   });
 
   it('keeps the selected plant-pot finish', () => {
@@ -93,6 +103,12 @@ describe('gallery publication payload', () => {
   it('rejects unsupported public frame values', () => {
     const invalid = draft([artwork()]) as unknown as { artworks: Array<Record<string, unknown>> };
     invalid.artworks[0].frame = 'gold';
+    expect(() => validateGalleryDraft(invalid)).toThrow(GalleryRepositoryDataError);
+  });
+
+  it('rejects unsupported public mat values', () => {
+    const invalid = draft([artwork()]) as unknown as { artworks: Array<Record<string, unknown>> };
+    invalid.artworks[0].mat = 'museum-gold';
     expect(() => validateGalleryDraft(invalid)).toThrow(GalleryRepositoryDataError);
   });
 

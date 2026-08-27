@@ -81,6 +81,21 @@ function object(
 }
 
 describe("artwork placement", () => {
+  it("reserves wall space for frames and mats", () => {
+    const bare = artwork("bare", { frame: "none", mat: "none" });
+    const mounted = artwork("mounted", {
+      frame: "dark-wood",
+      mat: "white",
+    });
+    const bareBounds = artworkHorizontalBounds(draft("white-cube", [bare]), bare);
+    const mountedBounds = artworkHorizontalBounds(
+      draft("white-cube", [mounted]),
+      mounted,
+    );
+    expect(mountedBounds.min).toBeGreaterThan(bareBounds.min);
+    expect(mountedBounds.max).toBeLessThan(bareBounds.max);
+  });
+
   it("exposes divider walls only for the pavilion", () => {
     expect(galleryWalls("white-cube")).toEqual([
       "north",

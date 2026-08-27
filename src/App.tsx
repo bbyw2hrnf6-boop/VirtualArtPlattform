@@ -30,6 +30,11 @@ import {
   type WallId,
   isShortGalleryWall,
 } from "./features/gallery/types";
+import {
+  ARTWORK_FRAME_OPTIONS,
+  ARTWORK_MAT_OPTIONS,
+  artworkPresentationMetrics,
+} from "./features/gallery/artworkPresentation";
 import { createGalleryDraft } from "./features/gallery/editor/draftDefaults";
 import { createDemoCollectionDraft } from "./features/gallery/editor/demoCollection";
 import type { GallerySceneCapture } from "./features/gallery/GalleryScene";
@@ -45,6 +50,7 @@ import {
   galleryWalls,
   updateArtworkPlacement,
   updateDecorPlacement,
+  validateArtworkPlacement,
 } from "./features/gallery/editor/placementValidation";
 import {
   reviewGalleryForPublish,
@@ -1277,6 +1283,7 @@ function Studio({
     total: number;
   }>();
   const [uploadError, setUploadError] = useState<string>();
+  const [uploadReadyCount, setUploadReadyCount] = useState(0);
   const [curating, setCurating] = useState(false);
   const [curationPhase, setCurationPhase] = useState<CurationPhase>("palette");
   const [curationReport, setCurationReport] = useState<CurationReport>();
@@ -1323,6 +1330,9 @@ function Studio({
         : roomDimensions[1] / 2 - 0.8;
   const artworkLimit = selected ? wallLimit(selected.wall) : 3.5;
   const selectedSize = selected ? artworkSize(selected) : undefined;
+  const selectedPresentation = selected
+    ? artworkPresentationMetrics(selected)
+    : undefined;
   const selectedBounds = selected
     ? artworkHorizontalBounds(draft, selected)
     : { min: -artworkLimit, max: artworkLimit };
@@ -1343,6 +1353,8 @@ function Studio({
           description: artwork.description,
           year: artwork.year,
           image: artwork.src,
+          medium: artwork.medium,
+          dimensions: artwork.dimensions,
           imageAlt: `${artwork.title} by ${draft.artist}`,
         })),
     [draft.artist, draft.artworks],
@@ -1500,6 +1512,31 @@ function Studio({
     );
   const updateArtwork = (value: Partial<Artwork>) => {
     if (!selectedId) return;
+    if ("frame" in value || "mat" in value) {
+      const artwork = draftRef.current.artworks.find(
+        (item) => item.id === selectedId,
+      );
+      if (!artwork) return;
+      const candidate = { ...artwork, ...value };
+      const issue = validateArtworkPlacement(draftRef.current, candidate);
+      if (issue) {
+        setPlacementError(
+          `${issue.message} Move the artwork or choose a narrower presentation.`,
+        );
+        return;
+      }
+      setDraft(
+        (current) => ({
+          ...current,
+          artworks: current.artworks.map((item) =>
+            item.id === selectedId ? candidate : item,
+          ),
+        }),
+        `artwork:${selectedId}:presentation`,
+      );
+      setPlacementError(undefined);
+      return;
+    }
     if ("wall" in value || "x" in value || "y" in value || "scale" in value) {
       const result = updateArtworkPlacement(
         draftRef.current,
@@ -1732,6 +1769,7 @@ function Studio({
     const prepared: Artwork[] = [];
     const failures: string[] = [];
     setUploading(true);
+    setUploadReadyCount(0);
     setUploadProgress({ current: 0, total: supported.length });
     trackTelemetry("artwork_upload_started", { template: draft.templateId, count: supported.length });
     setUploadError(undefined);
@@ -1803,6 +1841,7 @@ function Studio({
         working = { ...working, artworks: [...working.artworks, positioned] };
         placed.push(positioned);
       }
+      setUploadReadyCount(placed.length);
       if (placed.length) {
         setDraft(working);
         setPlacementError(undefined);
@@ -2407,6 +2446,11 @@ function Studio({
                 {uploadError}
               </p>
             )}
+            {!uploading && uploadReadyCount > 0 && (
+              <p className="upload-ready" role="status">
+                {uploadReadyCount} {uploadReadyCount === 1 ? "artwork is" : "artworks are"} ready to place.
+              </p>
+            )}
             <div className="artwork-list">
               {draft.artworks.map((artwork, index) => (
                 <button
@@ -2477,6 +2521,30 @@ function Studio({
                     }
                   />
                 </label>
+                <label>
+                  Medium
+                  <input
+                    type="text"
+                    value={selected.medium ?? ""}
+                    maxLength={80}
+                    placeholder="Oil on canvas"
+                    onChange={(event) =>
+                      updateArtwork({ medium: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Original dimensions
+                  <input
+                    type="text"
+                    value={selected.dimensions ?? ""}
+                    maxLength={80}
+                    placeholder="120 × 90 cm"
+                    onChange={(event) =>
+                      updateArtwork({ dimensions: event.target.value })
+                    }
+                  />
+                </label>
                 <label className="placement-note">
                   Artwork note
                   <textarea
@@ -2512,10 +2580,24 @@ function Studio({
                 </div>
                 <p className="inspector-subhead">Frame</p>
                 <Choice
-                  options={["black", "white", "oak", "none"]}
+                  options={ARTWORK_FRAME_OPTIONS.map((option) => option.id)}
+                  labels={Object.fromEntries(
+                    ARTWORK_FRAME_OPTIONS.map((option) => [option.id, option.label]),
+                  )}
                   value={selected.frame ?? "black"}
                   onChange={(frame) =>
                     updateArtwork({ frame: frame as Artwork["frame"] })
+                  }
+                />
+                <p className="inspector-subhead">Mat</p>
+                <Choice
+                  options={ARTWORK_MAT_OPTIONS.map((option) => option.id)}
+                  labels={Object.fromEntries(
+                    ARTWORK_MAT_OPTIONS.map((option) => [option.id, option.label]),
+                  )}
+                  value={selected.mat ?? "none"}
+                  onChange={(mat) =>
+                    updateArtwork({ mat: mat as Artwork["mat"] })
                   }
                 />
                 <label>
@@ -2587,6 +2669,12 @@ function Studio({
                   <small>
                     Aspect ratio stays locked to the uploaded image.
                   </small>
+                  {selectedPresentation && (
+                    <small>
+                      Mounted size: {Math.round(selectedPresentation.outerWidth * 100)} ×{" "}
+                      {Math.round(selectedPresentation.outerHeight * 100)} cm.
+                    </small>
+                  )}
                 </p>
                 <div
                   className="placement-actions"
@@ -2640,6 +2728,33 @@ function Studio({
                     onClick={distributeSelectedWall}
                   >
                     Space this wall
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selected.locked}
+                    onClick={() => {
+                      const placement = findAvailableArtworkPlacement(
+                        draftRef.current,
+                        selected.id,
+                        selected.wall,
+                        0,
+                        DEFAULT_ARTWORK_EYE_LINE_METRES,
+                      );
+                      if (!placement) {
+                        setPlacementError(
+                          "No safe reset position is available on this wall.",
+                        );
+                        return;
+                      }
+                      placeArtwork(
+                        selected.id,
+                        placement.wall,
+                        placement.x,
+                        placement.y,
+                      );
+                    }}
+                  >
+                    Reset placement
                   </button>
                   <button
                     type="button"
@@ -3441,10 +3556,12 @@ function Swatches({
 }
 function Choice({
   options,
+  labels,
   value,
   onChange,
 }: {
   options: string[];
+  labels?: Record<string, string>;
   value: string;
   onChange: (value: string) => void;
 }) {
@@ -3458,7 +3575,7 @@ function Choice({
           aria-pressed={value === item}
           onClick={() => onChange(item)}
         >
-          {item}
+          {labels?.[item] ?? item}
         </button>
       ))}
     </div>
@@ -4181,6 +4298,8 @@ function PublishedGallery({ id }: { id: string }) {
       description: artwork.description,
       year: artwork.year,
       image: artwork.src,
+      medium: artwork.medium,
+      dimensions: artwork.dimensions,
       imageAlt: `${artwork.title} by ${gallery.artist}`,
     }));
   const changeView = (value: ViewMode) => {
