@@ -592,7 +592,7 @@ function DiscoverGalleries() {
     visiblePage * 3 + 3,
   );
   const searching = searchQuery.trim().length > 0;
-  const showReference = !searching && !galleries.length;
+  const showEmptyDirectory = !searching && !galleries.length;
   const removeGallery = async (gallery: GalleryRecord) => {
     if (
       !window.confirm(
@@ -698,54 +698,32 @@ function DiscoverGalleries() {
         </div>
       )}
       <div
-        className={`discover-grid ${showReference ? "discover-grid--reference" : ""}`}
+        className={`discover-grid ${showEmptyDirectory ? "discover-grid--empty" : ""}`}
       >
-        {showReference && (
-          <>
-            <article className="discover-card discover-card--reference">
-              <button
-                className="discover-card-main"
-                onClick={() => landingNavigate("/demo", "landing_example_entered", "discover_reference")}
-              >
-                <div className="discover-cover">
-                  <img
-                    src="./assets/demo/danny-cover.webp"
-                    alt="Threshold virtual exhibition by Danny Hirsch Arts"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <span>Reference demo</span>
-                </div>
-                <p>Danny Hirsch Arts</p>
-                <h3>Threshold</h3>
-                <small>Enter permanent demo →</small>
-              </button>
-            </article>
-            <div className="discover-empty">
-              <span>
-                {status === "idle"
-                  ? "Live exhibitions load here."
-                  : status === "loading"
-                    ? "Looking for open exhibitions…"
-                    : status === "error"
-                      ? "The live feed is unavailable."
-                      : "No community exhibitions are open."}
-              </span>
-              <p>
-                {status === "error"
-                  ? "The reference exhibition stays available. Retry the live community feed when the connection is ready."
-                  : "Explore the reference exhibition or publish the first community Space."}
-              </p>
-              <button
-                className="text-link"
-                onClick={status === "error" ? load : () => landingNavigate("/create", "landing_create_cta_clicked", "discover_empty")}
-              >
-                {status === "error"
-                  ? "Retry live feed →"
-                  : `${PRODUCT_BRAND.primaryCta} →`}
-              </button>
-            </div>
-          </>
+        {showEmptyDirectory && (
+          <div className="discover-empty discover-empty--directory">
+            <p className="eyebrow">Public directory</p>
+            <span>
+              {status === "idle"
+                ? "Public Spaces load here."
+                : status === "loading"
+                  ? "Looking for open Spaces…"
+                  : status === "error"
+                    ? "The directory is taking a pause."
+                    : "Be the first Space in this edition."}
+            </span>
+            <p>
+              {status === "error"
+                ? "Retry the directory without leaving the page."
+                : "Publish a public Space to appear in Discover and Creator search."}
+            </p>
+            <button
+              className="text-link"
+              onClick={status === "error" ? load : () => landingNavigate("/create", "landing_create_cta_clicked", "discover_empty")}
+            >
+              {status === "error" ? "Retry directory →" : `${PRODUCT_BRAND.primaryCta} →`}
+            </button>
+          </div>
         )}
         {searching && !directory.spaces.length && !directory.creators.length && (
           <div className="discover-empty discover-empty--search">
@@ -779,9 +757,9 @@ function DiscoverGalleries() {
                   ) : (
                     <img src={templatePreview(gallery.templateId)} alt="" loading="lazy" decoding="async" />
                   )}
-                  <span>{days} days left</span>
+                  <span>{days <= 30 ? `${days} days left` : "Live Space"}</span>
                 </div>
-                <p>{gallery.artist}</p>
+                <p>{gallery.artist} · {TEMPLATES.find((item) => item.id === gallery.templateId)?.name}</p>
                 <h3>{gallery.title}</h3>
                 <small>Enter Space →</small>
               </button>
@@ -817,57 +795,6 @@ function Landing() {
       <GlobalDirectorySearch open={directoryOpen} onClose={() => setDirectoryOpen(false)} />
       <LandingProductProof />
       <DeferredScrollStory />
-      <section className="demo-tease">
-        <div>
-          <p className="eyebrow">Working reference case</p>
-          <h2>
-            Danny Hirsch
-            <br />
-            <em>Threshold</em>
-          </h2>
-          <p>
-            Brief: preserve the atmosphere of an authored Blender exhibition in
-            one browser link. {PRODUCT_BRAND.name} converted its navigation anchors, routes,
-            artwork metadata, and collision data into an optimized walk,
-            overview, and guided tour.
-          </p>
-          <dl className="case-study-facts">
-            <div>
-              <dt>Brief</dt>
-              <dd>Translate one authored show</dd>
-            </div>
-            <div>
-              <dt>Build</dt>
-              <dd>GLB · anchors · routes · metadata</dd>
-            </div>
-            <div>
-              <dt>Result</dt>
-              <dd>Walk · overview · 7 artwork records</dd>
-            </div>
-          </dl>
-          <button
-            className="button button--light"
-            onClick={() => landingNavigate("/demo", "landing_example_entered", "case_study")}
-          >
-            {PRODUCT_BRAND.secondaryCta} <span>→</span>
-          </button>
-        </div>
-        <button
-          className="demo-image"
-          onClick={() => landingNavigate("/demo", "landing_example_entered", "case_study_image")}
-          aria-label="Explore in 3D — Danny Hirsch Threshold live demo"
-        >
-          <img
-            src="./assets/demo/danny-cover.webp"
-            width="1440"
-            height="1000"
-            loading="lazy"
-            decoding="async"
-            alt="Threshold virtual exhibition by Danny Hirsch Arts"
-          />
-          <span>Explore in 3D ↗</span>
-        </button>
-      </section>
       <RoomShowcase />
       <PitchSections />
       <DiscoverGalleries />
@@ -891,11 +818,6 @@ function Landing() {
 }
 
 function RoomShowcase() {
-  const facts: Record<TemplateId, [string, string]> = {
-    "white-cube": ["16 × 12 m · 8 works", "Solo and duo exhibitions"],
-    nocturne: ["15.5 × 11.5 m · 8 works", "Focused launches and private views"],
-    pavilion: ["40 × 60 m · 14 works", "Institution and brand concepts"],
-  };
   return (
     <section className="room-showcase" aria-labelledby="room-showcase-title">
       <div className="room-showcase-heading">
@@ -907,8 +829,8 @@ function RoomShowcase() {
         </h2>
         <p>
           Start with sample art, then replace it with your own work. These
-          concept images show each room's visual direction; every button opens
-          the working browser builder.
+          Each environment has its own architecture, material palette and light.
+          Every button opens the working browser Studio.
         </p>
       </div>
       <div className="room-showcase-grid">
@@ -925,7 +847,7 @@ function RoomShowcase() {
                 height="752"
                 loading="lazy"
                 decoding="async"
-                alt={`${template.name} premium concept visualization`}
+                alt={`${template.name} environment preview`}
               />
               <span>Try this room ↗</span>
             </button>
@@ -936,11 +858,15 @@ function RoomShowcase() {
             <dl>
               <div>
                 <dt>Scale</dt>
-                <dd>{facts[template.id][0]}</dd>
+                <dd>{template.dimensions[0]} × {template.dimensions[1]} m · {template.maxArtworks} works</dd>
               </div>
               <div>
                 <dt>Best for</dt>
-                <dd>{facts[template.id][1]}</dd>
+                <dd>{template.bestFor}</dd>
+              </div>
+              <div>
+                <dt>Materials</dt>
+                <dd>{template.materialIdentity.wall} · {template.materialIdentity.floor}</dd>
               </div>
             </dl>
           </article>
@@ -1178,7 +1104,7 @@ function TemplatePicker({
                     width="965"
                     height="752"
                     decoding="async"
-                    alt={`${template.name} premium concept visualization`}
+                    alt={`${template.name} environment preview`}
                   />
                   {projects.length > 0 && (
                     <b className="template-draft-badge">
@@ -1191,6 +1117,11 @@ function TemplatePicker({
               <p>{template.label}</p>
               <h2>{template.name}</h2>
               <small>{template.description}</small>
+              <dl className="template-environment-facts">
+                <div><dt>Scale</dt><dd>{template.dimensions[0]} × {template.dimensions[1]} m</dd></div>
+                <div><dt>Light</dt><dd>{template.defaultLighting}</dd></div>
+                <div><dt>Material</dt><dd>{template.materialIdentity.wall}</dd></div>
+              </dl>
               {projects.length > 0 && (
                 <div className="template-project-list" aria-label={`${template.name} saved projects`}>
                   <p>Saved projects</p>
@@ -1213,7 +1144,7 @@ function TemplatePicker({
         })}
       </div>
       <p className="picker-footnote">
-        Concept direction imagery · Every template opens in {PRODUCT_BRAND.name} Studio.
+        Three working environments · Every template opens in {PRODUCT_BRAND.name} Studio.
       </p>
     </main>
   );

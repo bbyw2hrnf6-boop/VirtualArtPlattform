@@ -1603,6 +1603,64 @@ function buildRoom(
   const architecture = new THREE.Group();
   architecture.name = `architecture-${draft.templateId}`;
   scene.add(architecture);
+  const portalMaterial = new THREE.MeshPhysicalMaterial({
+    color: template.materialIdentity.accentColor,
+    roughness: draft.templateId === "nocturne" ? 0.42 : 0.72,
+    metalness: draft.templateId === "nocturne" ? 0.06 : 0.01,
+    clearcoat: draft.templateId === "nocturne" ? 0.12 : 0.025,
+    envMapIntensity: 0.34,
+  });
+  const portalDepth = template.architecture.portalDepth;
+  const portalWidth = template.architecture.entranceWidth;
+  const portalHeight = Math.min(h - 0.55, draft.templateId === "pavilion" ? 4.35 : 3.72);
+  const portalZ = d / 2 - template.architecture.thresholdDepth;
+  [-1, 1].forEach((side) => {
+    const jamb = new THREE.Mesh(
+      new RoundedBoxGeometry(
+        template.architecture.trimScale,
+        portalHeight,
+        portalDepth,
+        4,
+        0.018,
+      ),
+      portalMaterial,
+    );
+    jamb.position.set(side * portalWidth / 2, portalHeight / 2, portalZ);
+    jamb.name = `${draft.templateId}-entrance-jamb-${side < 0 ? "left" : "right"}`;
+    jamb.castShadow = true;
+    jamb.receiveShadow = true;
+    architecture.add(jamb);
+  });
+  const portalHeader = new THREE.Mesh(
+    new RoundedBoxGeometry(
+      portalWidth + template.architecture.trimScale,
+      template.architecture.trimScale,
+      portalDepth,
+      4,
+      0.018,
+    ),
+    portalMaterial,
+  );
+  portalHeader.position.set(0, portalHeight, portalZ);
+  portalHeader.name = `${draft.templateId}-entrance-header`;
+  portalHeader.castShadow = true;
+  portalHeader.receiveShadow = true;
+  architecture.add(portalHeader);
+  const thresholdMaterial = new THREE.MeshPhysicalMaterial({
+    color: template.materialIdentity.floorColor,
+    roughness: draft.templateId === "nocturne" ? 0.48 : 0.64,
+    clearcoat: 0.08,
+    envMapIntensity: 0.32,
+  });
+  const threshold = new THREE.Mesh(
+    new RoundedBoxGeometry(portalWidth + 0.7, 0.035, portalDepth + 0.72, 3, 0.012),
+    thresholdMaterial,
+  );
+  threshold.position.set(0, 0.0175, portalZ);
+  threshold.name = `${draft.templateId}-entrance-threshold`;
+  threshold.receiveShadow = true;
+  threshold.userData.noWalkCollision = true;
+  architecture.add(threshold);
   if (draft.templateId === "white-cube") {
     const revealMaterial = wall.clone();
     const glowMaterial = new THREE.MeshStandardMaterial({
@@ -1706,19 +1764,43 @@ function buildRoom(
       wing.rotation.y = side * -0.34;
       architecture.add(wing);
     });
+    const architecturalSegments = qualityTier === "low" ? 28 : qualityTier === "balanced" ? 44 : 64;
     const stage = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.55, 1.65, 0.18, 64),
+      new THREE.CylinderGeometry(1.55, 1.65, 0.18, architecturalSegments),
       mineral,
     );
     stage.position.set(0, 0.09, 0.65);
     architecture.add(stage);
     const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(1.85, 0.035, 10, 72),
+      new THREE.TorusGeometry(1.85, 0.035, qualityTier === "low" ? 6 : 10, architecturalSegments),
       bronze,
     );
     ring.rotation.x = Math.PI / 2;
     ring.position.set(0, h - 0.32, 0.35);
     architecture.add(ring);
+    const cove = new THREE.MeshStandardMaterial({
+      color: "#4b3827",
+      emissive: "#c78d52",
+      emissiveIntensity: ceilingFinish === "dark" ? 2.2 : 0.72,
+      roughness: 0.48,
+    });
+    [-1, 1].forEach((side) => {
+      const ceilingLine = new THREE.Mesh(
+        new RoundedBoxGeometry(w * 0.62, 0.04, 0.05, 3, 0.01),
+        cove,
+      );
+      ceilingLine.position.set(0, h - 0.12, side * d * 0.31);
+      ceilingLine.visible = !cutaway;
+      ceilingLine.userData.hideInCutaway = true;
+      architecture.add(ceilingLine);
+      const innerPortal = new THREE.Mesh(
+        new RoundedBoxGeometry(w * 0.54, 0.12, portalDepth, 4, 0.025),
+        bronze,
+      );
+      innerPortal.position.set(0, h * 0.73, side * d * 0.24);
+      innerPortal.castShadow = true;
+      architecture.add(innerPortal);
+    });
   }
   if (draft.templateId === "pavilion") {
     // A rational museum plan inspired by the supplied reference: a long central
@@ -1938,6 +2020,22 @@ function buildRoom(
       spine.userData.hideInCutaway = true;
       architecture.add(spine);
     });
+    const datumMaterial = new THREE.MeshPhysicalMaterial({
+      color: "#b8aa93",
+      roughness: 0.66,
+      clearcoat: 0.035,
+      envMapIntensity: 0.28,
+    });
+    [-1, 1].forEach((xSide) => {
+      const datum = new THREE.Mesh(
+        new RoundedBoxGeometry(0.1, 0.16, d * 0.88, 3, 0.014),
+        datumMaterial,
+      );
+      datum.position.set(xSide * sideBoundaryX, 0.08, 0);
+      datum.receiveShadow = true;
+      datum.userData.noWalkCollision = true;
+      architecture.add(datum);
+    });
   }
   if (draft.templateId === "nocturne") {
     const plinth = new THREE.Mesh(
@@ -1947,6 +2045,12 @@ function buildRoom(
     plinth.position.set(0, 0.5, 0.65);
     architecture.add(plinth);
   }
+  architecture.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+  });
   const decorObjects = draft.decor.map((item) =>
     createDecor(item, selectedDecorId === item.id),
   );

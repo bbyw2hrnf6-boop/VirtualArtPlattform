@@ -1,9 +1,10 @@
 import type { GalleryDraft, TemplateId } from '../types';
+import { getTemplate } from '../templates';
 
-const DEFAULT_ATMOSPHERES: Record<TemplateId, Pick<GalleryDraft, 'wall' | 'floor' | 'ceiling' | 'lighting'>> = {
-  'white-cube': { wall: 'chalk', floor: 'concrete', ceiling: 'gallery', lighting: 'daylight' },
-  nocturne: { wall: 'charcoal', floor: 'dark-oak', ceiling: 'dark', lighting: 'evening' },
-  pavilion: { wall: 'travertine', floor: 'marble', ceiling: 'skylight', lighting: 'daylight' }
+const DEFAULT_ATMOSPHERES: Record<TemplateId, Pick<GalleryDraft, 'wall' | 'floor' | 'ceiling'>> = {
+  'white-cube': { wall: 'chalk', floor: 'concrete', ceiling: 'gallery' },
+  nocturne: { wall: 'charcoal', floor: 'dark-oak', ceiling: 'dark' },
+  pavilion: { wall: 'travertine', floor: 'marble', ceiling: 'skylight' }
 };
 
 export function createGalleryDraft(templateId: TemplateId): GalleryDraft {
@@ -12,6 +13,7 @@ export function createGalleryDraft(templateId: TemplateId): GalleryDraft {
     artist: 'Your name',
     templateId,
     ...DEFAULT_ATMOSPHERES[templateId],
+    lighting: getTemplate(templateId).defaultLighting,
     decor: [],
     artworks: []
   };

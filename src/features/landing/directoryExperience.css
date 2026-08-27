@@ -2,3 +2,29 @@
 @media(max-width:900px){.brand-hero>*:not(.brand-hero__media){max-width:70vw}.brand-hero__media{right:-10vw;width:47vw;opacity:.55}.directory-dialog__results{grid-template-columns:1fr}}
 @media(max-width:620px){.site-header__search span{display:none}.site-header__search{min-width:44px;padding:0!important}.brand-hero>*:not(.brand-hero__media){max-width:100%}.brand-hero__media{position:relative;inset:auto;width:100%;height:270px;margin-top:40px;opacity:1}.brand-hero__search{display:none}.brand-hero__signal{display:none}.directory-dialog-backdrop{padding:0}.directory-dialog{width:100%;height:100dvh;max-height:none}.directory-dialog>header{padding:24px 18px 20px}.directory-dialog__field{padding:24px 18px 14px}.directory-dialog__status{padding:0 18px 18px}.directory-dialog__results{padding:0 18px 30px}.discover-heading{padding-bottom:25px}.discover-search{margin-bottom:34px}.discover-card-main:hover{transform:none}}
 @media(prefers-reduced-motion:reduce){.brand-hero__media img,.discover-card-main{transition:none}.brand-hero__media:hover img,.discover-card-main:hover{transform:none}}
+
+/* WP12: editorial directory cards use the published cover as the hero, not a grey template tile. */
+.discover{padding-top:clamp(86px,11vh,150px);background:linear-gradient(180deg,#e4e1d8 0,#d7d3c9 100%)}
+.discover-heading{grid-template-columns:minmax(0,1.45fr) minmax(280px,.55fr);padding-bottom:clamp(34px,5vh,68px)}
+.discover-heading h2{font-size:clamp(64px,8vw,126px);line-height:.8}
+.discover-intro{padding-bottom:8px}
+.discover-search{margin-bottom:clamp(42px,6vh,76px);padding:22px 0 26px}
+.discover-search input{font-size:clamp(28px,3.2vw,52px);letter-spacing:-.025em}
+.discover-grid{gap:clamp(28px,3.4vw,58px) clamp(16px,2vw,30px)}
+.discover-card{display:flex;min-width:0;flex-direction:column}
+.discover-card-main{display:flex;flex:1;flex-direction:column}
+.discover-cover{height:auto;aspect-ratio:4/3;border:1px solid #b6b1a6;background:#bdb8ac;box-shadow:0 24px 54px #38372f1d}
+.discover-cover>img{filter:saturate(.9) contrast(1.035)}
+.discover-card:hover .discover-cover>img{filter:saturate(1.02) contrast(1.02)}
+.discover-cover>span{top:auto;right:14px;bottom:14px;padding:8px 10px;border:0;background:#171816e8;color:#f2f0e8;backdrop-filter:blur(8px)}
+.discover-card-main>p{margin:18px 0 8px;padding:0;color:#575850;font-size:10px;line-height:1.4}
+.discover-card-main h3{margin:0 0 16px;padding:0;font-size:clamp(30px,3vw,48px);line-height:.98;white-space:normal;text-wrap:balance}
+.discover-card-main small{align-self:flex-start;margin-top:auto;font-size:9px}
+.discover-creator-link{margin-top:10px}
+.discover-empty--directory{min-height:330px;padding:clamp(32px,5vw,72px);background:#e8e5dc;border:1px solid #b5b1a6}
+.discover-empty--directory .eyebrow{margin:0 0 28px;color:#74756d}
+.discover-empty--directory>span{max-width:750px;font-size:clamp(38px,5vw,72px);line-height:.95}
+.template-environment-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:20px 0 0;padding-top:14px;border-top:1px solid #b8b7af}
+.template-environment-facts div{min-width:0}.template-environment-facts dt{color:#73756d;font-size:9px;letter-spacing:.1em;text-transform:uppercase}.template-environment-facts dd{margin:5px 0 0;color:#343630;font-size:11px;line-height:1.35;text-transform:capitalize}
+@media(max-width:900px){.discover-heading{grid-template-columns:1fr}.discover-card:first-child:nth-last-child(3){grid-column:1/-1}.discover-card:first-child:nth-last-child(3) .discover-cover{aspect-ratio:16/8}.template-environment-facts{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.discover{padding:82px 20px}.discover-heading h2{font-size:18vw}.discover-search input{font-size:26px}.discover-card:first-child:nth-last-child(3){grid-column:auto}.discover-card:first-child:nth-last-child(3) .discover-cover,.discover-cover{aspect-ratio:4/3}.discover-card-main h3{font-size:38px}.template-environment-facts{grid-template-columns:1fr}.discover-empty--directory{min-height:280px;padding:28px 22px}}

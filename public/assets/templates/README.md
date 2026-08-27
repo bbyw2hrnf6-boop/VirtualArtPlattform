@@ -1,15 +1,15 @@
-# LIEUVA template concept previews
+# LIEUVA template runtime previews
 
-These three 965 × 752 WebP files are photorealistic concept-direction images generated specifically for LIEUVA with OpenAI ImageGen on 2026-08-04. They communicate the intended character of each configurable Space and are explicitly described as concepts in the product UI; they are not screenshots of the current Three.js runtime and contain no third-party stock imagery.
+These three 965 × 752 WebP files are real captures of the shared Three.js Studio runtime, taken from each template's Walk Preview on 2026-08-27. They use the bundled sample artworks and truthfully represent the architecture, lighting and default material direction that opens in Studio.
 
-- `white-cube-preview.webp`: luminous white museum room, warm daylight, restrained dark timber bench
-- `nocturne-preview.webp`: intimate charcoal room, warm spot lighting, jewel-toned works and sculpture
-- `pavilion-preview.webp`: monumental travertine forum, skylight, connected galleries and central sculpture
+- `white-cube-preview.webp`: neutral contemporary room, framed openings and museum light
+- `nocturne-preview.webp`: intimate warm room, timber floor, bronze details and focused artwork light
+- `pavilion-preview.webp`: large museum forum, skylight, connected zones and a ceremonial axis
 
 SHA-256 checksums:
 
 ```text
-f139f9de85865a7e33fb442b876b8465de6ba511dd8da9c79c3768f36ea5218c  nocturne-preview.webp
-46a17f56e950cbd6a9196691db72a0996877c3d963e47d20009e3c66c80f684b  pavilion-preview.webp
-57a4adef941d308aef895ab141b76c916bd3a700274cdeb90e06f0e9716d749e  white-cube-preview.webp
+0d478b23f0d78eb2cd820d82a240e5bde31f9a33a62a1281428d9aa65493a786  nocturne-preview.webp
+ef52c79c7982da6691bc557376fb0be91e82f39ea3293aa160dfafee54a17d9f  pavilion-preview.webp
+4db2d125d6aaebbe6eded6542537b0e512812a34b164823d05eb528108c7e126  white-cube-preview.webp
 ```
