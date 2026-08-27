@@ -1,100 +1,49 @@
-.creator-hub {
-  width: 100%;
-  max-width: 100vw;
-  overflow-x: hidden;
-}
+.creator-hub,
+.creator-hub * { box-sizing: border-box; }
 
-.creator-hub__hero > * {
-  min-width: 0;
-}
-
-.creator-hub__following {
-  display: flex;
-  gap: 10px;
-  margin: -15px 0 32px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-}
-
-.creator-hub__following > a {
-  display: grid;
-  grid-template-columns: 48px minmax(130px, 1fr) auto;
-  align-items: center;
-  gap: 11px;
-  min-width: 250px;
-  border: 1px solid #aaa89f;
-  padding: 10px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.creator-hub__following > a > span {
-  display: grid;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 50%;
-  background: #171816;
-  color: #f3f2ec;
-  font: 20px Instrument;
-}
-
-.creator-hub__following img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.creator-hub__following div {
-  display: grid;
-  gap: 3px;
-}
-
-.creator-hub__following small {
-  color: #666860;
-  font-size: 10px;
-}
-
-@media (max-width: 760px) {
-  .creator-hub > header {
-    padding: 18px 20px;
-  }
-
-  .creator-hub > header nav {
-    min-width: 44px;
-  }
-
-  .creator-hub > header .account-entry {
-    width: 44px;
-    min-width: 44px;
-    padding: 0;
-    font-size: 0;
-  }
-
-  .creator-hub > header .account-entry::after {
-    content: "ID";
-    font-size: 10px;
-  }
-
-  .creator-hub__hero,
+@media (max-width: 900px) {
+  .creator-hub > header { padding: 16px 20px; }
+  .creator-hub > header nav > a:first-child,
+  .creator-hub > header nav > a:nth-child(2) { display: none; }
+  .creator-hub__hero { grid-template-columns: 1fr; }
+  .creator-hub__hero-copy { max-width: 560px; }
+  .creator-hub__search { grid-column: 1; }
+  .creator-hub__workspace { grid-template-columns: 1fr; padding: 1px 20px; }
+  .creator-hub__social-grid { grid-template-columns: 1fr; }
+  .creator-hub__rail { position: static; }
   .creator-hub__updates,
-  .creator-hub__grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  .creator-hub__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
-  .creator-hub__hero,
+@media (max-width: 620px) {
+  .creator-hub > header nav > a { display: none; }
+  .creator-hub > header .account-entry { width: 44px; min-width: 44px; padding: 0; font-size: 0; }
+  .creator-hub > header .account-entry::after { content: "ID"; font-size: 9px; }
+  .creator-hub__hero { padding: 62px 20px 46px; background-size: 26px 26px, auto; }
+  .creator-hub__hero h1 { font-size: clamp(52px, 15vw, 78px); }
+  .creator-hub__hero-copy p { font-size: 14px; }
+  .creator-hub__search { margin-top: 8px; padding-right: 38px; }
+  .creator-hub__search input { font-size: 28px; }
+  .creator-hub__search i { right: 0; font-size: 28px; }
+  .creator-hub__workspace { padding: 1px 0; }
+  .creator-hub__identity-panel,
+  .creator-hub__composer { padding: 38px 20px; }
+  .creator-hub__composer textarea { min-height: 170px; font-size: 20px; }
+  .creator-hub__composer-actions { align-items: stretch; flex-direction: column; }
+  .creator-hub__composer button { width: 100%; }
+  .creator-hub__social,
   .creator-hub__feed,
-  .creator-hub__directory {
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .creator-hub__hero > p:not(.eyebrow),
-  .creator-hub__hero h1,
-  .creator-hub__hero label {
-    max-width: 100%;
-    width: 100%;
-    overflow-wrap: anywhere;
-  }
+  .creator-hub__directory { padding: 64px 20px; }
+  .creator-hub__section-heading { align-items: start; flex-direction: column; gap: 0; }
+  .creator-hub__section-heading h2 { margin-bottom: 20px; font-size: 54px; }
+  .creator-hub__section-heading > p,
+  .creator-hub__section-heading > span { padding-bottom: 25px; }
+  .creator-post > p,
+  .creator-post footer { margin-left: 0; }
+  .creator-post > p { font-size: 24px; }
+  .creator-post footer { gap: 20px; }
+  .creator-hub__updates,
+  .creator-hub__grid { grid-template-columns: minmax(0, 1fr); }
+  .creator-hub__grid > a { min-height: 290px; }
+  .site-header__creators { display: none; }
 }

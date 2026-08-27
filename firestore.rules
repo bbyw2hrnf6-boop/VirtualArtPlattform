@@ -275,6 +275,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /creatorAccounts/{creatorId}/posts/{postId} {
+      allow read, write: if false;
+    }
+
     match /creatorProfiles/{creatorId} {
       allow read, write: if false;
     }

@@ -165,6 +165,7 @@ export function ScrollGalleryStory() {
     const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reducedMotion = reducedMotionQuery.matches;
     let disposed = false;
+    let sectionVisible = true;
     let frameRequest = 0;
     let requestRender = () => undefined;
     let renderer: THREE.WebGLRenderer;
@@ -703,7 +704,7 @@ export function ScrollGalleryStory() {
     };
 
     requestRender = () => {
-      if (!disposed && !frameRequest) frameRequest = window.requestAnimationFrame(renderFrame);
+      if (!disposed && sectionVisible && !frameRequest) frameRequest = window.requestAnimationFrame(renderFrame);
     };
 
     const handleResize = () => {
@@ -890,6 +891,19 @@ export function ScrollGalleryStory() {
 
     const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(requestRender);
     resizeObserver?.observe(canvas);
+    const visibilityObserver = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(
+      ([entry]) => {
+        sectionVisible = entry.isIntersecting;
+        if (!sectionVisible && frameRequest) {
+          window.cancelAnimationFrame(frameRequest);
+          frameRequest = 0;
+          return;
+        }
+        requestRender();
+      },
+      { rootMargin: "200px 0px" },
+    );
+    visibilityObserver?.observe(section);
     window.addEventListener("scroll", requestRender, { passive: true });
     window.addEventListener("resize", handleResize, { passive: true });
     window.addEventListener("keydown", handleKeyDown);
@@ -926,6 +940,7 @@ export function ScrollGalleryStory() {
       canvas.removeEventListener("webglcontextrestored", handleContextRestored);
       visitor.removeEventListener("click", handleMoveControl);
       resizeObserver?.disconnect();
+      visibilityObserver?.disconnect();
       if (frameRequest) window.cancelAnimationFrame(frameRequest);
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh || object instanceof THREE.LineSegments)) return;

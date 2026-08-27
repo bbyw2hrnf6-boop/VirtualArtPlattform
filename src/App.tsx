@@ -1030,15 +1030,15 @@ function MvpDataNotice() {
             Signed-in accounts can download an account-wide JSON record under
             Account → Data &amp; rights. It includes profile and preference data,
             owned-Space manifests, revision and media references, access-role
-            summaries, invitations, and account-linked drafts on the current
-            browser. The existing single-Space .aura.json export remains a
+            summaries, invitations, Creator profile and feed posts, and
+            account-linked drafts on the current browser. The existing single-Space .aura.json export remains a
             separate tool.
           </p>
           <p>
             Permanent account deletion requires a fresh Google or password
             confirmation. It deletes Spaces owned by the account, their
-            published Storage files and revisions, profile/avatar, invitations,
-            newsletter state, and authentication. Memberships in Spaces owned
+            published Storage files and revisions, profile/avatar, Creator posts,
+            invitations, newsletter state, and authentication. Memberships in Spaces owned
             by other people are removed without deleting those Spaces. Local
             drafts linked to the deleted account are cleared only after the
             server confirms completion; unrelated anonymous browser drafts stay.

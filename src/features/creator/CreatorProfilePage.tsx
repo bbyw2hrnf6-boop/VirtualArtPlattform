@@ -13,6 +13,7 @@ import {
 import type { AccountSession } from "../../services/accountTypes";
 import { spaceCanonicalUrl } from "../../services/spaceRoutes";
 import { trackTelemetry } from "../../services/telemetry";
+import { isDemoCreatorHandle } from "./demoCreators";
 import "./creatorProfile.css";
 
 type LoadState =
@@ -25,8 +26,9 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
   const serverState = document
     .querySelector('meta[name="lieuva:creator-state"]')
     ?.getAttribute("content");
+  const demoProfile = isDemoCreatorHandle(handle);
   const [state, setState] = useState<LoadState>(() =>
-    serverState === "unavailable" ? { status: "not-found" } : { status: "loading" },
+    serverState === "unavailable" && !demoProfile ? { status: "not-found" } : { status: "loading" },
   );
   const [attempt, setAttempt] = useState(0);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -35,7 +37,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
   const [followBusy, setFollowBusy] = useState(false);
 
   useEffect(() => {
-    if (serverState === "unavailable") return;
+    if (serverState === "unavailable" && !demoProfile) return;
     const controller = new AbortController();
     void loadPublicCreatorProfile(handle, controller.signal)
       .then((payload) => setState(payload ? { status: "ready", payload } : { status: "not-found" }))
@@ -44,11 +46,11 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
         setState({ status: "error" });
       });
     return () => controller.abort();
-  }, [attempt, handle, serverState]);
+  }, [attempt, demoProfile, handle, serverState]);
 
   const profile = state.status === "ready" ? state.payload.profile : null;
   useEffect(() => {
-    if (!profile || !session || session.isAnonymous) return;
+    if (!profile || profile.demo || !session || session.isAnonymous) return;
     let active = true;
     void manageCreatorFollow(profile.handle, "status")
       .then((result) => { if (active) setFollowState(result); })
@@ -114,7 +116,8 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
           <span>@{profile.handle}</span>
           <div className="creator-profile__social">
             <strong>{followState?.followerCount ?? profile.followerCount ?? 0} followers</strong>
-            {!followState?.isSelf && (
+            {profile.demo && <small>Demo profile · editorial preview</small>}
+            {!profile.demo && !followState?.isSelf && (
               <button
                 type="button"
                 className={followState?.following ? "is-following" : ""}
@@ -134,7 +137,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
                 {followBusy ? "Updating…" : followState?.following ? "Following" : "Follow"}
               </button>
             )}
-            {session && !session.isAnonymous && followState?.canFollow === false && !followState.isSelf && (
+            {!profile.demo && session && !session.isAnonymous && followState?.canFollow === false && !followState.isSelf && (
               <small>Create your Creator profile to follow.</small>
             )}
           </div>
@@ -150,6 +153,24 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
           )}
         </div>
       </section>
+      {state.payload.posts?.length ? (
+        <section className="creator-profile__posts" aria-labelledby="creator-posts-title">
+          <div className="creator-profile__section-heading">
+            <p className="eyebrow">Studio notes</p>
+            <h2 id="creator-posts-title">Updates</h2>
+            <span>{state.payload.posts.length}</span>
+          </div>
+          <div className="creator-profile__post-list">
+            {state.payload.posts.map((post) => (
+              <article key={post.id}>
+                <time dateTime={post.createdAt}>{new Date(post.createdAt).toLocaleDateString("en", { day: "2-digit", month: "short", year: "numeric" })}</time>
+                <p>{post.body}</p>
+                <small>{post.demo ? "Demo profile · editorial preview" : "Creator update"}</small>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <section className="creator-profile__portfolio" aria-labelledby="creator-spaces-title">
         <div className="creator-profile__section-heading">
           <p className="eyebrow">Public portfolio</p>

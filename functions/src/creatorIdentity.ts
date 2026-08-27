@@ -7,6 +7,7 @@ const RESERVED_HANDLES = new Set([
   "data", "demo", "discover", "help", "home", "legal", "login", "logout",
   "lieuva", "moderator", "privacy", "root", "settings", "signin", "signup",
   "sitemap", "space", "spaces", "studio", "support", "system", "terms", "www",
+  "mira-vale", "atlas-studio", "noor-patel", "common-field", "elian-ross",
 ]);
 
 export type CreatorLink = { label: string; url: string };
@@ -30,6 +31,14 @@ export type PublicCreatorSpace = {
   updatedAt?: string;
 };
 
+export type PublicCreatorPost = {
+  id: string;
+  handle: string;
+  displayName: string;
+  body: string;
+  createdAt: string;
+};
+
 export type PublicCreatorDirectoryEntry = {
   handle: string;
   displayName: string;
@@ -39,7 +48,7 @@ export type PublicCreatorDirectoryEntry = {
 };
 
 export type CreatorDelivery =
-  | { kind: "public"; profile: PublicCreatorProfile; spaces: PublicCreatorSpace[] }
+  | { kind: "public"; profile: PublicCreatorProfile; spaces: PublicCreatorSpace[]; posts: PublicCreatorPost[] }
   | { kind: "not-found"; handle?: string }
   | { kind: "temporary-error"; handle?: string };
 
@@ -71,6 +80,12 @@ function boundedText(value: unknown, maximum: number, required = false): string 
   const text = value.trim().replace(/\s+/g, " ");
   if ((required && !text) || text.length > maximum) return null;
   return text;
+}
+
+export function parseCreatorPostInput(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const body = value.trim().replace(/\r\n?/g, "\n").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n");
+  return body && body.length <= 600 ? body : null;
 }
 
 export function parseCreatorLinks(value: unknown): CreatorLink[] | null {

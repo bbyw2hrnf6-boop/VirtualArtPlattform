@@ -1370,6 +1370,64 @@ function rebuildCeilingDetails(
   }
 }
 
+function createHomePortalTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 768;
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  const gradient = context.createLinearGradient(0, 0, 512, 768);
+  gradient.addColorStop(0, "#292b25");
+  gradient.addColorStop(0.55, "#141611");
+  gradient.addColorStop(1, "#090a08");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 512, 768);
+  context.strokeStyle = "rgba(215,255,57,.34)";
+  context.lineWidth = 2;
+  context.strokeRect(28, 28, 456, 712);
+  context.save();
+  context.translate(294, 135);
+  context.rotate(-0.08);
+  context.fillStyle = "rgba(230,232,218,.055)";
+  context.fillRect(0, 0, 175, 350);
+  context.strokeStyle = "rgba(215,255,57,.26)";
+  context.strokeRect(15, 19, 145, 310);
+  context.restore();
+  context.fillStyle = "rgba(240,238,229,.86)";
+  context.font = "600 17px Manrope, Arial, sans-serif";
+  context.letterSpacing = "5px";
+  context.fillText("LIEUVA", 54, 86);
+  context.fillStyle = "rgba(215,255,57,.88)";
+  context.font = "600 11px Manrope, Arial, sans-serif";
+  context.letterSpacing = "2px";
+  context.fillText("RETURN TO THE HOMEPAGE", 54, 350);
+  context.fillStyle = "rgba(244,242,234,.92)";
+  context.font = "66px Instrument, Georgia, serif";
+  context.letterSpacing = "-3px";
+  context.fillText("Give your", 50, 430);
+  context.fillText("work a place.", 50, 495);
+  context.strokeStyle = "rgba(240,238,229,.32)";
+  context.lineWidth = 1;
+  context.beginPath();
+  context.moveTo(52, 590);
+  context.lineTo(460, 590);
+  context.stroke();
+  context.fillStyle = "rgba(240,238,229,.82)";
+  context.font = "600 13px Manrope, Arial, sans-serif";
+  context.letterSpacing = "2px";
+  context.fillText("ENTER HOME", 54, 632);
+  context.fillText("→", 432, 632);
+  context.fillStyle = "rgba(240,238,229,.5)";
+  context.font = "11px Manrope, Arial, sans-serif";
+  context.letterSpacing = "1px";
+  context.fillText("The Space remains behind you.", 54, 684);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function buildRoom(
   scene: THREE.Scene,
   draft: GalleryDraft,
@@ -1693,16 +1751,24 @@ function buildRoom(
   threshold.receiveShadow = true;
   threshold.userData.noWalkCollision = true;
   architecture.add(threshold);
+  const homePortalTexture = createHomePortalTexture();
   const exitPortal = new THREE.Mesh(
     new THREE.PlaneGeometry(
       Math.max(1, portalWidth - template.architecture.trimScale * 1.3),
       Math.max(1, portalHeight - template.architecture.trimScale * 0.75),
     ),
-    new THREE.MeshStandardMaterial({
-      color: "#10110f",
-      roughness: 0.88,
-      emissive: "#11130f",
-      emissiveIntensity: 0.12,
+    new THREE.MeshPhysicalMaterial({
+      color: "#d8dbc9",
+      map: homePortalTexture,
+      emissive: "#dce1c5",
+      emissiveMap: homePortalTexture,
+      emissiveIntensity: 0.18,
+      roughness: 0.26,
+      metalness: 0.02,
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.32,
+      transparent: true,
+      opacity: 0.86,
       side: THREE.DoubleSide,
     }),
   );

@@ -2,6 +2,7 @@ import { httpsCallable } from "firebase/functions";
 import { firebaseFunctions } from "./firebase";
 import { creatorCanonicalUrl } from "./spaceRoutes";
 import { prepareProfileImage } from "./profileImage";
+import { DEMO_CREATORS, demoCreatorPayload } from "../features/creator/demoCreators";
 
 export type CreatorLink = { label: string; url: string };
 export type CreatorProfile = {
@@ -13,6 +14,7 @@ export type CreatorProfile = {
   imagePresent: boolean;
   followerCount?: number;
   updatedAt?: string;
+  demo?: boolean;
 };
 export type CreatorSpaceCard = {
   id: string;
@@ -25,6 +27,7 @@ export type PublicCreatorPayload = {
   schemaVersion: 1;
   profile: CreatorProfile;
   spaces: CreatorSpaceCard[];
+  posts?: CreatorPost[];
 };
 export type PublicCreatorDirectoryEntry = {
   handle: string;
@@ -32,6 +35,7 @@ export type PublicCreatorDirectoryEntry = {
   bio: string;
   imagePresent: boolean;
   followerCount?: number;
+  demo?: boolean;
 };
 export type PublicCreatorDirectoryPayload = {
   schemaVersion: 1;
@@ -49,22 +53,37 @@ export function creatorProfileUrl(handle: string) {
 }
 
 export async function loadPublicCreatorProfile(handle: string, signal?: AbortSignal) {
+  const demo = demoCreatorPayload(handle);
+  if (demo) return demo;
   const response = await fetch(`/creator-profiles/${encodeURIComponent(handle)}.json`, {
     headers: { Accept: "application/json" },
     signal,
   });
-  if (response.status === 404) return null;
+  if (response.status === 404) return demoCreatorPayload(handle);
   if (!response.ok) throw new Error("Creator profile is temporarily unavailable.");
   return await response.json() as PublicCreatorPayload;
 }
 
 export async function loadPublicCreatorDirectory(signal?: AbortSignal) {
-  const response = await fetch("/creator-directory.json", {
-    headers: { Accept: "application/json" },
-    signal,
-  });
-  if (!response.ok) throw new Error("Creator search is temporarily unavailable.");
-  return await response.json() as PublicCreatorDirectoryPayload;
+  try {
+    const response = await fetch("/creator-directory.json", {
+      headers: { Accept: "application/json" },
+      signal,
+    });
+    if (!response.ok) throw new Error("Creator search is temporarily unavailable.");
+    const payload = await response.json() as PublicCreatorDirectoryPayload;
+    const liveHandles = new Set(payload.creators.map((creator) => creator.handle));
+    return {
+      ...payload,
+      creators: [
+        ...payload.creators,
+        ...DEMO_CREATORS.filter((creator) => !liveHandles.has(creator.handle)),
+      ],
+    };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    return { schemaVersion: 1 as const, creators: DEMO_CREATORS };
+  }
 }
 
 export async function loadCreatorAttribution(spaceId: string, signal?: AbortSignal) {
@@ -133,6 +152,16 @@ export type CreatorHomePayload = {
   schemaVersion: 1;
   following: PublicCreatorDirectoryEntry[];
   updates: Array<CreatorSpaceCard & { handle: string; displayName: string }>;
+  posts: CreatorPost[];
+};
+
+export type CreatorPost = {
+  id: string;
+  handle: string;
+  displayName: string;
+  body: string;
+  createdAt: string;
+  demo?: boolean;
 };
 
 export async function loadCreatorHome() {
@@ -141,6 +170,14 @@ export async function loadCreatorHome() {
     "getMyLieuvaCreatorHome",
   )({});
   return result.data;
+}
+
+export async function createCreatorPost(body: string) {
+  const result = await httpsCallable<{ body: string }, { post: CreatorPost }>(
+    firebaseFunctions,
+    "createLieuvaCreatorPost",
+  )({ body });
+  return result.data.post;
 }
 
 export async function manageCreatorFollow(handle: string, action: "status" | "follow" | "unfollow") {

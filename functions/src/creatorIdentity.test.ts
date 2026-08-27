@@ -5,6 +5,7 @@ import {
   isReservedCreatorHandle,
   isValidCreatorWebp,
   normalizeCreatorHandle,
+  parseCreatorPostInput,
   parseCreatorProfileInput,
   publicCreatorDirectoryEntry,
   renderCreatorDocument,
@@ -22,6 +23,7 @@ describe("Creator identity contract", () => {
   it("reserves product and routing names", () => {
     expect(isReservedCreatorHandle("LIEUVA")).toBe(true);
     expect(normalizeCreatorHandle("spaces")).toBeNull();
+    expect(normalizeCreatorHandle("mira-vale")).toBeNull();
   });
 
   it("accepts only bounded WebP payloads", () => {
@@ -67,11 +69,18 @@ describe("Creator identity contract", () => {
     expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: false })).toBeNull();
   });
 
+  it("accepts bounded Creator posts and preserves intentional paragraph breaks", () => {
+    expect(parseCreatorPostInput("  New room.\n\nProcess notes.  ")).toBe("New room.\n\nProcess notes.");
+    expect(parseCreatorPostInput("   ")).toBeNull();
+    expect(parseCreatorPostInput("x".repeat(601))).toBeNull();
+  });
+
   it("renders public metadata without an internal identifier", () => {
     const html = renderCreatorDocument(SHELL, {
       kind: "public",
       profile: { handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [], profilePublic: true, imagePresent: false, followerCount: 0 },
       spaces: [{ id: "space-safe", title: "Material Futures", creator: "Studio North", coverUrl: "https://lieuva.com/space-cards/space-safe" }],
+      posts: [],
     });
     expect(html).toContain(creatorCanonicalUrl("studio-north"));
     expect(html).toContain("ProfilePage");

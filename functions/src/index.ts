@@ -49,10 +49,12 @@ import {
   creatorCanonicalUrl,
   isValidCreatorWebp,
   normalizeCreatorHandle,
+  parseCreatorPostInput,
   parseCreatorProfileInput,
   publicCreatorDirectoryEntry,
   renderCreatorDocument,
   type CreatorDelivery,
+  type PublicCreatorPost,
   type PublicCreatorSpace,
 } from "./creatorIdentity.js";
 
@@ -230,11 +232,17 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
   ) return { kind: "not-found", handle: requestedHandle };
   const profile = parseCreatorProfileInput(profileData);
   if (!profile || !profile.profilePublic) return { kind: "not-found", handle: requestedHandle };
-  const spacesSnapshot = await db.collection("galleries")
-    .where("ownerId", "==", accountData.ownerId)
-    .limit(100)
-    .select(...publicDeliveryFields)
-    .get();
+  const [spacesSnapshot, postsSnapshot] = await Promise.all([
+    db.collection("galleries")
+      .where("ownerId", "==", accountData.ownerId)
+      .limit(100)
+      .select(...publicDeliveryFields)
+      .get(),
+    db.collection("creatorAccounts").doc(creatorId).collection("posts")
+      .orderBy("createdAt", "desc")
+      .limit(12)
+      .get(),
+  ]);
   const spaces: PublicCreatorSpace[] = spacesSnapshot.docs
     .map((document) => classifySpaceForDelivery(document.id, document.data()))
     .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public")
@@ -247,6 +255,18 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
       ...(space.updatedAt ? { updatedAt: space.updatedAt } : {}),
     }));
   const updated = timestampMilliseconds(profileData.updatedAt);
+  const posts: PublicCreatorPost[] = postsSnapshot.docs.flatMap((document) => {
+    const body = parseCreatorPostInput(document.data().body);
+    const createdAt = timestampMilliseconds(document.data().createdAt);
+    if (!body || createdAt === undefined) return [];
+    return [{
+      id: document.id,
+      handle: profile.handle,
+      displayName: profile.displayName,
+      body,
+      createdAt: new Date(createdAt).toISOString(),
+    }];
+  });
   return {
     kind: "public",
     profile: {
@@ -254,12 +274,13 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
       ...(updated !== undefined ? { updatedAt: new Date(updated).toISOString() } : {}),
     },
     spaces,
+    posts,
   };
 }
 
 function publicCreatorPayload(delivery: CreatorDelivery) {
   if (delivery.kind !== "public") return undefined;
-  return { schemaVersion: 1, profile: delivery.profile, spaces: delivery.spaces };
+  return { schemaVersion: 1, profile: delivery.profile, spaces: delivery.spaces, posts: delivery.posts };
 }
 
 async function publicDeliveryManifest(spaceId: string) {
@@ -497,15 +518,60 @@ export const manageLieuvaCreatorFollow = onCall(
   },
 );
 
-/** Private home feed made only from already-public Creator profiles and their
- * public Space updates. No post or private-Space data is projected. */
+/** A bounded, text-only public post. The transaction makes the cooldown
+ * server-authoritative and prevents clients from writing Creator data directly. */
+export const createLieuvaCreatorPost = onCall(
+  { region: REGION, timeoutSeconds: 15, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const body = parseCreatorPostInput(request.data?.body);
+    if (!body) throw new HttpsError("invalid-argument", "Write between 1 and 600 characters.");
+    const owner = await db.collection("creatorAccountOwners").doc(uid).get();
+    const creatorId = owner.data()?.creatorId;
+    if (typeof creatorId !== "string")
+      throw new HttpsError("failed-precondition", "Create your Creator profile before posting.");
+    const profileReference = db.collection("creatorProfiles").doc(creatorId);
+    const profile = parseCreatorProfileInput((await profileReference.get()).data());
+    if (!profile?.profilePublic)
+      throw new HttpsError("failed-precondition", "Make your Creator profile public before posting.");
+    const accountReference = db.collection("creatorAccounts").doc(creatorId);
+    const postReference = accountReference.collection("posts").doc();
+    const createdAt = new Date();
+    await db.runTransaction(async (transaction) => {
+      const account = await transaction.get(accountReference);
+      if (account.data()?.ownerId !== uid)
+        throw new HttpsError("permission-denied", "This Creator profile is not available to this account.");
+      const lastPostAt = timestampMilliseconds(account.data()?.lastPostAt);
+      if (lastPostAt !== undefined && createdAt.getTime() - lastPostAt < 30_000)
+        throw new HttpsError("resource-exhausted", "Wait a moment before posting again.");
+      transaction.set(postReference, {
+        body,
+        createdAt: FieldValue.serverTimestamp(),
+        schemaVersion: 1,
+      });
+      transaction.set(accountReference, { lastPostAt: FieldValue.serverTimestamp() }, { merge: true });
+    });
+    return {
+      post: {
+        id: postReference.id,
+        handle: profile.handle,
+        displayName: profile.displayName,
+        body,
+        createdAt: createdAt.toISOString(),
+      },
+    };
+  },
+);
+
+/** Private home feed made only from already-public Creator profiles, posts and
+ * public Space updates. Private Creator and Space data is never projected. */
 export const getMyLieuvaCreatorHome = onCall(
   { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
   async (request) => {
     const uid = requireAccount(request.auth);
     const owner = await db.collection("creatorAccountOwners").doc(uid).get();
     const creatorId = owner.data()?.creatorId;
-    if (typeof creatorId !== "string") return { schemaVersion: 1, following: [], updates: [] };
+    if (typeof creatorId !== "string") return { schemaVersion: 1, following: [], updates: [], posts: [] };
     const follows = await db.collection("creatorFollows")
       .where("followerCreatorId", "==", creatorId).limit(50).get();
     const followedIds = follows.docs
@@ -515,7 +581,14 @@ export const getMyLieuvaCreatorHome = onCall(
     const publicProfiles = profiles
       .map((snapshot) => parseCreatorProfileInput(snapshot.data()))
       .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile?.profilePublic));
-    const deliveries = await Promise.all(publicProfiles.map((profile) => creatorDeliveryForHandle(profile.handle)));
+    const ownProfile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
+    const feedProfiles = [
+      ...(ownProfile?.profilePublic ? [ownProfile] : []),
+      ...publicProfiles,
+    ].filter((profile, index, profilesValue) => profilesValue.findIndex((candidate) => candidate.handle === profile.handle) === index);
+    const feedDeliveries = await Promise.all(feedProfiles.map((profile) => creatorDeliveryForHandle(profile.handle)));
+    const followedHandles = new Set(publicProfiles.map((profile) => profile.handle));
+    const deliveries = feedDeliveries.filter((delivery) => delivery.kind === "public" && followedHandles.has(delivery.profile.handle));
     const following = publicProfiles.map((profile) => ({
       handle: profile.handle,
       displayName: profile.displayName,
@@ -532,7 +605,10 @@ export const getMyLieuvaCreatorHome = onCall(
       : [])
       .sort((left, right) => (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
       .slice(0, 24);
-    return { schemaVersion: 1, following, updates };
+    const posts = feedDeliveries.flatMap((delivery) => delivery.kind === "public" ? delivery.posts : [])
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, 30);
+    return { schemaVersion: 1, following, updates, posts };
   },
 );
 
@@ -563,13 +639,14 @@ export const exportAuraAccountData = onCall(
       db.collection("creatorAccountOwners").doc(uid).get(),
     ]);
     const creatorId = creatorOwner.data()?.creatorId;
-    const [creatorProfile, creatorAccount, creatorHandles] = typeof creatorId === "string"
+    const [creatorProfile, creatorAccount, creatorHandles, creatorPosts] = typeof creatorId === "string"
       ? await Promise.all([
           db.collection("creatorProfiles").doc(creatorId).get(),
           db.collection("creatorAccounts").doc(creatorId).get(),
           db.collection("creatorHandles").where("creatorId", "==", creatorId).get(),
+          db.collection("creatorAccounts").doc(creatorId).collection("posts").orderBy("createdAt", "asc").get(),
         ])
-      : [undefined, undefined, undefined];
+      : [undefined, undefined, undefined, undefined];
     const ownedSpaces = await Promise.all(ownedSnapshot.docs.map(async (gallery) => {
       const [members, media] = await Promise.all([
         gallery.ref.collection("members").get(),
@@ -614,6 +691,7 @@ export const exportAuraAccountData = onCall(
         aliases: creatorHandles?.docs
           .filter((handle) => handle.data().kind === "alias")
           .map((handle) => handle.id) ?? [],
+        posts: creatorPosts?.docs.map((post) => ({ id: post.id, ...post.data() })) ?? [],
       } } : {}),
     });
   },
@@ -662,12 +740,13 @@ export const deleteAuraAccount = onCall(
       const creatorHandles = typeof creatorId === "string"
         ? await db.collection("creatorHandles").where("creatorId", "==", creatorId).get()
         : undefined;
-      const [creatorFollowers, creatorFollowing] = typeof creatorId === "string"
+      const [creatorFollowers, creatorFollowing, creatorPosts] = typeof creatorId === "string"
         ? await Promise.all([
             db.collection("creatorFollows").where("followedCreatorId", "==", creatorId).get(),
             db.collection("creatorFollows").where("followerCreatorId", "==", creatorId).get(),
+            db.collection("creatorAccounts").doc(creatorId).collection("posts").get(),
           ])
-        : [undefined, undefined];
+        : [undefined, undefined, undefined];
       const plan: AccountDeletionPlan = {
         uid,
         ownedGalleryIds: owned.docs.map((gallery) => gallery.id),
@@ -690,6 +769,7 @@ export const deleteAuraAccount = onCall(
             { ref: db.collection("creatorProfiles").doc(creatorId) },
           ] : []),
           ...(creatorHandles?.docs ?? []),
+          ...(creatorPosts?.docs ?? []),
           ...uniqueDocumentPaths([
             ...(creatorFollowers?.docs ?? []),
             ...(creatorFollowing?.docs ?? []),
