@@ -17,6 +17,10 @@ import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { GalleryAccessManager } from "./GalleryAccessManager";
 import { firebaseActionErrorMessage } from "../../services/firebaseActionError";
 import { CreatorProfileSettings } from "./CreatorProfileSettings";
+import {
+  galleryDraftSignature,
+  publishedProjectState,
+} from "./projectWorkspace";
 import "./accountDialog.css";
 
 type AccountModule = typeof import("../../services/accountService");
@@ -25,6 +29,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [rooms, setRooms] = useState<GalleryRecord[]>([]);
   const [drafts, setDrafts] = useState<StoredGalleryDraft[]>([]);
+  const [linkedDrafts, setLinkedDrafts] = useState<StoredGalleryDraft[]>([]);
   const [invites, setInvites] = useState<GalleryInvite[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [lifecycleBusyId, setLifecycleBusyId] = useState<string>();
@@ -32,6 +37,11 @@ function AccountRooms({ session }: { session: AccountSession }) {
   const [error, setError] = useState<string>();
   const [accessRoom, setAccessRoom] = useState<GalleryRecord>();
   const [manageRoomId, setManageRoomId] = useState<string>();
+  const [editConflict, setEditConflict] = useState<{
+    room: GalleryRecord;
+    editable: Awaited<ReturnType<typeof galleryRepository.editableDraft>>;
+    stored: StoredGalleryDraft;
+  }>();
   const loadRooms = useCallback(async () => {
     setStatus("loading");
     setError(undefined);
@@ -44,6 +54,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
       setRooms(next);
       setInvites(pending);
       setDrafts(localDrafts.filter((draft) => !draft.publication));
+      setLinkedDrafts(localDrafts.filter((draft) => Boolean(draft.publication)));
       setStatus("ready");
     } catch (caught) {
       console.error("Account Spaces unavailable", caught);
@@ -65,19 +76,18 @@ function AccountRooms({ session }: { session: AccountSession }) {
       const editable = await galleryRepository.editableDraft(room.id);
       const projectId = publishedGalleryProjectId(room.id);
       const stored = await loadGalleryDraft(projectId);
+      const workspace = publishedProjectState(room, stored ?? undefined);
+      if (stored && workspace.state === "conflict") {
+        setEditConflict({ room, editable, stored });
+        return;
+      }
       if (!stored || stored.publication?.revision !== editable.target.revision) {
-        if (stored) {
-          await saveGalleryDraft(
-            createGalleryProjectId(stored.templateId),
-            stored.draft,
-            1,
-          );
-        }
         await saveGalleryDraft(
           projectId,
           editable.draft,
           (stored?.revision ?? 0) + 1,
           editable.target,
+          galleryDraftSignature(editable.draft),
         );
       } else if (stored.publication.role !== editable.target.role) {
         await saveGalleryDraft(
@@ -96,6 +106,38 @@ function AccountRooms({ session }: { session: AccountSession }) {
         caught,
         "This Space could not be opened for editing. Check your access and retry.",
       ));
+    } finally {
+      setEditingId(undefined);
+    }
+  };
+  const resolveEditConflict = async (choice: "local" | "live") => {
+    if (!editConflict) return;
+    setEditingId(editConflict.room.id);
+    setError(undefined);
+    try {
+      const { stored, editable } = editConflict;
+      await saveGalleryDraft(
+        createGalleryProjectId(stored.templateId),
+        stored.draft,
+        1,
+      );
+      const selectedDraft = choice === "local" ? stored.draft : editable.draft;
+      await saveGalleryDraft(
+        publishedGalleryProjectId(editConflict.room.id),
+        selectedDraft,
+        stored.revision + 1,
+        editable.target,
+        galleryDraftSignature(editable.draft),
+      );
+      setEditConflict(undefined);
+      window.location.assign(
+        hashApplicationUrl(
+          `/create/${selectedDraft.templateId}/${publishedGalleryProjectId(editConflict.room.id)}`,
+          window.location.href,
+        ),
+      );
+    } catch (caught) {
+      setError(firebaseActionErrorMessage(caught, "The edit conflict could not be resolved."));
     } finally {
       setEditingId(undefined);
     }
@@ -198,6 +240,18 @@ function AccountRooms({ session }: { session: AccountSession }) {
           ))}
         </div>
       )}
+      {editConflict && (
+        <section className="account-edit-conflict" role="alertdialog" aria-labelledby="edit-conflict-title">
+          <p className="eyebrow">Newer live revision found</p>
+          <h4 id="edit-conflict-title">Choose what opens in Studio.</h4>
+          <p>Your browser has local work based on revision {editConflict.stored.publication?.revision}; the live Space is revision {editConflict.editable.target.revision}. A recovery copy is kept either way.</p>
+          <div>
+            <button type="button" onClick={() => void resolveEditConflict("local")}>Keep local work</button>
+            <button type="button" onClick={() => void resolveEditConflict("live")}>Open latest live</button>
+            <button type="button" onClick={() => setEditConflict(undefined)}>Cancel</button>
+          </div>
+        </section>
+      )}
       {status === "loading" ? (
         <p>Loading Spaces…</p>
       ) : status === "error" ? (
@@ -211,13 +265,17 @@ function AccountRooms({ session }: { session: AccountSession }) {
             const role = room.effectiveRole ?? (room.ownerId === session.uid ? "owner" : "viewer");
             const expired = new Date(room.expiresAt).getTime() <= currentTime;
             const available = room.lifecycleStatus === "active" && !expired;
+            const workspace = publishedProjectState(
+              room,
+              linkedDrafts.find((draft) => draft.publication?.id === room.id),
+            );
             return <li key={room.id} data-role={role}>
               {available ? <a href={galleryShareUrl(room.id, window.location.href)}>
                 <span className="account-room-cover">{room.coverSrc && <img src={room.coverSrc} alt="" />}</span>
                 <span className="account-room-copy">
-                  <span className="account-room-badges"><i>{visibilityLabel[room.visibility]}</i><i>{role}</i></span>
+                  <span className="account-room-badges"><i>{visibilityLabel[room.visibility]}</i><i>{role}</i><i data-state={workspace.state}>{workspace.label}</i></span>
                   <strong>{room.title}</strong>
-                  <small>Revision {room.revision} · Live until {new Date(room.expiresAt).toLocaleDateString()}</small>
+                  <small>{workspace.detail} · Live until {new Date(room.expiresAt).toLocaleDateString()}</small>
                 </span>
                 <b aria-hidden="true">↗</b>
               </a> : <div className="account-room-summary">
@@ -274,7 +332,11 @@ function AccountRooms({ session }: { session: AccountSession }) {
           })}
         </ul>
       ) : (
-        <p>Spaces published with this account will appear here.</p>
+        <div className="account-project-empty">
+          <strong>Your first Space starts as a private draft.</strong>
+          <p>Choose a template, arrange your work, preview it, then publish when it is ready.</p>
+          <a href={hashApplicationUrl("/create", window.location.href)}>Create a Space</a>
+        </div>
       )}
       {rooms.length > 0 && (
         <p className="account-rooms__hint">Edit updates the same live URL. Archive hides a Space; Trash keeps a seven-day recovery window.</p>

@@ -175,12 +175,13 @@ describe("versioned multi-project draft storage", () => {
       revision: 3,
       role: "editor" as const,
     };
-    await saveGalleryDraft("published-room-1", draft(), 1, publication);
+    await saveGalleryDraft("published-room-1", draft(), 1, publication, "published-signature");
     await saveGalleryDraft("published-room-1", draft("white-cube", "Changed"), 2);
     expect(await loadGalleryDraft("published-room-1")).toMatchObject({
       revision: 2,
       draft: { title: "Changed" },
       publication,
+      publishedDraftSignature: "published-signature",
     });
   });
 

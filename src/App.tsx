@@ -36,6 +36,7 @@ import {
   artworkPresentationMetrics,
 } from "./features/gallery/artworkPresentation";
 import { createGalleryDraft } from "./features/gallery/editor/draftDefaults";
+import { galleryDraftSignature } from "./features/account/projectWorkspace";
 import { createDemoCollectionDraft } from "./features/gallery/editor/demoCollection";
 import type { GallerySceneCapture } from "./features/gallery/GalleryScene";
 import {
@@ -74,6 +75,7 @@ import {
   type GalleryRecord,
 } from "./services/galleryRepository";
 import { galleryShareUrl } from "./services/galleryShareUrl";
+import { firebaseActionErrorMessage } from "./services/firebaseActionError";
 import {
   applicationRootUrl,
   creatorCanonicalUrl,
@@ -1264,6 +1266,8 @@ function Studio({
   const [selectedDecorId, setSelectedDecorId] = useState<string>();
   const [published, setPublished] = useState<GalleryRecord>();
   const [editTarget, setEditTarget] = useState<GalleryEditTarget>();
+  const [publishedDraftSignature, setPublishedDraftSignature] = useState<string>();
+  const [visibleEditorMode, setVisibleEditorMode] = useState<"arrange" | "walk">("arrange");
   const [publishStatus, transitionPublish] = useReducer(
     publishStatusReducer,
     "idle",
@@ -1362,6 +1366,7 @@ function Studio({
     if (editorMode.current === mode) return;
     const previousMode = editorMode.current;
     editorMode.current = mode;
+    setVisibleEditorMode(mode);
     if (mode === "walk")
       trackTelemetry("walk_preview_entered", { template: initialTemplate });
     else if (previousMode === "walk")
@@ -1388,6 +1393,7 @@ function Studio({
           saveRevision.current = stored.revision;
           if (stored.publication) {
             setEditTarget(stored.publication);
+            setPublishedDraftSignature(stored.publishedDraftSignature);
             setPublishVisibility(stored.publication.visibility);
             resetDraft(stored.draft);
             setStorageReady(true);
@@ -1985,7 +1991,9 @@ function Studio({
         finalDraft,
         ++saveRevision.current,
         nextTarget,
+        galleryDraftSignature(finalDraft),
       );
+      setPublishedDraftSignature(galleryDraftSignature(finalDraft));
       setPublished(publishedGallery);
       trackTelemetry(editTarget ? "published_update_succeeded" : "publish_succeeded", {
         template: finalDraft.templateId,
@@ -2003,9 +2011,10 @@ function Studio({
         is_update: Boolean(editTarget),
       });
       setPublishError(
-        error instanceof Error
-          ? error.message
-          : "Publishing could not connect to Firebase. Please check the connection and try again.",
+        firebaseActionErrorMessage(
+          error,
+          "Publishing could not connect to Firebase. Your working draft is still saved; check the connection and retry.",
+        ),
       );
       transitionPublish({ type: "FAIL" });
     } finally {
@@ -2246,7 +2255,13 @@ function Studio({
             aria-live="polite"
           >
             <strong className="draft-save-status__scope">
-              {editTarget ? "Live edits" : "Draft"}
+              {!editTarget
+                ? "Draft · Not live"
+                : !publishedDraftSignature
+                  ? "Published Space · Local draft"
+                  : galleryDraftSignature(draft) !== publishedDraftSignature
+                    ? "Changes · Not live"
+                    : `Published · r${editTarget.revision}`}
             </strong>
             <span className="draft-save-status__state">
               {saveStatus === "checking"
@@ -3063,8 +3078,14 @@ function Studio({
             artworkButtonRef={editorDirectoryButton}
             onOpenArtworkDirectory={() => setEditorDirectoryOpen(true)}
           />
+          {visibleEditorMode === "walk" && (
+            <div className="draft-preview-status" role="status">
+              <strong>Draft preview</strong>
+              <span>Changes are not live</span>
+            </div>
+          )}
           <div className="canvas-badge">
-            <span>Editing</span>
+            <span>{visibleEditorMode === "walk" ? "Draft preview" : "Editing"}</span>
             {TEMPLATES.find((item) => item.id === draft.templateId)?.name}
           </div>
           {curating && (

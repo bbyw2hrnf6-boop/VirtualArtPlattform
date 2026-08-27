@@ -17,6 +17,7 @@ export interface StoredGalleryDraft {
   savedAt: string;
   draft: GalleryDraft;
   publication?: GalleryEditTarget;
+  publishedDraftSignature?: string;
 }
 
 type LegacyStoredGalleryDraft = Omit<StoredGalleryDraft, "projectId" | "schemaVersion"> & {
@@ -59,6 +60,8 @@ function isStoredDraft(
     typeof item.revision === "number" &&
     typeof item.savedAt === "string" &&
     (item.publication === undefined || isGalleryEditTarget(item.publication)) &&
+    (item.publishedDraftSignature === undefined ||
+      typeof item.publishedDraftSignature === "string") &&
     Boolean(
       item.draft &&
         item.draft.templateId === item.templateId &&
@@ -270,9 +273,11 @@ export async function saveGalleryDraft(
   draft: GalleryDraft,
   revision: number,
   publication?: GalleryEditTarget,
+  publishedDraftSignature?: string,
 ): Promise<StoredGalleryDraft> {
   const createRecord = (
     preservedPublication?: GalleryEditTarget,
+    preservedPublishedDraftSignature?: string,
   ): StoredGalleryDraft => ({
       projectId,
       templateId: draft.templateId,
@@ -282,6 +287,12 @@ export async function saveGalleryDraft(
       draft,
       ...(publication ?? preservedPublication
         ? { publication: publication ?? preservedPublication }
+        : {}),
+      ...(publishedDraftSignature ?? preservedPublishedDraftSignature
+        ? {
+            publishedDraftSignature:
+              publishedDraftSignature ?? preservedPublishedDraftSignature,
+          }
         : {}),
     });
   try {
@@ -297,6 +308,9 @@ export async function saveGalleryDraft(
         }
         const record = createRecord(
           isStoredDraft(existing, projectId) ? existing.publication : undefined,
+          isStoredDraft(existing, projectId)
+            ? existing.publishedDraftSignature
+            : undefined,
         );
         const request = store.put(record);
         request.onsuccess = () => finish(record);
@@ -314,7 +328,10 @@ export async function saveGalleryDraft(
     try {
       const existing = readFallback(projectId);
       if (existing && existing.revision > revision) return existing;
-      const record = createRecord(existing?.publication);
+      const record = createRecord(
+        existing?.publication,
+        existing?.publishedDraftSignature,
+      );
       localStorage.setItem(`${FALLBACK_PREFIX}${projectId}`, JSON.stringify(record));
       return record;
     } catch {
