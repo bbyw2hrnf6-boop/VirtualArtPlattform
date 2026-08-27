@@ -516,8 +516,41 @@ function LandingProductProof() {
 }
 
 function DeferredScrollStory() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const compact = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const reveal = () => setReady(true);
+    if (compact) {
+      // Give mobile navigation, typography and the authored poster the first
+      // frame before Three.js parsing and GLB decoding enter the main thread.
+      const handle = window.setTimeout(reveal, 900);
+      return () => window.clearTimeout(handle);
+    }
+    if (idleWindow.requestIdleCallback) {
+      const handle = idleWindow.requestIdleCallback(reveal, { timeout: 900 });
+      return () => idleWindow.cancelIdleCallback?.(handle);
+    }
+    const handle = window.setTimeout(reveal, 350);
+    return () => window.clearTimeout(handle);
+  }, []);
   return (
     <div className="story-deferred">
+      {!ready ? (
+        <section
+          className="story-placeholder"
+          aria-label="Preparing the interactive Space story"
+        >
+          <picture aria-hidden="true">
+            <source media="(max-width: 900px)" srcSet="./assets/demo/danny-emil-finale-mobile-v2.webp" />
+            <img src="./assets/demo/danny-emil-finale-v2.webp" alt="" />
+          </picture>
+          <span>Preparing Danny Hirsch Arts…</span>
+        </section>
+      ) : (
       <Suspense
         fallback={
           <section
@@ -530,6 +563,7 @@ function DeferredScrollStory() {
       >
         <ScrollGalleryStory />
       </Suspense>
+      )}
     </div>
   );
 }
@@ -836,8 +870,8 @@ function RoomShowcase() {
           <em>Make it yours.</em>
         </h2>
         <p>
-          Start with sample art, then replace it with your own work. These
-          Each environment has its own architecture, material palette and light.
+          Start with sample art, then replace it with your own work. Each
+          environment has its own architecture, material palette and light.
           Every button opens the working browser Studio.
         </p>
       </div>
@@ -889,7 +923,7 @@ function Footer() {
     <footer>
       <Logo />
       <nav aria-label="Product information">
-        <a href="#/data">MVP data & rights</a>
+        <a href="#/data">Data &amp; rights</a>
         <a href="./licenses/FONT-LICENSES.txt">Font licenses</a>
         <a href="#pilot-faq">FAQ</a>
       </nav>

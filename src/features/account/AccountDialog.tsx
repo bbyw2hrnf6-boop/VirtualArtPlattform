@@ -735,7 +735,7 @@ export function AccountDialog({
                 })} disabled={busy}>I verified</button>
               </div>
             )}
-            <p className="account-note">LIEUVA Light Preview is free now. Public Spaces appear in Discover; unlisted and private Spaces stay in Your Spaces. Paid plans and additional professional tools are coming later—billing is not active.</p>
+            <p className="account-note">LIEUVA Early Access is available now. Public Spaces appear in Discover; unlisted and private Spaces stay in Your Spaces. Professional plans and additional tools are in development—billing is not active.</p>
             <button className="account-secondary" onClick={() => void run(async () => {
               await service?.signOutAccount();
               setSession(null);

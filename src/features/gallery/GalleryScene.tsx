@@ -2527,7 +2527,9 @@ function addLighting(
   main.castShadow = true;
   main.shadow.mapSize.set(shadowMapSize, shadowMapSize);
   main.shadow.bias = -0.00018;
-  main.shadow.normalBias = 0.035;
+  // Keep the shadow attached to feet, plinths and frames. The previous large
+  // normal bias hid acne but visibly floated contact shadows on pale floors.
+  main.shadow.normalBias = 0.018;
   main.shadow.radius = shadowMapSize >= 1024 ? 3 : 1.5;
   const shadowExtent = Math.max(w, d) * 0.52;
   main.shadow.camera.left = -shadowExtent;
@@ -2644,7 +2646,7 @@ function addLighting(
       const spotShadowSize = Math.min(1024, shadowMapSize);
       spot.shadow.mapSize.set(spotShadowSize, spotShadowSize);
       spot.shadow.bias = -0.0003;
-      spot.shadow.normalBias = 0.025;
+      spot.shadow.normalBias = 0.014;
       spot.shadow.radius = shadowMapSize >= 1024 ? 3 : 1;
       spot.shadow.camera.near = 0.2;
       spot.shadow.camera.far = Math.max(12, h * 1.8);
@@ -3804,6 +3806,11 @@ function GallerySceneRenderer({
     // Keep one supported filtered path; tier differences live in map size,
     // light count and material/probe resolution instead.
     renderer.shadowMap.type = THREE.PCFShadowMap;
+    // Rooms and light rigs are static between authored edits. Re-rendering all
+    // shadow maps every animation frame was the largest avoidable mobile GPU
+    // cost and also made reflection/shadow timing diverge under load.
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     const initialLightingProfile = roomLightingProfile(
@@ -4067,6 +4074,7 @@ function GallerySceneRenderer({
       });
       element.dataset.cutaway = active ? "active" : "inactive";
       element.dataset.roofPreference = editorCutawayOpen ? "open" : "ceiling";
+      renderer.shadowMap.needsUpdate = true;
     };
     applyCutawayMode();
     let reflectionEnvironmentTarget: THREE.WebGLRenderTarget | null = null;
@@ -4786,6 +4794,7 @@ function GallerySceneRenderer({
           roomBounds.minZ,
           roomBounds.maxZ,
         );
+        renderer.shadowMap.needsUpdate = true;
         suppressSceneClick = true;
         return;
       }
@@ -4800,6 +4809,7 @@ function GallerySceneRenderer({
         draggedArtwork.rotation.set(...config.rotation);
         draggedArtwork.userData.wall = placement.wall;
         draggedArtworkPlacement = { id: artwork.id, ...placement };
+        renderer.shadowMap.needsUpdate = true;
         suppressSceneClick = true;
       }
     };
@@ -5088,6 +5098,7 @@ function GallerySceneRenderer({
       currentSelectedDecorId = nextSelectedDecorId;
       if (previousCollisionKey !== nextCollisionKey) rebuildCollision();
       if (reflectionChanged) scheduleRoomReflection();
+      renderer.shadowMap.needsUpdate = true;
       element.dataset.ceiling = next.ceiling ?? "gallery";
       element.dataset.lightingPreset = next.lighting;
       element.dataset.artLights = String(lighting.count);

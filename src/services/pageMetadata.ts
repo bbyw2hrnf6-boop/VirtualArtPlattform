@@ -39,7 +39,7 @@ export function pageMetadataPolicy(
   };
   const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "demo">, string> = {
     create: "Create a Space",
-    data: "MVP data and rights",
+    data: "Data and rights",
     account: "Your Projects and account",
     "auth-action": "Account action",
     "space-not-found": "Space unavailable",

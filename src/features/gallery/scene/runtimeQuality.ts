@@ -198,7 +198,15 @@ export function renderQualityForCapabilities({
     ? { antialias: false, dpr: Math.min(dpr, 1.15), shadows: true, shadowMapSize: 512, tier: 'low' }
     : high
       ? { antialias: true, dpr: Math.min(dpr, 1.65), shadows: true, shadowMapSize: 2048, tier: 'high' }
-      : { antialias: true, dpr: Math.min(dpr, 1.35), shadows: true, shadowMapSize: 1024, tier: 'balanced' };
+      : {
+          antialias: true,
+          // On compact/coarse devices 1.2 DPR keeps textural detail while
+          // cutting roughly 21% of the fragments rendered at 1.35 DPR.
+          dpr: Math.min(dpr, coarse || compact ? 1.2 : 1.35),
+          shadows: true,
+          shadowMapSize: 1024,
+          tier: 'balanced',
+        };
 }
 
 export function createAdaptiveDpr(

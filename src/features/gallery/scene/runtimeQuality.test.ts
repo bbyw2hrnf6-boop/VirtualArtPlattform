@@ -62,7 +62,9 @@ describe('planar gallery collision', () => {
 
 describe('runtime quality selection', () => {
   it('does not classify a capable touch tablet as low quality', () => {
-    expect(renderQualityForCapabilities({ coarse: true, compact: true, cores: 8, memory: 8, dpr: 2 }).tier).toBe('balanced');
+    const quality = renderQualityForCapabilities({ coarse: true, compact: true, cores: 8, memory: 8, dpr: 2 });
+    expect(quality.tier).toBe('balanced');
+    expect(quality.dpr).toBe(1.2);
   });
 
   it('starts genuinely constrained devices on the bounded low tier', () => {
