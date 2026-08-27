@@ -267,7 +267,6 @@
     border-right: 0;
     border-bottom: 1px solid rgba(255, 255, 255, .09);
   }
-  .visitor-controls__actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .visitor-controls__tour-nav button > span { display: none; }
 
   .viewer-caption {

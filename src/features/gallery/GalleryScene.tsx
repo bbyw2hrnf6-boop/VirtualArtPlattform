@@ -2796,8 +2796,9 @@ function createFirstPersonWalk(
     const dx = event.clientX - lastX;
     const dy = event.clientY - lastY;
     if (Math.abs(dx) + Math.abs(dy) > 2) dragged = true;
-    yaw -= dx * 0.0032;
-    pitch -= dy * 0.0032;
+    const lookSensitivity = event.pointerType === "touch" ? 0.00245 : 0.0028;
+    yaw -= dx * lookSensitivity;
+    pitch -= dy * lookSensitivity;
     pitch = THREE.MathUtils.clamp(pitch, -1.22, 1.22);
     camera.rotation.set(pitch, yaw, 0, "YXZ");
     lastX = event.clientX;
@@ -2864,7 +2865,7 @@ function createFirstPersonWalk(
     if (keys.has("KeyS")) desired.sub(forward);
     if (keys.has("KeyD")) desired.add(right);
     if (keys.has("KeyA")) desired.sub(right);
-    if (desired.lengthSq()) desired.normalize().multiplyScalar(2.75);
+    if (desired.lengthSq()) desired.normalize().multiplyScalar(2.3);
     else if (destinations.length) {
       desired.subVectors(destinations[0], camera.position);
       desired.y = 0;
@@ -2875,9 +2876,10 @@ function createFirstPersonWalk(
       } else
         desired
           .normalize()
-          .multiplyScalar(Math.min(2.6, Math.max(0.7, distance * 1.5)));
+          .multiplyScalar(Math.min(2.2, Math.max(0.55, distance * 1.35)));
     }
-    velocity.lerp(desired, 1 - Math.exp(-9 * delta));
+    const response = desired.lengthSq() > velocity.lengthSq() ? 7.4 : 10.8;
+    velocity.lerp(desired, 1 - Math.exp(-response * delta));
     previous.copy(camera.position);
     camera.position.addScaledVector(velocity, delta);
     const current = bounds();
@@ -2893,6 +2895,8 @@ function createFirstPersonWalk(
     );
     camera.position.y = eyeHeight;
     const moved = collision?.(camera.position, previous);
+    if (moved === false && camera.position.distanceToSquared(previous) < 1e-7)
+      velocity.multiplyScalar(0.18);
     if (
       destinations.length &&
       moved === false &&
@@ -3214,6 +3218,7 @@ export interface GallerySceneProps {
   selectedId?: string;
   selectedDecorId?: string;
   focusWall?: { wall: WallId; token: number };
+  focusArtwork?: { id: string; token: number };
   onSelect?: (id: string) => void;
   onSelectDecor?: (id: string) => void;
   onMoveDecor?: (id: string, x: number, z: number) => void;
@@ -3575,6 +3580,7 @@ function disposeAndRemove(parent: THREE.Object3D, object: THREE.Object3D) {
 
 type ModeTransition = {
   startedAt: number;
+  durationMs?: number;
   fromPosition: THREE.Vector3;
   toPosition: THREE.Vector3;
   fromQuaternion: THREE.Quaternion;
@@ -3595,6 +3601,7 @@ type GalleryRuntime = {
   setEditorCutaway: (open: boolean) => void;
   resetView: () => void;
   focusWall: (wall: WallId) => void;
+  focusArtwork: (id: string) => void;
   focusPavilionZone: (zone: PavilionZoneId) => void;
   startGuidedTour: () => void;
   skipGuidedTour: () => void;
@@ -3609,6 +3616,7 @@ type GalleryTourPose = {
   quaternion: THREE.Quaternion;
   label: string;
   artworkId?: string;
+  isStop?: boolean;
 };
 
 type GalleryActiveTour = {
@@ -3625,6 +3633,7 @@ function GallerySceneRenderer({
   selectedId,
   selectedDecorId,
   focusWall,
+  focusArtwork,
   onSelect,
   onSelectDecor,
   onMoveDecor,
@@ -4486,8 +4495,7 @@ function GallerySceneRenderer({
     };
     const focusPavilionZoneView = (zoneId: PavilionZoneId) => {
       if (
-        initial.visitor ||
-        mode !== "arrange" ||
+        (initial.visitor ? mode !== "overview" : mode !== "arrange") ||
         currentDraft.templateId !== "pavilion"
       )
         return;
@@ -4513,6 +4521,37 @@ function GallerySceneRenderer({
         };
         controls.enabled = false;
       }
+    };
+    const focusArtworkView = (id: string) => {
+      if (!initial.visitor || mode !== "walk" || activeGuidedTour) return;
+      const pose = galleryTourPoses().find((item) => item.artworkId === id);
+      if (!pose) return;
+      navigation.setEnabled(false);
+      const finish = () => {
+        camera.position.copy(pose.position);
+        camera.quaternion.copy(pose.quaternion);
+        camera.fov = 58;
+        camera.updateProjectionMatrix();
+        navigation.syncFromCamera();
+        navigation.setEnabled(true);
+        setSmartViewLabel(pose.label);
+        modeTransition = null;
+        element.dataset.transition = "idle";
+      };
+      modeTransition = {
+        startedAt: performance.now(),
+        durationMs: 560,
+        fromPosition: camera.position.clone(),
+        fromQuaternion: camera.quaternion.clone(),
+        fromFov: camera.fov,
+        toPosition: pose.position.clone(),
+        toQuaternion: pose.quaternion.clone(),
+        toFov: 58,
+        finish,
+      };
+      element.dataset.transition = "active";
+      if (reducedMotion.matches) finish();
+      status.ready(`${pose.label} ready.`);
     };
     roomTurn.current = (direction) => {
       if (!controls || mode !== "arrange" || orbitAnimation) return;
@@ -5125,11 +5164,13 @@ function GallerySceneRenderer({
           position: entrance,
           quaternion: cameraQuaternionFor(entrance, entranceTarget),
           label: "Entrance",
+          isStop: true,
         },
         {
           position: center,
           quaternion: cameraQuaternionFor(center, new THREE.Vector3(0, VISITOR_EYE_HEIGHT, -d * 0.34)),
           label: "Room overview",
+          isStop: true,
         },
       ];
       currentDraft.artworks
@@ -5153,6 +5194,7 @@ function GallerySceneRenderer({
             quaternion: cameraQuaternionFor(position, target),
             label: artwork.title || "Untitled artwork",
             artworkId: artwork.id,
+            isStop: true,
           });
         });
       if (poses.length === 2)
@@ -5160,23 +5202,46 @@ function GallerySceneRenderer({
           position: entrance.clone(),
           quaternion: cameraQuaternionFor(entrance, entranceTarget),
           label: "Visitor view",
+          isStop: true,
         });
-      return poses;
+      const routed: GalleryTourPose[] = [poses[0]];
+      for (const destination of poses.slice(1)) {
+        const from = routed.at(-1)?.position ?? poses[0].position;
+        const path = collision.findPath(from, destination.position);
+        if (path?.length) {
+          path.slice(0, -1).forEach((point, index) => {
+            if (point.distanceToSquared(from) < 0.04) return;
+            const next = path[index + 1] ?? destination.position;
+            routed.push({
+              position: point.clone().setY(VISITOR_EYE_HEIGHT),
+              quaternion: cameraQuaternionFor(point, next.clone().setY(VISITOR_EYE_HEIGHT)),
+              label: destination.label,
+              isStop: false,
+            });
+          });
+        }
+        routed.push(destination);
+      }
+      return routed;
     };
     const publishGalleryTourState = (
       status: VisitorTourState["status"],
       progress: number,
       pose: GalleryTourPose,
       index: number,
-      count: number,
+      poses: GalleryTourPose[],
     ) => {
       if (disposed) return;
+      const stops = poses.filter((item) => item.isStop !== false);
+      const currentStop = poses
+        .slice(0, index + 1)
+        .filter((item) => item.isStop !== false).length;
       setTourState({
         status,
         progress,
         currentLabel: pose.label,
-        currentStop: Math.min(count, index + 1),
-        stopCount: count,
+        currentStop: Math.max(1, Math.min(stops.length, currentStop)),
+        stopCount: stops.length,
       });
       element.dataset.guidedTour = status;
       element.dataset.tourStop = pose.label;
@@ -5210,7 +5275,7 @@ function GallerySceneRenderer({
           THREE.MathUtils.clamp((now - activeGuidedTour.startedAt) / activeGuidedTour.duration, 0, 1),
           pose,
           Math.max(0, activeGuidedTour.segment + 1),
-          activeGuidedTour.poses.length,
+          activeGuidedTour.poses,
         );
       } else {
         activeGuidedTour.pausedAt = now;
@@ -5222,26 +5287,51 @@ function GallerySceneRenderer({
           THREE.MathUtils.clamp((now - activeGuidedTour.startedAt) / activeGuidedTour.duration, 0, 1),
           pose,
           Math.max(0, activeGuidedTour.segment + 1),
-          activeGuidedTour.poses.length,
+          activeGuidedTour.poses,
         );
       }
     };
     const stepGuidedTour = (direction: -1 | 1) => {
       if (!activeGuidedTour) return;
       const tour = activeGuidedTour;
-      const index = THREE.MathUtils.clamp(tour.segment + 1 + direction, 0, tour.poses.length - 1);
+      const stopIndexes = tour.poses.flatMap((pose, poseIndex) =>
+        pose.isStop === false ? [] : [poseIndex],
+      );
+      const current = stopIndexes.findIndex((poseIndex) => poseIndex >= tour.segment + 1);
+      const stopIndex = THREE.MathUtils.clamp(
+        (current < 0 ? stopIndexes.length - 1 : current) + direction,
+        0,
+        stopIndexes.length - 1,
+      );
+      const index = stopIndexes[stopIndex];
       const pose = tour.poses[index];
       const progress = index / Math.max(1, tour.poses.length - 1);
-      camera.position.copy(pose.position);
-      camera.quaternion.copy(pose.quaternion);
-      camera.fov = 58;
-      camera.updateProjectionMatrix();
       tour.segment = Math.max(-1, index - 1);
       tour.startedAt = performance.now() - progress * tour.duration;
       tour.pausedAt = performance.now();
-      navigation.syncFromCamera();
-      navigation.setEnabled(true);
-      publishGalleryTourState("paused", progress, pose, index, tour.poses.length);
+      navigation.setEnabled(false);
+      const finish = () => {
+        camera.position.copy(pose.position);
+        camera.quaternion.copy(pose.quaternion);
+        camera.fov = 58;
+        camera.updateProjectionMatrix();
+        modeTransition = null;
+        navigation.syncFromCamera();
+        navigation.setEnabled(true);
+      };
+      modeTransition = {
+        startedAt: performance.now(),
+        durationMs: 520,
+        fromPosition: camera.position.clone(),
+        toPosition: pose.position.clone(),
+        fromQuaternion: camera.quaternion.clone(),
+        toQuaternion: pose.quaternion.clone(),
+        fromFov: camera.fov,
+        toFov: 58,
+        finish,
+      };
+      if (reducedMotion.matches) finish();
+      publishGalleryTourState("paused", progress, pose, index, tour.poses);
     };
     const startGuidedTour = () => {
       if (disposed || mode !== "walk" || activeGuidedTour) return;
@@ -5275,7 +5365,7 @@ function GallerySceneRenderer({
         segment: -1,
         lastUiUpdate: 0,
       };
-      publishGalleryTourState("playing", 0, poses[0], 0, poses.length);
+      publishGalleryTourState("playing", 0, poses[0], 0, poses);
     };
     const smartView = () => {
       if (mode !== "walk" || activeGuidedTour) return;
@@ -5312,6 +5402,7 @@ function GallerySceneRenderer({
       setEditorCutaway: setEditorCutawayMode,
       resetView: resetSceneView,
       focusWall: focusWallView,
+      focusArtwork: focusArtworkView,
       focusPavilionZone: focusPavilionZoneView,
       startGuidedTour,
       skipGuidedTour: () => stopGuidedTour("skipped"),
@@ -5431,13 +5522,13 @@ function GallerySceneRenderer({
         if (tour.segment !== segment || now - tour.lastUiUpdate > 120) {
           tour.segment = segment;
           tour.lastUiUpdate = now;
-          publishGalleryTourState("playing", raw, to, segment + 1, tour.poses.length);
+          publishGalleryTourState("playing", raw, to, segment + 1, tour.poses);
         }
         if (raw >= 1) stopGuidedTour("completed");
       } else if (mode === "walk" && !modeTransition) navigation.update();
       updateCutaway();
       if (modeTransition) {
-        const raw = Math.min(1, (now - modeTransition.startedAt) / 320);
+        const raw = Math.min(1, (now - modeTransition.startedAt) / (modeTransition.durationMs ?? 320));
         const eased = raw * raw * (3 - 2 * raw);
         camera.position.lerpVectors(
           modeTransition.fromPosition,
@@ -5673,6 +5764,9 @@ function GallerySceneRenderer({
     if (!visitor && focusWall) runtime.current?.focusWall(focusWall.wall);
   }, [focusWall, visitor]);
   useEffect(() => {
+    if (visitor && focusArtwork) runtime.current?.focusArtwork(focusArtwork.id);
+  }, [focusArtwork, visitor]);
+  useEffect(() => {
     onCaptureReady?.(runtime.current?.capture ?? null);
     return () => {
       onCaptureReady?.(null);
@@ -5728,6 +5822,7 @@ function GallerySceneRenderer({
           artworkButtonRef={artworkButtonRef}
           onOpenArtworkDirectory={onOpenArtworkDirectory}
           compactLabel={visitor ? "Space controls" : "Walk Preview controls"}
+          firstEntryHint={visitor}
         />
       )}
       {!visitor && arranging && (
@@ -5811,43 +5906,44 @@ function GallerySceneRenderer({
               →
             </button>
           </>
-          {draft.templateId === "pavilion" && (
-            <nav
-              className="pavilion-zone-nav"
-              aria-label="Grand Forum camera zones"
-            >
-              <div className="pavilion-zone-nav__heading">
-                <span>Grand Forum map</span>
-                <small>Jump to zone</small>
-              </div>
-              <div
-                className="pavilion-zone-map"
-                role="group"
-                aria-label="Choose a Forum camera zone"
-              >
-                {PAVILION_ZONES.map((zone) => (
-                  <button
-                    key={zone.id}
-                    type="button"
-                    data-zone={zone.id}
-                    className={activePavilionZone === zone.id ? "active" : ""}
-                    aria-pressed={activePavilionZone === zone.id}
-                    aria-label={`Jump camera to ${zone.label}`}
-                    title={zone.label}
-                    onClick={() => {
-                      setActivePavilionZone(zone.id);
-                      runtime.current?.focusPavilionZone(zone.id);
-                    }}
-                  >
-                    <span>{zone.shortLabel}</span>
-                  </button>
-                ))}
-              </div>
-              <p>Five camera zones · one Project</p>
-            </nav>
-          )}
         </>
       )}
+      {draft.templateId === "pavilion" &&
+        (arranging || (visitor && viewMode === "overview")) && (
+          <nav
+            className="pavilion-zone-nav"
+            aria-label="Grand Forum camera zones"
+          >
+            <div className="pavilion-zone-nav__heading">
+              <span>Grand Forum map</span>
+              <small>Jump to zone</small>
+            </div>
+            <div
+              className="pavilion-zone-map"
+              role="group"
+              aria-label="Choose a Forum camera zone"
+            >
+              {PAVILION_ZONES.map((zone) => (
+                <button
+                  key={zone.id}
+                  type="button"
+                  data-zone={zone.id}
+                  className={activePavilionZone === zone.id ? "active" : ""}
+                  aria-pressed={activePavilionZone === zone.id}
+                  aria-label={`Jump camera to ${zone.label}`}
+                  title={zone.label}
+                  onClick={() => {
+                    setActivePavilionZone(zone.id);
+                    runtime.current?.focusPavilionZone(zone.id);
+                  }}
+                >
+                  <span>{zone.shortLabel}</span>
+                </button>
+              ))}
+            </div>
+            <p>Five camera zones · one Project</p>
+          </nav>
+        )}
       <div className="scene-hint">
         <span className="movement-hint__desktop">
           {visitor
@@ -5891,6 +5987,8 @@ export const GalleryScene = memo(
     previous.selectedDecorId === next.selectedDecorId &&
     previous.focusWall?.token === next.focusWall?.token &&
     previous.focusWall?.wall === next.focusWall?.wall &&
+    previous.focusArtwork?.token === next.focusArtwork?.token &&
+    previous.focusArtwork?.id === next.focusArtwork?.id &&
     previous.onSelect === next.onSelect &&
     previous.onSelectDecor === next.onSelectDecor &&
     previous.onMoveDecor === next.onMoveDecor &&

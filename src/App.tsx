@@ -38,7 +38,6 @@ import {
 import { createGalleryDraft } from "./features/gallery/editor/draftDefaults";
 import { createDemoCollectionDraft } from "./features/gallery/editor/demoCollection";
 import type { GallerySceneCapture } from "./features/gallery/GalleryScene";
-import { VISITOR_KEYBOARD_HINT } from "./features/gallery/visitorKeyboard";
 import {
   DEFAULT_ARTWORK_EYE_LINE_METRES,
   PLACEMENT_GRID_STEP_METRES,
@@ -3774,6 +3773,7 @@ function ArtworkDirectory({
   unavailable,
   imagesLoading,
   returnFocus,
+  onViewArtwork,
   onClose,
 }: {
   exhibitionTitle: string;
@@ -3783,6 +3783,7 @@ function ArtworkDirectory({
   unavailable: boolean;
   imagesLoading?: boolean;
   returnFocus: React.RefObject<HTMLElement | null>;
+  onViewArtwork?: (id: string) => void;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLElement>(null);
@@ -3891,6 +3892,15 @@ function ArtworkDirectory({
                       {artwork.description ||
                         "No artwork note was provided for this exhibition."}
                     </p>
+                    {onViewArtwork && !unavailable && (
+                      <button
+                        className="text-link"
+                        type="button"
+                        onClick={() => onViewArtwork(artwork.id)}
+                      >
+                        View in Space →
+                      </button>
+                    )}
                   </div>
                 </article>
               </li>
@@ -3973,17 +3983,14 @@ function ArtworkInfoCard({
 }
 
 function MovementHint({ viewMode }: { viewMode: ViewMode }) {
+  if (viewMode === "walk") return null;
   return (
     <div className="movement-hint" role="note">
       <span className="movement-hint__desktop">
-        {viewMode === "walk"
-          ? `${VISITOR_KEYBOARD_HINT} · Click floor to move`
-          : "Drag to orbit · Scroll to zoom"}
+        Drag to orbit · Scroll to zoom
       </span>
       <span className="movement-hint__mobile">
-        {viewMode === "walk"
-          ? "Drag to look · Tap floor to walk · Pinch to zoom"
-          : "Drag to orbit · Pinch to zoom"}
+        Drag to orbit · Pinch to zoom
       </span>
     </div>
   );
@@ -4014,6 +4021,19 @@ function DemoLoadingPoster({
       <span />
       <p>Preparing exhibition · {Math.round(progress)}%</p>
     </div>
+  );
+}
+
+function SpaceLoadingPoster() {
+  return (
+    <main className="space-entry-loading" role="status" aria-live="polite">
+      <Logo />
+      <div aria-hidden="true" className="space-entry-loading__frame" />
+      <p className="eyebrow">Immersive Space</p>
+      <h1>Preparing your visit.</h1>
+      <p>Loading the room, artworks and visitor route…</p>
+      <span aria-hidden="true" />
+    </main>
   );
 }
 
@@ -4138,6 +4158,10 @@ function PublishedGallery({ id }: { id: string }) {
   const [viewMode, setViewMode] = useState<ViewMode>("walk");
   const [artworkFocus, setArtworkFocus] = useState<ArtworkFocus | null>(null);
   const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [directoryFocus, setDirectoryFocus] = useState<{
+    id: string;
+    token: number;
+  }>();
   const [accountOpen, setAccountOpen] = useState(false);
   const [artworkLoad, setArtworkLoad] = useState({ loaded: 0, total: 0, failed: false });
   const handleViewerSessionChange = useCallback((session: AccountSession | null) => {
@@ -4225,11 +4249,7 @@ function PublishedGallery({ id }: { id: string }) {
     });
   }, [artworkLoad.loaded, artworkLoad.total, loadState]);
   if (loadState.status === "loading")
-    return (
-      <main className="loading" role="status" aria-live="polite">
-        Loading space…
-      </main>
-    );
+    return <SpaceLoadingPoster />;
   if (loadState.status === "error")
     return (
       <main className="not-found not-found--error">
@@ -4331,6 +4351,7 @@ function PublishedGallery({ id }: { id: string }) {
         visitor
         viewMode={viewMode}
         playIntro
+        focusArtwork={directoryFocus}
         onArtworkFocus={setArtworkFocus}
         onViewModeChange={changeView}
         artworkCount={directoryArtworks.length}
@@ -4374,6 +4395,12 @@ function PublishedGallery({ id }: { id: string }) {
           sourceNote="Artwork images and notes are shown as supplied with this exhibition."
           unavailable={sceneUnavailable}
           returnFocus={directoryButton}
+          onViewArtwork={(artworkId) => {
+            setDirectoryOpen(false);
+            setArtworkFocus(null);
+            setViewMode("walk");
+            setDirectoryFocus({ id: artworkId, token: Date.now() });
+          }}
           onClose={() => setDirectoryOpen(false)}
         />
       )}

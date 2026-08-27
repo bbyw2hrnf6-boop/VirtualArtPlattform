@@ -1,4 +1,5 @@
-import type { CSSProperties, RefObject } from "react";
+import { useEffect, useState, type CSSProperties, type RefObject } from "react";
+import { VISITOR_KEYBOARD_HINT } from "./visitorKeyboard";
 import type { VisitorTourState } from "./visitorTourState";
 
 export type VisitorModeOption<TMode extends string> = {
@@ -25,7 +26,10 @@ type VisitorControlsProps<TMode extends string> = {
   artworkButtonRef?: RefObject<HTMLButtonElement | null>;
   onOpenArtworkDirectory?: () => void;
   compactLabel?: string;
+  firstEntryHint?: boolean;
 };
+
+const VISITOR_HINT_KEY = "lieuva-visitor-controls-seen-v1";
 
 export function VisitorControls<TMode extends string>({
   mode,
@@ -45,7 +49,22 @@ export function VisitorControls<TMode extends string>({
   artworkButtonRef,
   onOpenArtworkDirectory,
   compactLabel = "Space controls",
+  firstEntryHint = false,
 }: VisitorControlsProps<TMode>) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [showHint, setShowHint] = useState(() =>
+    Boolean(
+      firstEntryHint &&
+      typeof sessionStorage !== "undefined" &&
+      !sessionStorage.getItem(VISITOR_HINT_KEY),
+    ),
+  );
+  useEffect(() => {
+    if (!showHint || typeof sessionStorage === "undefined") return;
+    sessionStorage.setItem(VISITOR_HINT_KEY, "seen");
+    const timeout = window.setTimeout(() => setShowHint(false), 7200);
+    return () => window.clearTimeout(timeout);
+  }, [showHint]);
   const tourRunning = tour.status !== "idle";
   const progressStyle = {
     "--visitor-tour-progress": String(Math.max(0, Math.min(1, tour.progress))),
@@ -120,7 +139,27 @@ export function VisitorControls<TMode extends string>({
             <small>{artworkCount} listed</small>
           </button>
         )}
+        <button
+          type="button"
+          className="visitor-controls__help-trigger"
+          aria-expanded={helpOpen}
+          aria-controls="visitor-controls-help"
+          onClick={() => setHelpOpen((value) => !value)}
+        >
+          <span>Controls</span>
+          <small>How to explore</small>
+        </button>
       </div>
+
+      {(helpOpen || showHint) && (
+        <aside id="visitor-controls-help" className="visitor-controls__help" role="note">
+          <button type="button" aria-label="Close control guide" onClick={() => { setHelpOpen(false); setShowHint(false); }}>×</button>
+          <strong>Explore at your pace.</strong>
+          <span className="visitor-controls__help-desktop">{VISITOR_KEYBOARD_HINT} · Drag to look · Click the floor to walk</span>
+          <span className="visitor-controls__help-mobile">Drag to look · Tap the floor to walk · Pinch to zoom</span>
+          <small>Select an artwork for its story, or choose Guided tour.</small>
+        </aside>
+      )}
 
       {tourRunning && (
         <div className="visitor-controls__tour-nav" role="group" aria-label="Guided tour playback">
