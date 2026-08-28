@@ -8,6 +8,9 @@ import {
   loadCreatorHome,
   loadMyCreatorProfile,
   loadPublicCreatorDirectory,
+  interactCreatorPost,
+  manageCreatorBlock,
+  type CreatorComment,
   type CreatorHomePayload,
   type CreatorPost,
   type CreatorProfile,
@@ -43,6 +46,10 @@ export default function CreatorHubPage() {
   const [postBody, setPostBody] = useState("");
   const [postBusy, setPostBusy] = useState(false);
   const [postNotice, setPostNotice] = useState("");
+  const [activePost, setActivePost] = useState<string>();
+  const [commentBody, setCommentBody] = useState("");
+  const [postActions, setPostActions] = useState<Record<string, string>>({});
+  const [newComments, setNewComments] = useState<Record<string, CreatorComment[]>>({});
 
   useEffect(() => {
     void loadPublicCreatorDirectory().then((value) => {
@@ -89,6 +96,7 @@ export default function CreatorHubPage() {
           following: current?.following ?? [],
           updates: current?.updates ?? [],
           posts: [post, ...(current?.posts ?? [])],
+          notifications: current?.notifications ?? [],
         }));
         setPostBody("");
         setPostNotice("Posted to your Creator feed.");
@@ -97,6 +105,44 @@ export default function CreatorHubPage() {
         setPostNotice(error instanceof Error ? error.message.replace(/^Firebase:\s*/i, "") : "The post could not be published.");
       })
       .finally(() => setPostBusy(false));
+  };
+
+  const updatePost = (postId: string, update: Partial<CreatorPost>) => setHome((current) => current ? ({
+    ...current,
+    posts: current.posts.map((post) => post.id === postId ? { ...post, ...update } : post),
+  }) : current);
+
+  const engage = async (post: CreatorPost, action: "reaction" | "comment" | "report" | "block") => {
+    if (!signedIn) { setPostActions((value) => ({ ...value, [post.id]: "Sign in to join the conversation." })); return; }
+    if (post.demo) { setPostActions((value) => ({ ...value, [post.id]: "Demo profiles are read-only." })); return; }
+    setPostActions((value) => ({ ...value, [post.id]: "Working…" }));
+    try {
+      if (action === "reaction") {
+        const result = await interactCreatorPost(post.handle, post.id, { action: post.viewerReacted ? "unreact" : "react" });
+        updatePost(post.id, { viewerReacted: result.reacted, reactionCount: result.reactionCount ?? post.reactionCount });
+        setPostActions((value) => ({ ...value, [post.id]: result.reacted ? "Appreciated." : "Appreciation removed." }));
+      } else if (action === "comment") {
+        const body = commentBody.trim();
+        if (!body) return;
+        const result = await interactCreatorPost(post.handle, post.id, { action: "comment", body });
+        if (result.comment) setNewComments((value) => ({ ...value, [post.id]: [...(value[post.id] ?? []), result.comment!] }));
+        updatePost(post.id, { commentCount: post.commentCount + 1 });
+        setCommentBody("");
+        setPostActions((value) => ({ ...value, [post.id]: "Comment posted." }));
+      } else if (action === "report") {
+        await interactCreatorPost(post.handle, post.id, { action: "report", reason: "other" });
+        setPostActions((value) => ({ ...value, [post.id]: "Report received for review." }));
+      } else {
+        await manageCreatorBlock(post.handle, "block");
+        setHome((current) => current ? ({
+          ...current,
+          posts: current.posts.filter((item) => item.handle !== post.handle),
+          following: current.following.filter((creator) => creator.handle !== post.handle),
+        }) : current);
+      }
+    } catch (error) {
+      setPostActions((value) => ({ ...value, [post.id]: error instanceof Error ? error.message.replace(/^Firebase:\s*/i, "") : "Action failed." }));
+    }
   };
 
   return (
@@ -189,11 +235,25 @@ export default function CreatorHubPage() {
                   <time dateTime={post.createdAt}>{relativeDate(post.createdAt)}</time>
                 </header>
                 <p>{post.body}</p>
-                <footer>{post.demo ? <span>Demo profile</span> : <span>Creator update</span>}<a href={creatorCanonicalUrl(post.handle)}>Visit Creator <b>→</b></a></footer>
+                <footer className="creator-post__actions">
+                  <button type="button" className={post.viewerReacted ? "is-active" : ""} onClick={() => void engage(post, "reaction")}>◇ Appreciate <b>{post.reactionCount ?? 0}</b></button>
+                  <button type="button" onClick={() => setActivePost(activePost === post.id ? undefined : post.id)}>Discuss <b>{post.commentCount ?? 0}</b></button>
+                  <details><summary>Safety ···</summary><div><button type="button" onClick={() => void engage(post, "report")}>Report post</button><button type="button" onClick={() => void engage(post, "block")}>Block Creator</button></div></details>
+                  <a href={creatorCanonicalUrl(post.handle)}>Visit Creator <b>→</b></a>
+                </footer>
+                {activePost === post.id && <div className="creator-post__discussion">
+                  {(newComments[post.id] ?? []).map((comment) => <p key={comment.id}><strong>{comment.displayName}</strong> {comment.body}</p>)}
+                  <form onSubmit={(event) => { event.preventDefault(); void engage(post, "comment"); }}>
+                    <label><span className="visually-hidden">Comment on this post</span><input value={commentBody} onChange={(event) => setCommentBody(event.target.value.slice(0, 280))} placeholder="Add a considered comment…" disabled={!signedIn || Boolean(post.demo)} /></label>
+                    <button type="submit" disabled={!commentBody.trim() || !signedIn || Boolean(post.demo)}>Post</button>
+                  </form>
+                </div>}
+                {postActions[post.id] && <small className="creator-post__notice" aria-live="polite">{postActions[post.id]}</small>}
               </article>
             ))}
           </div>
           <aside className="creator-hub__rail">
+            {home?.notifications?.length ? <div className="creator-hub__notifications"><p className="eyebrow">Notifications</p>{home.notifications.slice(0, 4).map((notification) => <a key={notification.id} href={creatorCanonicalUrl(notification.actorHandle)}><strong>{notification.actorDisplayName}</strong><span>{notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? " commented on your post" : " appreciated your post"}</span><time>{relativeDate(notification.createdAt)}</time></a>)}</div> : null}
             <p className="eyebrow">Following</p>
             <h3>{home?.following.length ? "Your circle" : "Build your circle"}</h3>
             {home?.following.length ? <div className="creator-hub__following" aria-label="Creators you follow">{home.following.map((creator) => (

@@ -15,6 +15,11 @@
   background: #0c0f0d;
 }
 
+.sgs[data-condensed="true"] {
+  height: 790svh;
+  min-height: 6000px;
+}
+
 .sgs__sticky {
   position: sticky;
   top: 0;
@@ -542,8 +547,8 @@
 
 @media (max-width: 900px), (max-height: 520px) and (pointer: coarse) {
   .sgs {
-    height: 1300svh;
-    min-height: 9200px;
+    height: 760svh;
+    min-height: 5400px;
   }
 
   .sgs__sticky {

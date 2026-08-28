@@ -42,6 +42,10 @@
   .creator-post footer { margin-left: 0; }
   .creator-post > p { font-size: 24px; }
   .creator-post footer { gap: 20px; }
+  .creator-post__actions { flex-wrap: wrap; }
+  .creator-post__actions > a { width: 100%; margin: 4px 0 0; padding-top: 12px; border-top: 1px solid #aaa89f; }
+  .creator-post__discussion,
+  .creator-post__notice { margin-left: 0; }
   .creator-hub__updates,
   .creator-hub__grid { grid-template-columns: minmax(0, 1fr); }
   .creator-hub__grid > a { min-height: 290px; }

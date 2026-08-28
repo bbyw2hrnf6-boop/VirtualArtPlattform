@@ -49,8 +49,10 @@ import {
   creatorCanonicalUrl,
   isValidCreatorWebp,
   normalizeCreatorHandle,
+  parseCreatorCommentInput,
   parseCreatorPostInput,
   parseCreatorProfileInput,
+  parseCreatorReportReason,
   publicCreatorDirectoryEntry,
   renderCreatorDocument,
   type CreatorDelivery,
@@ -256,6 +258,7 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
     }));
   const updated = timestampMilliseconds(profileData.updatedAt);
   const posts: PublicCreatorPost[] = postsSnapshot.docs.flatMap((document) => {
+    if (document.data().moderationStatus === "removed") return [];
     const body = parseCreatorPostInput(document.data().body);
     const createdAt = timestampMilliseconds(document.data().createdAt);
     if (!body || createdAt === undefined) return [];
@@ -265,6 +268,8 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
       displayName: profile.displayName,
       body,
       createdAt: new Date(createdAt).toISOString(),
+      reactionCount: Math.max(0, Number.isSafeInteger(document.data().reactionCount) ? document.data().reactionCount : 0),
+      commentCount: Math.max(0, Number.isSafeInteger(document.data().commentCount) ? document.data().commentCount : 0),
     }];
   });
   return {
@@ -484,11 +489,17 @@ export const manageLieuvaCreatorFollow = onCall(
       return { following: false, followerCount: target.followerCount, canFollow: false, isSelf: false };
     const isSelf = followerCreatorId === followedCreatorId;
     const followReference = db.collection("creatorFollows").doc(`${followerCreatorId}_${followedCreatorId}`);
+    const [outgoingBlock, incomingBlock] = isSelf ? [undefined, undefined] : await Promise.all([
+      db.collection("creatorBlocks").doc(`${followerCreatorId}_${followedCreatorId}`).get(),
+      db.collection("creatorBlocks").doc(`${followedCreatorId}_${followerCreatorId}`).get(),
+    ]);
+    const blocked = outgoingBlock?.exists === true || incomingBlock?.exists === true;
     if (action === "status" || isSelf) {
       const follow = isSelf ? undefined : await followReference.get();
-      return { following: follow?.exists === true, followerCount: target.followerCount, canFollow: !isSelf, isSelf };
+      return { following: blocked ? false : follow?.exists === true, followerCount: target.followerCount, canFollow: !isSelf && !blocked, isSelf, blocked };
     }
-    const following = await db.runTransaction(async (transaction) => {
+    if (blocked) throw new HttpsError("failed-precondition", "This Creator connection is blocked.");
+    const transitionResult = await db.runTransaction(async (transaction) => {
       const [followSnapshot, currentTarget] = await Promise.all([
         transaction.get(followReference),
         transaction.get(targetReference),
@@ -504,17 +515,29 @@ export const manageLieuvaCreatorFollow = onCall(
           schemaVersion: 1,
         });
         transaction.set(targetReference, { followerCount: transition.followerCount }, { merge: true });
-        return true;
+        return { following: true, changed: true };
       }
       if (action === "unfollow" && transition.changed) {
         transaction.delete(followReference);
         transaction.set(targetReference, { followerCount: transition.followerCount }, { merge: true });
-        return false;
+        return { following: false, changed: true };
       }
-      return exists;
+      return { following: exists, changed: false };
     });
+    if (action === "follow" && transitionResult.changed) {
+      const actorProfile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(followerCreatorId).get()).data());
+      await db.collection("creatorNotifications").doc(followedCreatorId).collection("items").add({
+        kind: "follow",
+        actorCreatorId: followerCreatorId,
+        actorHandle: actorProfile?.handle ?? "creator",
+        actorDisplayName: actorProfile?.displayName ?? "A Creator",
+        createdAt: FieldValue.serverTimestamp(),
+        read: false,
+        schemaVersion: 1,
+      });
+    }
     const updated = parseCreatorProfileInput((await targetReference.get()).data());
-    return { following, followerCount: updated?.followerCount ?? 0, canFollow: true, isSelf: false };
+    return { following: transitionResult.following, followerCount: updated?.followerCount ?? 0, canFollow: true, isSelf: false, blocked: false };
   },
 );
 
@@ -547,6 +570,9 @@ export const createLieuvaCreatorPost = onCall(
       transaction.set(postReference, {
         body,
         createdAt: FieldValue.serverTimestamp(),
+        reactionCount: 0,
+        commentCount: 0,
+        moderationStatus: "published",
         schemaVersion: 1,
       });
       transaction.set(accountReference, { lastPostAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -558,8 +584,173 @@ export const createLieuvaCreatorPost = onCall(
         displayName: profile.displayName,
         body,
         createdAt: createdAt.toISOString(),
+        reactionCount: 0,
+        commentCount: 0,
       },
     };
+  },
+);
+
+/** Moderated post engagement. Reactions and comments are enabled only behind
+ * server-owned reporting/blocking boundaries; clients never write the social
+ * collections directly. */
+export const manageLieuvaCreatorPostInteraction = onCall(
+  { region: REGION, timeoutSeconds: 20, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const handle = normalizeCreatorHandle(request.data?.handle);
+    const postId = typeof request.data?.postId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(request.data.postId)
+      ? request.data.postId
+      : null;
+    const action = request.data?.action;
+    if (!handle || !postId || !["react", "unreact", "comment", "report"].includes(action))
+      throw new HttpsError("invalid-argument", "Choose a valid Creator post interaction.");
+    const [actorOwner, targetHandle] = await Promise.all([
+      db.collection("creatorAccountOwners").doc(uid).get(),
+      db.collection("creatorHandles").doc(handle).get(),
+    ]);
+    const actorCreatorId = actorOwner.data()?.creatorId;
+    const targetCreatorId = targetHandle.data()?.creatorId;
+    if (typeof actorCreatorId !== "string")
+      throw new HttpsError("failed-precondition", "Create your Creator profile before joining the conversation.");
+    if (typeof targetCreatorId !== "string") throw new HttpsError("not-found", "Creator post not found.");
+    const actorProfile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(actorCreatorId).get()).data());
+    if (!actorProfile?.profilePublic)
+      throw new HttpsError("failed-precondition", "Make your Creator profile public before joining the conversation.");
+    const postReference = db.collection("creatorAccounts").doc(targetCreatorId).collection("posts").doc(postId);
+    const post = await postReference.get();
+    if (!post.exists || post.data()?.moderationStatus === "removed")
+      throw new HttpsError("not-found", "Creator post not found.");
+    const [outgoingBlock, incomingBlock] = await Promise.all([
+      db.collection("creatorBlocks").doc(`${actorCreatorId}_${targetCreatorId}`).get(),
+      db.collection("creatorBlocks").doc(`${targetCreatorId}_${actorCreatorId}`).get(),
+    ]);
+    if ((outgoingBlock.exists || incomingBlock.exists) && action !== "report")
+      throw new HttpsError("failed-precondition", "This Creator connection is blocked.");
+
+    if (action === "report") {
+      const reason = parseCreatorReportReason(request.data?.reason);
+      if (!reason) throw new HttpsError("invalid-argument", "Choose a valid report reason.");
+      const reportId = createHash("sha256").update(`${actorCreatorId}:${targetCreatorId}:${postId}`).digest("hex");
+      await db.collection("creatorReports").doc(reportId).set({
+        reporterCreatorId: actorCreatorId,
+        targetCreatorId,
+        postId,
+        reason,
+        status: "open",
+        createdAt: FieldValue.serverTimestamp(),
+        schemaVersion: 1,
+      }, { merge: false });
+      return { reported: true };
+    }
+
+    if (action === "comment") {
+      const body = parseCreatorCommentInput(request.data?.body);
+      if (!body) throw new HttpsError("invalid-argument", "Write between 1 and 280 characters.");
+      const commentReference = postReference.collection("comments").doc();
+      await db.runTransaction(async (transaction) => {
+        const [currentPost, actorAccount] = await Promise.all([
+          transaction.get(postReference),
+          transaction.get(db.collection("creatorAccounts").doc(actorCreatorId)),
+        ]);
+        if (!currentPost.exists || currentPost.data()?.moderationStatus === "removed")
+          throw new HttpsError("not-found", "Creator post not found.");
+        const lastCommentAt = timestampMilliseconds(actorAccount.data()?.lastCommentAt);
+        if (lastCommentAt !== undefined && Date.now() - lastCommentAt < 15_000)
+          throw new HttpsError("resource-exhausted", "Wait a moment before commenting again.");
+        const commentCount = Math.max(0, Number.isSafeInteger(currentPost.data()?.commentCount) ? currentPost.data()!.commentCount : 0);
+        transaction.create(commentReference, {
+          authorCreatorId: actorCreatorId,
+          authorHandle: actorProfile.handle,
+          authorDisplayName: actorProfile.displayName,
+          body,
+          moderationStatus: "published",
+          createdAt: FieldValue.serverTimestamp(),
+          schemaVersion: 1,
+        });
+        transaction.set(postReference, { commentCount: commentCount + 1 }, { merge: true });
+        transaction.set(db.collection("creatorAccounts").doc(actorCreatorId), { lastCommentAt: FieldValue.serverTimestamp() }, { merge: true });
+      });
+      if (actorCreatorId !== targetCreatorId) await db.collection("creatorNotifications").doc(targetCreatorId).collection("items").add({
+        kind: "comment", actorCreatorId, actorHandle: actorProfile.handle, actorDisplayName: actorProfile.displayName,
+        postId, bodyPreview: body.slice(0, 100), createdAt: FieldValue.serverTimestamp(), read: false, schemaVersion: 1,
+      });
+      return { comment: { id: commentReference.id, handle: actorProfile.handle, displayName: actorProfile.displayName, body, createdAt: new Date().toISOString() } };
+    }
+
+    const reactionReference = postReference.collection("reactions").doc(actorCreatorId);
+    const reactionResult = await db.runTransaction(async (transaction) => {
+      const [currentPost, currentReaction] = await Promise.all([
+        transaction.get(postReference),
+        transaction.get(reactionReference),
+      ]);
+      if (!currentPost.exists || currentPost.data()?.moderationStatus === "removed")
+        throw new HttpsError("not-found", "Creator post not found.");
+      const currentCount = Math.max(0, Number.isSafeInteger(currentPost.data()?.reactionCount) ? currentPost.data()!.reactionCount : 0);
+      if (action === "react" && !currentReaction.exists) {
+        transaction.create(reactionReference, { creatorId: actorCreatorId, createdAt: FieldValue.serverTimestamp(), schemaVersion: 1 });
+        transaction.set(postReference, { reactionCount: currentCount + 1 }, { merge: true });
+        return { reacted: true, reactionCount: currentCount + 1, changed: true };
+      }
+      if (action === "unreact" && currentReaction.exists) {
+        transaction.delete(reactionReference);
+        transaction.set(postReference, { reactionCount: Math.max(0, currentCount - 1) }, { merge: true });
+        return { reacted: false, reactionCount: Math.max(0, currentCount - 1), changed: true };
+      }
+      return { reacted: currentReaction.exists, reactionCount: currentCount, changed: false };
+    });
+    if (action === "react" && reactionResult.changed && actorCreatorId !== targetCreatorId)
+      await db.collection("creatorNotifications").doc(targetCreatorId).collection("items").add({
+        kind: "reaction", actorCreatorId, actorHandle: actorProfile.handle, actorDisplayName: actorProfile.displayName,
+        postId, createdAt: FieldValue.serverTimestamp(), read: false, schemaVersion: 1,
+      });
+    return reactionResult;
+  },
+);
+
+export const manageLieuvaCreatorBlock = onCall(
+  { region: REGION, timeoutSeconds: 20, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const handle = normalizeCreatorHandle(request.data?.handle);
+    const action = request.data?.action;
+    if (!handle || !["block", "unblock"].includes(action))
+      throw new HttpsError("invalid-argument", "Choose a valid Creator block action.");
+    const [owner, targetHandle] = await Promise.all([
+      db.collection("creatorAccountOwners").doc(uid).get(),
+      db.collection("creatorHandles").doc(handle).get(),
+    ]);
+    const blockerCreatorId = owner.data()?.creatorId;
+    const blockedCreatorId = targetHandle.data()?.creatorId;
+    if (typeof blockerCreatorId !== "string") throw new HttpsError("failed-precondition", "Create your Creator profile first.");
+    if (typeof blockedCreatorId !== "string" || blockedCreatorId === blockerCreatorId)
+      throw new HttpsError("invalid-argument", "Choose another public Creator.");
+    const blockReference = db.collection("creatorBlocks").doc(`${blockerCreatorId}_${blockedCreatorId}`);
+    const outgoingFollow = db.collection("creatorFollows").doc(`${blockerCreatorId}_${blockedCreatorId}`);
+    const incomingFollow = db.collection("creatorFollows").doc(`${blockedCreatorId}_${blockerCreatorId}`);
+    await db.runTransaction(async (transaction) => {
+      const [block, outgoing, incoming, blockerProfile, blockedProfile] = await Promise.all([
+        transaction.get(blockReference), transaction.get(outgoingFollow), transaction.get(incomingFollow),
+        transaction.get(db.collection("creatorProfiles").doc(blockerCreatorId)),
+        transaction.get(db.collection("creatorProfiles").doc(blockedCreatorId)),
+      ]);
+      if (action === "unblock") {
+        if (block.exists) transaction.delete(blockReference);
+        return;
+      }
+      if (!block.exists) transaction.create(blockReference, {
+        blockerCreatorId, blockedCreatorId, createdAt: FieldValue.serverTimestamp(), schemaVersion: 1,
+      });
+      if (outgoing.exists) {
+        transaction.delete(outgoingFollow);
+        transaction.set(blockedProfile.ref, { followerCount: Math.max(0, (blockedProfile.data()?.followerCount ?? 0) - 1) }, { merge: true });
+      }
+      if (incoming.exists) {
+        transaction.delete(incomingFollow);
+        transaction.set(blockerProfile.ref, { followerCount: Math.max(0, (blockerProfile.data()?.followerCount ?? 0) - 1) }, { merge: true });
+      }
+    });
+    return { blocked: action === "block" };
   },
 );
 
@@ -571,12 +762,16 @@ export const getMyLieuvaCreatorHome = onCall(
     const uid = requireAccount(request.auth);
     const owner = await db.collection("creatorAccountOwners").doc(uid).get();
     const creatorId = owner.data()?.creatorId;
-    if (typeof creatorId !== "string") return { schemaVersion: 1, following: [], updates: [], posts: [] };
-    const follows = await db.collection("creatorFollows")
-      .where("followerCreatorId", "==", creatorId).limit(50).get();
+    if (typeof creatorId !== "string") return { schemaVersion: 1, following: [], updates: [], posts: [], notifications: [] };
+    const [follows, blocks, notificationsSnapshot] = await Promise.all([
+      db.collection("creatorFollows").where("followerCreatorId", "==", creatorId).limit(50).get(),
+      db.collection("creatorBlocks").where("blockerCreatorId", "==", creatorId).limit(100).get(),
+      db.collection("creatorNotifications").doc(creatorId).collection("items").orderBy("createdAt", "desc").limit(20).get(),
+    ]);
+    const blockedIds = new Set(blocks.docs.map((document) => document.data().blockedCreatorId).filter((value): value is string => typeof value === "string"));
     const followedIds = follows.docs
       .map((document) => document.data().followedCreatorId)
-      .filter((value): value is string => typeof value === "string");
+      .filter((value): value is string => typeof value === "string" && !blockedIds.has(value));
     const profiles = await Promise.all(followedIds.map((id) => db.collection("creatorProfiles").doc(id).get()));
     const publicProfiles = profiles
       .map((snapshot) => parseCreatorProfileInput(snapshot.data()))
@@ -608,7 +803,13 @@ export const getMyLieuvaCreatorHome = onCall(
     const posts = feedDeliveries.flatMap((delivery) => delivery.kind === "public" ? delivery.posts : [])
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .slice(0, 30);
-    return { schemaVersion: 1, following, updates, posts };
+    const notifications = notificationsSnapshot.docs.flatMap((document) => {
+      const data = document.data();
+      const createdAt = timestampMilliseconds(data.createdAt);
+      if (typeof data.kind !== "string" || typeof data.actorHandle !== "string" || typeof data.actorDisplayName !== "string" || createdAt === undefined) return [];
+      return [{ id: document.id, kind: data.kind, actorHandle: data.actorHandle, actorDisplayName: data.actorDisplayName, createdAt: new Date(createdAt).toISOString(), read: data.read === true }];
+    });
+    return { schemaVersion: 1, following, updates, posts, notifications };
   },
 );
 
@@ -639,14 +840,22 @@ export const exportAuraAccountData = onCall(
       db.collection("creatorAccountOwners").doc(uid).get(),
     ]);
     const creatorId = creatorOwner.data()?.creatorId;
-    const [creatorProfile, creatorAccount, creatorHandles, creatorPosts] = typeof creatorId === "string"
+    const [creatorProfile, creatorAccount, creatorHandles, creatorPosts, creatorFollowing, creatorFollowers,
+      creatorBlocks, creatorReports, creatorComments, creatorReactions, creatorNotifications] = typeof creatorId === "string"
       ? await Promise.all([
           db.collection("creatorProfiles").doc(creatorId).get(),
           db.collection("creatorAccounts").doc(creatorId).get(),
           db.collection("creatorHandles").where("creatorId", "==", creatorId).get(),
           db.collection("creatorAccounts").doc(creatorId).collection("posts").orderBy("createdAt", "asc").get(),
+          db.collection("creatorFollows").where("followerCreatorId", "==", creatorId).get(),
+          db.collection("creatorFollows").where("followedCreatorId", "==", creatorId).get(),
+          db.collection("creatorBlocks").where("blockerCreatorId", "==", creatorId).get(),
+          db.collection("creatorReports").where("reporterCreatorId", "==", creatorId).get(),
+          db.collectionGroup("comments").where("authorCreatorId", "==", creatorId).get(),
+          db.collectionGroup("reactions").where("creatorId", "==", creatorId).get(),
+          db.collection("creatorNotifications").doc(creatorId).collection("items").orderBy("createdAt", "asc").get(),
         ])
-      : [undefined, undefined, undefined, undefined];
+      : [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
     const ownedSpaces = await Promise.all(ownedSnapshot.docs.map(async (gallery) => {
       const [members, media] = await Promise.all([
         gallery.ref.collection("members").get(),
@@ -692,6 +901,13 @@ export const exportAuraAccountData = onCall(
           .filter((handle) => handle.data().kind === "alias")
           .map((handle) => handle.id) ?? [],
         posts: creatorPosts?.docs.map((post) => ({ id: post.id, ...post.data() })) ?? [],
+        following: creatorFollowing?.docs.map((follow) => follow.data()) ?? [],
+        followerCount: creatorFollowers?.size ?? 0,
+        blocks: creatorBlocks?.docs.map((block) => ({ id: block.id, ...block.data() })) ?? [],
+        reports: creatorReports?.docs.map((report) => ({ id: report.id, ...report.data() })) ?? [],
+        comments: creatorComments?.docs.map((comment) => ({ path: comment.ref.path, ...comment.data() })) ?? [],
+        reactions: creatorReactions?.docs.map((reaction) => ({ path: reaction.ref.path, ...reaction.data() })) ?? [],
+        notifications: creatorNotifications?.docs.map((notification) => ({ id: notification.id, ...notification.data() })) ?? [],
       } } : {}),
     });
   },
@@ -740,13 +956,21 @@ export const deleteAuraAccount = onCall(
       const creatorHandles = typeof creatorId === "string"
         ? await db.collection("creatorHandles").where("creatorId", "==", creatorId).get()
         : undefined;
-      const [creatorFollowers, creatorFollowing, creatorPosts] = typeof creatorId === "string"
+      const [creatorFollowers, creatorFollowing, creatorPosts, creatorBlocksOut, creatorBlocksIn,
+        creatorReportsMade, creatorReportsAgainst, creatorComments, creatorReactions, creatorNotificationActors] = typeof creatorId === "string"
         ? await Promise.all([
             db.collection("creatorFollows").where("followedCreatorId", "==", creatorId).get(),
             db.collection("creatorFollows").where("followerCreatorId", "==", creatorId).get(),
             db.collection("creatorAccounts").doc(creatorId).collection("posts").get(),
+            db.collection("creatorBlocks").where("blockerCreatorId", "==", creatorId).get(),
+            db.collection("creatorBlocks").where("blockedCreatorId", "==", creatorId).get(),
+            db.collection("creatorReports").where("reporterCreatorId", "==", creatorId).get(),
+            db.collection("creatorReports").where("targetCreatorId", "==", creatorId).get(),
+            db.collectionGroup("comments").where("authorCreatorId", "==", creatorId).get(),
+            db.collectionGroup("reactions").where("creatorId", "==", creatorId).get(),
+            db.collectionGroup("items").where("actorCreatorId", "==", creatorId).get(),
           ])
-        : [undefined, undefined, undefined];
+        : [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
       const plan: AccountDeletionPlan = {
         uid,
         ownedGalleryIds: owned.docs.map((gallery) => gallery.id),
@@ -767,12 +991,20 @@ export const deleteAuraAccount = onCall(
           ...(typeof creatorId === "string" ? [
             { ref: db.collection("creatorAccounts").doc(creatorId) },
             { ref: db.collection("creatorProfiles").doc(creatorId) },
+            { ref: db.collection("creatorNotifications").doc(creatorId) },
           ] : []),
           ...(creatorHandles?.docs ?? []),
           ...(creatorPosts?.docs ?? []),
           ...uniqueDocumentPaths([
             ...(creatorFollowers?.docs ?? []),
             ...(creatorFollowing?.docs ?? []),
+            ...(creatorBlocksOut?.docs ?? []),
+            ...(creatorBlocksIn?.docs ?? []),
+            ...(creatorReportsMade?.docs ?? []),
+            ...(creatorReportsAgainst?.docs ?? []),
+            ...(creatorComments?.docs ?? []),
+            ...(creatorReactions?.docs ?? []),
+            ...(creatorNotificationActors?.docs ?? []),
           ]).map((path) => ({ ref: db.doc(path) })),
         ]),
       };
@@ -805,7 +1037,12 @@ export const deleteAuraAccount = onCall(
           if (typeof creatorId === "string")
             await getStorage().bucket().deleteFiles({ prefix: `creator-public/${creatorId}/`, force: true });
         },
-        removeLinkedDocument: async (path) => { await db.doc(path).delete(); },
+        removeLinkedDocument: async (path) => {
+          if (typeof creatorId === "string" && (
+            path === `creatorAccounts/${creatorId}` || path === `creatorNotifications/${creatorId}`
+          )) await db.recursiveDelete(db.doc(path));
+          else await db.doc(path).delete();
+        },
         deleteAuthentication: async (ownerId) => { await getAuth().deleteUser(ownerId); },
         finish: async (result) => {
           await job.set({ status: "complete", phase: "complete", summary: result, updatedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => undefined);

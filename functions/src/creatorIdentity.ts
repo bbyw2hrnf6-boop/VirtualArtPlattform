@@ -37,6 +37,8 @@ export type PublicCreatorPost = {
   displayName: string;
   body: string;
   createdAt: string;
+  reactionCount: number;
+  commentCount: number;
 };
 
 export type PublicCreatorDirectoryEntry = {
@@ -86,6 +88,20 @@ export function parseCreatorPostInput(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const body = value.trim().replace(/\r\n?/g, "\n").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n");
   return body && body.length <= 600 ? body : null;
+}
+
+export function parseCreatorCommentInput(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const body = value.trim().replace(/\r\n?/g, "\n").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n");
+  return body && body.length <= 280 ? body : null;
+}
+
+const CREATOR_REPORT_REASONS = new Set(["spam", "harassment", "rights", "unsafe", "other"]);
+
+export function parseCreatorReportReason(value: unknown): "spam" | "harassment" | "rights" | "unsafe" | "other" | null {
+  return typeof value === "string" && CREATOR_REPORT_REASONS.has(value)
+    ? value as "spam" | "harassment" | "rights" | "unsafe" | "other"
+    : null;
 }
 
 export function parseCreatorLinks(value: unknown): CreatorLink[] | null {

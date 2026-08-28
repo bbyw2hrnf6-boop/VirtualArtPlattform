@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
@@ -68,6 +68,19 @@ const CHAPTERS = [
     body: "The live room resolves at visitor height. Drag to look, then walk the completed exhibition.",
   },
 ] as const;
+
+const CONDENSED_CHAPTER_INDEXES = [0, 1, 3, 5, 7] as const;
+const EMIL_COMPLETED_KEY = "lieuva-emil-story-completed";
+
+function emilStoryCompleted() {
+  try { return window.localStorage.getItem(EMIL_COMPLETED_KEY) === "true"; }
+  catch { return false; }
+}
+
+function rememberEmilStory() {
+  try { window.localStorage.setItem(EMIL_COMPLETED_KEY, "true"); }
+  catch { /* Storage may be disabled; the full experience remains functional. */ }
+}
 
 type MaterialState = {
   material: THREE.Material;
@@ -154,6 +167,13 @@ export function ScrollGalleryStory() {
   const visitorRef = useRef<HTMLDivElement>(null);
   const buildLabelRef = useRef<HTMLParagraphElement>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
+  const [condensed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return usesCompactInteractionLayout() || emilStoryCompleted();
+  });
+  const storyChapters = useMemo(() => condensed
+    ? CONDENSED_CHAPTER_INDEXES.map((sourceIndex) => ({ sourceIndex, chapter: CHAPTERS[sourceIndex] }))
+    : CHAPTERS.map((chapter, sourceIndex) => ({ sourceIndex, chapter })), [condensed]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -248,10 +268,15 @@ export function ScrollGalleryStory() {
     const trackedTextures = new Set<THREE.Texture>();
     let modelReady = false;
 
-    const updateChapter = (index: number) => {
+    const updateChapter = (sourceIndex: number) => {
+      const visibleIndex = storyChapters.reduce((closest, item, index) => (
+        Math.abs(item.sourceIndex - sourceIndex) < Math.abs(storyChapters[closest].sourceIndex - sourceIndex)
+          ? index
+          : closest
+      ), 0);
       chapterRefs.current.forEach((chapter, chapterIndex) => {
         if (!chapter) return;
-        const active = chapterIndex === index;
+        const active = chapterIndex === visibleIndex;
         chapter.dataset.active = active ? "true" : "false";
         chapter.setAttribute("aria-hidden", active ? "false" : "true");
       });
@@ -678,6 +703,7 @@ export function ScrollGalleryStory() {
       targetProgress = reducedMotion
         ? 1
         : THREE.MathUtils.clamp((window.scrollY - storyTop) / storyTravel, 0, 1);
+      if (targetProgress >= 0.985) rememberEmilStory();
       if (!hasProgress) {
         renderedProgress = targetProgress;
         hasProgress = true;
@@ -957,10 +983,10 @@ export function ScrollGalleryStory() {
       delete section.dataset.buildStage;
       delete section.dataset.panel;
     };
-  }, []);
+  }, [condensed, storyChapters]);
 
   return (
-    <section className="sgs" ref={sectionRef} aria-labelledby="sgs-title">
+    <section className="sgs" ref={sectionRef} aria-labelledby="sgs-title" data-condensed={condensed ? "true" : "false"}>
       <h2 className="visually-hidden" id="sgs-title">Build and enter the Danny Hirsch Arts virtual exhibition</h2>
       <div className="sgs__sticky">
         <div className="sgs__visual">
@@ -989,7 +1015,7 @@ export function ScrollGalleryStory() {
         </div>
 
         <div className="sgs__chapters">
-          {CHAPTERS.map((chapter, index) => (
+          {storyChapters.map(({ chapter }, index) => (
             <article
               key={chapter.eyebrow}
               ref={(element) => { chapterRefs.current[index] = element; }}
@@ -1074,7 +1100,7 @@ export function ScrollGalleryStory() {
       </div>
 
       <ol className="sgs__accessible-sequence">
-        {CHAPTERS.map((chapter) => (
+        {storyChapters.map(({ chapter }) => (
           <li key={chapter.eyebrow}><strong>{chapter.title}</strong> {chapter.body}</li>
         ))}
       </ol>

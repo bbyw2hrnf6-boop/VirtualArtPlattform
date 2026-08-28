@@ -279,6 +279,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /creatorAccounts/{creatorId}/posts/{postId}/{socialCollection}/{socialId} {
+      allow read, write: if false;
+    }
+
     match /creatorProfiles/{creatorId} {
       allow read, write: if false;
     }
@@ -288,6 +292,18 @@ service cloud.firestore {
     }
 
     match /creatorFollows/{followId} {
+      allow read, write: if false;
+    }
+
+    match /creatorBlocks/{blockId} {
+      allow read, write: if false;
+    }
+
+    match /creatorReports/{reportId} {
+      allow read, write: if false;
+    }
+
+    match /creatorNotifications/{creatorId}/{document=**} {
       allow read, write: if false;
     }
 

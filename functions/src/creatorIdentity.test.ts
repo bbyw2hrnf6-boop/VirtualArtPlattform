@@ -6,6 +6,8 @@ import {
   isValidCreatorWebp,
   normalizeCreatorHandle,
   parseCreatorPostInput,
+  parseCreatorCommentInput,
+  parseCreatorReportReason,
   parseCreatorProfileInput,
   publicCreatorDirectoryEntry,
   renderCreatorDocument,
@@ -73,6 +75,13 @@ describe("Creator identity contract", () => {
     expect(parseCreatorPostInput("  New room.\n\nProcess notes.  ")).toBe("New room.\n\nProcess notes.");
     expect(parseCreatorPostInput("   ")).toBeNull();
     expect(parseCreatorPostInput("x".repeat(601))).toBeNull();
+  });
+
+  it("bounds comments and allow-lists report reasons", () => {
+    expect(parseCreatorCommentInput("  Thoughtful note.  ")).toBe("Thoughtful note.");
+    expect(parseCreatorCommentInput("x".repeat(281))).toBeNull();
+    expect(parseCreatorReportReason("rights")).toBe("rights");
+    expect(parseCreatorReportReason("delete-everything")).toBeNull();
   });
 
   it("renders public metadata without an internal identifier", () => {

@@ -508,7 +508,7 @@ function AccountDataRights({
         )}
         <small>If a server step fails, the UI reports an incomplete operation and keeps authentication until the deletion can be retried.</small>
       </article>
-      <p className="account-data-rights__policy">This preview does not yet state a legal backup-retention period or production controller/contact. Those owner decisions remain open. <a href="#/data">Read the current factual data notice.</a></p>
+      <p className="account-data-rights__policy">This early-access service does not yet state a legal backup-retention period or production controller/contact. Those owner decisions remain open. <a href="#/data">Read the current data and rights notice.</a></p>
     </section>
   );
 }

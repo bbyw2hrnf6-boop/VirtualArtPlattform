@@ -2,7 +2,14 @@ import { httpsCallable } from "firebase/functions";
 import { firebaseFunctions } from "./firebase";
 import { creatorCanonicalUrl } from "./spaceRoutes";
 import { prepareProfileImage } from "./profileImage";
-import { DEMO_CREATORS, demoCreatorPayload } from "../features/creator/demoCreators";
+
+const DEMO_CREATOR_HANDLES = new Set([
+  "mira-vale",
+  "atlas-studio",
+  "noor-patel",
+  "common-field",
+  "elian-ross",
+]);
 
 export type CreatorLink = { label: string; url: string };
 export type CreatorProfile = {
@@ -53,13 +60,20 @@ export function creatorProfileUrl(handle: string) {
 }
 
 export async function loadPublicCreatorProfile(handle: string, signal?: AbortSignal) {
-  const demo = demoCreatorPayload(handle);
-  if (demo) return demo;
+  const normalizedHandle = handle.trim().toLowerCase();
+  if (DEMO_CREATOR_HANDLES.has(normalizedHandle)) {
+    const { demoCreatorPayload } = await import("../features/creator/demoCreators");
+    const demo = demoCreatorPayload(normalizedHandle);
+    if (demo) return demo;
+  }
   const response = await fetch(`/creator-profiles/${encodeURIComponent(handle)}.json`, {
     headers: { Accept: "application/json" },
     signal,
   });
-  if (response.status === 404) return demoCreatorPayload(handle);
+  if (response.status === 404 && DEMO_CREATOR_HANDLES.has(normalizedHandle)) {
+    const { demoCreatorPayload } = await import("../features/creator/demoCreators");
+    return demoCreatorPayload(normalizedHandle);
+  }
   if (!response.ok) throw new Error("Creator profile is temporarily unavailable.");
   return await response.json() as PublicCreatorPayload;
 }
@@ -72,6 +86,7 @@ export async function loadPublicCreatorDirectory(signal?: AbortSignal) {
     });
     if (!response.ok) throw new Error("Creator search is temporarily unavailable.");
     const payload = await response.json() as PublicCreatorDirectoryPayload;
+    const { DEMO_CREATORS } = await import("../features/creator/demoCreators");
     const liveHandles = new Set(payload.creators.map((creator) => creator.handle));
     return {
       ...payload,
@@ -82,6 +97,7 @@ export async function loadPublicCreatorDirectory(signal?: AbortSignal) {
     };
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
+    const { DEMO_CREATORS } = await import("../features/creator/demoCreators");
     return { schemaVersion: 1 as const, creators: DEMO_CREATORS };
   }
 }
@@ -153,6 +169,16 @@ export type CreatorHomePayload = {
   following: PublicCreatorDirectoryEntry[];
   updates: Array<CreatorSpaceCard & { handle: string; displayName: string }>;
   posts: CreatorPost[];
+  notifications: CreatorNotification[];
+};
+
+export type CreatorNotification = {
+  id: string;
+  kind: "follow" | "reaction" | "comment";
+  actorHandle: string;
+  actorDisplayName: string;
+  createdAt: string;
+  read: boolean;
 };
 
 export type CreatorPost = {
@@ -161,7 +187,18 @@ export type CreatorPost = {
   displayName: string;
   body: string;
   createdAt: string;
+  reactionCount: number;
+  commentCount: number;
+  viewerReacted?: boolean;
   demo?: boolean;
+};
+
+export type CreatorComment = {
+  id: string;
+  handle: string;
+  displayName: string;
+  body: string;
+  createdAt: string;
 };
 
 export async function loadCreatorHome() {
@@ -178,6 +215,26 @@ export async function createCreatorPost(body: string) {
     "createLieuvaCreatorPost",
   )({ body });
   return result.data.post;
+}
+
+export async function interactCreatorPost(
+  handle: string,
+  postId: string,
+  input: { action: "react" | "unreact" } | { action: "comment"; body: string } | { action: "report"; reason: "spam" | "harassment" | "rights" | "unsafe" | "other" },
+) {
+  const result = await httpsCallable<
+    { handle: string; postId: string } & typeof input,
+    { reacted?: boolean; reactionCount?: number; comment?: CreatorComment; reported?: boolean }
+  >(firebaseFunctions, "manageLieuvaCreatorPostInteraction")({ handle, postId, ...input });
+  return result.data;
+}
+
+export async function manageCreatorBlock(handle: string, action: "block" | "unblock") {
+  const result = await httpsCallable<{ handle: string; action: "block" | "unblock" }, { blocked: boolean }>(
+    firebaseFunctions,
+    "manageLieuvaCreatorBlock",
+  )({ handle, action });
+  return result.data;
 }
 
 export async function manageCreatorFollow(handle: string, action: "status" | "follow" | "unfollow") {

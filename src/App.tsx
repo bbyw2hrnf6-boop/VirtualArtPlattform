@@ -13,7 +13,6 @@ import { Logo } from "./components/Logo";
 import { SpaceShareMenu } from "./components/SpaceShareMenu";
 import { FullscreenButton } from "./components/FullscreenButton";
 import { PRODUCT_BRAND } from "./config/brand";
-import { PitchSections } from "./features/landing/PitchSections";
 import "./features/landing/landingConversion.css";
 import "./features/landing/directoryExperience.css";
 import { TEMPLATES } from "./features/gallery/templates";
@@ -132,6 +131,11 @@ const DannyDemoScene = lazy(() =>
 const ScrollGalleryStory = lazy(() =>
   import("./features/landing/ScrollGalleryStory").then((module) => ({
     default: module.ScrollGalleryStory,
+  })),
+);
+const PitchSections = lazy(() =>
+  import("./features/landing/PitchSections").then((module) => ({
+    default: module.PitchSections,
   })),
 );
 const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
@@ -386,11 +390,10 @@ function BrandHero({ onSearch }: { onSearch: () => void }) {
         <button className="text-link" onClick={() => landingNavigate("/demo", "landing_example_entered", "hero")}>{PRODUCT_BRAND.secondaryCta} →</button>
         <button className="text-link brand-hero__search" onClick={onSearch}>Search Spaces &amp; Creators ⌕</button>
       </div>
-      <button className="brand-hero__media" onClick={() => landingNavigate("/demo", "landing_example_entered", "hero_visual")} aria-label="Enter the Threshold reference Space">
-        <img src="./assets/demo/danny-cover.webp" alt="Threshold immersive Space by Danny Hirsch Arts" width="1440" height="1000" decoding="async" />
-        <span><i /> Live reference Space</span>
-        <strong>Threshold <small>Danny Hirsch Arts</small></strong>
-        <b>Enter ↗</b>
+      <button className="brand-hero__media brand-hero__media--community" onClick={() => navigate("/creators")} aria-label="Open the LIEUVA Creator community">
+        <span><i /> Creator community</span>
+        <strong>Follow the work.<small>Profiles · posts · new Spaces</small></strong>
+        <b>Open Creator Space →</b>
       </button>
       <div className="brand-hero__signal" aria-hidden="true">
         <span>Browser Studio</span>
@@ -949,9 +952,10 @@ function MvpDataNotice() {
           <em>you upload.</em>
         </h1>
         <p className="info-lead">
-          {PRODUCT_BRAND.name} is a concept-validation product, not yet a production
-          publishing service. This factual MVP notice does not replace a
-          complete privacy policy or pilot agreement.
+          {PRODUCT_BRAND.name} is an early-access publishing product. Core creation,
+          publishing and account controls are operational, while complete contractual
+          terms, named controller details and service guarantees remain in progress.
+          This notice does not replace a complete privacy policy or pilot agreement.
         </p>
         <section>
           <h2>What happens to a draft?</h2>
@@ -977,8 +981,9 @@ function MvpDataNotice() {
           <p>
             Only upload artwork and text you are allowed to share. Private
             access reduces discoverability but is not yet a contractual
-            confidential-data service. The preview has no moderation review,
-            payments, or contractual archival promise.
+            confidential-data service. Community reporting and blocking are available;
+            guaranteed moderation response times, payments and contractual archival
+            promises are not yet offered.
           </p>
         </section>
         <section>

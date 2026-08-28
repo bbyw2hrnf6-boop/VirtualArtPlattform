@@ -30,6 +30,8 @@ const demoCreator = (
     displayName,
     body,
     createdAt,
+    reactionCount: Math.max(2, Math.round(followerCount / 9)),
+    commentCount: Math.max(1, Math.round(followerCount / 32)),
     demo: true,
   }],
 });

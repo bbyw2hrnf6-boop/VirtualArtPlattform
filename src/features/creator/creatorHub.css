@@ -176,6 +176,35 @@
 .creator-post footer { display: flex; justify-content: space-between; margin-left: 60px; padding: 0; background: transparent; color: inherit; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .creator-post footer > span { color: #777870; }
 .creator-post footer a { color: inherit; text-decoration: none; }
+.creator-post__actions { align-items: center; justify-content: flex-start !important; gap: 18px; }
+.creator-post__actions > button,
+.creator-post__actions summary,
+.creator-post__actions details div button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.creator-post__actions > button.is-active { color: #526700; }
+.creator-post__actions > a { margin-left: auto; }
+.creator-post__actions details { position: relative; }
+.creator-post__actions summary { list-style: none; }
+.creator-post__actions details div { position: absolute; z-index: 4; top: 24px; left: 0; display: grid; width: 145px; padding: 8px; background: #191a17; box-shadow: 0 12px 28px #0003; }
+.creator-post__actions details div button { padding: 10px; color: #efede5; text-align: left; }
+.creator-post__discussion { margin: 22px 0 0 60px; padding: 18px; background: #ebe8df; }
+.creator-post__discussion > p { margin: 0 0 10px; font-size: 12px; line-height: 1.5; }
+.creator-post__discussion form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.creator-post__discussion input { width: 100%; height: 44px; padding: 0 12px; border: 1px solid #a5a39a; background: #f4f1e9; color: inherit; }
+.creator-post__discussion form button { min-width: 72px; border: 0; background: #191a17; color: #efede5; font-size: 9px; text-transform: uppercase; }
+.creator-post__notice { display: block; margin: 12px 0 0 60px; color: #65665f; }
+.creator-hub__notifications { display: grid; margin-bottom: 28px; padding-bottom: 18px; border-bottom: 1px solid #55564f; }
+.creator-hub__notifications > a { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; padding: 10px 0; border-top: 1px solid #454640; color: inherit; font-size: 10px; text-decoration: none; }
+.creator-hub__notifications > a span { color: #a6a79f; }
+.creator-hub__notifications time { grid-row: 1 / 3; grid-column: 2; color: #878880; font-size: 8px; }
 .creator-hub__rail { position: sticky; top: 100px; padding: 28px; background: #191a17; color: #efede5; }
 .creator-hub__rail h3 { margin: 12px 0 20px; font: 38px Instrument; font-weight: 400; }
 .creator-hub__rail > p:not(.eyebrow) { color: #a6a79f; line-height: 1.6; }
