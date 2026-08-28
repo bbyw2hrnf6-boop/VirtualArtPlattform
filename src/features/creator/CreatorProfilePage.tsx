@@ -49,6 +49,9 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
   }, [attempt, demoProfile, handle, serverState]);
 
   const profile = state.status === "ready" ? state.payload.profile : null;
+  const spaces = state.status === "ready" ? state.payload.spaces : [];
+  const posts = state.status === "ready" ? state.payload.posts ?? [] : [];
+  const featuredSpace = spaces[0];
   useEffect(() => {
     if (!profile || profile.demo || !session || session.isAnonymous) return;
     let active = true;
@@ -83,7 +86,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
       <p className="eyebrow">Private or unavailable</p>
       <h1>This Creator profile isn’t public.</h1>
       <p>Nothing private is shown here.</p>
-      <a href="/">Return to LIEUVA</a>
+      <a href="/creators">Return to Creator Hub</a>
     </main>
   );
 
@@ -91,7 +94,12 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
     <main className="creator-profile">
       <header className="creator-profile__nav">
         <Logo dark />
-        <div>
+        <nav aria-label="LIEUVA navigation">
+          <a href="/">LIEUVA home</a>
+          <a className="is-active" href="/creators">Creator Hub</a>
+          <a href="/#discover-spaces">Explore Spaces</a>
+        </nav>
+        <div className="creator-profile__nav-actions">
           <SpaceShareMenu
             compact
             url={creatorProfileUrl(profile.handle)}
@@ -105,22 +113,22 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
         </div>
       </header>
       <section className="creator-profile__hero" aria-labelledby="creator-profile-title">
-        <div className="creator-profile__mark" aria-hidden="true">
-          {profile.imagePresent
-            ? <img src={creatorImageUrl(profile.handle)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : initials}
-        </div>
         <div className="creator-profile__identity">
-          <p className="eyebrow">LIEUVA Creator</p>
+          <div className="creator-profile__mark" aria-hidden="true">
+            {profile.imagePresent
+              ? <img src={creatorImageUrl(profile.handle)} alt="" />
+              : initials}
+          </div>
+          <p className="eyebrow"><span aria-hidden="true" /> LIEUVA Creator</p>
           <h1 id="creator-profile-title">{profile.displayName}</h1>
-          <span>@{profile.handle}</span>
+          <p className="creator-profile__handle">@{profile.handle}</p>
+          {profile.bio && <p className="creator-profile__bio">{profile.bio}</p>}
           <div className="creator-profile__social">
-            <strong>{followState?.followerCount ?? profile.followerCount ?? 0} followers</strong>
-            {profile.demo && <small>Demo profile · editorial preview</small>}
             {!profile.demo && !followState?.isSelf && (
               <button
                 type="button"
                 className={followState?.following ? "is-following" : ""}
+                aria-pressed={Boolean(followState?.following)}
                 disabled={followBusy || (Boolean(session && !session.isAnonymous) && followState?.canFollow === false)}
                 onClick={() => {
                   if (!session || session.isAnonymous) {
@@ -140,8 +148,8 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
             {!profile.demo && session && !session.isAnonymous && followState?.canFollow === false && !followState.isSelf && (
               <small>Create your Creator profile to follow.</small>
             )}
+            {profile.demo && <small>Demo profile · editorial preview</small>}
           </div>
-          {profile.bio && <p className="creator-profile__bio">{profile.bio}</p>}
           {profile.links.length > 0 && (
             <nav className="creator-profile__links" aria-label={`${profile.displayName} links`}>
               {profile.links.map((link) => (
@@ -151,42 +159,48 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
               ))}
             </nav>
           )}
+          <dl className="creator-profile__facts" aria-label={`${profile.displayName} profile overview`}>
+            <div><dt>Public Spaces</dt><dd>{spaces.length}</dd></div>
+            <div><dt>Studio Notes</dt><dd>{posts.length}</dd></div>
+            <div><dt>Followers</dt><dd>{followState?.followerCount ?? profile.followerCount ?? 0}</dd></div>
+          </dl>
         </div>
+        {featuredSpace ? (
+          <a className="creator-profile__featured-space" href={spaceCanonicalUrl(featuredSpace.id)}>
+            <div className="creator-profile__featured-media">
+              {featuredSpace.coverUrl
+                ? <img src={featuredSpace.coverUrl} alt="" decoding="async" fetchPriority="high" />
+                : <span aria-hidden="true">01</span>}
+            </div>
+            <div className="creator-profile__featured-copy">
+              <p><span>Featured Space</span><small>01 / {String(spaces.length).padStart(2, "0")}</small></p>
+              <h2>{featuredSpace.title}</h2>
+              <span>Enter immersive Space <b aria-hidden="true">↗</b></span>
+            </div>
+          </a>
+        ) : (
+          <div className="creator-profile__featured-space creator-profile__featured-space--empty">
+            <div className="creator-profile__featured-media" aria-hidden="true"><span>00</span></div>
+            <div className="creator-profile__featured-copy"><p><span>Public portfolio</span></p><h2>Space in progress.</h2><span>No active public Spaces yet</span></div>
+          </div>
+        )}
       </section>
-      {state.payload.posts?.length ? (
-        <section className="creator-profile__posts" aria-labelledby="creator-posts-title">
-          <div className="creator-profile__section-heading">
-            <p className="eyebrow">Studio notes</p>
-            <h2 id="creator-posts-title">Updates</h2>
-            <span>{state.payload.posts.length}</span>
-          </div>
-          <div className="creator-profile__post-list">
-            {state.payload.posts.map((post) => (
-              <article key={post.id}>
-                <time dateTime={post.createdAt}>{new Date(post.createdAt).toLocaleDateString("en", { day: "2-digit", month: "short", year: "numeric" })}</time>
-                <p>{post.body}</p>
-                <small>{post.demo ? "Demo profile · editorial preview" : "Creator update"}</small>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
       <section className="creator-profile__portfolio" aria-labelledby="creator-spaces-title">
         <div className="creator-profile__section-heading">
-          <p className="eyebrow">Public portfolio</p>
-          <h2 id="creator-spaces-title">Spaces</h2>
-          <span>{state.payload.spaces.length}</span>
+          <div><p className="eyebrow">Public portfolio</p><h2 id="creator-spaces-title">Selected Spaces.</h2></div>
+          <p>Immersive work published by {profile.displayName}. Enter each Space directly in your browser.</p>
+          <span>{String(spaces.length).padStart(2, "0")}</span>
         </div>
-        {state.payload.spaces.length ? (
+        {spaces.length ? (
           <div className="creator-profile__grid">
-            {state.payload.spaces.map((space, index) => (
+            {spaces.map((space, index) => (
               <a key={space.id} className="creator-space-card" href={spaceCanonicalUrl(space.id)}>
                 <div className="creator-space-card__cover">
                   {space.coverUrl
-                    ? <img src={space.coverUrl} alt="" loading={index > 1 ? "lazy" : "eager"} decoding="async" />
+                    ? <img src={space.coverUrl} alt="" loading={index > 0 ? "lazy" : "eager"} decoding="async" />
                     : <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>}
                 </div>
-                <div><small>Immersive Space</small><h3>{space.title}</h3><span>Enter →</span></div>
+                <div><small>{String(index + 1).padStart(2, "0")} · Immersive Space</small><h3>{space.title}</h3><span>Enter <b aria-hidden="true">↗</b></span></div>
               </a>
             ))}
           </div>
@@ -194,7 +208,25 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
           <p className="creator-profile__empty">No active public Spaces yet.</p>
         )}
       </section>
-      <footer className="creator-profile__footer"><span>Give your work a place.</span><a href="/#/create">Create a Space →</a></footer>
+      {posts.length ? (
+        <section className="creator-profile__posts" aria-labelledby="creator-posts-title">
+          <div className="creator-profile__section-heading">
+            <div><p className="eyebrow">From the practice</p><h2 id="creator-posts-title">Studio Notes.</h2></div>
+            <p>Process, changes and ideas shared with the LIEUVA Creator community.</p>
+            <span>{String(posts.length).padStart(2, "0")}</span>
+          </div>
+          <div className="creator-profile__post-list">
+            {posts.map((post) => (
+              <article key={post.id}>
+                <div><span>@{post.handle}</span><time dateTime={post.createdAt}>{new Date(post.createdAt).toLocaleDateString("en", { day: "2-digit", month: "short", year: "numeric" })}</time></div>
+                <p>{post.body}</p>
+                <small>{post.demo ? "Demo profile · editorial preview" : "Studio Note"}</small>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      <footer className="creator-profile__footer"><div><Logo /><p>Immersive Spaces, published in the browser.</p></div><nav aria-label="Creator profile footer"><a href="/creators">Creator Hub →</a><a href="/#discover-spaces">Explore Spaces →</a><a href="/#/create">Create a Space →</a></nav></footer>
     </main>
   );
 }

@@ -21,6 +21,11 @@ import {
   galleryDraftSignature,
   publishedProjectState,
 } from "./projectWorkspace";
+import {
+  accountSectionTitle,
+  accountSignInMethods,
+  type AccountSection,
+} from "./accountPresentation";
 import "./accountDialog.css";
 
 type AccountModule = typeof import("../../services/accountService");
@@ -360,6 +365,7 @@ function AccountProfileSettings({
   onSave,
   onResetPassword,
   onNewsletterChange,
+  onOpenDataRights,
 }: {
   account: AccountSession;
   busy: boolean;
@@ -371,6 +377,7 @@ function AccountProfileSettings({
   }) => void;
   onResetPassword: () => void;
   onNewsletterChange: (subscribed: boolean) => Promise<boolean>;
+  onOpenDataRights: () => void;
 }) {
   const [displayName, setDisplayName] = useState(account.displayName ?? "");
   const [nickname, setNickname] = useState(account.nickname ?? "");
@@ -380,8 +387,9 @@ function AccountProfileSettings({
     Boolean(account.newsletterSubscribed),
   );
   const [newsletterBusy, setNewsletterBusy] = useState(false);
+  const signInMethods = accountSignInMethods(account.providers);
   return (
-    <form className="account-profile" onSubmit={(event) => {
+    <form className="account-profile account-security" onSubmit={(event) => {
       event.preventDefault();
       onSave({
         displayName,
@@ -390,60 +398,84 @@ function AccountProfileSettings({
         removeAvatar,
       });
     }}>
-      <div className="account-profile__heading">
-        <div><p className="eyebrow">Profile</p><h3>How you appear.</h3></div>
-        <span>Visible to collaborators</span>
-      </div>
-      <fieldset>
-        <legend>Identity</legend>
-        <div className="account-profile__avatar">
-          <div className="account-avatar account-avatar--large" aria-hidden="true">
-            {account.avatarSrc && !removeAvatar
-              ? <img src={account.avatarSrc} alt="" />
-              : <span>{(nickname || displayName || account.email || "A").slice(0, 1).toUpperCase()}</span>}
-          </div>
-          <div>
-            <label className="account-profile__upload">Choose image
-              <input type="file" accept="image/avif,image/jpeg,image/png,image/webp" onChange={(event) => {
-                const next = event.target.files?.[0];
-                setAvatar(next);
-                if (next) setRemoveAvatar(false);
-              }} />
+      <div className="account-security__layout">
+        <div className="account-security__main">
+          <section className="account-security__section" aria-labelledby="account-identity-title">
+            <header><h3 id="account-identity-title">Profile</h3><span>Visible to collaborators</span></header>
+            <div className="account-security__identity">
+              <div className="account-profile__avatar">
+                <div className="account-avatar account-avatar--large" aria-hidden="true">
+                  {account.avatarSrc && !removeAvatar
+                    ? <img src={account.avatarSrc} alt="" />
+                    : <span>{(nickname || displayName || account.email || "A").slice(0, 1).toUpperCase()}</span>}
+                </div>
+                <div>
+                  <strong>{displayName || account.email}</strong>
+                  {nickname && <small>@{nickname}</small>}
+                  <i className={account.emailVerified ? "is-verified" : ""}>{account.emailVerified ? "✓ Verified account" : "Verification required"}</i>
+                </div>
+                <label className="account-profile__upload">Change image
+                  <input type="file" accept="image/avif,image/jpeg,image/png,image/webp" onChange={(event) => {
+                    const next = event.target.files?.[0];
+                    setAvatar(next);
+                    if (next) setRemoveAvatar(false);
+                  }} />
+                </label>
+              </div>
+              {avatar && <small>{avatar.name}</small>}
+              {(account.avatarSrc || avatar) && <button type="button" className="account-profile__remove" onClick={() => { setAvatar(undefined); setRemoveAvatar(true); }}>Remove image</button>}
+              <div className="account-security__fields">
+                <label>Full name<input maxLength={60} required autoComplete="name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
+                <label>Nickname<input maxLength={32} autoComplete="nickname" placeholder="creator-name" value={nickname} onChange={(event) => setNickname(event.target.value)} /><small>Letters, numbers, dots, dashes, or underscores.</small></label>
+              </div>
+              <button className="account-primary" disabled={busy}>{busy ? "Saving…" : "Save account profile"}</button>
+            </div>
+          </section>
+          <section className="account-security__section" aria-labelledby="account-login-title">
+            <header><h3 id="account-login-title">Email &amp; login</h3></header>
+            <dl className="account-security__rows">
+              <div><dt>Email address</dt><dd>{account.email || "No email available"}</dd><span>{account.emailVerified ? "Verified" : "Needs verification"}</span></div>
+              <div><dt>Sign-in method</dt><dd>{signInMethods.join(", ") || "Current Firebase account"}</dd><span>Connected</span></div>
+            </dl>
+            {account.email && <button type="button" className="account-outline-button" disabled={busy} onClick={onResetPassword}>Send password reset email</button>}
+          </section>
+          <section className="account-security__section" aria-labelledby="account-communication-title">
+            <header><h3 id="account-communication-title">Communication</h3></header>
+            <label className="account-newsletter-setting">
+              <input
+                type="checkbox"
+                checked={newsletterSubscribed}
+                disabled={busy || newsletterBusy}
+                onChange={(event) => {
+                  const next = event.target.checked;
+                  setNewsletterBusy(true);
+                  void onNewsletterChange(next).then((saved) => {
+                    if (saved) setNewsletterSubscribed(next);
+                  }).finally(() => setNewsletterBusy(false));
+                }}
+              />
+              <span><strong>LIEUVA Preview Letter</strong>Occasional product and roadmap notes. Unsubscribe here or from any email.</span>
             </label>
-            {avatar && <small>{avatar.name}</small>}
-            {(account.avatarSrc || avatar) && (
-              <button type="button" className="account-profile__remove" onClick={() => {
-                setAvatar(undefined);
-                setRemoveAvatar(true);
-              }}>Remove image</button>
-            )}
-          </div>
+          </section>
         </div>
-        <label>Full name<input maxLength={60} required autoComplete="name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></label>
-        <label>Nickname<input maxLength={32} autoComplete="nickname" placeholder="creator-name" value={nickname} onChange={(event) => setNickname(event.target.value)} /><small>Letters, numbers, dots, dashes, or underscores.</small></label>
-        <button className="account-primary" disabled={busy}>{busy ? "Saving…" : "Save profile"}</button>
-      </fieldset>
-      <fieldset>
-        <legend>Communication &amp; security</legend>
-        <label className="account-newsletter-setting">
-          <input
-            type="checkbox"
-            checked={newsletterSubscribed}
-            disabled={busy || newsletterBusy}
-            onChange={(event) => {
-              const next = event.target.checked;
-              setNewsletterBusy(true);
-              void onNewsletterChange(next).then((saved) => {
-                if (saved) setNewsletterSubscribed(next);
-              }).finally(() => setNewsletterBusy(false));
-            }}
-          />
-          <span><strong>LIEUVA Preview Letter</strong>Occasional product and roadmap notes. Unsubscribe here or from any email.</span>
-        </label>
-        {account.email && (
-          <button type="button" className="account-reset" disabled={busy} onClick={onResetPassword}>Send password reset email</button>
-        )}
-      </fieldset>
+        <aside className="account-security__context">
+          <section>
+            <span className="account-security__icon" aria-hidden="true">◇</span>
+            <h3>Account security</h3>
+            <p>{account.emailVerified ? "Your email is verified and publishing is enabled." : "Verify your email before publishing or joining a team."}</p>
+          </section>
+          <section>
+            <h3>Current session</h3>
+            <p>You are signed in on this browser. LIEUVA does not expose a device-session manager yet.</p>
+            <dl><div><dt>Account</dt><dd>{account.email}</dd></div><div><dt>Access</dt><dd>{account.emailVerified ? "Active now" : "Limited"}</dd></div></dl>
+          </section>
+          <section>
+            <h3>Privacy controls</h3>
+            <p>Download your account record or permanently delete it from Data &amp; rights.</p>
+            <button type="button" onClick={onOpenDataRights}>Review data controls →</button>
+          </section>
+        </aside>
+      </div>
     </form>
   );
 }
@@ -528,7 +560,7 @@ export function AccountDialog({
   const [service, setService] = useState<AccountModule>();
   const [session, setSession] = useState<AccountSession | null>(null);
   const [mode, setMode] = useState<"signin" | "create">("create");
-  const [section, setSection] = useState<"rooms" | "creator" | "account" | "data">("rooms");
+  const [section, setSection] = useState<AccountSection>("rooms");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -595,6 +627,9 @@ export function AccountDialog({
       setBusy(false);
     }
   };
+  const pageTitle = accountSectionTitle(section);
+  const applicationHome = hashApplicationUrl("/", window.location.href);
+  const createSpaceUrl = hashApplicationUrl("/create", window.location.href);
 
   return (
     <div className={`account-backdrop ${presentation === "page" ? "account-backdrop--page" : ""}`} onMouseDown={(event) => {
@@ -608,14 +643,51 @@ export function AccountDialog({
         aria-labelledby="account-dialog-title"
         tabIndex={-1}
       >
+        {presentation === "page" && (
+          <header className="account-platform-header">
+            <a className="account-platform-header__brand" href={applicationHome} aria-label="LIEUVA home"><i aria-hidden="true">L</i><strong>LIEUVA</strong></a>
+            <nav aria-label="LIEUVA navigation">
+              <a href={applicationHome}>LIEUVA home</a>
+              <a href="/creators">Creator Hub</a>
+              <a href={createSpaceUrl}>Create a Space</a>
+            </nav>
+            {account && <span className="account-platform-header__user"><b>{(account.nickname || account.displayName || account.email || "A").slice(0, 1).toUpperCase()}</b>{account.nickname || account.displayName || "Account"}</span>}
+          </header>
+        )}
+        <div className={`account-page-layout ${account ? "" : "account-page-layout--guest"}`}>
+          {presentation === "page" && account && (
+            <aside className="account-local-nav" aria-label="Account sections">
+              <div>
+                <button type="button" aria-current={section === "rooms" ? "page" : undefined} onClick={() => setSection("rooms")}><span aria-hidden="true">01</span>Overview</button>
+                <button type="button" aria-current={section === "creator" ? "page" : undefined} onClick={() => setSection("creator")}><span aria-hidden="true">02</span>Public profile</button>
+                <button type="button" aria-current={section === "account" ? "page" : undefined} onClick={() => setSection("account")}><span aria-hidden="true">03</span>Account &amp; security</button>
+                <button type="button" aria-current={section === "data" ? "page" : undefined} onClick={() => setSection("data")}><span aria-hidden="true">04</span>Data &amp; rights</button>
+              </div>
+              <div className="account-local-nav__product">
+                <a href="/creators">Creator Hub <span aria-hidden="true">↗</span></a>
+                <a href={createSpaceUrl}>Create a Space <span aria-hidden="true">↗</span></a>
+              </div>
+              <div className="account-local-nav__identity">
+                <div className="account-avatar" aria-hidden="true">{account.avatarSrc ? <img src={account.avatarSrc} alt="" /> : (account.nickname || account.displayName || account.email || "A").slice(0, 1).toUpperCase()}</div>
+                <span><strong>{account.displayName || account.email}</strong>{account.nickname && <small>@{account.nickname}</small>}</span>
+              </div>
+            </aside>
+          )}
+          <div className="account-page-content">
         <button className="account-dialog__close" onClick={onClose} aria-label={presentation === "page" ? "Back to LIEUVA" : "Close account"}>
-          {presentation === "page" ? "←" : "×"}
+          {presentation === "page" ? "← Home" : "×"}
         </button>
-        <p className="eyebrow">LIEUVA account</p>
         {account ? (
           <>
-            <h2 id="account-dialog-title">Your work.<br /><em>One place.</em></h2>
-            <div className="account-overview-card">
+            {presentation === "page" ? (
+              <div className="account-page-heading">
+                <div><p className="eyebrow">Account settings</p><h1 id="account-dialog-title">{pageTitle}</h1></div>
+                <a href="/creators">Open Creator Hub <span aria-hidden="true">↗</span></a>
+              </div>
+            ) : (
+              <><p className="eyebrow">LIEUVA account</p><h2 id="account-dialog-title">Your work.<br /><em>One place.</em></h2></>
+            )}
+            {(presentation !== "page" || section === "rooms") && <div className="account-overview-card">
               <div className="account-identity">
                 <div className="account-avatar" aria-hidden="true">
                   {account.avatarSrc
@@ -637,19 +709,19 @@ export function AccountDialog({
                 <p>{account.emailVerified ? "Publishing and collaboration enabled." : "Verify email to publish."}</p>
                 <i>Free now</i>
               </div>
-            </div>
+            </div>}
             <div className="account-tabs account-tabs--settings" role="tablist" aria-label="Account settings">
-              <button role="tab" aria-selected={section === "rooms"} onClick={() => setSection("rooms")}>Projects &amp; Spaces</button>
+              <button role="tab" aria-selected={section === "rooms"} onClick={() => setSection("rooms")}>Overview</button>
               <button role="tab" aria-selected={section === "creator"} onClick={() => setSection("creator")}>Public profile</button>
               <button role="tab" aria-selected={section === "account"} onClick={() => setSection("account")}>Account &amp; security</button>
               <button role="tab" aria-selected={section === "data"} onClick={() => setSection("data")}>Data &amp; rights</button>
             </div>
-            <a className="account-creator-space-link" href="/creators">
+            {presentation !== "page" && <a className="account-creator-space-link" href="/creators">
               Open Creator Hub <span aria-hidden="true">→</span>
-            </a>
+            </a>}
             {account.emailVerified && section === "rooms" && <AccountRooms session={account} />}
             {account.emailVerified && section === "creator" && <CreatorProfileSettings account={account} />}
-            {account.emailVerified && section === "account" && (
+            {section === "account" && (
               <AccountProfileSettings
                 key={`${account.uid}:${account.displayName ?? ""}:${account.nickname ?? ""}:${account.avatarSrc ?? ""}`}
                 account={account}
@@ -691,6 +763,7 @@ export function AccountDialog({
                     setBusy(false);
                   }
                 }}
+                onOpenDataRights={() => setSection("data")}
               />
             )}
             {section === "data" && (
@@ -745,6 +818,7 @@ export function AccountDialog({
           </>
         ) : (
           <>
+            <p className="eyebrow">LIEUVA account</p>
             <h2 id="account-dialog-title">Keep control<br /><em>of your Spaces.</em></h2>
             <p className="account-lead">Build and Walk Preview freely. Sign in with Google or create and verify an account only when you are ready to publish.</p>
             <div className="account-tabs" role="tablist" aria-label="Account action">
@@ -816,6 +890,8 @@ export function AccountDialog({
           </>
         )}
         {(message || error) && <p className={error ? "account-message is-error" : "account-message"} role={error ? "alert" : "status"}>{error || message}</p>}
+          </div>
+        </div>
       </section>
     </div>
   );
@@ -834,6 +910,10 @@ export function AccountButton({
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [session, setSession] = useState<AccountSession | null>(null);
+  const onSessionChangeRef = useRef(onSessionChange);
+  useEffect(() => {
+    onSessionChangeRef.current = onSessionChange;
+  }, [onSessionChange]);
   const open = controlledOpen ?? internalOpen;
   const setOpen = useCallback(
     (next: boolean) => {
@@ -846,9 +926,9 @@ export function AccountButton({
   const handleSessionChange = useCallback(
     (next: AccountSession | null) => {
       setSession(next);
-      onSessionChange?.(next);
+      onSessionChangeRef.current?.(next);
     },
-    [onSessionChange],
+    [],
   );
   useEffect(() => {
     let active = true;

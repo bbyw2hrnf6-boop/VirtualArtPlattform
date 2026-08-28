@@ -665,7 +665,7 @@ function DiscoverGalleries() {
     }
   };
   return (
-    <section ref={section} className="discover">
+    <section ref={section} className="discover" id="discover-spaces">
       <div className="discover-heading">
         <div>
           <p className="eyebrow">Live from {PRODUCT_BRAND.name}</p>

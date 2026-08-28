@@ -69,6 +69,21 @@ export type CreatorAttribution = {
   profileUrl: string;
 };
 
+export const CREATOR_PROFILE_UPDATED_EVENT = "lieuva:creator-profile-updated";
+
+export function announceCreatorProfileUpdated(profile: CreatorProfile) {
+  window.dispatchEvent(new CustomEvent<CreatorProfile>(CREATOR_PROFILE_UPDATED_EVENT, {
+    detail: profile,
+  }));
+}
+
+export function creatorProfileSaveLabel(published: boolean, nextPublic: boolean, saving = false) {
+  if (saving) return "Saving…";
+  if (published && nextPublic) return "Save profile changes";
+  if (nextPublic) return "Save and activate Hub profile";
+  return published ? "Save and make private" : "Save private draft";
+}
+
 export function creatorProfileUrl(handle: string) {
   return creatorCanonicalUrl(handle);
 }

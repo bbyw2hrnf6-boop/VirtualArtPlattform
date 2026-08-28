@@ -1,10 +1,16 @@
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import {
+  discoverCoverSource,
+  galleryRepository,
+  type GalleryRecord,
+} from '../../services/galleryRepository';
+import {
+  creatorImageUrl,
+  loadPublicCreatorDirectory,
+  type PublicCreatorDirectoryEntry,
+} from '../../services/creatorProfile';
+import { creatorCanonicalUrl, spacePath } from '../../services/spaceRoutes';
 import './pitchSections.css';
-
-const CREATOR_VALUE = [
-  ['Scale people understand', 'Let visitors experience distance, sequence, and relationships that disappear inside a flat image grid.'],
-  ['A visit, not a slide deck', 'Guide attention through a room while leaving people free to pause, look closer, and move at their own pace.'],
-  ['One link to return to', 'Publish a presentation that opens in the browser and can be shared with collaborators, clients, or an audience.']
-] as const;
 
 const FAQS = [
   ['Do I need Blender or 3D software?', 'No. LIEUVA Studio creates each template Space directly in the browser. Choose a room, arrange your work, preview the visit, and publish from one workflow.'],
@@ -15,22 +21,130 @@ const FAQS = [
 ] as const;
 
 export function PitchSections() {
+  const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
+  const [creators, setCreators] = useState<PublicCreatorDirectoryEntry[]>([]);
+  const [directoryStatus, setDirectoryStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const showcase = useRef<HTMLElement>(null);
+  const requested = useRef(false);
+
+  const loadShowcase = useCallback(() => {
+    if (requested.current) return;
+    requested.current = true;
+    setDirectoryStatus('loading');
+    void Promise.all([galleryRepository.discover(), loadPublicCreatorDirectory()])
+      .then(([publishedSpaces, directory]) => {
+        setSpaces(publishedSpaces.slice(0, 3));
+        setCreators(directory.creators.filter((creator) => !creator.demo).slice(0, 8));
+        setDirectoryStatus('ready');
+      })
+      .catch(() => {
+        requested.current = false;
+        setDirectoryStatus('error');
+      });
+  }, []);
+
+  useEffect(() => {
+    const target = showcase.current;
+    if (!target || requested.current) return undefined;
+    if (!('IntersectionObserver' in window)) {
+      const frame = requestAnimationFrame(loadShowcase);
+      return () => cancelAnimationFrame(frame);
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      loadShowcase();
+    }, { rootMargin: '500px 0px' });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadShowcase]);
+
   return (
     <div className="aura-pitch">
-      <section className="aura-use-cases" aria-labelledby="aura-use-cases-title">
-        <div className="aura-section-heading">
-          <p>Why creators use space</p>
-          <h2 id="aura-use-cases-title">More than an image grid.<br /><em>Work people can enter.</em></h2>
-          <span>LIEUVA gives visual work a sense of place while keeping the path from first upload to shareable Space direct.</span>
+      <section ref={showcase} className="follow-work" aria-labelledby="follow-work-title">
+        <div className="follow-work__hero">
+          <div className="follow-work__copy">
+            <p>Live on LIEUVA</p>
+            <h2 id="follow-work-title">Follow the work.</h2>
+            <span>Enter published Spaces first. Then meet the creators building new ways to present art, design and ideas.</span>
+            <div className="follow-work__actions">
+              <a href="#discover-spaces">Explore Spaces <b aria-hidden="true">↗</b></a>
+              <a href="#/create">Create a Space <b aria-hidden="true">→</b></a>
+            </div>
+            <ol aria-label="LIEUVA product journey">
+              <li><b>01</b> Space</li>
+              <li><b>02</b> Creator</li>
+              <li><b>03</b> Community</li>
+            </ol>
+          </div>
+
+          <div className={`follow-work__spaces follow-work__spaces--${directoryStatus}`} aria-live="polite">
+            {(directoryStatus === 'idle' || directoryStatus === 'loading') && (
+              <div className="follow-work__loading" role="status"><span>Opening public Spaces…</span></div>
+            )}
+            {directoryStatus === 'error' && (
+              <div className="follow-work__empty" role="status">
+                <strong>The public rooms are taking a pause.</strong>
+                <button type="button" onClick={loadShowcase}>Try again →</button>
+              </div>
+            )}
+            {directoryStatus === 'ready' && !spaces.length && (
+              <div className="follow-work__empty" role="status">
+                <strong>The next public Space starts here.</strong>
+                <a href="#/create">Open the Studio →</a>
+              </div>
+            )}
+            {spaces.map((space, index) => {
+              const image = discoverCoverSource(space) ?? `./assets/templates/${space.templateId}-preview.webp`;
+              return (
+                <a
+                  className="follow-work__space"
+                  href={spacePath(space.id)}
+                  key={space.id}
+                  style={{ '--space-order': index } as CSSProperties}
+                  aria-label={`Enter ${space.title} by ${space.artist}`}
+                >
+                  <img
+                    src={image}
+                    alt={`${space.title} room view`}
+                    loading="lazy"
+                    decoding="async"
+                    onError={(event) => {
+                      if (event.currentTarget.dataset.fallback === 'true') return;
+                      event.currentTarget.dataset.fallback = 'true';
+                      event.currentTarget.src = `./assets/templates/${space.templateId}-preview.webp`;
+                    }}
+                  />
+                  <span><small>Published Space</small><strong>{space.title}</strong><em>{space.artist}</em></span>
+                  <b aria-hidden="true">↗</b>
+                </a>
+              );
+            })}
+          </div>
         </div>
-        <div className="aura-use-case-grid">
-          {CREATOR_VALUE.map(([title, body], index) => (
-            <article key={title}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <h3>{title}</h3>
-              <p>{body}</p>
-            </article>
-          ))}
+
+        <div className="follow-work__creators">
+          <header>
+            <div><p>Featured creators</p><h3>Meet the people<br />behind the Spaces.</h3></div>
+            <a href="/creators#creator-directory">View Creator Hub <span aria-hidden="true">→</span></a>
+          </header>
+          {directoryStatus === 'ready' && creators.length ? (
+            <div className="follow-work__creator-list">
+              {creators.map((creator) => (
+                <a href={creatorCanonicalUrl(creator.handle)} key={creator.handle}>
+                  <span>
+                    {creator.imagePresent
+                      ? <img src={creatorImageUrl(creator.handle)} alt="" loading="lazy" decoding="async" />
+                      : creator.displayName.slice(0, 1).toUpperCase()}
+                  </span>
+                  <strong>{creator.displayName}</strong>
+                  <small>@{creator.handle}</small>
+                </a>
+              ))}
+            </div>
+          ) : directoryStatus === 'ready' ? (
+            <p className="follow-work__creator-empty">Public Creator profiles will appear here as their work goes live.</p>
+          ) : null}
         </div>
       </section>
 

@@ -138,7 +138,692 @@ Browser console on tested local and production routes: **zero unexpected applica
 | Product | PASS CONDITIONS | Complete primary surfaces; repository and browser gates green | Pilot evidence incomplete | Limit first release to controlled cohort |
 | Creator workflow | PASS CONDITIONS | Create/upload/edit/save/recover browser + tests | Production authenticated run | Run prefixed lifecycle |
 | Publishing | PASS CONDITIONS | 72-test release gate | Live owner/editor/update matrix | Execute and clean isolated fixtures |
-| Viewer | PASS CONDITIONS | Public routes and visitor QA | Physical devices/private fixtures | Run real-device and privacy matrix |
+| Viewer | PASS CONDITIONS | Public routes and visitor QA | Physical devices/private # LIEUVA — UI/UX VISUAL REDESIGN FROM REFERENCE SCREENSHOTS
+
+Work on the current LIEUVA repository.
+
+I am providing reference screenshots/mockups for the redesign.
+
+IMPORTANT:
+
+Before changing any code, inspect ALL supplied reference images carefully.
+
+Analyze them visually and understand:
+
+- layout
+- hierarchy
+- composition
+- typography
+- spacing
+- proportions
+- navigation
+- cards
+- imagery
+- borders
+- backgrounds
+- colors
+- contrast
+- controls
+- information density
+- visual rhythm
+- responsive implications
+- relationship between the different screens
+
+These images are the PRIMARY VISUAL REFERENCE for this task.
+
+The goal is NOT merely to take inspiration from them.
+
+Reproduce their overall design direction, composition, hierarchy and visual character closely inside the real LIEUVA product, while adapting them intelligently to the actual functionality, data and existing architecture.
+
+Do not blindly copy fake/mockup content.
+
+Use real current LIEUVA functionality and data.
+
+Before implementation also inspect the existing:
+
+- main homepage
+- post-Emil homepage section
+- Creator Hub
+- Feed
+- Creators
+- My Spaces
+- Account
+- Public Profile settings
+- public Creator profiles
+- shared navigation
+- existing design system
+- responsive behavior
+- relevant previous audit/WP decisions
+
+Then map the supplied visual concepts onto the real product.
+
+==================================================
+PRODUCT HIERARCHY — CRITICAL
+==================================================
+
+LIEUVA is FIRST an immersive 3D presentation / spatial publishing platform.
+
+The primary product is:
+
+CREATE
+→ BUILD A SPACE
+→ PUBLISH
+→ SHARE
+→ EXPERIENCE / EXPLORE
+
+The 3D Spaces, Studio and published experiences remain the main purpose of LIEUVA.
+
+Creator Hub is a SECONDARY community feature built around the work created on LIEUVA.
+
+The product hierarchy must remain:
+
+SPACES / WORK
+→ CREATORS
+→ COMMUNITY
+
+NOT:
+
+SOCIAL FEED
+→ FOLLOWERS
+→ 3D Spaces as a secondary feature.
+
+This distinction must be visible in the UI.
+
+==================================================
+1. MAIN HOMEPAGE — POST-EMIL SECTION
+==================================================
+
+Use the supplied dark `Follow the work` concept as the visual reference for the homepage section AFTER Emil Scroll.
+
+This belongs to the MAIN LIEUVA HOMEPAGE.
+
+It is NOT Creator Hub.
+
+Its purpose is to transition from:
+
+"What can LIEUVA create?"
+
+into:
+
+"Look at the Spaces and creators already using it."
+
+The visual hierarchy should therefore be:
+
+FIRST:
+real / featured LIEUVA Spaces
+
+SECOND:
+the creators behind them
+
+THIRD:
+an optional path into Creator Hub/community.
+
+Reproduce the strong aspects of the supplied reference:
+
+- dark near-black section
+- large editorial serif headline
+- `Follow the work.` direction
+- large layered/overlapping Space previews
+- spatial composition rather than conventional cards
+- restrained lime/acid accent
+- strong contrast with the lighter homepage
+- Featured Creators below
+- premium editorial composition
+- generous negative space
+
+BUT:
+
+Do not make social metrics the focus.
+
+Do not use fake statistics such as follower counts or invented platform numbers.
+
+Do not use fake institutions or fake creators.
+
+The 3D Spaces must visually dominate this section.
+
+Primary actions should remain product-oriented, for example:
+
+EXPLORE SPACES
+
+with Creator discovery / Creator Hub as secondary actions.
+
+`Create a Space` remains more strategically important to LIEUVA than `Enter Creator Hub`.
+
+The narrative should feel like:
+
+PRODUCT
+→ SPACE
+→ CREATOR
+→ COMMUNITY
+
+==================================================
+2. CREATOR HUB HOME
+==================================================
+
+Use the supplied Creator Hub mockup with:
+
+`Make a place. Share the process.`
+
+as the PRIMARY visual reference.
+
+When users intentionally enter Creator Hub, the community layer can become locally dominant.
+
+Reproduce the visual architecture closely:
+
+- LIEUVA global header
+- clear distinction between `Hub Home` and `LIEUVA Home`
+- Hub-specific local navigation
+- warm off-white base
+- near-black contrast surfaces
+- editorial serif headline
+- large Space imagery
+- dark `Share a Studio Note` composer
+- lightweight creator statistics
+- visual `From the Feed` section
+- `My Spaces`
+- recent/community activity
+- strong image-first feed cards
+- restrained lime accent
+
+The Hero should communicate:
+
+IDENTITY
++
+CREATE / SHARE PROCESS
++
+YOUR SPACES
++
+COMMUNITY.
+
+The Creator Hub should feel like a premium creator/community workspace.
+
+It must NOT feel like:
+
+- Facebook
+- Instagram
+- LinkedIn
+- generic SaaS dashboard
+- generic admin panel.
+
+The creator's work and Spaces remain visually more important than follower counts or social mechanics.
+
+==================================================
+3. HUB NAVIGATION VS MAIN LIEUVA
+==================================================
+
+This is important.
+
+Creator Hub is a feature INSIDE LIEUVA, not a separate product.
+
+The user must always understand the distinction between:
+
+LIEUVA HOME
+
+and
+
+HUB HOME.
+
+The global product identity remains LIEUVA.
+
+Inside Hub, use a clear local navigation for the actual existing Hub functions, such as:
+
+Hub Home
+Feed
+Creators
+My Spaces
+Notifications
+Messages
+
+ONLY where those functions actually exist.
+
+Do not invent backend functionality from the mockup.
+
+There must always be an obvious route back to the normal LIEUVA homepage/product.
+
+==================================================
+4. ACCOUNT & SECURITY
+==================================================
+
+Use the supplied Account & Security mockup as the visual target.
+
+Account Settings belongs to LIEUVA OVERALL.
+
+It is NOT merely a Creator Hub settings page.
+
+Preserve the real existing account functionality.
+
+Reproduce the visual approach:
+
+- same LIEUVA visual language as Hub
+- clear account header
+- calm functional layout
+- Account navigation such as:
+  Overview
+  Public Profile
+  Account & Security
+  Data & Rights
+- strong identity summary
+- grouped Email & Login controls
+- clear security information
+- active sessions/context where actually supported
+- contextual right-hand column on desktop
+- restrained cards
+- strong typography
+- generous spacing
+- clear status badges
+- no giant undifferentiated form
+
+The hierarchy should be:
+
+LEFT / MAIN:
+things the user can change
+
+RIGHT / CONTEXT:
+security/status/help/context.
+
+Do not add unsupported account functionality merely because the reference image contains it.
+
+==================================================
+5. PUBLIC PROFILE SETTINGS
+==================================================
+
+Use the supplied Public Profile settings mockup as the PRIMARY visual reference.
+
+This should strongly follow the:
+
+EDITOR
++
+LIVE PREVIEW
+
+composition.
+
+Desktop should approximately behave like:
+
+LEFT:
+public-profile editor
+
+RIGHT:
+realistic live preview.
+
+The editor should use the actual existing public Creator fields and functionality.
+
+Examples where currently supported:
+
+- profile activation
+- profile image
+- display name
+- handle
+- bio
+- public links
+- Save Changes
+
+Do not invent unsupported fields.
+
+The live preview should visually represent the actual public Creator profile as closely as practical.
+
+The creator should immediately understand:
+
+"This is what other people will see."
+
+==================================================
+6. PUBLIC CREATOR PROFILE HIERARCHY
+==================================================
+
+The public profile must remain PORTFOLIO-FIRST.
+
+Hierarchy:
+
+CREATOR
+→ SPACES
+→ STUDIO NOTES / COMMUNITY.
+
+NOT:
+
+CREATOR
+→ FOLLOWERS
+→ SOCIAL FEED
+→ WORK.
+
+Space imagery should therefore be one of the strongest visual elements.
+
+Creator identity should be editorial and premium:
+
+- large serif name
+- restrained handle
+- concise bio
+- profile image
+- public links where supported
+- large Selected / Featured Spaces
+- Studio Notes below
+
+Do not turn it into a social-media profile clone.
+
+==================================================
+7. SHARED VISUAL SYSTEM
+==================================================
+
+The four supplied references must result in ONE coherent LIEUVA UI system.
+
+Do not implement four independent styles.
+
+Use a shared visual language:
+
+TYPOGRAPHY
+
+Editorial serif:
+- hero headlines
+- expressive section titles
+- Creator names
+- important identity moments
+
+Functional sans-serif:
+- navigation
+- controls
+- forms
+- labels
+- metadata
+- status
+
+COLORS
+
+- warm off-white / bone as primary light surface
+- near-black / charcoal for strong contrast surfaces
+- restrained acid/lime green for:
+  active state
+  important action
+  small status accents
+  selected navigation
+
+Do NOT spread neon green everywhere.
+
+LAYOUT
+
+- generous architectural spacing
+- strong asymmetric compositions where appropriate
+- large imagery
+- editorial rhythm
+- clear grids
+- deliberate negative space
+
+SURFACES
+
+Prefer:
+
+- thin borders
+- spacing
+- typography
+- background contrast
+
+over excessive:
+
+- rounded cards
+- shadows
+- glass panels
+- floating containers.
+
+Do not make LIEUVA look like generic modern SaaS.
+
+==================================================
+8. IMAGE-FIRST DESIGN
+==================================================
+
+LIEUVA is a visual/spatial product.
+
+Use real Space imagery wherever appropriate.
+
+Space previews should generally be more visually important than textual metadata.
+
+Creator Hub Feed:
+image-first.
+
+Public Creator Profile:
+Space-first.
+
+Post-Emil Homepage:
+Space-first.
+
+Account Settings:
+more functional and restrained.
+
+This difference in density is intentional.
+
+==================================================
+9. MOTION
+==================================================
+
+Use premium restrained motion consistent with existing LIEUVA behavior.
+
+Appropriate:
+
+- elegant section reveals
+- subtle image depth
+- refined hover transitions
+- panel transitions
+- smooth active-state movement
+- subtle card/image scaling
+- high-quality easing
+
+Avoid:
+
+- constant floating
+- excessive parallax
+- giant blur animations
+- bouncy SaaS motion
+- decorative particle effects.
+
+Respect reduced motion.
+
+==================================================
+10. MOBILE
+==================================================
+
+Do NOT simply squeeze the desktop mockups.
+
+Preserve their hierarchy.
+
+Creator Hub mobile should roughly become:
+
+identity/hero
+→ Studio Note composer
+→ important stats/context
+→ Feed
+→ My Spaces
+
+Public Profile Settings:
+
+Editor
+→ Save
+→ Live Preview
+
+Post-Emil Homepage:
+
+Headline
+→ Space presentation
+→ Creators
+→ community path
+
+Account:
+
+Account navigation
+→ primary settings
+→ security/context.
+
+Use the existing responsive architecture.
+
+Test at minimum:
+
+1920 desktop
+1440 desktop
+390×844
+360×800
+
+No horizontal overflow.
+
+No clipped primary actions.
+
+Touch targets remain appropriate.
+
+==================================================
+11. FUNCTIONALITY + ENGINEERING
+==================================================
+
+This is a UI/UX redesign, NOT a backend rewrite.
+
+Preserve all existing:
+
+- Firebase behavior
+- Auth
+- Creator identity
+- handles
+- privacy
+- Account functions
+- Creator Hub functions
+- Feed
+- Spaces
+- Studio
+- publishing
+- Discover
+- routing
+- SEO
+- telemetry
+- accessibility
+- mobile behavior
+- data rights
+
+Do not create duplicate architecture merely to match the screenshots.
+
+Reuse shared components and design tokens where appropriate.
+
+Create/refine shared primitives if that improves consistency.
+
+Do not blindly hardcode screenshot layouts separately for every page.
+
+==================================================
+12. USE THE SCREENSHOTS INTELLIGENTLY
+==================================================
+
+The supplied images are concrete visual targets.
+
+Inspect them carefully before implementation.
+
+For each screen determine:
+
+- what should be reproduced closely
+- what needs adapting to real functionality
+- what is fake/mockup content and must NOT be implemented
+- which visual pattern should become a shared component/token
+- how the design behaves responsively
+
+Do not ignore the screenshots and invent a completely different design.
+
+Likewise, do not blindly reproduce mistakes or fake functionality from them.
+
+The target is:
+
+THE VISUAL CHARACTER AND COMPOSITION OF THE REFERENCES
++
+THE REAL CURRENT LIEUVA PRODUCT.
+
+==================================================
+13. VISUAL REFINEMENT
+==================================================
+
+Do not stop after the first implementation.
+
+After all four surfaces are working:
+
+inspect them side by side.
+
+Perform at least one dedicated visual refinement pass.
+
+Review:
+
+- hierarchy
+- typography
+- spacing
+- alignment
+- image treatment
+- navigation
+- active states
+- buttons
+- forms
+- borders
+- contrast
+- responsive composition
+- hover/touch
+- loading
+- empty states
+- error states
+
+They should visibly belong to the same product family.
+
+The visual quality should be at least equal to the supplied concepts, adapted to the real product.
+
+==================================================
+14. PRIORITIES
+==================================================
+
+When trade-offs are necessary, use this hierarchy:
+
+1. LIEUVA remains primarily a 3D Space creation/publishing platform.
+2. Spaces/work remain visually dominant.
+3. Supplied reference designs should be reproduced closely.
+4. Creator Hub remains a secondary community feature.
+5. Public Creator profiles remain portfolio-first.
+6. Account remains a platform-level settings surface.
+7. Visual quality and coherence.
+8. Usability/accessibility.
+9. Responsive quality.
+10. Performance.
+11. Raw implementation size.
+
+Do not sacrifice stability or accessibility.
+
+A somewhat larger UI implementation is acceptable if it materially improves visual quality and remains maintainable.
+
+==================================================
+15. QA
+==================================================
+
+Run the existing relevant tests/builds.
+
+Perform browser QA on all redesigned surfaces.
+
+Compare implementation directly against the supplied screenshots.
+
+Do not merely ask:
+
+"Does it work?"
+
+Ask:
+
+"Does it actually look and feel like the intended design?"
+
+Check desktop and mobile.
+
+Do not commit, push or deploy unless explicitly instructed.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+At completion briefly report:
+
+1. how each reference image was interpreted
+2. Main Homepage changes
+3. Creator Hub changes
+4. Account & Security changes
+5. Public Profile Settings changes
+6. Public Creator Profile changes
+7. shared design-system changes
+8. responsive/mobile behavior
+9. accessibility
+10. performance impact
+11. tests
+12. differences from the references and why
+13. remaining visual issues
+
+Do not start unrelated product work.fixtures | Run real-device and privacy matrix |
 | 3D | PASS CONDITIONS | No WebGL warnings; templates/Walk smoke | GPU/FPS/thermal evidence | Test mid-range phones |
 | Mobile | EXTERNAL | Emulated 360/390/430 pass | No physical iOS/Android | Run device lab |
 | Security | PASS CONDITIONS | Audit 0; rules reviewed; App Check/header fixes | Rules parity/CSP/abuse controls | Deploy/verify rules; staged CSP; pilot-only uploads |
