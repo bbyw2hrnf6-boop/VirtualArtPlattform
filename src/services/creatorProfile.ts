@@ -73,6 +73,46 @@ export function creatorProfileUrl(handle: string) {
   return creatorCanonicalUrl(handle);
 }
 
+function creatorErrorCode(error: unknown) {
+  return typeof error === "object" && error && "code" in error
+    ? String(error.code).toLowerCase()
+    : "";
+}
+
+export function isTransientCreatorActionError(error: unknown) {
+  const code = creatorErrorCode(error);
+  return ["internal", "unavailable", "deadline-exceeded", "network-request-failed"].some((value) =>
+    code.includes(value),
+  );
+}
+
+export function creatorActionErrorMessage(
+  error: unknown,
+  fallback = "The Creator Hub is temporarily unavailable. Nothing was changed; retry shortly.",
+) {
+  const code = creatorErrorCode(error);
+  if (code.includes("already-exists")) return "That handle is already taken. Try another.";
+  if (code.includes("invalid-argument")) return "Check the handle, display name, bio and HTTPS links.";
+  if (code.includes("failed-precondition")) return "Finish your public Creator profile before continuing.";
+  if (code.includes("unauthenticated")) return "Your session expired. Sign in again, then retry.";
+  if (code.includes("permission-denied")) return "This account cannot change that Creator profile.";
+  if (code.includes("resource-exhausted")) return "Too many Creator actions were requested. Wait a moment, then retry.";
+  if (isTransientCreatorActionError(error)) return fallback;
+  return error instanceof Error && error.message && error.message.toLowerCase() !== "internal"
+    ? error.message.replace(/^Firebase:\s*/i, "")
+    : fallback;
+}
+
+async function creatorCallableWithRetry<T>(operation: () => Promise<T>) {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!isTransientCreatorActionError(error)) throw error;
+    await new Promise((resolve) => window.setTimeout(resolve, 450));
+    return await operation();
+  }
+}
+
 export async function loadPublicCreatorProfile(handle: string, signal?: AbortSignal) {
   const normalizedHandle = handle.trim().toLowerCase();
   if (DEMO_CREATOR_HANDLES.has(normalizedHandle)) {
@@ -127,26 +167,32 @@ export async function loadCreatorAttribution(spaceId: string, signal?: AbortSign
 }
 
 export async function loadMyCreatorProfile() {
-  const result = await httpsCallable<Record<string, never>, { profile: CreatorProfile | null }>(
-    firebaseFunctions,
-    "getMyLieuvaCreatorProfile",
-  )({});
+  const result = await creatorCallableWithRetry(() =>
+    httpsCallable<Record<string, never>, { profile: CreatorProfile | null }>(
+      firebaseFunctions,
+      "getMyLieuvaCreatorProfile",
+    )({}),
+  );
   return result.data.profile;
 }
 
 export async function checkCreatorHandle(handle: string) {
-  const result = await httpsCallable<{ handle: string }, { handle: string; available: boolean }>(
-    firebaseFunctions,
-    "checkLieuvaCreatorHandle",
-  )({ handle });
+  const result = await creatorCallableWithRetry(() =>
+    httpsCallable<{ handle: string }, { handle: string; available: boolean }>(
+      firebaseFunctions,
+      "checkLieuvaCreatorHandle",
+    )({ handle }),
+  );
   return result.data;
 }
 
 export async function saveCreatorProfile(profile: CreatorProfile) {
-  const result = await httpsCallable<CreatorProfile, { profile: CreatorProfile; publicUrl: string }>(
-    firebaseFunctions,
-    "saveLieuvaCreatorProfile",
-  )(profile);
+  const result = await creatorCallableWithRetry(() =>
+    httpsCallable<CreatorProfile, { profile: CreatorProfile; publicUrl: string }>(
+      firebaseFunctions,
+      "saveLieuvaCreatorProfile",
+    )(profile),
+  );
   return result.data;
 }
 

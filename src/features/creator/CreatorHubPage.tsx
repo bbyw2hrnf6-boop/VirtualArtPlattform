@@ -4,6 +4,7 @@ import { AccountButton } from "../account/AccountDialog";
 import type { AccountSession } from "../../services/accountTypes";
 import {
   checkCreatorHandle,
+  creatorActionErrorMessage,
   createCreatorPost,
   creatorHandleBase,
   creatorImageUrl,
@@ -124,7 +125,10 @@ export default function CreatorHubPage() {
       setProfileNotice(`Creator Hub active as @${saved.profile.handle}.`);
       void loadCreatorHome().then(setHome).catch(() => undefined);
     } catch (error) {
-      setProfileNotice(error instanceof Error ? error.message.replace(/^Firebase:\s*/i, "") : "Creator profile setup failed.");
+      setProfileNotice(creatorActionErrorMessage(
+        error,
+        "Creator Hub activation timed out. Nothing changed; retry once or finish the same profile in Account.",
+      ));
     } finally {
       setProfileBusy(false);
     }
@@ -194,9 +198,10 @@ export default function CreatorHubPage() {
   return (
     <main className="creator-hub">
       <header>
-        <a href="/" aria-label="LIEUVA home"><Logo dark /></a>
+        <Logo dark />
         <nav aria-label="Creator Hub navigation">
-          <a href="#creator-home">Home</a>
+          <a href="/">LIEUVA home</a>
+          <a href="#creator-feed">Feed</a>
           {myProfile?.profilePublic && <a href={creatorCanonicalUrl(myProfile.handle)}>My profile</a>}
           <a href="/#/create">Create a Space</a>
           <AccountButton light onSessionChange={(next) => {
@@ -209,14 +214,26 @@ export default function CreatorHubPage() {
         </nav>
       </header>
 
+      <nav className="creator-hub__section-nav" aria-label="Creator Hub sections">
+        <a href="#creator-home"><span aria-hidden="true">01</span> Hub home</a>
+        <a href="#creator-feed"><span aria-hidden="true">02</span> Feed</a>
+        <a href="#creator-directory"><span aria-hidden="true">03</span> Creators</a>
+        <a href="/#/create"><span aria-hidden="true">04</span> My Spaces</a>
+      </nav>
+
       <section className="creator-hub__hero" id="creator-home">
         <div>
           <p className="eyebrow">Creator Hub · Community</p>
           <h1>Make a place.<br/><em>Share the process.</em></h1>
         </div>
         <div className="creator-hub__hero-copy">
-          <p>A social home for the people behind LIEUVA Spaces. Follow practices, post studio notes and return to new work as it develops.</p>
+          <p>The social layer around LIEUVA Spaces. Follow practices, publish studio notes, find new rooms and return to work as it develops.</p>
           <a href="#creator-feed">Open the feed <span aria-hidden="true">↓</span></a>
+          <dl className="creator-hub__pulse" aria-label="Creator Hub overview">
+            <div><dt>Creators</dt><dd>{creators.length}</dd></div>
+            <div><dt>Feed</dt><dd>{home?.posts?.length ?? DEMO_CREATOR_POSTS.length}</dd></div>
+            <div><dt>Your profile</dt><dd>{myProfile?.profilePublic ? "Live" : signedIn ? "Draft" : "Sign in"}</dd></div>
+          </dl>
         </div>
         <label className="creator-hub__search">
           <span>Search the public community</span>
@@ -225,9 +242,9 @@ export default function CreatorHubPage() {
         </label>
       </section>
 
-      <section className="creator-hub__workspace" aria-label="Your Creator workspace">
+      <section className="creator-hub__workspace" id="creator-workspace" aria-label="Your Creator workspace">
         <div className="creator-hub__identity-panel">
-          <p className="eyebrow">Your Creator profile</p>
+          <div className="creator-hub__panel-heading"><p className="eyebrow">Your Creator Hub profile</p><span className={myProfile?.profilePublic ? "is-live" : ""}>{myProfile?.profilePublic ? "Live" : signedIn ? "Not public" : "Signed out"}</span></div>
           {signedIn && myProfile?.profilePublic ? (
             <>
               <div className="creator-hub__my-identity">
@@ -243,11 +260,11 @@ export default function CreatorHubPage() {
           ) : (
             <>
               <h2>{signedIn ? "Introduce your practice." : "Your work has a social home."}</h2>
-              <p>{signedIn ? "Activate a public profile here to post and follow. Your published rooms remain separate Creator Spaces." : "Sign in to publish studio notes, follow Creators and keep your own profile close."}</p>
+              <p>{signedIn ? "One profile powers your Hub identity, public page, follows and posts. Your published rooms stay separate and appear as Spaces on that profile." : "Sign in to publish studio notes, follow Creators and keep your own profile close."}</p>
               {signedIn ? (
                 <>
-                  <button className="creator-hub__primary-action" type="button" disabled={profileBusy} onClick={() => void activateCreatorHub()}>{profileBusy ? "Activating…" : myProfile ? "Make profile public" : "Activate Creator Hub profile"} <span>→</span></button>
-                  <a className="creator-hub__secondary-action" href="/#/account">Customize profile in Account</a>
+                  <button className="creator-hub__primary-action" type="button" disabled={profileBusy} onClick={() => void activateCreatorHub()}>{profileBusy ? "Activating…" : myProfile ? "Make Hub profile public" : "Quick-activate Hub profile"} <span>→</span></button>
+                  <a className="creator-hub__secondary-action" href="/#/account">Or review and activate in Account settings&nbsp; →</a>
                   {profileNotice && <small className="creator-hub__profile-notice" aria-live="polite">{profileNotice}</small>}
                 </>
               ) : <a className="creator-hub__primary-action" href="/#/account">Sign in or create account <span>→</span></a>}
@@ -257,7 +274,7 @@ export default function CreatorHubPage() {
 
         <form className="creator-hub__composer" onSubmit={(event) => { event.preventDefault(); publishPost(); }}>
           <div><p className="eyebrow">Post an update</p><span>{postBody.length}/600</span></div>
-          <h2>What is changing in your practice?</h2>
+          <h2>Share a studio note.</h2>
           <textarea
             value={postBody}
             onChange={(event) => setPostBody(event.target.value.slice(0, 600))}

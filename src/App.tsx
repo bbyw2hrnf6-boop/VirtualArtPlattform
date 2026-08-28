@@ -2280,6 +2280,7 @@ function Studio({
     );
   return (
     <main className="studio">
+      <h1 className="visually-hidden">LIEUVA Studio — {draft.title || "Untitled Project"}</h1>
       <header className="studio-header">
         <Logo />
         <div className="studio-title">

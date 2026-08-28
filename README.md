@@ -1,14 +1,14 @@
 # LIEUVA — Immersive 3D presentation platform
 
-LIEUVA is a browser-based platform for creating, publishing, sharing and discovering immersive 3D presentations. This repository contains the current MVP: LIEUVA Studio, three Space templates, a visitor experience, Discover, account access, and a Firebase publishing lifecycle.
+LIEUVA is a browser-based platform for creating, publishing, sharing and discovering immersive 3D presentations. This repository contains the current production-pilot product: LIEUVA Studio, three Space templates, a visitor experience, Discover, Creator identity and community, account access, and a Firebase publishing lifecycle.
 
 > **Compatibility firewall:** LIEUVA is the visible brand. Existing AURA/gallery identifiers in Firebase, Storage, callable Functions, local persistence, `.aura.json`, routes and GLB metadata are intentional compatibility contracts and must not be casually renamed.
 
-Live MVP: [lieuva.com](https://lieuva.com/)
+Live product: [lieuva.com](https://lieuva.com/)
 
-> **MVP status:** LIEUVA is a concept-validation product, not yet a production marketplace. Read [Security, privacy, and current limitations](#security-privacy-and-current-limitations) before inviting public uploads.
+> **Launch status:** LIEUVA is a production-pilot candidate, not yet an unrestricted public-upload marketplace. The launch verdict and open owner actions live in `audit/LIEUVA-LAUNCH-READINESS-WP16.md`. Read [Security, privacy, and current limitations](#security-privacy-and-current-limitations) before inviting public uploads.
 
-## What the MVP includes
+## What the production-pilot product includes
 
 - A premium landing page, featured Danny Hirsch exhibition, and Discover carousel.
 - Exactly three selectable gallery spaces:
@@ -208,15 +208,11 @@ During the separately approved external preview window, deploy the three new Fun
 
 Clean customer URLs do not imply renamed Firebase/data identifiers. `galleries`, `galleryId`, Storage paths, callable names, `.aura.json`, local draft keys and GLB `aura_*` metadata remain compatibility contracts.
 
-## Legacy GitHub Pages rollback
+## Production deployment and rollback
 
-1. Push the repository to GitHub with the application on `main`.
-2. Open **Repository Settings → Pages**.
-3. Under **Build and deployment**, select **GitHub Actions** as the source.
-4. Push a commit to `main`, or manually run **Actions → Deploy to GitHub Pages → Run workflow**.
-5. Confirm every step is green and open the URL shown by the deployment job.
+`.github/workflows/deploy.yml` is the authoritative production workflow. A push to `main` (or an explicit manual dispatch) installs locked dependencies, runs both repository gates, builds with production telemetry/App Check configuration, and deploys Firebase Hosting plus Functions. It does **not** deploy Firestore rules, Storage rules, or indexes; those require a separately approved rules release using the exact repository files and the steps in [`FIREBASE_SETUP.md`](./FIREBASE_SETUP.md).
 
-`.github/workflows/deploy.yml` installs the locked dependencies with `npm ci`, builds `dist/`, uploads the Pages artifact, and deploys it. Firestore rules remain a separate manual Firebase Console step. Do not configure Pages to publish the repository root or the unbuilt `main` branch.
+Before accepting a deployment, confirm that the successful workflow `head_sha` equals `origin/main`, Firebase Hosting shows the same release time, and the raw homepage/Space/Creator endpoints return the expected status, canonical metadata, and cache policy.
 
 Before presenting a deployment, verify:
 
@@ -225,9 +221,9 @@ npm run lint
 npm run build
 ```
 
-Then test the landing page, all three room editors, the Danny demo, one publication, the resulting share link in a private browser window, and its Discover card.
+Then run the isolated production smoke matrix in `audit/PUBLISH-UPDATE-RELEASE-GATE.md`: landing, all three room editors, Danny, one prefixed Public/Unlisted/Private fixture, owner/editor/viewer access, update-in-place, recovery, private-window share links, Discover, and exact fixture cleanup.
 
-The Pages workflow sets `LEGACY_GITHUB_PAGES=true`, preserving the previous repository-subpath asset behavior. It cannot provide per-Space raw metadata, dynamic cards or privacy-aware status codes and is therefore a rollback path, not the WP5 production target.
+For rollback, restore a known-good Firebase Hosting release from Hosting release history or redeploy a reviewed known-good commit with the same workflow. Roll back Functions from the same known-good source if the incident involves server delivery or callables. Never roll back by deleting Firestore documents, Storage objects, IDs, revisions, or ACL. A relative `LEGACY_GITHUB_PAGES=true` build remains a compatibility artifact, but there is no active Pages deployment workflow in this repository and it must not be described as the current production rollback mechanism.
 
 ## Troubleshooting
 

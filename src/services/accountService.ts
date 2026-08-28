@@ -18,6 +18,7 @@ import {
   updateProfile,
   type User,
 } from "firebase/auth";
+import { shouldUseFirebaseVerificationFallback } from "./verificationFallback";
 import { httpsCallable } from "firebase/functions";
 import {
   doc,
@@ -244,9 +245,8 @@ async function requestAuraVerification(user: User) {
     const code = typeof error === "object" && error && "code" in error
       ? String(error.code).toLowerCase()
       : "";
-    if (!code.includes("not-found") && !code.includes("unimplemented"))
-      throw error;
-    console.warn("Branded verification function is not deployed; using Firebase fallback.");
+    if (!shouldUseFirebaseVerificationFallback(code)) throw error;
+    console.warn("Branded verification delivery is unavailable; using Firebase fallback.");
     await sendEmailVerification(user, actionCodeSettings());
   }
 }

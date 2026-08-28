@@ -11,6 +11,7 @@ import {
   parseCreatorProfileInput,
   publicCreatorDirectoryEntry,
   renderCreatorDocument,
+  renderCreatorHubDocument,
 } from "./creatorIdentity.js";
 
 const SHELL = "<!doctype html><html><head><title>Home</title><meta name=\"robots\" content=\"index\"><link rel=\"canonical\" href=\"https://lieuva.com/\"></head><body><div id=\"root\"></div></body></html>";
@@ -101,6 +102,16 @@ describe("Creator identity contract", () => {
     const html = renderCreatorDocument(SHELL, { kind: "not-found", handle: "hidden-name" });
     expect(html).toContain("noindex,nofollow,noarchive");
     expect(html).not.toContain("hidden-name");
+  });
+
+  it("renders the Creator Hub as a canonical indexable application route", () => {
+    const html = renderCreatorHubDocument(SHELL);
+    expect(html).toContain("Creator Hub — Community | LIEUVA");
+    expect(html).toContain("https://lieuva.com/creators");
+    expect(html).toContain("index,follow,max-image-preview:large");
+    expect(html).toContain("CollectionPage");
+    expect(html.match(/rel="canonical"/g)).toHaveLength(1);
+    expect(html).not.toContain("Creator unavailable");
   });
 
   it("keeps follow and unfollow transitions idempotent and non-negative", () => {

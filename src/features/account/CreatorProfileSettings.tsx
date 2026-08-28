@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   checkCreatorHandle,
+  creatorActionErrorMessage,
+  creatorHandleBase,
   creatorImageUrl,
   creatorProfileUrl,
   loadMyCreatorProfile,
@@ -23,15 +25,19 @@ function errorMessage(error: unknown): string {
   if (code.includes("failed-precondition")) return "Handle changes are limited to once every seven days.";
   if (code.includes("invalid-argument")) return "Check the handle, bio, and public links.";
   if (code.includes("unauthenticated")) return "Sign in again to save your public profile.";
-  return "The public profile could not be saved. Your existing profile is unchanged.";
+  return creatorActionErrorMessage(
+    error,
+    "The Creator profile service is temporarily unavailable. Your existing profile is unchanged; retry shortly.",
+  );
 }
 
 const emptyLink = (): CreatorLink => ({ label: "", url: "" });
 
 export function CreatorProfileSettings({ account }: { account: AccountSession }) {
+  const { uid, displayName, nickname, email } = account;
   const [profile, setProfile] = useState<CreatorProfile>({
     handle: "",
-    displayName: account.displayName ?? "",
+    displayName: displayName ?? "",
     bio: "",
     links: [],
     profilePublic: false,
@@ -56,9 +62,15 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           setProfile(existing);
           setLinks(existing.links.length ? existing.links : [emptyLink()]);
           setOriginalHandle(existing.handle);
+        } else {
+          setProfile((current) => ({
+            ...current,
+            handle: creatorHandleBase({ nickname, displayName, email }),
+            displayName: current.displayName || nickname || email?.split("@")[0] || "LIEUVA Creator",
+          }));
         }
         setState("idle");
-        setMessage(existing ? "Profile settings loaded." : "Public profile is off by default.");
+        setMessage(existing ? "Creator Hub profile settings loaded." : "Review your suggested identity, then switch the Creator Hub profile on.");
       })
       .catch((error) => {
         if (!active) return;
@@ -66,7 +78,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
         setMessage(errorMessage(error));
       });
     return () => { active = false; };
-  }, [account.uid]);
+  }, [uid, displayName, nickname, email]);
 
   const checkHandle = async () => {
     if (!handleValid) {
@@ -149,11 +161,11 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
   return (
     <form className="creator-settings" onSubmit={(event) => void submit(event)}>
       <div className="account-profile__heading">
-        <div><p className="eyebrow">Public Creator profile</p><h3>Your public place.</h3></div>
+        <div><p className="eyebrow">Creator Hub profile</p><h3>Your public identity.</h3></div>
         <span>{profile.profilePublic ? "Public" : "Private"}</span>
       </div>
       <section className="creator-settings__visibility">
-        <div><strong>Public profile</strong><p>Off by default. Only the fields below and eligible owned public Spaces can appear.</p></div>
+        <div><strong>Activate Creator Hub profile</strong><p>This is the same public identity used in the Hub, search, follows and posts. Only the fields below and eligible owned public Spaces can appear.</p></div>
         <label className="creator-settings__switch"><input type="checkbox" checked={profile.profilePublic} onChange={(event) => setProfile((current) => ({ ...current, profilePublic: event.target.checked }))} /><span>{profile.profilePublic ? "On" : "Off"}</span></label>
       </section>
       <fieldset disabled={state === "loading" || state === "saving"}>
@@ -188,7 +200,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
         </div>
       </section>
       <div className="creator-settings__actions">
-        <button className="account-primary" disabled={state === "loading" || state === "saving"}>{state === "saving" ? "Saving…" : "Save public profile"}</button>
+        <button className="account-primary" disabled={state === "loading" || state === "saving"}>{state === "saving" ? "Saving…" : profile.profilePublic ? "Save and activate Hub profile" : "Save private draft"}</button>
         {profile.profilePublic && publicUrl && <a href={publicUrl}>View live profile ↗</a>}
       </div>
       <p className={`creator-settings__status ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>

@@ -1370,57 +1370,45 @@ function rebuildCeilingDetails(
   }
 }
 
-function createHomePortalTexture() {
+function createHomeExitSignTexture() {
   const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 768;
+  canvas.width = 768;
+  canvas.height = 360;
   const context = canvas.getContext("2d");
   if (!context) return null;
-  const gradient = context.createLinearGradient(0, 0, 512, 768);
+  const gradient = context.createLinearGradient(0, 0, 768, 360);
   gradient.addColorStop(0, "#292b25");
-  gradient.addColorStop(0.55, "#141611");
+  gradient.addColorStop(0.58, "#141611");
   gradient.addColorStop(1, "#090a08");
   context.fillStyle = gradient;
-  context.fillRect(0, 0, 512, 768);
-  context.strokeStyle = "rgba(215,255,57,.34)";
-  context.lineWidth = 2;
-  context.strokeRect(28, 28, 456, 712);
-  context.save();
-  context.translate(294, 135);
-  context.rotate(-0.08);
-  context.fillStyle = "rgba(230,232,218,.055)";
-  context.fillRect(0, 0, 175, 350);
-  context.strokeStyle = "rgba(215,255,57,.26)";
-  context.strokeRect(15, 19, 145, 310);
-  context.restore();
+  context.fillRect(0, 0, 768, 360);
+  context.strokeStyle = "rgba(215,255,57,.58)";
+  context.lineWidth = 3;
+  context.strokeRect(18, 18, 732, 324);
   context.fillStyle = "rgba(240,238,229,.86)";
-  context.font = "600 17px Manrope, Arial, sans-serif";
-  context.letterSpacing = "5px";
-  context.fillText("LIEUVA", 54, 86);
+  context.font = "600 22px Manrope, Arial, sans-serif";
+  context.letterSpacing = "7px";
+  context.fillText("LIEUVA", 48, 68);
   context.fillStyle = "rgba(215,255,57,.88)";
-  context.font = "600 11px Manrope, Arial, sans-serif";
-  context.letterSpacing = "2px";
-  context.fillText("DOORWAY TO LIEUVA", 54, 350);
+  context.font = "600 14px Manrope, Arial, sans-serif";
+  context.letterSpacing = "3px";
+  context.fillText("EXIT SIGN", 48, 130);
   context.fillStyle = "rgba(244,242,234,.92)";
-  context.font = "66px Instrument, Georgia, serif";
-  context.letterSpacing = "-3px";
-  context.fillText("Give your", 50, 430);
-  context.fillText("work a place.", 50, 495);
+  context.font = "58px Instrument, Georgia, serif";
+  context.letterSpacing = "-2px";
+  context.fillText("Back to homepage", 46, 212);
   context.strokeStyle = "rgba(240,238,229,.32)";
   context.lineWidth = 1;
   context.beginPath();
-  context.moveTo(52, 590);
-  context.lineTo(460, 590);
+  context.moveTo(48, 252);
+  context.lineTo(720, 252);
   context.stroke();
   context.fillStyle = "rgba(240,238,229,.82)";
-  context.font = "600 13px Manrope, Arial, sans-serif";
+  context.font = "600 16px Manrope, Arial, sans-serif";
   context.letterSpacing = "2px";
-  context.fillText("BACK TO HOMEPAGE", 54, 632);
-  context.fillText("→", 432, 632);
-  context.fillStyle = "rgba(240,238,229,.5)";
-  context.font = "11px Manrope, Arial, sans-serif";
-  context.letterSpacing = "1px";
-  context.fillText("The Space remains behind you.", 54, 684);
+  context.fillText("TAP TO LEAVE THIS SPACE", 48, 302);
+  context.font = "34px Instrument, Georgia, serif";
+  context.fillText("→", 680, 305);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
@@ -1692,91 +1680,31 @@ function buildRoom(
   const architecture = new THREE.Group();
   architecture.name = `architecture-${draft.templateId}`;
   scene.add(architecture);
-  const portalMaterial = new THREE.MeshPhysicalMaterial({
-    color: template.materialIdentity.accentColor,
-    roughness: draft.templateId === "nocturne" ? 0.42 : 0.72,
-    metalness: draft.templateId === "nocturne" ? 0.06 : 0.01,
-    clearcoat: draft.templateId === "nocturne" ? 0.12 : 0.025,
-    envMapIntensity: 0.34,
-  });
   const portalDepth = template.architecture.portalDepth;
-  const portalWidth = template.architecture.entranceWidth;
-  const portalHeight = Math.min(h - 0.55, draft.templateId === "pavilion" ? 4.35 : 3.72);
-  // Seat the trim into the south wall instead of floating in front of it.
-  const portalZ = d / 2 - portalDepth / 2 - 0.018;
-  [-1, 1].forEach((side) => {
-    const jamb = new THREE.Mesh(
-      new RoundedBoxGeometry(
-        template.architecture.trimScale,
-        portalHeight,
-        portalDepth,
-        4,
-        0.018,
-      ),
-      portalMaterial,
-    );
-    jamb.position.set(side * portalWidth / 2, portalHeight / 2, portalZ);
-    jamb.name = `${draft.templateId}-entrance-jamb-${side < 0 ? "left" : "right"}`;
-    jamb.castShadow = true;
-    jamb.receiveShadow = true;
-    architecture.add(jamb);
-  });
-  const portalHeader = new THREE.Mesh(
-    new RoundedBoxGeometry(
-      portalWidth + template.architecture.trimScale,
-      template.architecture.trimScale,
-      portalDepth,
-      4,
-      0.018,
-    ),
-    portalMaterial,
-  );
-  portalHeader.position.set(0, portalHeight, portalZ);
-  portalHeader.name = `${draft.templateId}-entrance-header`;
-  portalHeader.castShadow = true;
-  portalHeader.receiveShadow = true;
-  architecture.add(portalHeader);
-  const thresholdMaterial = new THREE.MeshPhysicalMaterial({
-    color: template.materialIdentity.floorColor,
-    roughness: draft.templateId === "nocturne" ? 0.48 : 0.64,
-    clearcoat: 0.08,
-    envMapIntensity: 0.32,
-  });
-  const threshold = new THREE.Mesh(
-    new RoundedBoxGeometry(portalWidth + 0.7, 0.035, portalDepth + 0.72, 3, 0.012),
-    thresholdMaterial,
-  );
-  threshold.position.set(0, 0.0175, portalZ);
-  threshold.name = `${draft.templateId}-entrance-threshold`;
-  threshold.receiveShadow = true;
-  threshold.userData.noWalkCollision = true;
-  architecture.add(threshold);
-  const homePortalTexture = createHomePortalTexture();
-  const exitPortal = new THREE.Mesh(
-    new THREE.PlaneGeometry(
-      Math.max(1, portalWidth - template.architecture.trimScale * 1.3),
-      Math.max(1, portalHeight - template.architecture.trimScale * 0.75),
-    ),
+  const homeSignTexture = createHomeExitSignTexture();
+  const exitSign = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.25, 1.05),
     new THREE.MeshPhysicalMaterial({
       color: "#d8dbc9",
-      map: homePortalTexture,
+      map: homeSignTexture,
       emissive: "#dce1c5",
-      emissiveMap: homePortalTexture,
-      emissiveIntensity: 0.18,
-      roughness: 0.26,
+      emissiveMap: homeSignTexture,
+      emissiveIntensity: 0.24,
+      roughness: 0.32,
       metalness: 0.02,
-      clearcoat: 0.5,
-      clearcoatRoughness: 0.32,
-      transparent: true,
-      opacity: 0.86,
+      clearcoat: 0.42,
+      clearcoatRoughness: 0.36,
       side: THREE.DoubleSide,
     }),
   );
-  exitPortal.position.set(0, portalHeight / 2, d / 2 - 0.028);
-  exitPortal.rotation.y = Math.PI;
-  exitPortal.name = "lieuva-exit-portal";
-  exitPortal.userData.exitPortal = true;
-  architecture.add(exitPortal);
+  // Mount the wayfinding sign on the arrival-side wall, inside the room and
+  // within the visitor's first field of view. It replaces the former portal
+  // architecture without looking like another doorway.
+  exitSign.position.set(-w / 2 + 0.028, 1.55, d / 2 - Math.min(2.25, d * 0.22));
+  exitSign.rotation.y = Math.PI / 2;
+  exitSign.name = "lieuva-home-exit-sign";
+  exitSign.userData.exitSign = true;
+  architecture.add(exitSign);
   if (draft.templateId === "white-cube") {
     const revealMaterial = wall.clone();
     const glowMaterial = new THREE.MeshStandardMaterial({
@@ -2817,6 +2745,8 @@ function createFirstPersonWalk(
   let pitch = camera.rotation.x;
   let eyeHeight = camera.position.y;
   let targetFov = camera.fov;
+  let touchForward = 0;
+  let touchStrafe = 0;
   let lastPinchDistance = 0;
   const touches = new Map<number, { x: number; y: number }>();
   const syncRotation = () => {
@@ -2952,6 +2882,8 @@ function createFirstPersonWalk(
     if (keys.has("KeyS")) desired.sub(forward);
     if (keys.has("KeyD")) desired.add(right);
     if (keys.has("KeyA")) desired.sub(right);
+    if (touchForward) desired.addScaledVector(forward, touchForward);
+    if (touchStrafe) desired.addScaledVector(right, touchStrafe);
     if (desired.lengthSq()) desired.normalize().multiplyScalar(2.3);
     else if (destinations.length) {
       desired.subVectors(destinations[0], camera.position);
@@ -3019,8 +2951,17 @@ function createFirstPersonWalk(
   const setEnabled = (value: boolean) => {
     enabled = value;
     keys.clear();
+    touchForward = 0;
+    touchStrafe = 0;
     velocity.set(0, 0, 0);
     if (!value) destinations = [];
+  };
+  const setTouchMovement = (direction?: "forward" | "backward" | "left" | "right") => {
+    touchForward = direction === "forward" ? 1 : direction === "backward" ? -1 : 0;
+    touchStrafe = direction === "right" ? 1 : direction === "left" ? -1 : 0;
+    if (!direction || !enabled) return;
+    destinations = [];
+    onUserIntent?.();
   };
   const consumeClick = () => {
     const isClick = !dragged && enabled;
@@ -3040,6 +2981,7 @@ function createFirstPersonWalk(
     lookAt,
     moveTo,
     setEnabled,
+    setTouchMovement,
     syncFromCamera,
     consumeClick,
     hasDestination: () => destinations.length > 0,
@@ -3696,6 +3638,7 @@ type GalleryRuntime = {
   pauseOrResumeGuidedTour: () => void;
   stepGuidedTour: (direction: -1 | 1) => void;
   smartView: () => void;
+  setTouchMovement: (direction?: "forward" | "backward" | "left" | "right") => void;
   capture: GallerySceneCapture;
 };
 
@@ -4708,6 +4651,7 @@ function GallerySceneRenderer({
     let editorPinching = false;
     let editorPinchDistance = 0;
     let editorZoomDistance: number | null = null;
+    let lastTouchActivationAt = -Infinity;
     const editorTouches = new Map<number, { x: number; y: number }>();
     const isArranging = () => !initial.visitor && mode === "arrange";
     const setPointer = (event: PointerEvent) => {
@@ -4947,6 +4891,12 @@ function GallerySceneRenderer({
       suppressSceneClick = pointerTravel > 2;
     };
     const handlePointer = (event: PointerEvent) => {
+      const touchActivation = event.type === "pointerup" && event.pointerType === "touch";
+      if (event.type === "click" && performance.now() - lastTouchActivationAt < 700) return;
+      if (touchActivation) {
+        lastTouchActivationAt = performance.now();
+        if (!navigation.consumeClick()) return;
+      }
       setPointer(event);
       const artHit = raycaster.intersectObjects(artworkObjects, true)[0];
       const artworkId = artHit?.object.userData.artworkId as string | undefined;
@@ -4994,11 +4944,11 @@ function GallerySceneRenderer({
         }
         return;
       }
-      const exitPortal = scene.getObjectByName("lieuva-exit-portal");
+      const exitSign = scene.getObjectByName("lieuva-home-exit-sign");
       if (
         mode === "walk" &&
-        exitPortal &&
-        raycaster.intersectObject(exitPortal, false).length > 0 &&
+        exitSign &&
+        raycaster.intersectObject(exitSign, false).length > 0 &&
         latest.current.onExitSpace
       ) {
         latest.current.onExitSpace();
@@ -5024,7 +4974,7 @@ function GallerySceneRenderer({
         });
         return;
       }
-      if (mode !== "walk" || !navigation.consumeClick()) return;
+      if (mode !== "walk" || (!touchActivation && !navigation.consumeClick())) return;
       const floorHit = raycaster.intersectObject(floorMesh, false)[0];
       if (floorHit) {
         focusedArtwork = null;
@@ -5040,6 +4990,7 @@ function GallerySceneRenderer({
     renderer.domElement.addEventListener("pointermove", editorPointerMove);
     renderer.domElement.addEventListener("pointerup", editorPointerUp);
     renderer.domElement.addEventListener("pointercancel", editorPointerUp);
+    renderer.domElement.addEventListener("pointerup", handlePointer);
     renderer.domElement.addEventListener("click", handlePointer);
     const syncDraft = (
       next: GalleryDraft,
@@ -5521,6 +5472,7 @@ function GallerySceneRenderer({
       pauseOrResumeGuidedTour,
       stepGuidedTour,
       smartView,
+      setTouchMovement: navigation.setTouchMovement,
       capture,
     };
     trackTelemetry("three_milestone", {
@@ -5798,11 +5750,11 @@ function GallerySceneRenderer({
       // them at 60 fps created strings, DOM mutations and avoidable GC pauses.
       if (now - lastDiagnosticsAt >= 120) {
         lastDiagnosticsAt = now;
-        const exitPortal = scene.getObjectByName("lieuva-exit-portal");
+        const exitSign = scene.getObjectByName("lieuva-home-exit-sign");
         let nextExitPromptVisible = false;
-        if (initial.visitor && mode === "walk" && exitPortal) {
+        if (initial.visitor && mode === "walk" && exitSign) {
           camera.getWorldDirection(cameraDirection);
-          exitPortal.getWorldPosition(exitPortalPosition);
+          exitSign.getWorldPosition(exitPortalPosition);
           exitPortalDirection.subVectors(exitPortalPosition, camera.position);
           const exitDistance = exitPortalDirection.length();
           nextExitPromptVisible = exitDistance <= 14
@@ -5859,6 +5811,7 @@ function GallerySceneRenderer({
       renderer.domElement.removeEventListener("pointermove", editorPointerMove);
       renderer.domElement.removeEventListener("pointerup", editorPointerUp);
       renderer.domElement.removeEventListener("pointercancel", editorPointerUp);
+      renderer.domElement.removeEventListener("pointerup", handlePointer);
       renderer.domElement.removeEventListener("click", handlePointer);
       renderer.domElement.removeEventListener("webglcontextlost", handleContextLost);
       renderer.domElement.removeEventListener("webglcontextrestored", handleContextRestored);
@@ -5954,6 +5907,7 @@ function GallerySceneRenderer({
           onOpenArtworkDirectory={onOpenArtworkDirectory}
           compactLabel={visitor ? "Space controls" : "Walk Preview controls"}
           firstEntryHint={visitor}
+          onTouchMove={(direction) => runtime.current?.setTouchMovement(direction)}
         />
       )}
       {visitor && exitPortalFocused && (
@@ -5963,9 +5917,9 @@ function GallerySceneRenderer({
           onClick={() => onExitSpace?.()}
           aria-label="Return to the LIEUVA homepage"
         >
-          <small>Doorway</small>
+          <small>Exit sign</small>
           <strong>Back to homepage</strong>
-          <span>Click to leave this Space&nbsp; →</span>
+          <span>Tap the sign or this prompt&nbsp; →</span>
         </button>
       )}
       {!visitor && arranging && (
@@ -6205,6 +6159,7 @@ type DannyDemoRuntime = {
   stepGuidedTour: (direction: -1 | 1) => void;
   smartView: () => void;
   resetView: () => void;
+  setTouchMovement: (direction?: "forward" | "backward" | "left" | "right") => void;
 };
 
 const DANNY_GUIDED_TOUR_DURATION_MS = 45_000;
@@ -6880,6 +6835,7 @@ export function DannyDemoScene({
       stepGuidedTour,
       smartView,
       resetView,
+      setTouchMovement: navigation.setTouchMovement,
     };
     if (mode === "overview") {
       camera.position.copy(overviewState.position);
@@ -7794,6 +7750,7 @@ export function DannyDemoScene({
         artworkDirectoryUnavailable={artworkDirectoryUnavailable}
         artworkButtonRef={artworkButtonRef}
         onOpenArtworkDirectory={onOpenArtworkDirectory}
+        onTouchMove={(direction) => modeRuntime.current?.setTouchMovement(direction)}
       />
       <div className="scene-hint">
         <span className="movement-hint__desktop">

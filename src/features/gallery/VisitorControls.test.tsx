@@ -22,6 +22,7 @@ describe("VisitorControls", () => {
         onSmartView={() => undefined}
         smartViewLabel="Artwork views"
         onResetView={() => undefined}
+        onTouchMove={() => undefined}
         artworkCount={3}
         onOpenArtworkDirectory={() => undefined}
         firstEntryHint
@@ -36,6 +37,8 @@ describe("VisitorControls", () => {
     expect(markup).toContain("Q/E");
     expect(markup).not.toContain("Q/R");
     expect(markup).toContain("Tap the floor to walk");
+    expect(markup).toContain("Walk controls");
+    expect(markup).toContain("Move forward");
     vi.unstubAllGlobals();
   });
 });

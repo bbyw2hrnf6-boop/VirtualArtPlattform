@@ -218,3 +218,38 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
   ].join("\n    ");
   return stripMetadata(shell).replace("</head>", `    ${tags}\n  </head>`);
 }
+
+/** Server metadata for the Creator Hub itself. The Hub is a real application
+ * route, not a missing Creator profile, so direct visits and reloads must keep
+ * returning the SPA shell with directory-level metadata. */
+export function renderCreatorHubDocument(shell: string): string {
+  const canonical = "https://lieuva.com/creators";
+  const title = "Creator Hub — Community | LIEUVA";
+  const description = "Discover public Creators and Spaces, follow practices, and share updates in the LIEUVA Creator Hub.";
+  const image = "https://lieuva.com/assets/demo/aura-hero-gallery.webp";
+  const tags = [
+    `<title>${title}</title>`,
+    `<meta name="description" content="${description}">`,
+    `<meta name="robots" content="index,follow,max-image-preview:large">`,
+    `<link rel="canonical" href="${canonical}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="LIEUVA">`,
+    `<meta property="og:url" content="${canonical}">`,
+    `<meta property="og:title" content="${title}">`,
+    `<meta property="og:description" content="${description}">`,
+    `<meta property="og:image" content="${image}">`,
+    `<meta property="og:image:alt" content="The LIEUVA Creator community">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${title}">`,
+    `<meta name="twitter:description" content="${description}">`,
+    `<meta name="twitter:image" content="${image}">`,
+    `<script type="application/ld+json">${JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      url: canonical,
+      name: "LIEUVA Creator Hub",
+      description,
+    }).replaceAll("<", "\\u003c")}</script>`,
+  ].join("\n    ");
+  return stripMetadata(shell).replace("</head>", `    ${tags}\n  </head>`);
+}

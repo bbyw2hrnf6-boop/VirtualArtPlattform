@@ -90,7 +90,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
   return (
     <main className="creator-profile">
       <header className="creator-profile__nav">
-        <a href="/" aria-label="LIEUVA home"><Logo dark /></a>
+        <Logo dark />
         <div>
           <SpaceShareMenu
             compact

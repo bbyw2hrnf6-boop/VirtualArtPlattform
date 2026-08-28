@@ -55,6 +55,7 @@ import {
   parseCreatorReportReason,
   publicCreatorDirectoryEntry,
   renderCreatorDocument,
+  renderCreatorHubDocument,
   type CreatorDelivery,
   type PublicCreatorPost,
   type PublicCreatorSpace,
@@ -322,7 +323,7 @@ async function accountMediaFootprint(ownerId: string, galleryId: string) {
 /** Server-authoritative handle availability. The response never exposes a UID
  * or the private Creator mapping. */
 export const checkLieuvaCreatorHandle = onCall(
-  { region: REGION, timeoutSeconds: 15, memory: "256MiB", enforceAppCheck: true },
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
   async (request) => {
     const uid = requireAccount(request.auth);
     const handle = normalizeCreatorHandle(request.data?.handle);
@@ -337,7 +338,7 @@ export const checkLieuvaCreatorHandle = onCall(
 );
 
 export const getMyLieuvaCreatorProfile = onCall(
-  { region: REGION, timeoutSeconds: 15, memory: "256MiB", enforceAppCheck: true },
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
   async (request) => {
     const uid = requireAccount(request.auth);
     const owner = await db.collection("creatorAccountOwners").doc(uid).get();
@@ -353,7 +354,7 @@ export const getMyLieuvaCreatorProfile = onCall(
  * decided atomically; old handles remain aliases and never become silently
  * available to another account. */
 export const saveLieuvaCreatorProfile = onCall(
-  { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
+  { region: REGION, timeoutSeconds: 45, memory: "256MiB", enforceAppCheck: true },
   async (request) => {
     const uid = requireAccount(request.auth);
     const input = parseCreatorProfileInput(request.data);
@@ -1361,7 +1362,7 @@ async function queueMail(to: string, mail: { subject: string; text: string; html
 }
 
 export const sendAuraVerificationEmail = onCall(
-  { region: REGION, timeoutSeconds: 30 },
+  { region: REGION, timeoutSeconds: 30, enforceAppCheck: true },
   async (request) => {
     requireMailConfiguration();
     const uid = requireAccount(request.auth);
@@ -1397,7 +1398,7 @@ export const sendAuraVerificationEmail = onCall(
 );
 
 export const setAuraNewsletterPreference = onCall(
-  { region: REGION, timeoutSeconds: 30 },
+  { region: REGION, timeoutSeconds: 30, enforceAppCheck: true },
   async (request) => {
     requireMailConfiguration();
     const uid = requireAccount(request.auth);
@@ -1558,6 +1559,13 @@ export const creatorDocument = onRequest(
     }
     const requestedHandle = requestRouteValue(request.path, "creators");
     try {
+      if (!requestedHandle) {
+        response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
+        response.set("X-Robots-Tag", "index,follow,max-image-preview:large");
+        response.status(200).send(renderCreatorHubDocument(generatedAppShell()));
+        logOperation("creator_document", "success", startedAt, { delivery: "hub" });
+        return;
+      }
       const delivery = await creatorDeliveryForHandle(requestedHandle);
       if (delivery.kind === "public" && requestedHandle !== delivery.profile.handle) {
         response.set("Cache-Control", "public, max-age=300, s-maxage=3600");
