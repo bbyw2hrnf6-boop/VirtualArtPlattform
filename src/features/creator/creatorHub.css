@@ -30,6 +30,7 @@
   background: #f4f1ebf2;
   backdrop-filter: blur(18px);
 }
+.creator-hub__global-header .logo { min-height: 44px; align-items: center; }
 .creator-hub__global-context,
 .creator-hub__global-actions { display: flex; align-items: center; gap: 18px; }
 .creator-hub__global-context a,

@@ -23,6 +23,7 @@ import {
 } from "../../services/galleryRepository";
 import { galleryShareUrl } from "../../services/galleryShareUrl";
 import { isPublicProfileSpace } from "./accountPresentation";
+import "./creatorProfileSettings.css";
 
 type SaveState = "loading" | "idle" | "checking" | "saving" | "saved" | "error";
 

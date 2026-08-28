@@ -16,6 +16,7 @@
   border-bottom: 1px solid #c3c2bb;
   background: #f2f1ec;
 }
+.creator-profile__nav .logo { min-height: 44px; align-items: center; }
 .creator-profile__nav > nav { display: flex; align-items: stretch; gap: 30px; }
 .creator-profile__nav > nav a {
   position: relative;

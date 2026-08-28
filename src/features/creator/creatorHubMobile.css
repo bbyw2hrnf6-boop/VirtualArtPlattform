@@ -20,9 +20,9 @@
   .creator-hub__global-context a:first-child { display: inline-flex; font-size: 8px; }
   .creator-hub__global-actions { gap: 8px; }
   .creator-hub__global-actions .creator-hub__create { display: none; }
-  .creator-hub__global-actions .account-entry { width: 44px; min-width: 44px; padding: 0; }
-  .creator-hub__global-actions .account-entry > span { display: none; }
-  .creator-hub__global-actions .account-entry::after { content: "ME"; font-size: 8px; }
+  .creator-hub__global-actions .account-entry { width: 44px; min-width: 44px; justify-content: center; padding: 0; font-size: 0 !important; }
+  .creator-hub__global-actions .account-entry > span:not(.account-entry__avatar) { display: none; }
+  .creator-hub__global-actions .account-entry:not(.is-signed-in)::after { content: "ME"; font-size: 8px !important; }
   .creator-hub__shell { display: block; }
   .creator-hub__sidebar {
     position: fixed;

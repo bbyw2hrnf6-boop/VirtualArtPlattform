@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { AccountSession } from "../../services/accountTypes";
 import { galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
 import { galleryShareUrl } from "../../services/galleryShareUrl";
@@ -16,7 +16,6 @@ import {
 import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { GalleryAccessManager } from "./GalleryAccessManager";
 import { firebaseActionErrorMessage } from "../../services/firebaseActionError";
-import { CreatorProfileSettings } from "./CreatorProfileSettings";
 import {
   galleryDraftSignature,
   publishedProjectState,
@@ -29,6 +28,9 @@ import {
 import "./accountDialog.css";
 
 type AccountModule = typeof import("../../services/accountService");
+const CreatorProfileSettings = lazy(() => import("./CreatorProfileSettings").then((module) => ({
+  default: module.CreatorProfileSettings,
+})));
 
 function AccountRooms({ session }: { session: AccountSession }) {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -720,7 +722,11 @@ export function AccountDialog({
               Open Creator Hub <span aria-hidden="true">→</span>
             </a>}
             {account.emailVerified && section === "rooms" && <AccountRooms session={account} />}
-            {account.emailVerified && section === "creator" && <CreatorProfileSettings account={account} />}
+            {account.emailVerified && section === "creator" && (
+              <Suspense fallback={<p className="account-section-loading" role="status">Loading public profile editor…</p>}>
+                <CreatorProfileSettings account={account} />
+              </Suspense>
+            )}
             {section === "account" && (
               <AccountProfileSettings
                 key={`${account.uid}:${account.displayName ?? ""}:${account.nickname ?? ""}:${account.avatarSrc ?? ""}`}
