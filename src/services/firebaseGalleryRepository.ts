@@ -32,6 +32,7 @@ import {
   FIREBASE_PROJECT_ID,
 } from "./firebase";
 import {
+  discoverCoverSource,
   GalleryAccessDeniedError,
   type GalleryRepository,
   type GalleryRecord,
@@ -742,7 +743,11 @@ export class FirebaseGalleryRepository implements GalleryRepository {
           // minutes when one cover was unavailable. Legacy embedded covers are
           // still rendered; Storage-backed covers use the existing room fallback
           // so the Space remains immediately discoverable.
-          return record;
+          const coverSrc = discoverCoverSource(record);
+          return {
+            ...record,
+            ...(coverSrc ? { coverSrc } : {}),
+          };
         } catch (error) {
           console.warn("Skipping invalid Discover gallery.", error);
           return null;

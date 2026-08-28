@@ -366,7 +366,7 @@ function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () =>
       <nav>
         <span className="preview-status">{PRODUCT_BRAND.previewLabel}</span>
         {onSearch && <button className="site-header__search" onClick={onSearch} aria-label="Search public Spaces and Creators"><span>Search</span> <i aria-hidden="true">⌕</i></button>}
-        <button className="site-header__creators" onClick={() => navigate("/creators")}>Creators</button>
+        <button className="site-header__creators" onClick={() => navigate("/creators")}>Creator Hub</button>
         <button className="site-header__demo" onClick={() => landingNavigate("/demo", "landing_example_entered", "header")}>{PRODUCT_BRAND.secondaryCta}</button>
         <AccountButton light={light} />
         <button className="site-header__create" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "header")}>
@@ -393,7 +393,7 @@ function BrandHero({ onSearch }: { onSearch: () => void }) {
       <button className="brand-hero__media brand-hero__media--community" onClick={() => navigate("/creators")} aria-label="Open the LIEUVA Creator community">
         <span><i /> Creator community</span>
         <strong>Follow the work.<small>Profiles · posts · new Spaces</small></strong>
-        <b>Open Creator Space →</b>
+        <b>Open Creator Hub →</b>
       </button>
       <div className="brand-hero__signal" aria-hidden="true">
         <span>Browser Studio</span>
@@ -783,6 +783,7 @@ function DiscoverGalleries() {
         )}
         {visibleGalleries.map((gallery) => {
           const cover = gallery.coverSrc;
+          const templateCover = `./assets/templates/${gallery.templateId}-preview.webp`;
           const days = Math.max(
             1,
             Math.ceil(
@@ -799,9 +800,17 @@ function DiscoverGalleries() {
                 onClick={() => navigate(spacePath(gallery.id))}
               >
                 <div className="discover-cover">
-                  {cover ? (
-                    <img src={cover} alt="" loading="lazy" decoding="async" />
-                  ) : <div className="discover-cover__missing"><small>Room view unavailable</small><strong>{gallery.title}</strong></div>}
+                  <img
+                    src={cover ?? templateCover}
+                    alt={`${gallery.title} room view`}
+                    loading="lazy"
+                    decoding="async"
+                    onError={(event) => {
+                      if (event.currentTarget.dataset.fallback === "true") return;
+                      event.currentTarget.dataset.fallback = "true";
+                      event.currentTarget.src = templateCover;
+                    }}
+                  />
                   <span>{days <= 30 ? `${days} days left` : "Live Space"}</span>
                 </div>
                 <p>{gallery.artist} · {TEMPLATES.find((item) => item.id === gallery.templateId)?.name}</p>

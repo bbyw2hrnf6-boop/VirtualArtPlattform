@@ -31,6 +31,16 @@ export interface GalleryRecord extends GalleryDraft {
   discoverEligible?: boolean;
 }
 
+/** Resolve the public image used by Discover without exposing Storage URLs. */
+export function discoverCoverSource(
+  record: Pick<GalleryRecord, 'id' | 'coverSrc' | 'coverPath'>,
+): string | undefined {
+  if (record.coverSrc) return record.coverSrc;
+  return record.coverPath
+    ? `/space-cards/${encodeURIComponent(record.id)}`
+    : undefined;
+}
+
 export type EditableGalleryProject = {
   draft: GalleryDraft;
   target: GalleryEditTarget;

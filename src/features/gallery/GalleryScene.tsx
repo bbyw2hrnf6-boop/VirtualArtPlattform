@@ -1400,7 +1400,7 @@ function createHomePortalTexture() {
   context.fillStyle = "rgba(215,255,57,.88)";
   context.font = "600 11px Manrope, Arial, sans-serif";
   context.letterSpacing = "2px";
-  context.fillText("RETURN TO THE HOMEPAGE", 54, 350);
+  context.fillText("DOORWAY TO LIEUVA", 54, 350);
   context.fillStyle = "rgba(244,242,234,.92)";
   context.font = "66px Instrument, Georgia, serif";
   context.letterSpacing = "-3px";
@@ -1415,7 +1415,7 @@ function createHomePortalTexture() {
   context.fillStyle = "rgba(240,238,229,.82)";
   context.font = "600 13px Manrope, Arial, sans-serif";
   context.letterSpacing = "2px";
-  context.fillText("ENTER HOME", 54, 632);
+  context.fillText("BACK TO HOMEPAGE", 54, 632);
   context.fillText("→", 432, 632);
   context.fillStyle = "rgba(240,238,229,.5)";
   context.font = "11px Manrope, Arial, sans-serif";
@@ -3757,6 +3757,7 @@ function GallerySceneRenderer({
     useState<PavilionZoneId>("central-axis");
   const [tourState, setTourState] = useState<VisitorTourState>(IDLE_VISITOR_TOUR);
   const [smartViewLabel, setSmartViewLabel] = useState("Artwork views");
+  const [exitPortalFocused, setExitPortalFocused] = useState(false);
   const latest = useRef({
     draft,
     selectedId,
@@ -5594,6 +5595,9 @@ function GallerySceneRenderer({
     const cameraDirection = new THREE.Vector3();
     const artworkDirection = new THREE.Vector3();
     const artworkPosition = new THREE.Vector3();
+    const exitPortalPosition = new THREE.Vector3();
+    const exitPortalDirection = new THREE.Vector3();
+    let exitPromptVisible = false;
     const insertionDirection = new THREE.Vector3();
     const insertionPoint = new THREE.Vector3();
     const insertionHorizontal = new THREE.Vector3();
@@ -5794,6 +5798,21 @@ function GallerySceneRenderer({
       // them at 60 fps created strings, DOM mutations and avoidable GC pauses.
       if (now - lastDiagnosticsAt >= 120) {
         lastDiagnosticsAt = now;
+        const exitPortal = scene.getObjectByName("lieuva-exit-portal");
+        let nextExitPromptVisible = false;
+        if (initial.visitor && mode === "walk" && exitPortal) {
+          camera.getWorldDirection(cameraDirection);
+          exitPortal.getWorldPosition(exitPortalPosition);
+          exitPortalDirection.subVectors(exitPortalPosition, camera.position);
+          const exitDistance = exitPortalDirection.length();
+          nextExitPromptVisible = exitDistance <= 14
+            && cameraDirection.dot(exitPortalDirection.normalize()) >= 0.82;
+        }
+        if (nextExitPromptVisible !== exitPromptVisible) {
+          exitPromptVisible = nextExitPromptVisible;
+          setExitPortalFocused(nextExitPromptVisible);
+          element.dataset.exitPortalFocus = nextExitPromptVisible ? "true" : "false";
+        }
         element.dataset.cameraPosition = camera.position
           .toArray()
           .map((value) => value.toFixed(3))
@@ -5854,6 +5873,7 @@ function GallerySceneRenderer({
       renderer.dispose();
       renderer.forceContextLoss();
       renderer.domElement.remove();
+      setExitPortalFocused(false);
     };
   }, [runtimeKey]);
   useEffect(() => {
@@ -5935,6 +5955,18 @@ function GallerySceneRenderer({
           compactLabel={visitor ? "Space controls" : "Walk Preview controls"}
           firstEntryHint={visitor}
         />
+      )}
+      {visitor && exitPortalFocused && (
+        <button
+          type="button"
+          className="exit-portal-prompt"
+          onClick={() => onExitSpace?.()}
+          aria-label="Return to the LIEUVA homepage"
+        >
+          <small>Doorway</small>
+          <strong>Back to homepage</strong>
+          <span>Click to leave this Space&nbsp; →</span>
+        </button>
       )}
       {!visitor && arranging && (
         <>
@@ -6117,7 +6149,8 @@ export const GalleryScene = memo(
     previous.artworkDirectoryExpanded === next.artworkDirectoryExpanded &&
     previous.artworkDirectoryUnavailable === next.artworkDirectoryUnavailable &&
     previous.artworkButtonRef === next.artworkButtonRef &&
-    previous.onOpenArtworkDirectory === next.onOpenArtworkDirectory,
+    previous.onOpenArtworkDirectory === next.onOpenArtworkDirectory &&
+    previous.onExitSpace === next.onExitSpace
 );
 
 export interface DannyDemoSceneProps {

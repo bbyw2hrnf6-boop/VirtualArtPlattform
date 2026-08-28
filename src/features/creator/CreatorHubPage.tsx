@@ -3,13 +3,16 @@ import { Logo } from "../../components/Logo";
 import { AccountButton } from "../account/AccountDialog";
 import type { AccountSession } from "../../services/accountTypes";
 import {
+  checkCreatorHandle,
   createCreatorPost,
+  creatorHandleBase,
   creatorImageUrl,
   loadCreatorHome,
   loadMyCreatorProfile,
   loadPublicCreatorDirectory,
   interactCreatorPost,
   manageCreatorBlock,
+  saveCreatorProfile,
   type CreatorComment,
   type CreatorHomePayload,
   type CreatorPost,
@@ -46,6 +49,8 @@ export default function CreatorHubPage() {
   const [postBody, setPostBody] = useState("");
   const [postBusy, setPostBusy] = useState(false);
   const [postNotice, setPostNotice] = useState("");
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileNotice, setProfileNotice] = useState("");
   const [activePost, setActivePost] = useState<string>();
   const [commentBody, setCommentBody] = useState("");
   const [postActions, setPostActions] = useState<Record<string, string>>({});
@@ -61,17 +66,13 @@ export default function CreatorHubPage() {
   useEffect(() => {
     if (!session || session.isAnonymous) return;
     let active = true;
-    void Promise.all([loadCreatorHome(), loadMyCreatorProfile()])
-      .then(([nextHome, profile]) => {
-        if (!active) return;
-        setHome(nextHome);
-        setMyProfile(profile);
-      })
-      .catch(() => {
-        if (!active) return;
-        setHome(undefined);
-        setMyProfile(null);
-      });
+    setMyProfile(undefined);
+    void loadCreatorHome()
+      .then((nextHome) => { if (active) setHome(nextHome); })
+      .catch(() => { if (active) setHome(undefined); });
+    void loadMyCreatorProfile()
+      .then((profile) => { if (active) setMyProfile(profile); })
+      .catch(() => { if (active) setMyProfile(null); });
     return () => { active = false; };
   }, [session]);
 
@@ -83,6 +84,51 @@ export default function CreatorHubPage() {
   }, [creators, query]);
   const signedIn = Boolean(session && !session.isAnonymous);
   const posts: CreatorPost[] = home?.posts?.length ? home.posts : DEMO_CREATOR_POSTS;
+
+  const activateCreatorHub = async () => {
+    if (!session || session.isAnonymous || profileBusy) return;
+    setProfileBusy(true);
+    setProfileNotice("Preparing your public Creator profile…");
+    try {
+      let handle = myProfile?.handle;
+      if (!handle) {
+        const base = creatorHandleBase(session);
+        const suffix = Date.now().toString(36).slice(-4);
+        const candidates = [
+          base,
+          `${base.slice(0, 23).replace(/-+$/g, "")}-studio`,
+          `${base.slice(0, 25).replace(/-+$/g, "")}-${suffix}`,
+        ];
+        for (const candidate of candidates) {
+          if ((await checkCreatorHandle(candidate)).available) {
+            handle = candidate;
+            break;
+          }
+        }
+      }
+      if (!handle) throw new Error("Choose a custom handle in Account.");
+      const displayName = myProfile?.displayName
+        || session.displayName
+        || session.nickname
+        || session.email?.split("@")[0]
+        || "LIEUVA Creator";
+      const saved = await saveCreatorProfile({
+        handle,
+        displayName,
+        bio: myProfile?.bio ?? "",
+        links: myProfile?.links ?? [],
+        profilePublic: true,
+        imagePresent: myProfile?.imagePresent ?? false,
+      });
+      setMyProfile(saved.profile);
+      setProfileNotice(`Creator Hub active as @${saved.profile.handle}.`);
+      void loadCreatorHome().then(setHome).catch(() => undefined);
+    } catch (error) {
+      setProfileNotice(error instanceof Error ? error.message.replace(/^Firebase:\s*/i, "") : "Creator profile setup failed.");
+    } finally {
+      setProfileBusy(false);
+    }
+  };
 
   const publishPost = () => {
     const body = postBody.trim();
@@ -149,7 +195,7 @@ export default function CreatorHubPage() {
     <main className="creator-hub">
       <header>
         <a href="/" aria-label="LIEUVA home"><Logo dark /></a>
-        <nav aria-label="Creator Space navigation">
+        <nav aria-label="Creator Hub navigation">
           <a href="#creator-home">Home</a>
           {myProfile?.profilePublic && <a href={creatorCanonicalUrl(myProfile.handle)}>My profile</a>}
           <a href="/#/create">Create a Space</a>
@@ -165,7 +211,7 @@ export default function CreatorHubPage() {
 
       <section className="creator-hub__hero" id="creator-home">
         <div>
-          <p className="eyebrow">Creator Space · Community</p>
+          <p className="eyebrow">Creator Hub · Community</p>
           <h1>Make a place.<br/><em>Share the process.</em></h1>
         </div>
         <div className="creator-hub__hero-copy">
@@ -181,7 +227,7 @@ export default function CreatorHubPage() {
 
       <section className="creator-hub__workspace" aria-label="Your Creator workspace">
         <div className="creator-hub__identity-panel">
-          <p className="eyebrow">Your Creator Space</p>
+          <p className="eyebrow">Your Creator profile</p>
           {signedIn && myProfile?.profilePublic ? (
             <>
               <div className="creator-hub__my-identity">
@@ -197,8 +243,14 @@ export default function CreatorHubPage() {
           ) : (
             <>
               <h2>{signedIn ? "Introduce your practice." : "Your work has a social home."}</h2>
-              <p>{signedIn ? "Create a public Creator profile in Account to post, follow and be discovered." : "Sign in to publish studio notes, follow Creators and keep your own profile close."}</p>
-              <a className="creator-hub__primary-action" href="/#/account">{signedIn ? "Create Creator profile" : "Sign in or create account"} <span>→</span></a>
+              <p>{signedIn ? "Activate a public profile here to post and follow. Your published rooms remain separate Creator Spaces." : "Sign in to publish studio notes, follow Creators and keep your own profile close."}</p>
+              {signedIn ? (
+                <>
+                  <button className="creator-hub__primary-action" type="button" disabled={profileBusy} onClick={() => void activateCreatorHub()}>{profileBusy ? "Activating…" : myProfile ? "Make profile public" : "Activate Creator Hub profile"} <span>→</span></button>
+                  <a className="creator-hub__secondary-action" href="/#/account">Customize profile in Account</a>
+                  {profileNotice && <small className="creator-hub__profile-notice" aria-live="polite">{profileNotice}</small>}
+                </>
+              ) : <a className="creator-hub__primary-action" href="/#/account">Sign in or create account <span>→</span></a>}
             </>
           )}
         </div>
@@ -209,12 +261,12 @@ export default function CreatorHubPage() {
           <textarea
             value={postBody}
             onChange={(event) => setPostBody(event.target.value.slice(0, 600))}
-            placeholder={myProfile?.profilePublic ? "Share a room update, process note or new idea…" : "A public Creator profile is required before posting."}
-            disabled={!myProfile?.profilePublic || postBusy}
+            placeholder={signedIn ? "Write your update here. Activate a public Creator profile before publishing." : "Sign in to write and publish an update."}
+            disabled={!signedIn || postBusy}
             rows={5}
           />
           <div className="creator-hub__composer-actions">
-            <small aria-live="polite">{postNotice || "Text only · public to the LIEUVA community"}</small>
+            <small aria-live="polite">{postNotice || (myProfile?.profilePublic ? "Text only · public to the LIEUVA community" : signedIn ? "Draft enabled · activate your profile to publish" : "Sign in to write and publish")}</small>
             <button type="submit" disabled={!postBody.trim() || !myProfile?.profilePublic || postBusy}>{postBusy ? "Posting…" : "Post to feed"}</button>
           </div>
         </form>
@@ -284,7 +336,7 @@ export default function CreatorHubPage() {
           <div><p className="eyebrow">Public directory</p><h2 id="creator-directory-title">Creators</h2></div>
           <span>{results.length} profiles</span>
         </div>
-        {status === "loading" && <p>Preparing Creator Space…</p>}
+        {status === "loading" && <p>Preparing Creator Hub…</p>}
         {status === "error" && <p>The live directory is temporarily unavailable.</p>}
         <div className="creator-hub__grid">{results.map((creator) => (
           <a key={creator.handle} href={creatorCanonicalUrl(creator.handle)}>

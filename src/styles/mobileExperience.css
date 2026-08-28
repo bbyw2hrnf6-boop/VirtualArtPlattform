@@ -319,6 +319,10 @@
 }
 
 @media (max-width: 620px) {
+  .exit-portal-prompt {
+    bottom: 92px;
+    width: min(280px, calc(100% - 36px));
+  }
   .site-header .account-entry {
     width: 64px;
     min-width: 64px;

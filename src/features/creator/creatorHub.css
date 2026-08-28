@@ -120,6 +120,7 @@
 .creator-hub__identity-panel nav { display: grid; }
 .creator-hub__identity-panel nav a { display: flex; justify-content: space-between; padding: 16px 0; border-top: 1px solid #b1afa6; color: inherit; font-size: 12px; text-decoration: none; }
 .creator-hub__primary-action { margin-top: 30px; }
+.creator-hub__primary-action:is(button){width:100%;padding:0;border-right:0;border-left:0;background:transparent;cursor:pointer;text-align:left}.creator-hub__primary-action:is(button):disabled{opacity:.55;cursor:wait}.creator-hub__secondary-action{display:inline-block;margin-top:14px;color:#53544e;font-size:9px;letter-spacing:.08em;text-transform:uppercase}.creator-hub__profile-notice{display:block;margin-top:14px;color:#62635d;line-height:1.5}
 
 .creator-hub__composer { background: #191a17; color: #efede5; }
 .creator-hub__composer > div:first-child,

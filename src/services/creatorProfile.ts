@@ -2,6 +2,7 @@ import { httpsCallable } from "firebase/functions";
 import { firebaseFunctions } from "./firebase";
 import { creatorCanonicalUrl } from "./spaceRoutes";
 import { prepareProfileImage } from "./profileImage";
+import type { AccountSession } from "./accountTypes";
 
 const DEMO_CREATOR_HANDLES = new Set([
   "mira-vale",
@@ -10,6 +11,19 @@ const DEMO_CREATOR_HANDLES = new Set([
   "common-field",
   "elian-ross",
 ]);
+
+export function creatorHandleBase(session: Pick<AccountSession, "nickname" | "displayName" | "email">) {
+  const source = session.nickname || session.displayName || session.email?.split("@")[0] || "creator";
+  const normalized = source
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30)
+    .replace(/-+$/g, "");
+  return normalized.length >= 3 ? normalized : `${normalized || "creator"}-art`.slice(0, 30);
+}
 
 export type CreatorLink = { label: string; url: string };
 export type CreatorProfile = {
