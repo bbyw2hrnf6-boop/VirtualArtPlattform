@@ -213,8 +213,10 @@
 .creator-profile-state button { min-height: 44px; display: inline-flex; align-items: center; border: 0; border-bottom: 1px solid #55564f; background: none; color: inherit; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
 
 @media (max-width: 900px) {
-  .creator-profile__nav { grid-template-columns: 1fr auto; }
-  .creator-profile__nav > nav { display: none; }
+  .creator-profile__nav { grid-template-columns: auto 1fr auto; gap: 12px; }
+  .creator-profile__nav > nav { display: flex; justify-content: center; gap: 0; }
+  .creator-profile__nav > nav a { display: none; }
+  .creator-profile__nav > nav a.is-active { display: grid; }
   .creator-profile__hero { grid-template-columns: 1fr; }
   .creator-profile__identity { min-height: 560px; }
   .creator-profile__featured-space { min-height: min(76svh, 680px); }

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { GalleryRecord } from "../../services/galleryRepository";
+import accountSource from "./AccountDialog.tsx?raw";
+import creatorSettingsSource from "./CreatorProfileSettings.tsx?raw";
 import {
+  accountSectionFromUrl,
   accountSectionTitle,
+  accountSectionUrl,
   accountSignInMethods,
   isPublicProfileSpace,
 } from "./accountPresentation";
@@ -12,6 +16,29 @@ describe("account presentation", () => {
     expect(accountSectionTitle("creator")).toBe("Public profile.");
     expect(accountSectionTitle("account")).toBe("Account & security.");
     expect(accountSectionTitle("data")).toBe("Data & rights.");
+  });
+
+  it("deep-links to one real account section without changing the app route", () => {
+    const url = accountSectionUrl("creator", "https://lieuva.com/creators");
+    expect(url).toBe("https://lieuva.com/?accountSection=creator#/account");
+    expect(accountSectionFromUrl(url)).toBe("creator");
+    expect(accountSectionFromUrl("https://lieuva.com/?accountSection=unknown#/account")).toBe("rooms");
+  });
+
+  it("uses the redesigned section navigation alone on the full account page", () => {
+    expect(accountSource).toContain('className="account-local-nav"');
+    expect(accountSource).toContain('className="account-local-nav__sections"');
+    expect(accountSource).toContain('className="account-local-nav__scroll-cue"');
+    expect(accountSource).toContain('data-account-section={section}');
+    expect(accountSource).toContain('{presentation !== "page" && <div className="account-tabs account-tabs--settings"');
+  });
+
+  it("keeps one profile state instead of repeating activation headings", () => {
+    expect(creatorSettingsSource).toContain('<strong>Profile visibility</strong>');
+    expect(creatorSettingsSource).toContain('<b>Publish profile</b>');
+    expect(creatorSettingsSource).not.toContain('Public profile is live');
+    expect(creatorSettingsSource).not.toContain('Publish public profile');
+    expect(creatorSettingsSource).not.toContain('<dd>Profile status</dd>');
   });
 
   it("shows only real connected sign-in methods", () => {

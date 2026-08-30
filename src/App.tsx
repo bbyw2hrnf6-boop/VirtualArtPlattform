@@ -379,27 +379,22 @@ function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () =>
   );
 }
 
-function BrandHero({ onSearch }: { onSearch: () => void }) {
+function BrandHero() {
   return (
-    <section className="brand-hero" aria-labelledby="brand-hero-title">
-      <p className="eyebrow">{PRODUCT_BRAND.category}</p>
-      <h1 id="brand-hero-title">{PRODUCT_BRAND.claim}</h1>
-      <p>{PRODUCT_BRAND.heroCopy}</p>
+    <section className="brand-hero brand-hero--follow" aria-labelledby="brand-hero-title">
+      <p className="eyebrow"><i aria-hidden="true" /> Live on LIEUVA</p>
+      <h1 id="brand-hero-title">Follow the work.</h1>
+      <p>Enter published Spaces. Meet the Creators behind them. Follow new rooms and studio notes as the work develops.</p>
       <div className="brand-hero__actions">
-        <button className="button button--light" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "hero")}>{PRODUCT_BRAND.primaryCta} <span>↗</span></button>
-        <button className="text-link" onClick={() => landingNavigate("/demo", "landing_example_entered", "hero")}>{PRODUCT_BRAND.secondaryCta} →</button>
-        <button className="text-link brand-hero__search" onClick={onSearch}>Search Spaces &amp; Creators ⌕</button>
+        <a className="button button--light" href="#discover-spaces">Explore Spaces <span>↓</span></a>
+        <button className="text-link" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "hero")}>{PRODUCT_BRAND.primaryCta} →</button>
+        <button className="text-link brand-hero__hub" onClick={() => navigate("/creators")}>Creator Hub ↗</button>
       </div>
-      <button className="brand-hero__media brand-hero__media--community" onClick={() => navigate("/creators")} aria-label="Open the LIEUVA Creator community">
-        <span><i /> Creator community</span>
-        <strong>Follow the work.<small>Profiles · posts · new Spaces</small></strong>
-        <b>Open Creator Hub →</b>
-      </button>
-      <div className="brand-hero__signal" aria-hidden="true">
-        <span>Browser Studio</span>
-        <i />
-        <span>One link to enter</span>
-      </div>
+      <ol className="brand-hero__journey" aria-label="LIEUVA community journey">
+        <li><b>01</b> Spaces</li>
+        <li><b>02</b> Creators</li>
+        <li><b>03</b> Community</li>
+      </ol>
     </section>
   );
 }
@@ -846,7 +841,7 @@ function Landing() {
     <main className="landing">
       <Header onSearch={() => setDirectoryOpen(true)} />
       <DeferredScrollStory />
-      <BrandHero onSearch={() => setDirectoryOpen(true)} />
+      <BrandHero />
       <GlobalDirectorySearch open={directoryOpen} onClose={() => setDirectoryOpen(false)} />
       <LandingProductProof />
       <RoomShowcase />

@@ -34,4 +34,22 @@ describe("Creator Hub account lifecycle contract", () => {
     expect(hubSource).toContain("Search Spaces or Creators");
     expect(hubSource).toContain("Space title, Creator or @handle");
   });
+
+  it("keeps mobile social navigation complete and opens the matching account surface", () => {
+    expect(hubSource).toContain("creator-hub__mobile-account");
+    expect(hubSource).toContain('href="#creator-profile"');
+    expect(hubSource).toContain('accountSectionUrl("creator"');
+    expect(hubSource).toContain('accountSectionUrl("account"');
+    expect(hubSource).toContain('aria-current={activeSection === "feed" ? "page" : undefined}');
+    expect(hubSource).not.toContain("Draft enabled · activate your profile to publish");
+    expect(hubSource).toContain('record.ownerId === sessionUid || record.effectiveRole === "owner"');
+  });
+
+  it("surfaces only real activity on mobile and isolates comment drafts per post", () => {
+    expect(hubSource).toContain('className="creator-hub__feed-badge"');
+    expect(hubSource).toContain("Feed (${notificationCount} new)");
+    expect(hubSource).toContain("notificationCount ?");
+    expect(hubSource).toContain('commentDrafts[post.id] ?? ""');
+    expect(hubSource).not.toContain('const [commentBody, setCommentBody]');
+  });
 });

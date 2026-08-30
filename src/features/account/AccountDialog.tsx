@@ -21,7 +21,9 @@ import {
   publishedProjectState,
 } from "./projectWorkspace";
 import {
+  accountSectionFromUrl,
   accountSectionTitle,
+  accountSectionUrl,
   accountSignInMethods,
   type AccountSection,
 } from "./accountPresentation";
@@ -562,7 +564,9 @@ export function AccountDialog({
   const [service, setService] = useState<AccountModule>();
   const [session, setSession] = useState<AccountSession | null>(null);
   const [mode, setMode] = useState<"signin" | "create">("create");
-  const [section, setSection] = useState<AccountSection>("rooms");
+  const [section, setSection] = useState<AccountSection>(() => (
+    presentation === "page" ? accountSectionFromUrl(window.location.href) : "rooms"
+  ));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -632,6 +636,12 @@ export function AccountDialog({
   const pageTitle = accountSectionTitle(section);
   const applicationHome = hashApplicationUrl("/", window.location.href);
   const createSpaceUrl = hashApplicationUrl("/create", window.location.href);
+  const selectSection = (next: AccountSection) => {
+    setSection(next);
+    if (presentation === "page") {
+      window.history.replaceState(null, "", accountSectionUrl(next, window.location.href));
+    }
+  };
 
   return (
     <div className={`account-backdrop ${presentation === "page" ? "account-backdrop--page" : ""}`} onMouseDown={(event) => {
@@ -640,6 +650,7 @@ export function AccountDialog({
       <section
         ref={dialog}
         className={`account-dialog ${presentation === "page" ? "account-dialog--page" : ""}`}
+        data-account-section={section}
         role={presentation === "dialog" ? "dialog" : undefined}
         aria-modal={presentation === "dialog" ? "true" : undefined}
         aria-labelledby="account-dialog-title"
@@ -659,12 +670,13 @@ export function AccountDialog({
         <div className={`account-page-layout ${account ? "" : "account-page-layout--guest"}`}>
           {presentation === "page" && account && (
             <aside className="account-local-nav" aria-label="Account sections">
-              <div>
-                <button type="button" aria-current={section === "rooms" ? "page" : undefined} onClick={() => setSection("rooms")}><span aria-hidden="true">01</span>Overview</button>
-                <button type="button" aria-current={section === "creator" ? "page" : undefined} onClick={() => setSection("creator")}><span aria-hidden="true">02</span>Public profile</button>
-                <button type="button" aria-current={section === "account" ? "page" : undefined} onClick={() => setSection("account")}><span aria-hidden="true">03</span>Account &amp; security</button>
-                <button type="button" aria-current={section === "data" ? "page" : undefined} onClick={() => setSection("data")}><span aria-hidden="true">04</span>Data &amp; rights</button>
+              <div className="account-local-nav__sections">
+                <button type="button" aria-current={section === "rooms" ? "page" : undefined} onClick={() => selectSection("rooms")}><span aria-hidden="true">01</span>Overview</button>
+                <button type="button" aria-current={section === "creator" ? "page" : undefined} onClick={() => selectSection("creator")}><span aria-hidden="true">02</span>Public profile</button>
+                <button type="button" aria-current={section === "account" ? "page" : undefined} onClick={() => selectSection("account")}><span aria-hidden="true">03</span>Account &amp; security</button>
+                <button type="button" aria-current={section === "data" ? "page" : undefined} onClick={() => selectSection("data")}><span aria-hidden="true">04</span>Data &amp; rights</button>
               </div>
+              <span className="account-local-nav__scroll-cue" aria-hidden="true">Swipe settings <b>→</b></span>
               <div className="account-local-nav__product">
                 <a href="/creators">Creator Hub <span aria-hidden="true">↗</span></a>
                 <a href={createSpaceUrl}>Create a Space <span aria-hidden="true">↗</span></a>
@@ -712,12 +724,12 @@ export function AccountDialog({
                 <i>Free now</i>
               </div>
             </div>}
-            <div className="account-tabs account-tabs--settings" role="tablist" aria-label="Account settings">
-              <button role="tab" aria-selected={section === "rooms"} onClick={() => setSection("rooms")}>Overview</button>
-              <button role="tab" aria-selected={section === "creator"} onClick={() => setSection("creator")}>Public profile</button>
-              <button role="tab" aria-selected={section === "account"} onClick={() => setSection("account")}>Account &amp; security</button>
-              <button role="tab" aria-selected={section === "data"} onClick={() => setSection("data")}>Data &amp; rights</button>
-            </div>
+            {presentation !== "page" && <div className="account-tabs account-tabs--settings" role="tablist" aria-label="Account settings">
+              <button role="tab" aria-selected={section === "rooms"} onClick={() => selectSection("rooms")}>Overview</button>
+              <button role="tab" aria-selected={section === "creator"} onClick={() => selectSection("creator")}>Public profile</button>
+              <button role="tab" aria-selected={section === "account"} onClick={() => selectSection("account")}>Account &amp; security</button>
+              <button role="tab" aria-selected={section === "data"} onClick={() => selectSection("data")}>Data &amp; rights</button>
+            </div>}
             {presentation !== "page" && <a className="account-creator-space-link" href="/creators">
               Open Creator Hub <span aria-hidden="true">→</span>
             </a>}
@@ -769,7 +781,7 @@ export function AccountDialog({
                     setBusy(false);
                   }
                 }}
-                onOpenDataRights={() => setSection("data")}
+                onOpenDataRights={() => selectSection("data")}
               />
             )}
             {section === "data" && (

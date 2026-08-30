@@ -1,6 +1,22 @@
 import type { GalleryRecord } from "../../services/galleryRepository";
+import { hashApplicationUrl } from "../../services/spaceRoutes";
 
 export type AccountSection = "rooms" | "creator" | "account" | "data";
+
+const accountSections = new Set<AccountSection>(["rooms", "creator", "account", "data"]);
+
+export function accountSectionFromUrl(href: string): AccountSection {
+  const requested = new URL(href).searchParams.get("accountSection");
+  return requested && accountSections.has(requested as AccountSection)
+    ? requested as AccountSection
+    : "rooms";
+}
+
+export function accountSectionUrl(section: AccountSection, currentHref: string) {
+  const target = new URL(hashApplicationUrl("/account", currentHref));
+  target.searchParams.set("accountSection", section);
+  return target.toString();
+}
 
 export function accountSectionTitle(section: AccountSection) {
   if (section === "creator") return "Public profile.";

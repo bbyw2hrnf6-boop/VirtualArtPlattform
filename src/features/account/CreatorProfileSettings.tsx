@@ -205,13 +205,13 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
         <div className="creator-settings__editor">
           <section className="creator-settings__visibility">
             <div>
-              <strong>{published ? "Public profile is live" : "Publish public profile"}</strong>
+              <strong>Profile visibility</strong>
               <p>One profile powers your Hub identity, search, follows and studio notes. Public Spaces remain separate work.</p>
             </div>
             <label className="creator-settings__switch">
+              <b>Publish profile</b>
               <input type="checkbox" checked={profile.profilePublic} onChange={(event) => setProfile((current) => ({ ...current, profilePublic: event.target.checked }))} />
               <span aria-hidden="true" />
-              <b>{profile.profilePublic ? "Public" : "Private"}</b>
             </label>
           </section>
           <fieldset disabled={state === "loading" || state === "saving"}>
@@ -255,7 +255,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           <p className={`creator-settings__status ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>
         </div>
         <aside className="creator-settings__preview" aria-label="Live public profile preview">
-          <div className="creator-settings__preview-label"><span>Live preview</span><i>{profile.profilePublic ? "Public" : "Private preview"}</i></div>
+          <div className="creator-settings__preview-label"><span>Live preview</span></div>
           <div className="creator-settings__preview-cover" aria-hidden="true">
             {spaces[0] && discoverCoverSource(spaces[0])
               ? <img src={discoverCoverSource(spaces[0])} alt="" />
@@ -273,7 +273,6 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           <dl className="creator-settings__preview-stats">
             <div><dt>{spaces.length}</dt><dd>Public Spaces</dd></div>
             <div><dt>{previewLinks.length}</dt><dd>Public links</dd></div>
-            <div><dt>{published ? "Live" : "Draft"}</dt><dd>Profile status</dd></div>
           </dl>
           <section className="creator-settings__preview-spaces">
             <header><strong>Featured Spaces</strong><span>{spaces.length ? `${spaces.length} public` : "None published yet"}</span></header>

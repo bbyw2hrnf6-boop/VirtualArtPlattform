@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Logo } from "../../components/Logo";
 import { AccountButton } from "../account/AccountDialog";
+import { accountSectionUrl } from "../account/accountPresentation";
 import type { AccountSession } from "../../services/accountTypes";
 import { discoverCoverSource, galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
 import { searchPublicDirectory } from "../../services/publicDirectorySearch";
@@ -25,6 +26,13 @@ import {
   type PublicCreatorDirectoryEntry,
 } from "../../services/creatorProfile";
 import { creatorCanonicalUrl, spaceCanonicalUrl } from "../../services/spaceRoutes";
+import {
+  CREATOR_HUB_TARGETS,
+  creatorHubSectionAtViewportAnchor,
+  creatorHubSectionFromHash,
+  creatorHubTargetFromHash,
+  type CreatorHubSection,
+} from "./creatorHubNavigation";
 import "./creatorHub.css";
 import "./creatorHubMobile.css";
 
@@ -98,10 +106,73 @@ export default function CreatorHubPage() {
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileNotice, setProfileNotice] = useState("");
   const [activePost, setActivePost] = useState<string>();
-  const [commentBody, setCommentBody] = useState("");
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [postActions, setPostActions] = useState<Record<string, string>>({});
   const [newComments, setNewComments] = useState<Record<string, CreatorComment[]>>({});
+  const [activeSection, setActiveSection] = useState<CreatorHubSection>(() => creatorHubSectionFromHash(window.location.hash));
   const sessionUid = session && !session.isAnonymous ? session.uid : "";
+
+  useEffect(() => {
+    let hashFrame = 0;
+    let mountFrame = 0;
+    let settleFrame = 0;
+    let scrollFrame = 0;
+    let hashNavigationPending = false;
+
+    const cancelHashFrames = () => {
+      window.cancelAnimationFrame(hashFrame);
+      window.cancelAnimationFrame(mountFrame);
+      window.cancelAnimationFrame(settleFrame);
+    };
+    const syncSectionFromScroll = () => {
+      scrollFrame = 0;
+      const root = document.querySelector<HTMLElement>(".creator-hub");
+      const scrollOffset = Number.parseFloat(root ? getComputedStyle(root).getPropertyValue("--hub-scroll-offset") : "") || 84;
+      const targets = CREATOR_HUB_TARGETS.flatMap(({ id, section }) => {
+        const element = document.getElementById(id);
+        return element ? [{ section, top: element.getBoundingClientRect().top }] : [];
+      });
+      const nextSection = creatorHubSectionAtViewportAnchor(targets, scrollOffset);
+      setActiveSection((current) => current === nextSection ? current : nextSection);
+    };
+    const scheduleScrollSync = () => {
+      if (hashNavigationPending || scrollFrame) return;
+      scrollFrame = window.requestAnimationFrame(syncSectionFromScroll);
+    };
+    const scrollToHashTarget = () => {
+      const target = creatorHubTargetFromHash(window.location.hash);
+      if (!target) {
+        hashNavigationPending = false;
+        scheduleScrollSync();
+        return;
+      }
+
+      cancelHashFrames();
+      hashNavigationPending = true;
+      setActiveSection(creatorHubSectionFromHash(window.location.hash));
+      hashFrame = window.requestAnimationFrame(() => {
+        mountFrame = window.requestAnimationFrame(() => {
+          document.getElementById(target)?.scrollIntoView({ block: "start" });
+          settleFrame = window.requestAnimationFrame(() => {
+            hashNavigationPending = false;
+            scheduleScrollSync();
+          });
+        });
+      });
+    };
+
+    window.addEventListener("hashchange", scrollToHashTarget);
+    window.addEventListener("scroll", scheduleScrollSync, { passive: true });
+    window.addEventListener("resize", scheduleScrollSync);
+    scrollToHashTarget();
+    return () => {
+      cancelHashFrames();
+      window.cancelAnimationFrame(scrollFrame);
+      window.removeEventListener("hashchange", scrollToHashTarget);
+      window.removeEventListener("scroll", scheduleScrollSync);
+      window.removeEventListener("resize", scheduleScrollSync);
+    };
+  }, []);
 
   useEffect(() => {
     void Promise.allSettled([loadPublicCreatorDirectory(), galleryRepository.discover()]).then(([creatorResult, spaceResult]) => {
@@ -121,7 +192,10 @@ export default function CreatorHubPage() {
       .catch(() => { if (active) setHome(undefined); });
     void galleryRepository.mine()
       .then((records) => {
-        if (active) setMySpaces(records.filter((record) => record.lifecycleStatus !== "trashed"));
+        if (active) setMySpaces(records.filter((record) => (
+          record.lifecycleStatus !== "trashed"
+          && (record.ownerId === sessionUid || record.effectiveRole === "owner")
+        )));
       })
       .catch(() => { if (active) setMySpaces([]); });
     void loadMyCreatorProfile()
@@ -136,7 +210,7 @@ export default function CreatorHubPage() {
         if (!active) return;
         setMyProfile(undefined);
         setProfileStatus("error");
-        setProfileNotice(creatorActionErrorMessage(error, "Profile status could not refresh. Retry shortly."));
+        setProfileNotice(creatorActionErrorMessage(error, "Profile refresh failed. Retry."));
       });
     return () => { active = false; };
   }, [profileRefresh, sessionUid]);
@@ -159,6 +233,7 @@ export default function CreatorHubPage() {
   const creatorResults = query.trim() ? directory.creators : creators;
   const signedIn = Boolean(session && !session.isAnonymous);
   const posts: CreatorPost[] = home?.posts ?? [];
+  const notificationCount = home?.notifications?.length ?? 0;
   const featuredSpaces = useMemo(() => {
     if (home?.updates?.length) return home.updates.map((space) => ({
       id: space.id,
@@ -181,11 +256,15 @@ export default function CreatorHubPage() {
     ?? featuredSpaces.map((space) => space.coverUrl).find(Boolean)
     ?? "";
   const visibleMySpaces = mySpaces.slice(0, 4);
+  const accountOverviewUrl = accountSectionUrl("rooms", window.location.href);
+  const accountProfileUrl = accountSectionUrl("creator", window.location.href);
+  const accountSecurityUrl = accountSectionUrl("account", window.location.href);
+  const accountEntryUrl = signedIn ? accountSecurityUrl : "/#/account";
 
   const activateCreatorHub = async () => {
     if (!session || session.isAnonymous || profileBusy) return;
     setProfileBusy(true);
-    setProfileNotice("Preparing your public Creator profile…");
+    setProfileNotice("Preparing Creator profile…");
     try {
       const currentProfile = await loadMyCreatorProfile();
       if (currentProfile?.profilePublic) {
@@ -232,7 +311,7 @@ export default function CreatorHubPage() {
     } catch (error) {
       setProfileNotice(creatorActionErrorMessage(
         error,
-        "Creator Hub activation timed out. Nothing changed; retry once or finish the same profile in Account.",
+        "Activation timed out. Retry or finish the profile in Account.",
       ));
     } finally {
       setProfileBusy(false);
@@ -287,12 +366,12 @@ export default function CreatorHubPage() {
         updatePost(post.id, { viewerReacted: result.reacted, reactionCount: result.reactionCount ?? post.reactionCount });
         setPostActions((value) => ({ ...value, [post.id]: result.reacted ? "Appreciated." : "Appreciation removed." }));
       } else if (action === "comment") {
-        const body = commentBody.trim();
+        const body = (commentDrafts[post.id] ?? "").trim();
         if (!body) return;
         const result = await interactCreatorPost(post.handle, post.id, { action: "comment", body });
         if (result.comment) setNewComments((value) => ({ ...value, [post.id]: [...(value[post.id] ?? []), result.comment!] }));
         updatePost(post.id, { commentCount: post.commentCount + 1 });
-        setCommentBody("");
+        setCommentDrafts((value) => ({ ...value, [post.id]: "" }));
         setPostActions((value) => ({ ...value, [post.id]: "Comment posted." }));
       } else if (action === "report") {
         await interactCreatorPost(post.handle, post.id, { action: "report", reason: "other" });
@@ -327,17 +406,18 @@ export default function CreatorHubPage() {
       <div className="creator-hub__shell">
         <aside className="creator-hub__sidebar" aria-label="Creator Hub local navigation">
           <nav>
-            <a className="is-active" href="#creator-home"><HubIcon name="home" /> Hub Home</a>
-            <a href="#creator-feed"><HubIcon name="feed" /> Feed</a>
-            <a href="#creator-directory"><HubIcon name="creators" /> Creators</a>
-            <a href="#creator-spaces"><HubIcon name="spaces" /> My Spaces</a>
+            <a className={activeSection === "home" ? "is-active" : ""} aria-current={activeSection === "home" ? "page" : undefined} href="#creator-home"><HubIcon name="home" /> Hub Home</a>
+            <a className={`creator-hub__feed-link ${activeSection === "feed" ? "is-active" : ""}`} aria-current={activeSection === "feed" ? "page" : undefined} href="#creator-feed" aria-label={notificationCount ? `Feed (${notificationCount} new)` : undefined}><HubIcon name="feed" /> Feed {notificationCount ? <b className="creator-hub__feed-badge">{notificationCount}</b> : null}</a>
+            <a className={activeSection === "creators" ? "is-active" : ""} aria-current={activeSection === "creators" ? "page" : undefined} href="#creator-directory"><HubIcon name="creators" /> Creators</a>
+            <a className={activeSection === "spaces" ? "is-active" : ""} aria-current={activeSection === "spaces" ? "page" : undefined} href="#creator-spaces"><HubIcon name="spaces" /> My Spaces</a>
+            <a className={`creator-hub__mobile-account ${activeSection === "profile" ? "is-active" : ""}`} aria-current={activeSection === "profile" ? "page" : undefined} href="#creator-profile"><HubIcon name="account" /> Profile</a>
           </nav>
           <nav className="creator-hub__sidebar-utility">
             {home?.notifications?.length ? <a href="#creator-activity"><HubIcon name="bell" /> Notifications <b>{home.notifications.length}</b></a> : null}
-            <a href="/#/account"><HubIcon name="account" /> Account</a>
+            <a href={accountEntryUrl}><HubIcon name="account" /> Account</a>
           </nav>
           <a className="creator-hub__sidebar-create" href="/#/create">Create a Space</a>
-          <a className="creator-hub__sidebar-identity" href={myProfile?.profilePublic ? creatorCanonicalUrl(myProfile.handle) : "/#/account"}>
+          <a className="creator-hub__sidebar-identity" href={myProfile?.profilePublic ? creatorCanonicalUrl(myProfile.handle) : signedIn ? accountProfileUrl : "/#/account"}>
             <span>{myProfile ? <CreatorMark creator={myProfile} /> : (session?.displayName || session?.nickname || "L").slice(0, 1).toUpperCase()}</span>
             <div><strong>{myProfile?.displayName || session?.displayName || session?.nickname || "Your profile"}</strong><small>{myProfile ? `@${myProfile.handle}` : signedIn ? "Complete your profile" : "Sign in"}</small></div>
             <b>···</b>
@@ -364,12 +444,12 @@ export default function CreatorHubPage() {
                 aria-label="Studio note"
                 value={postBody}
                 onChange={(event) => setPostBody(event.target.value.slice(0, 600))}
-                placeholder={signedIn ? myProfile?.profilePublic ? "What are you working on?" : "Write a draft. Activate your public profile before publishing." : "Sign in to write and publish a studio note."}
+                placeholder={signedIn ? myProfile?.profilePublic ? "What are you working on?" : "Write a note. Activate your profile to publish." : "Sign in to write a studio note."}
                 disabled={!signedIn || postBusy}
                 rows={5}
               />
               <div className="creator-hub__composer-actions">
-                <small aria-live="polite">{postNotice || (myProfile?.profilePublic ? "Public to the LIEUVA Creator community" : signedIn ? "Draft enabled · activate your profile to publish" : "Sign in to write and publish")}</small>
+                <small aria-live="polite">{postNotice || (myProfile?.profilePublic ? "Public to the Creator community" : signedIn ? "Activate profile to publish" : "Sign in to write")}</small>
                 <button type="submit" disabled={!postBody.trim() || !myProfile?.profilePublic || postBusy}>{postBusy ? "Posting…" : "Post to feed"}</button>
               </div>
             </form>
@@ -377,12 +457,12 @@ export default function CreatorHubPage() {
 
           <dl className="creator-hub__pulse" aria-label="Your Creator Hub overview">
             <div><HubIcon name="creators" /><dt>Followers</dt><dd>{signedIn ? myProfile?.followerCount ?? 0 : "—"}</dd></div>
-            <div><HubIcon name="feed" /><dt>Studio notes</dt><dd>{signedIn ? home?.posts?.length ?? 0 : "—"}</dd></div>
+            <div><HubIcon name="feed" /><dt>Feed notes</dt><dd>{signedIn ? home?.posts?.length ?? 0 : "—"}</dd></div>
             <div><HubIcon name="spaces" /><dt>Your Spaces</dt><dd>{signedIn ? mySpaces.length : "—"}</dd></div>
             <div><HubIcon name="account" /><dt>Public profile</dt><dd>{myProfile?.profilePublic ? "Live" : profileStatus === "loading" ? "Syncing" : profileStatus === "error" ? "Retry" : signedIn ? "Draft" : "Sign in"}</dd></div>
           </dl>
 
-          <section className="creator-hub__work" id="creator-spaces" aria-labelledby="creator-spaces-title">
+          <section className="creator-hub__work" aria-labelledby="creator-spaces-title">
             <div className="creator-hub__work-main">
               <div className="creator-hub__compact-heading"><div><p className="eyebrow">Spaces first</p><h2 id="creator-spaces-title">Work moving now.</h2></div><a href="/#/create">Create a Space <span>↗</span></a></div>
               {featuredSpaces.length ? <div className="creator-hub__space-grid">{featuredSpaces.slice(0, 4).map((space) => (
@@ -395,8 +475,8 @@ export default function CreatorHubPage() {
             </div>
 
             <aside className="creator-hub__dashboard-rail">
-              <section aria-labelledby="my-spaces-title">
-                <div><p className="eyebrow" id="my-spaces-title">My Spaces</p><a href="/#/account">View all →</a></div>
+              <section id="creator-spaces" aria-labelledby="my-spaces-title">
+                <div><p className="eyebrow" id="my-spaces-title">My Spaces</p><a href={accountOverviewUrl}>View all →</a></div>
                 {visibleMySpaces.length ? <div className="creator-hub__my-spaces">{visibleMySpaces.map((space) => (
                   <a key={space.id} href={spaceCanonicalUrl(space.id)}>
                     <span><SpaceCover src={discoverCoverSource(space)} fallback={space.title.slice(0, 1)} /></span>
@@ -410,11 +490,11 @@ export default function CreatorHubPage() {
                 {signedIn && myProfile?.profilePublic ? <>
                   <div className="creator-hub__my-identity"><span><CreatorMark creator={myProfile} /></span><div><h3>{myProfile.displayName}</h3><p>@{myProfile.handle}</p></div></div>
                   {myProfile.bio && <p>{myProfile.bio}</p>}
-                  <nav><a href={creatorCanonicalUrl(myProfile.handle)}>Open public profile <b>↗</b></a><a href="/#/account">Edit profile <b>→</b></a></nav>
+                  <nav><a href={creatorCanonicalUrl(myProfile.handle)}>Open public profile <b>↗</b></a><a href={accountProfileUrl}>Edit profile <b>→</b></a></nav>
                 </> : profileStatus === "loading" ? <p>Syncing the Creator identity attached to this account…</p> : profileStatus === "error" ? <><p>{profileNotice}</p><button className="creator-hub__primary-action" type="button" onClick={() => setProfileRefresh((value) => value + 1)}>Retry profile sync <span>→</span></button></> : signedIn ? <>
                   <h3>Introduce your practice.</h3><p>One public profile connects your Spaces, studio notes and follows.</p>
                   <button className="creator-hub__primary-action" type="button" disabled={profileBusy} onClick={() => void activateCreatorHub()}>{profileBusy ? "Activating…" : myProfile ? "Make profile public" : "Activate Hub profile"} <span>→</span></button>
-                  <a className="creator-hub__secondary-action" href="/#/account">Review in Account settings →</a>
+                  <a className="creator-hub__secondary-action" href={accountProfileUrl}>Review in Account settings →</a>
                   {profileNotice && <small className="creator-hub__profile-notice" aria-live="polite">{profileNotice}</small>}
                 </> : <><h3>Bring your practice into the Hub.</h3><p>Sign in to publish notes, follow Creators and keep your work close.</p><a className="creator-hub__primary-action" href="/#/account">Sign in or create account <span>→</span></a></>}
               </section>
@@ -437,7 +517,7 @@ export default function CreatorHubPage() {
                       <details><summary>Safety ···</summary><div><button type="button" onClick={() => void engage(post, "report")}>Report post</button><button type="button" onClick={() => void engage(post, "block")}>Block Creator</button></div></details>
                       <a href={creatorCanonicalUrl(post.handle)}>Visit Creator <b>→</b></a>
                     </footer>
-                    {activePost === post.id && <div className="creator-post__discussion"><form onSubmit={(event) => { event.preventDefault(); void engage(post, "comment"); }}><label><span className="visually-hidden">Comment on this post</span><input value={commentBody} onChange={(event) => setCommentBody(event.target.value.slice(0, 280))} placeholder="Add a considered comment…" disabled={!signedIn || Boolean(post.demo)} /></label><button type="submit" disabled={!commentBody.trim() || !signedIn || Boolean(post.demo)}>Post</button></form>{(newComments[post.id] ?? []).map((comment) => <p key={comment.id}><strong>{comment.displayName}</strong> {comment.body}</p>)}</div>}
+                    {activePost === post.id && <div className="creator-post__discussion"><form onSubmit={(event) => { event.preventDefault(); void engage(post, "comment"); }}><label><span className="visually-hidden">Comment on this post</span><input value={commentDrafts[post.id] ?? ""} onChange={(event) => setCommentDrafts((value) => ({ ...value, [post.id]: event.target.value.slice(0, 280) }))} placeholder="Add a considered comment…" disabled={!signedIn || Boolean(post.demo)} /></label><button type="submit" disabled={!(commentDrafts[post.id] ?? "").trim() || !signedIn || Boolean(post.demo)}>Post</button></form>{(newComments[post.id] ?? []).map((comment) => <p key={comment.id}><strong>{comment.displayName}</strong> {comment.body}</p>)}</div>}
                     {postActions[post.id] && <small className="creator-post__notice" aria-live="polite">{postActions[post.id]}</small>}
                   </article>
                 )) : <div className="creator-hub__empty creator-hub__empty--feed"><HubIcon name="feed" /><h3>Your feed starts with real work.</h3><p>{signedIn ? "Follow a public Creator or publish a studio note. New Spaces and notes will appear here." : "Sign in, follow a Creator and return when their work changes."}</p><a href="#creator-directory">Discover Creators →</a></div>}
