@@ -5,19 +5,22 @@ export function useDialogFocus(
   onClose: () => void,
   returnFocus?: RefObject<HTMLElement | null>,
   enabled = true,
+  initialFocus?: RefObject<HTMLElement | null>,
 ) {
   useEffect(() => {
     if (!enabled) return;
     const previous = document.activeElement as HTMLElement | null;
     const returnElement = returnFocus?.current;
     const element = dialog.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const focusable = () =>
       Array.from(
         element?.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+          'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
         ) ?? [],
       );
-    (focusable()[0] ?? element)?.focus({ preventScroll: true });
+    (initialFocus?.current ?? focusable()[0] ?? element)?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -43,7 +46,8 @@ export function useDialogFocus(
     addEventListener("keydown", onKeyDown);
     return () => {
       removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
       (returnElement ?? previous)?.focus?.({ preventScroll: true });
     };
-  }, [dialog, enabled, onClose, returnFocus]);
+  }, [dialog, enabled, initialFocus, onClose, returnFocus]);
 }

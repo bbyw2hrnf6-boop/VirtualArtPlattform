@@ -393,9 +393,7 @@
 /* Keep long editorial sections accessible while letting the browser skip
    offscreen layout and paint work on the landing page. */
 .landing-proof,
-.room-showcase,
 .aura-pitch,
-.discover,
 .closing {
   content-visibility: auto;
   contain-intrinsic-size: auto 900px;

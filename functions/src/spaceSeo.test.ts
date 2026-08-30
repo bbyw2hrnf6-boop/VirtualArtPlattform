@@ -187,6 +187,8 @@ describe("Space SEO delivery policy", () => {
       deliveries.filter((item): item is PublicSpaceDelivery => item.kind === "public"),
     );
     expect(sitemap).toContain("https://lieuva.com/");
+    expect(sitemap).toContain("https://lieuva.com/creators");
+    expect(sitemap).not.toContain("https://lieuva.com/creator-hub");
     expect(sitemap).toContain("https://lieuva.com/spaces/public-space-123");
     expect(sitemap).not.toContain("private-space-123");
     expect(sitemap).not.toContain("unlisted-space-123");

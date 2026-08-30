@@ -5,6 +5,7 @@ import {
   canonicalHostRedirectUrl,
   creatorCanonicalUrl,
   creatorPath,
+  legacyCreatorHubRedirectPath,
   matchCreatorRoute,
   matchSpaceRoute,
   spaceCanonicalUrl,
@@ -19,7 +20,8 @@ describe("Space route contract", () => {
   });
 
   it("builds and matches a clean Creator profile without exposing an account ID", () => {
-    expect(matchCreatorRoute("/creators")).toEqual({ kind: "hub" });
+    expect(matchCreatorRoute("/creators")).toEqual({ kind: "directory" });
+    expect(matchCreatorRoute("/creator-hub")).toEqual({ kind: "hub" });
     expect(creatorCanonicalUrl("studio-north")).toBe("https://lieuva.com/creators/studio-north");
     expect(creatorPath("studio-north")).toBe("/creators/studio-north");
     expect(matchCreatorRoute("/creators/studio-north")).toEqual({
@@ -32,6 +34,18 @@ describe("Space route contract", () => {
     expect(matchCreatorRoute("/creators/Studio North")).toEqual({ kind: "malformed" });
     expect(matchCreatorRoute("/creators/studio/extra")).toEqual({ kind: "malformed" });
     expect(() => creatorPath("Firebase")).toThrow("Invalid Creator handle");
+  });
+
+  it("moves only legacy personalized Hub anchors off the public directory", () => {
+    expect(legacyCreatorHubRedirectPath("/creators", "#creator-home")).toBe(
+      "/creator-hub#creator-home",
+    );
+    expect(legacyCreatorHubRedirectPath("/creators/", "creator-profile?source=account")).toBe(
+      "/creator-hub#creator-profile?source=account",
+    );
+    expect(legacyCreatorHubRedirectPath("/creators", "#creator-directory")).toBeNull();
+    expect(legacyCreatorHubRedirectPath("/creator-hub", "#creator-home")).toBeNull();
+    expect(matchCreatorRoute("/creator-hub/nested")).toEqual({ kind: "malformed" });
   });
 
   it("keeps clean routes on the local origin during development", () => {

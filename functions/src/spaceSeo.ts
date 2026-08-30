@@ -281,6 +281,7 @@ export function renderPublicSitemap(
     .sort((left, right) => left.id.localeCompare(right.id));
   const urls = [
     `  <url><loc>${PUBLIC_SITE_ORIGIN}/</loc><changefreq>weekly</changefreq></url>`,
+    `  <url><loc>${PUBLIC_SITE_ORIGIN}/creators</loc><changefreq>daily</changefreq></url>`,
     ...unique.map((space) => {
       const modified = space.updatedAt ? `<lastmod>${escapeXml(space.updatedAt)}</lastmod>` : "";
       return `  <url><loc>${escapeXml(spaceCanonicalUrl(space.id))}</loc>${modified}</url>`;

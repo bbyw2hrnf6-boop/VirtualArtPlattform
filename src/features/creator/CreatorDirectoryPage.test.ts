@@ -1,0 +1,31 @@
+import { describe, expect, it } from "vitest";
+import directorySource from "./CreatorDirectoryPage.tsx?raw";
+
+describe("public Creator directory contract", () => {
+  it("loads both public resources and keeps their failure states independent", () => {
+    expect(directorySource).toContain("loadPublicCreatorDirectory(controller.signal)");
+    expect(directorySource).toContain("galleryRepository.discover()");
+    expect(directorySource).toContain('creators: { status: "error", data: [] }');
+    expect(directorySource).toContain('spaces: { status: "error", data: [] }');
+  });
+
+  it("uses crawlable public links for Creator profiles and Spaces", () => {
+    expect(directorySource).toContain("href={creatorProfileUrl(creator.handle)}");
+    expect(directorySource).toContain("href={spaceCanonicalUrl(space.id, location.href)}");
+    expect(directorySource).toContain('href="/creator-hub"');
+    expect(directorySource).toContain('href="/"');
+  });
+
+  it("keeps search, loading, empty and retry language visible", () => {
+    expect(directorySource).toContain('type="search"');
+    expect(directorySource).toContain("Loading the public directory…");
+    expect(directorySource).toContain("Try a broader search.");
+    expect(directorySource).toContain("Try again");
+  });
+
+  it("loads dedicated presentation without depending on Hub styles", () => {
+    expect(directorySource).toContain('import "./creatorDirectory.css"');
+    expect(directorySource).not.toContain('import "./creatorHub.css"');
+    expect(directorySource).not.toContain('import "./creatorHubMobile.css"');
+  });
+});

@@ -661,7 +661,7 @@ export function AccountDialog({
             <a className="account-platform-header__brand" href={applicationHome} aria-label="LIEUVA home"><i aria-hidden="true">L</i><strong>LIEUVA</strong></a>
             <nav aria-label="LIEUVA navigation">
               <a href={applicationHome}>LIEUVA home</a>
-              <a href="/creators">Creator Hub</a>
+              <a href="/creator-hub">Creator Hub</a>
               <a href={createSpaceUrl}>Create a Space</a>
             </nav>
             {account && <span className="account-platform-header__user"><b>{(account.nickname || account.displayName || account.email || "A").slice(0, 1).toUpperCase()}</b>{account.nickname || account.displayName || "Account"}</span>}
@@ -678,7 +678,7 @@ export function AccountDialog({
               </div>
               <span className="account-local-nav__scroll-cue" aria-hidden="true">Swipe settings <b>→</b></span>
               <div className="account-local-nav__product">
-                <a href="/creators">Creator Hub <span aria-hidden="true">↗</span></a>
+                <a href="/creator-hub">Creator Hub <span aria-hidden="true">↗</span></a>
                 <a href={createSpaceUrl}>Create a Space <span aria-hidden="true">↗</span></a>
               </div>
               <div className="account-local-nav__identity">
@@ -696,7 +696,7 @@ export function AccountDialog({
             {presentation === "page" ? (
               <div className="account-page-heading">
                 <div><p className="eyebrow">Account settings</p><h1 id="account-dialog-title">{pageTitle}</h1></div>
-                <a href="/creators">Open Creator Hub <span aria-hidden="true">↗</span></a>
+                <a href="/creator-hub">Open Creator Hub <span aria-hidden="true">↗</span></a>
               </div>
             ) : (
               <><p className="eyebrow">LIEUVA account</p><h2 id="account-dialog-title">Your work.<br /><em>One place.</em></h2></>
@@ -730,7 +730,7 @@ export function AccountDialog({
               <button role="tab" aria-selected={section === "account"} onClick={() => selectSection("account")}>Account &amp; security</button>
               <button role="tab" aria-selected={section === "data"} onClick={() => selectSection("data")}>Data &amp; rights</button>
             </div>}
-            {presentation !== "page" && <a className="account-creator-space-link" href="/creators">
+            {presentation !== "page" && <a className="account-creator-space-link" href="/creator-hub">
               Open Creator Hub <span aria-hidden="true">→</span>
             </a>}
             {account.emailVerified && section === "rooms" && <AccountRooms session={account} />}

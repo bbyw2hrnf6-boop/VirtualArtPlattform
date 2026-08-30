@@ -3,6 +3,8 @@ import type { GalleryVisibility } from "./galleryAccess";
 import { spaceCanonicalUrl } from "./spaceRoutes";
 
 const HOME_CANONICAL = "https://lieuva.com/";
+const CREATOR_DIRECTORY_CANONICAL = `${HOME_CANONICAL}creators`;
+const CREATOR_HUB_CANONICAL = `${HOME_CANONICAL}creator-hub`;
 const HOME_IMAGE = `${HOME_CANONICAL}assets/demo/aura-hero-gallery.webp`;
 const SPACE_CARD_ENDPOINT = `${HOME_CANONICAL}space-cards/`;
 
@@ -13,6 +15,7 @@ export type PageMetadataPolicy = {
   robots:
     | "index,follow,max-image-preview:large"
     | "noindex,nofollow"
+    | "noindex,nofollow,noarchive"
     | "noindex,follow,noarchive";
   image?: string;
 };
@@ -21,13 +24,27 @@ const NON_INDEXED_DESCRIPTION =
   "Create, manage and share immersive 3D presentations with LIEUVA.";
 
 export function pageMetadataPolicy(
-  page: "home" | "create" | "demo" | "data" | "account" | "auth-action" | "space-not-found" | "other",
+  page: "home" | "creators" | "creator-hub" | "create" | "demo" | "data" | "account" | "auth-action" | "space-not-found" | "other",
 ): PageMetadataPolicy {
   if (page === "home") return {
     title: productTitle(),
     description: PRODUCT_BRAND.description,
     canonical: HOME_CANONICAL,
     robots: "index,follow,max-image-preview:large",
+    image: HOME_IMAGE,
+  };
+  if (page === "creators") return {
+    title: productTitle("Creators — Directory"),
+    description: "Discover public Creators and their immersive Spaces in the LIEUVA Creator directory.",
+    canonical: CREATOR_DIRECTORY_CANONICAL,
+    robots: "index,follow,max-image-preview:large",
+    image: HOME_IMAGE,
+  };
+  if (page === "creator-hub") return {
+    title: productTitle("Creator Hub"),
+    description: "Manage your Creator profile, follow practices, and share updates in the LIEUVA Creator Hub.",
+    canonical: CREATOR_HUB_CANONICAL,
+    robots: "noindex,nofollow,noarchive",
     image: HOME_IMAGE,
   };
   if (page === "demo") return {
@@ -37,7 +54,7 @@ export function pageMetadataPolicy(
     robots: "noindex,nofollow",
     image: `${HOME_CANONICAL}assets/demo/danny-cover.webp`,
   };
-  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "demo">, string> = {
+  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "creators" | "creator-hub" | "demo">, string> = {
     create: "Create a Space",
     data: "Data and rights",
     account: "Your Projects and account",

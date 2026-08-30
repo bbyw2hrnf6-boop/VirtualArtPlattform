@@ -86,7 +86,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
       <p className="eyebrow">Private or unavailable</p>
       <h1>This Creator profile isn’t public.</h1>
       <p>Nothing private is shown here.</p>
-      <a href="/creators">Return to Creator Hub</a>
+      <a href="/creators">Return to Creator directory</a>
     </main>
   );
 
@@ -96,8 +96,8 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
         <Logo dark />
         <nav aria-label="LIEUVA navigation">
           <a href="/">LIEUVA home</a>
-          <a className="is-active" href="/creators">Creator Hub</a>
-          <a href="/#discover-spaces">Explore Spaces</a>
+          <a className="is-active" href="/creator-hub">Creator Hub</a>
+          <a href="/?explore=spaces">Explore Spaces</a>
         </nav>
         <div className="creator-profile__nav-actions">
           <SpaceShareMenu
@@ -226,7 +226,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
           </div>
         </section>
       ) : null}
-      <footer className="creator-profile__footer"><div><Logo /><p>Immersive Spaces, published in the browser.</p></div><nav aria-label="Creator profile footer"><a href="/creators">Creator Hub →</a><a href="/#discover-spaces">Explore Spaces →</a><a href="/#/create">Create a Space →</a></nav></footer>
+      <footer className="creator-profile__footer"><div><Logo /><p>Immersive Spaces, published in the browser.</p></div><nav aria-label="Creator profile footer"><a href="/creator-hub">Creator Hub →</a><a href="/creators">Creator directory →</a><a href="/?explore=spaces">Explore Spaces →</a><a href="/#/create">Create a Space →</a></nav></footer>
     </main>
   );
 }

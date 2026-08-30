@@ -12,10 +12,19 @@ export type SpaceRouteMatch =
   | null;
 
 export type CreatorRouteMatch =
+  | { kind: "directory" }
   | { kind: "hub" }
   | { kind: "creator"; handle: string }
   | { kind: "malformed" }
   | null;
+
+const LEGACY_CREATOR_HUB_HASHES = new Set([
+  "creator-home",
+  "creator-feed",
+  "creator-spaces",
+  "creator-profile",
+  "creator-activity",
+]);
 
 export function isValidSpaceIdentifier(value: string): boolean {
   return SPACE_IDENTIFIER_PATTERN.test(value);
@@ -91,7 +100,9 @@ export function matchSpaceRoute(pathname: string, hash: string): SpaceRouteMatch
 }
 
 export function matchCreatorRoute(pathname: string): CreatorRouteMatch {
-  if (pathname === "/creators" || pathname === "/creators/") return { kind: "hub" };
+  if (pathname === "/creator-hub" || pathname === "/creator-hub/") return { kind: "hub" };
+  if (pathname.startsWith("/creator-hub/")) return { kind: "malformed" };
+  if (pathname === "/creators" || pathname === "/creators/") return { kind: "directory" };
   const match = /^\/creators\/([^/]+)\/?$/.exec(pathname);
   if (match) {
     const handle = safelyDecoded(match[1]);
@@ -102,6 +113,16 @@ export function matchCreatorRoute(pathname: string): CreatorRouteMatch {
   return pathname.startsWith("/creators/")
     ? { kind: "malformed" }
     : null;
+}
+
+/** Maps only the historical personalized Hub anchors away from the public
+ * Creator directory. `#creator-directory` deliberately stays on /creators. */
+export function legacyCreatorHubRedirectPath(pathname: string, hash: string): string | null {
+  if (pathname !== "/creators" && pathname !== "/creators/") return null;
+  const hashValue = hash.replace(/^#/, "");
+  const routeHash = hashValue.split("?", 1)[0]?.toLowerCase();
+  if (!routeHash || !LEGACY_CREATOR_HUB_HASHES.has(routeHash)) return null;
+  return `/creator-hub#${hashValue}`;
 }
 
 export function applicationRootUrl(currentHref: string): string {

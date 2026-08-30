@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  classifyCreatorDocumentRoute,
   creatorFollowTransition,
   creatorCanonicalUrl,
   isReservedCreatorHandle,
@@ -10,13 +11,25 @@ import {
   parseCreatorReportReason,
   parseCreatorProfileInput,
   publicCreatorDirectoryEntry,
+  renderCreatorDirectoryDocument,
   renderCreatorDocument,
   renderCreatorHubDocument,
 } from "./creatorIdentity.js";
 
-const SHELL = "<!doctype html><html><head><title>Home</title><meta name=\"robots\" content=\"index\"><link rel=\"canonical\" href=\"https://lieuva.com/\"></head><body><div id=\"root\"></div></body></html>";
+const SHELL = "<!doctype html><html><head><title>Home</title><meta name=\"robots\" content=\"index\"><meta property=\"og:image:width\" content=\"1200\"><meta name=\"twitter:image:alt\" content=\"Old alt\"><link rel=\"canonical\" href=\"https://lieuva.com/\"></head><body><div id=\"root\"></div></body></html>";
 
 describe("Creator identity contract", () => {
+  it("separates the public directory, private Hub and stable profile routes", () => {
+    expect(classifyCreatorDocumentRoute("/creators")).toEqual({ kind: "directory" });
+    expect(classifyCreatorDocumentRoute("/creator-hub/")).toEqual({ kind: "hub" });
+    expect(classifyCreatorDocumentRoute("/creators/studio-north")).toEqual({
+      kind: "profile",
+      handle: "studio-north",
+    });
+    expect(classifyCreatorDocumentRoute("/creator-hub/nested")).toEqual({ kind: "malformed" });
+    expect(classifyCreatorDocumentRoute("/creators/studio/nested")).toEqual({ kind: "malformed" });
+  });
+
   it("normalizes case but rejects destructive or unsafe transformations", () => {
     expect(normalizeCreatorHandle(" Studio-North ")).toBe("studio-north");
     for (const value of ["st", "studio north", "studio_north", "studio--north", "-studio", "crëator"])
@@ -25,6 +38,7 @@ describe("Creator identity contract", () => {
 
   it("reserves product and routing names", () => {
     expect(isReservedCreatorHandle("LIEUVA")).toBe(true);
+    expect(normalizeCreatorHandle("creator-hub")).toBeNull();
     expect(normalizeCreatorHandle("spaces")).toBeNull();
     expect(normalizeCreatorHandle("mira-vale")).toBeNull();
   });
@@ -88,12 +102,18 @@ describe("Creator identity contract", () => {
   it("renders public metadata without an internal identifier", () => {
     const html = renderCreatorDocument(SHELL, {
       kind: "public",
-      profile: { handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [], profilePublic: true, imagePresent: false, followerCount: 0 },
+      profile: { handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [{ label: "Website", url: "https://example.com" }], profilePublic: true, imagePresent: true, followerCount: 0 },
       spaces: [{ id: "space-safe", title: "Material Futures", creator: "Studio North", coverUrl: "https://lieuva.com/space-cards/space-safe" }],
       posts: [],
     });
     expect(html).toContain(creatorCanonicalUrl("studio-north"));
     expect(html).toContain("ProfilePage");
+    expect(html).toContain('"mainEntity":{"@type":"Person"');
+    expect(html).toContain('"alternateName":"@studio-north"');
+    expect(html).toContain('"sameAs":["https://example.com"]');
+    expect(html).toContain('name="twitter:image:alt" content="Public Creator profile for Studio North"');
+    expect(html).not.toContain("og:image:width");
+    expect(html).not.toContain("Old alt");
     expect(html).not.toContain("ownerId");
     expect(html.match(/rel="canonical"/g)).toHaveLength(1);
   });
@@ -104,14 +124,25 @@ describe("Creator identity contract", () => {
     expect(html).not.toContain("hidden-name");
   });
 
-  it("renders the Creator Hub as a canonical indexable application route", () => {
-    const html = renderCreatorHubDocument(SHELL);
-    expect(html).toContain("Creator Hub — Community | LIEUVA");
+  it("renders the public Creator directory as a canonical indexable route", () => {
+    const html = renderCreatorDirectoryDocument(SHELL);
+    expect(html).toContain("Creators — Directory | LIEUVA");
     expect(html).toContain("https://lieuva.com/creators");
     expect(html).toContain("index,follow,max-image-preview:large");
+    expect(html).toContain('name="lieuva:creator-route" content="directory"');
     expect(html).toContain("CollectionPage");
     expect(html.match(/rel="canonical"/g)).toHaveLength(1);
     expect(html).not.toContain("Creator unavailable");
+  });
+
+  it("renders the personalized Creator Hub noindex with a self-canonical URL", () => {
+    const html = renderCreatorHubDocument(SHELL);
+    expect(html).toContain("Creator Hub | LIEUVA");
+    expect(html).toContain("https://lieuva.com/creator-hub");
+    expect(html).toContain("noindex,nofollow,noarchive");
+    expect(html).toContain('name="lieuva:creator-route" content="hub"');
+    expect(html).not.toContain("CollectionPage");
+    expect(html.match(/rel="canonical"/g)).toHaveLength(1);
   });
 
   it("keeps follow and unfollow transitions idempotent and non-negative", () => {

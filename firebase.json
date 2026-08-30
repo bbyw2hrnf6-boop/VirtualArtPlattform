@@ -26,6 +26,14 @@
     ],
     "rewrites": [
       {
+        "source": "/creator-hub{,/**}",
+        "function": {
+          "functionId": "creatorDocument",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
         "source": "/creators{,/**}",
         "function": {
           "functionId": "creatorDocument",
@@ -88,10 +96,6 @@
           "region": "europe-west1",
           "pinTag": true
         }
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
       }
     ],
     "headers": [

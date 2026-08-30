@@ -1,0 +1,328 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Logo } from "../../components/Logo";
+import {
+  creatorImageUrl,
+  creatorProfileUrl,
+  loadPublicCreatorDirectory,
+  type PublicCreatorDirectoryEntry,
+} from "../../services/creatorProfile";
+import {
+  discoverCoverSource,
+  galleryRepository,
+  type GalleryRecord,
+} from "../../services/galleryRepository";
+import { spaceCanonicalUrl } from "../../services/spaceRoutes";
+import { TEMPLATES } from "../gallery/templates";
+import "./creatorDirectory.css";
+
+type ResourceState<T> =
+  | { status: "loading"; data: T }
+  | { status: "ready"; data: T }
+  | { status: "error"; data: T };
+
+type DirectoryState = {
+  creators: ResourceState<PublicCreatorDirectoryEntry[]>;
+  spaces: ResourceState<GalleryRecord[]>;
+};
+
+const INITIAL_STATE: DirectoryState = {
+  creators: { status: "loading", data: [] },
+  spaces: { status: "loading", data: [] },
+};
+
+function searchable(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase()
+    .trim();
+}
+
+function filterCreatorDirectory(
+  creators: PublicCreatorDirectoryEntry[],
+  spaces: GalleryRecord[],
+  query: string,
+) {
+  const term = searchable(query);
+  if (!term) return { creators, spaces };
+  return {
+    creators: creators.filter((creator) =>
+      searchable(`${creator.displayName} ${creator.handle} ${creator.bio}`).includes(term),
+    ),
+    spaces: spaces.filter((space) =>
+      searchable(`${space.title} ${space.artist}`).includes(term),
+    ),
+  };
+}
+
+function initialsFor(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "L";
+}
+
+function CreatorPortrait({ creator }: { creator: PublicCreatorDirectoryEntry }) {
+  return (
+    <span className="creator-directory-card__portrait" aria-hidden="true">
+      <b>{initialsFor(creator.displayName)}</b>
+      {creator.imagePresent && !creator.demo ? (
+        <img
+          src={creatorImageUrl(creator.handle)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={(event) => { event.currentTarget.hidden = true; }}
+        />
+      ) : null}
+    </span>
+  );
+}
+
+function SpaceCover({ space }: { space: GalleryRecord }) {
+  const fallback = `/assets/templates/${space.templateId}-preview.webp`;
+  return (
+    <img
+      src={discoverCoverSource(space) ?? fallback}
+      alt={`${space.title} room view`}
+      loading="lazy"
+      decoding="async"
+      onError={(event) => {
+        if (event.currentTarget.dataset.fallback === "true") return;
+        event.currentTarget.dataset.fallback = "true";
+        event.currentTarget.src = fallback;
+      }}
+    />
+  );
+}
+
+function LoadingCards({ label }: { label: string }) {
+  return (
+    <div className="creator-directory__loading" role="status">
+      <span className="visually-hidden">{label}</span>
+      {[0, 1, 2].map((item) => <i key={item} aria-hidden="true" />)}
+    </div>
+  );
+}
+
+export default function CreatorDirectoryPage() {
+  const [state, setState] = useState<DirectoryState>(INITIAL_STATE);
+  const [query, setQuery] = useState("");
+  const [attempt, setAttempt] = useState(0);
+
+  const load = useCallback(() => {
+    const controller = new AbortController();
+
+    void loadPublicCreatorDirectory(controller.signal)
+      .then((payload) => {
+        setState((current) => ({
+          ...current,
+          creators: { status: "ready", data: payload.creators },
+        }));
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setState((current) => ({
+          ...current,
+          creators: { status: "error", data: [] },
+        }));
+      });
+
+    void galleryRepository.discover()
+      .then((spaces) => {
+        if (controller.signal.aborted) return;
+        setState((current) => ({
+          ...current,
+          spaces: { status: "ready", data: spaces },
+        }));
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setState((current) => ({
+          ...current,
+          spaces: { status: "error", data: [] },
+        }));
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => load(), [attempt, load]);
+
+  const retry = () => {
+    setState(INITIAL_STATE);
+    setAttempt((value) => value + 1);
+  };
+
+  const results = useMemo(
+    () => filterCreatorDirectory(state.creators.data, state.spaces.data, query),
+    [query, state.creators.data, state.spaces.data],
+  );
+  const isSearching = Boolean(query.trim());
+  const allFailed = state.creators.status === "error" && state.spaces.status === "error";
+  const allSettled = state.creators.status !== "loading" && state.spaces.status !== "loading";
+  const noResults = allSettled && !allFailed && !results.creators.length && !results.spaces.length;
+  const resultCount = results.creators.length + results.spaces.length;
+
+  return (
+    <main className="creator-directory">
+      <header className="creator-directory__nav">
+        <Logo dark />
+        <nav aria-label="Public Creator directory navigation">
+          <a href="/">Home</a>
+          <a className="is-active" href="/creators" aria-current="page">Creators</a>
+          <a href="/creator-hub">Creator Hub</a>
+        </nav>
+        <a className="creator-directory__hub-link" href="/creator-hub">
+          Open Creator Hub <span aria-hidden="true">↗</span>
+        </a>
+      </header>
+
+      <section className="creator-directory__hero" aria-labelledby="creator-directory-title">
+        <div>
+          <p className="eyebrow"><i aria-hidden="true" /> Public community</p>
+          <h1 id="creator-directory-title">Follow the work.</h1>
+          <p>Meet the people behind LIEUVA Spaces. Explore public practices, published rooms and the ideas taking shape between them.</p>
+        </div>
+        <dl aria-label="Public directory overview">
+          <div><dt>Creators</dt><dd>{state.creators.status === "loading" ? "—" : state.creators.data.length}</dd></div>
+          <div><dt>Live Spaces</dt><dd>{state.spaces.status === "loading" ? "—" : state.spaces.data.length}</dd></div>
+          <div><dt>Access</dt><dd>Public</dd></div>
+        </dl>
+      </section>
+
+      <section className="creator-directory__search" aria-label="Search the public community">
+        <label htmlFor="creator-directory-query">Search creators and Spaces</label>
+        <div>
+          <input
+            id="creator-directory-query"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Creator, practice, Space or @handle"
+            autoComplete="off"
+            aria-controls="creator-directory-results"
+          />
+          {query ? (
+            <button type="button" onClick={() => setQuery("")} aria-label="Clear directory search">Clear</button>
+          ) : <span aria-hidden="true">⌕</span>}
+        </div>
+        <p aria-live="polite">
+          {allSettled
+            ? `${resultCount} ${resultCount === 1 ? "result" : "results"}${isSearching ? ` for “${query.trim()}”` : ""}`
+            : "Loading the public directory…"}
+        </p>
+      </section>
+
+      <div id="creator-directory-results">
+        {allFailed ? (
+          <section className="creator-directory__fatal" role="alert">
+            <p className="eyebrow">Connection interrupted</p>
+            <h2>The community is still there.</h2>
+            <p>The public directory could not be reached. Nothing private was requested or shown.</p>
+            <button type="button" onClick={retry}>Try again</button>
+          </section>
+        ) : noResults ? (
+          <section className="creator-directory__empty" role="status">
+            <p className="eyebrow">No public match</p>
+            <h2>{isSearching ? "Try a broader search." : "The first public work is on its way."}</h2>
+            <p>{isSearching ? "Search by Creator name, handle, practice or Space title." : "Only public Creator profiles and published public Spaces appear here."}</p>
+            {isSearching ? <button type="button" onClick={() => setQuery("")}>Show the full directory</button> : null}
+          </section>
+        ) : (
+          <>
+            <section className="creator-directory__section creator-directory__section--creators" aria-labelledby="public-creators-title">
+              <header>
+                <div><p className="eyebrow">People and practices</p><h2 id="public-creators-title">Creators.</h2></div>
+                <p>Public profiles only. Open a profile to see its published Spaces and studio notes.</p>
+                <span>{String(results.creators.length).padStart(2, "0")}</span>
+              </header>
+
+              {state.creators.status === "loading" ? <LoadingCards label="Loading public Creators…" /> : null}
+              {state.creators.status === "error" ? (
+                <div className="creator-directory__inline-error" role="status">
+                  <p>Creator profiles are temporarily unavailable.</p>
+                  <button type="button" onClick={retry}>Retry directory</button>
+                </div>
+              ) : null}
+              {state.creators.status === "ready" && !results.creators.length ? (
+                <p className="creator-directory__section-empty">No public Creator matches this search.</p>
+              ) : (
+                <div className="creator-directory__creator-grid">
+                  {results.creators.map((creator, index) => (
+                    <a
+                      className="creator-directory-card"
+                      href={creatorProfileUrl(creator.handle)}
+                      key={creator.handle}
+                    >
+                      <span className="creator-directory-card__number">{String(index + 1).padStart(2, "0")}</span>
+                      <CreatorPortrait creator={creator} />
+                      <span className="creator-directory-card__identity">
+                        <small>@{creator.handle}</small>
+                        <strong>{creator.displayName}</strong>
+                      </span>
+                      <span className="creator-directory-card__bio">{creator.bio || "Public Creator profile on LIEUVA."}</span>
+                      <span className="creator-directory-card__meta">
+                        <small>{creator.demo ? "Editorial preview" : `${creator.followerCount ?? 0} followers`}</small>
+                        <b aria-hidden="true">↗</b>
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="creator-directory__section creator-directory__section--spaces" aria-labelledby="public-spaces-title">
+              <header>
+                <div><p className="eyebrow">Published in the browser</p><h2 id="public-spaces-title">Live Spaces.</h2></div>
+                <p>Enter public rooms directly. Every card links to the current published Space.</p>
+                <span>{String(results.spaces.length).padStart(2, "0")}</span>
+              </header>
+
+              {state.spaces.status === "loading" ? <LoadingCards label="Loading public Spaces…" /> : null}
+              {state.spaces.status === "error" ? (
+                <div className="creator-directory__inline-error" role="status">
+                  <p>Published Spaces could not be loaded. Creator profiles above remain available.</p>
+                  <button type="button" onClick={retry}>Retry Spaces</button>
+                </div>
+              ) : null}
+              {state.spaces.status === "ready" && !results.spaces.length ? (
+                <p className="creator-directory__section-empty">No public Space matches this search.</p>
+              ) : (
+                <div className="creator-directory__space-grid">
+                  {results.spaces.map((space, index) => (
+                    <a
+                      className="creator-directory-space"
+                      href={spaceCanonicalUrl(space.id, location.href)}
+                      key={space.id}
+                    >
+                      <span className="creator-directory-space__visual"><SpaceCover space={space} /><small>Live Space</small></span>
+                      <span className="creator-directory-space__copy">
+                        <small>{space.artist} · {TEMPLATES.find((template) => template.id === space.templateId)?.name ?? "LIEUVA"}</small>
+                        <strong>{space.title}</strong>
+                        <span>Enter Space <b aria-hidden="true">↗</b></span>
+                      </span>
+                      <i aria-hidden="true">{String(index + 1).padStart(2, "0")}</i>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </div>
+
+      <footer className="creator-directory__footer">
+        <div><Logo /><p>Public profiles, published Spaces and the work between them.</p></div>
+        <nav aria-label="Creator directory footer">
+          <a href="/">LIEUVA Home</a>
+          <a href="/creator-hub">Creator Hub</a>
+          <a href="/#/create">Create a Space <span aria-hidden="true">↗</span></a>
+        </nav>
+      </footer>
+    </main>
+  );
+}

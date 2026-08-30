@@ -45,6 +45,7 @@ import {
 } from "./spaceSeo.js";
 import {
   CREATOR_HANDLE_CHANGE_COOLDOWN_MS,
+  classifyCreatorDocumentRoute,
   creatorFollowTransition,
   creatorCanonicalUrl,
   isValidCreatorWebp,
@@ -54,6 +55,7 @@ import {
   parseCreatorProfileInput,
   parseCreatorReportReason,
   publicCreatorDirectoryEntry,
+  renderCreatorDirectoryDocument,
   renderCreatorDocument,
   renderCreatorHubDocument,
   type CreatorDelivery,
@@ -1557,15 +1559,32 @@ export const creatorDocument = onRequest(
       response.status(405).send("Method not allowed");
       return;
     }
-    const requestedHandle = requestRouteValue(request.path, "creators");
+    const route = classifyCreatorDocumentRoute(request.path);
     try {
-      if (!requestedHandle) {
-        response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
-        response.set("X-Robots-Tag", "index,follow,max-image-preview:large");
+      if (route.kind === "hub") {
+        response.set("Cache-Control", "private, no-store, max-age=0");
+        response.set("X-Robots-Tag", "noindex,nofollow,noarchive");
         response.status(200).send(renderCreatorHubDocument(generatedAppShell()));
         logOperation("creator_document", "success", startedAt, { delivery: "hub" });
         return;
       }
+      if (route.kind === "directory") {
+        response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
+        response.set("X-Robots-Tag", "index,follow,max-image-preview:large");
+        response.status(200).send(renderCreatorDirectoryDocument(generatedAppShell()));
+        logOperation("creator_document", "success", startedAt, { delivery: "directory" });
+        return;
+      }
+      if (route.kind === "malformed") {
+        response.set("Cache-Control", "private, no-store, max-age=0");
+        response.set("X-Robots-Tag", "noindex,nofollow,noarchive");
+        response.status(404).send(request.path.startsWith("/creator-hub/")
+          ? renderCreatorHubDocument(generatedAppShell())
+          : renderCreatorDocument(generatedAppShell(), { kind: "not-found" }));
+        logOperation("creator_document", "success", startedAt, { delivery: "not-found" });
+        return;
+      }
+      const requestedHandle = route.handle;
       const delivery = await creatorDeliveryForHandle(requestedHandle);
       if (delivery.kind === "public" && requestedHandle !== delivery.profile.handle) {
         response.set("Cache-Control", "public, max-age=300, s-maxage=3600");

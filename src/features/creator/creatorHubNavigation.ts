@@ -1,16 +1,15 @@
-export type CreatorHubSection = "home" | "feed" | "creators" | "spaces" | "profile";
+export type CreatorHubSection = "home" | "feed" | "spaces" | "profile" | "notifications";
 
 export const CREATOR_HUB_TARGETS = [
   { id: "creator-home", section: "home" },
+  { id: "creator-feed", section: "feed" },
+  { id: "creator-activity", section: "notifications" },
   { id: "creator-spaces", section: "spaces" },
   { id: "creator-profile", section: "profile" },
-  { id: "creator-feed", section: "feed" },
-  { id: "creator-directory", section: "creators" },
 ] as const satisfies ReadonlyArray<{ id: string; section: CreatorHubSection }>;
 
 const sectionByTarget = new Map<string, CreatorHubSection>([
   ...CREATOR_HUB_TARGETS.map(({ id, section }) => [id, section] as const),
-  ["creator-activity", "feed"],
 ]);
 
 function hashTarget(hash: string) {

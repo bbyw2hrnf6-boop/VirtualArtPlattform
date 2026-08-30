@@ -4,7 +4,6 @@ import { AccountButton } from "../account/AccountDialog";
 import { accountSectionUrl } from "../account/accountPresentation";
 import type { AccountSession } from "../../services/accountTypes";
 import { discoverCoverSource, galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
-import { searchPublicDirectory } from "../../services/publicDirectorySearch";
 import {
   announceCreatorProfileUpdated,
   checkCreatorHandle,
@@ -15,7 +14,6 @@ import {
   creatorImageUrl,
   loadCreatorHome,
   loadMyCreatorProfile,
-  loadPublicCreatorDirectory,
   interactCreatorPost,
   manageCreatorBlock,
   saveCreatorProfile,
@@ -51,17 +49,6 @@ function CreatorMark({ creator }: { creator: Pick<PublicCreatorDirectoryEntry, "
     : <>{creator.displayName.slice(0, 1).toUpperCase()}</>;
 }
 
-function syncOwnDirectoryEntry(current: PublicCreatorDirectoryEntry[], profile: CreatorProfile) {
-  const withoutCurrent = current.filter((creator) => creator.handle !== profile.handle);
-  return profile.profilePublic ? [{
-    handle: profile.handle,
-    displayName: profile.displayName,
-    bio: profile.bio,
-    imagePresent: profile.imagePresent,
-    followerCount: profile.followerCount,
-  }, ...withoutCurrent] : withoutCurrent;
-}
-
 type HubIconName = "home" | "feed" | "creators" | "spaces" | "account" | "bell" | "search";
 
 function HubIcon({ name }: { name: HubIconName }) {
@@ -91,15 +78,14 @@ function SpaceCover({ src, fallback = "Space preview preparing" }: { src?: strin
 
 export default function CreatorHubPage() {
   const [session, setSession] = useState<AccountSession | null>(null);
-  const [query, setQuery] = useState("");
-  const [creators, setCreators] = useState<PublicCreatorDirectoryEntry[]>([]);
   const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
   const [mySpaces, setMySpaces] = useState<GalleryRecord[]>([]);
   const [home, setHome] = useState<CreatorHomePayload>();
   const [myProfile, setMyProfile] = useState<CreatorProfile | null>();
+  const [homeStatus, setHomeStatus] = useState<"loading" | "error">();
+  const [mySpacesStatus, setMySpacesStatus] = useState<"loading" | "error">();
   const [profileStatus, setProfileStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [profileRefresh, setProfileRefresh] = useState(0);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [postBody, setPostBody] = useState("");
   const [postBusy, setPostBusy] = useState(false);
   const [postNotice, setPostNotice] = useState("");
@@ -175,36 +161,42 @@ export default function CreatorHubPage() {
   }, []);
 
   useEffect(() => {
-    void Promise.allSettled([loadPublicCreatorDirectory(), galleryRepository.discover()]).then(([creatorResult, spaceResult]) => {
-      if (creatorResult.status === "fulfilled") setCreators(creatorResult.value.creators);
-      if (spaceResult.status === "fulfilled") setSpaces(spaceResult.value);
-      setStatus(creatorResult.status === "rejected" && spaceResult.status === "rejected" ? "error" : "ready");
-    });
+    void galleryRepository.discover().then(setSpaces).catch(() => setSpaces([]));
   }, []);
 
   useEffect(() => {
-    if (!sessionUid) return;
+    if (!sessionUid) {
+      setHome(undefined);
+      setMySpaces([]);
+      setHomeStatus(undefined);
+      setMySpacesStatus(undefined);
+      return;
+    }
     let active = true;
     setProfileStatus("loading");
+    setHomeStatus("loading");
+    setMySpacesStatus("loading");
     setMyProfile(undefined);
     void loadCreatorHome()
-      .then((nextHome) => { if (active) setHome(nextHome); })
-      .catch(() => { if (active) setHome(undefined); });
+      .then((nextHome) => { if (active) { setHome(nextHome); setHomeStatus(undefined); } })
+      .catch(() => { if (active) { setHome(undefined); setHomeStatus("error"); } });
     void galleryRepository.mine()
       .then((records) => {
-        if (active) setMySpaces(records.filter((record) => (
-          record.lifecycleStatus !== "trashed"
-          && (record.ownerId === sessionUid || record.effectiveRole === "owner")
-        )));
+        if (active) {
+          setMySpaces(records.filter((record) => (
+            record.lifecycleStatus !== "trashed"
+            && (record.ownerId === sessionUid || record.effectiveRole === "owner")
+          )));
+          setMySpacesStatus(undefined);
+        }
       })
-      .catch(() => { if (active) setMySpaces([]); });
+      .catch(() => { if (active) { setMySpaces([]); setMySpacesStatus("error"); } });
     void loadMyCreatorProfile()
       .then((profile) => {
         if (!active) return;
         setMyProfile(profile);
         setProfileStatus("ready");
         setProfileNotice("");
-        if (profile) setCreators((current) => syncOwnDirectoryEntry(current, profile));
       })
       .catch((error) => {
         if (!active) return;
@@ -221,7 +213,6 @@ export default function CreatorHubPage() {
       if (profile) {
         setMyProfile(profile);
         setProfileStatus("ready");
-        setCreators((current) => syncOwnDirectoryEntry(current, profile));
         void loadCreatorHome().then(setHome).catch(() => undefined);
       }
     };
@@ -229,11 +220,14 @@ export default function CreatorHubPage() {
     return () => window.removeEventListener(CREATOR_PROFILE_UPDATED_EVENT, syncProfile);
   }, []);
 
-  const directory = useMemo(() => searchPublicDirectory(spaces, creators, query), [creators, query, spaces]);
-  const creatorResults = query.trim() ? directory.creators : creators;
   const signedIn = Boolean(session && !session.isAnonymous);
   const posts: CreatorPost[] = home?.posts ?? [];
-  const notificationCount = home?.notifications?.length ?? 0;
+  const notifications = useMemo(() => (home?.notifications ?? []).filter((notification) => (
+    notification.kind === "follow"
+    || notification.kind === "comment"
+    || notification.kind === "reaction"
+  )), [home?.notifications]);
+  const notificationCount = notifications.length;
   const featuredSpaces = useMemo(() => {
     if (home?.updates?.length) return home.updates.map((space) => ({
       id: space.id,
@@ -258,8 +252,6 @@ export default function CreatorHubPage() {
   const visibleMySpaces = mySpaces.slice(0, 4);
   const accountOverviewUrl = accountSectionUrl("rooms", window.location.href);
   const accountProfileUrl = accountSectionUrl("creator", window.location.href);
-  const accountSecurityUrl = accountSectionUrl("account", window.location.href);
-  const accountEntryUrl = signedIn ? accountSecurityUrl : "/#/account";
 
   const activateCreatorHub = async () => {
     if (!session || session.isAnonymous || profileBusy) return;
@@ -394,8 +386,8 @@ export default function CreatorHubPage() {
       <header className="creator-hub__global-header">
         <Logo dark />
         <nav className="creator-hub__global-context" aria-label="LIEUVA and Creator Hub">
-          <a className="is-active" href="#creator-home">Hub home</a>
           <a href="/">LIEUVA home <span aria-hidden="true">↗</span></a>
+          <a href="/creators"><HubIcon name="search" /> Find Creators</a>
         </nav>
         <nav className="creator-hub__global-actions" aria-label="Creator actions">
           <a className="creator-hub__create" href="/#/create">Create a Space</a>
@@ -407,16 +399,15 @@ export default function CreatorHubPage() {
         <aside className="creator-hub__sidebar" aria-label="Creator Hub local navigation">
           <nav>
             <a className={activeSection === "home" ? "is-active" : ""} aria-current={activeSection === "home" ? "page" : undefined} href="#creator-home"><HubIcon name="home" /> Hub Home</a>
-            <a className={`creator-hub__feed-link ${activeSection === "feed" ? "is-active" : ""}`} aria-current={activeSection === "feed" ? "page" : undefined} href="#creator-feed" aria-label={notificationCount ? `Feed (${notificationCount} new)` : undefined}><HubIcon name="feed" /> Feed {notificationCount ? <b className="creator-hub__feed-badge">{notificationCount}</b> : null}</a>
-            <a className={activeSection === "creators" ? "is-active" : ""} aria-current={activeSection === "creators" ? "page" : undefined} href="#creator-directory"><HubIcon name="creators" /> Creators</a>
+            <a className={`creator-hub__feed-link ${activeSection === "feed" ? "is-active" : ""}`} aria-current={activeSection === "feed" ? "page" : undefined} href="#creator-feed"><HubIcon name="feed" /> Feed</a>
+            <a href="/creators"><HubIcon name="creators" /> Creators</a>
+            <a className={`creator-hub__mobile-notifications ${activeSection === "notifications" ? "is-active" : ""}`} aria-current={activeSection === "notifications" ? "page" : undefined} href="#creator-activity" aria-label={notificationCount ? `Notifications (${notificationCount} recent)` : "Notifications"}><HubIcon name="bell" /> Alerts {notificationCount ? <b className="creator-hub__notification-badge">{notificationCount}</b> : null}</a>
             <a className={activeSection === "spaces" ? "is-active" : ""} aria-current={activeSection === "spaces" ? "page" : undefined} href="#creator-spaces"><HubIcon name="spaces" /> My Spaces</a>
             <a className={`creator-hub__mobile-account ${activeSection === "profile" ? "is-active" : ""}`} aria-current={activeSection === "profile" ? "page" : undefined} href="#creator-profile"><HubIcon name="account" /> Profile</a>
           </nav>
-          <nav className="creator-hub__sidebar-utility">
-            {home?.notifications?.length ? <a href="#creator-activity"><HubIcon name="bell" /> Notifications <b>{home.notifications.length}</b></a> : null}
-            <a href={accountEntryUrl}><HubIcon name="account" /> Account</a>
-          </nav>
-          <a className="creator-hub__sidebar-create" href="/#/create">Create a Space</a>
+          {notificationCount ? <nav className="creator-hub__sidebar-utility">
+            <a className={activeSection === "notifications" ? "is-active" : ""} aria-current={activeSection === "notifications" ? "page" : undefined} href="#creator-activity"><HubIcon name="bell" /> Notifications <b>{notificationCount}</b></a>
+          </nav> : null}
           <a className="creator-hub__sidebar-identity" href={myProfile?.profilePublic ? creatorCanonicalUrl(myProfile.handle) : signedIn ? accountProfileUrl : "/#/account"}>
             <span>{myProfile ? <CreatorMark creator={myProfile} /> : (session?.displayName || session?.nickname || "L").slice(0, 1).toUpperCase()}</span>
             <div><strong>{myProfile?.displayName || session?.displayName || session?.nickname || "Your profile"}</strong><small>{myProfile ? `@${myProfile.handle}` : signedIn ? "Complete your profile" : "Sign in"}</small></div>
@@ -427,9 +418,7 @@ export default function CreatorHubPage() {
         <div className="creator-hub__content">
           <section className="creator-hub__hero" id="creator-home">
             <div className="creator-hub__hero-visual" style={{
-              backgroundImage: heroCover
-                ? `url(${JSON.stringify(heroCover)}), url("/assets/demo/aura-hero-gallery.webp")`
-                : "url(\"/assets/demo/aura-hero-gallery.webp\")",
+              backgroundImage: `url(${JSON.stringify(heroCover || "/assets/demo/aura-hero-gallery.webp")})`,
             }}>
               <div>
                 <p className="eyebrow">Creator Hub</p>
@@ -450,7 +439,9 @@ export default function CreatorHubPage() {
               />
               <div className="creator-hub__composer-actions">
                 <small aria-live="polite">{postNotice || (myProfile?.profilePublic ? "Public to the Creator community" : signedIn ? "Activate profile to publish" : "Sign in to write")}</small>
-                <button type="submit" disabled={!postBody.trim() || !myProfile?.profilePublic || postBusy}>{postBusy ? "Posting…" : "Post to feed"}</button>
+                {myProfile?.profilePublic
+                  ? <button type="submit" disabled={!postBody.trim() || postBusy}>{postBusy ? "Posting…" : "Post to feed"}</button>
+                  : <a className="creator-hub__composer-action" href={signedIn ? accountProfileUrl : "/#/account"}>{signedIn ? "Publish profile" : "Sign in to post"} <span aria-hidden="true">→</span></a>}
               </div>
             </form>
           </section>
@@ -461,47 +452,6 @@ export default function CreatorHubPage() {
             <div><HubIcon name="spaces" /><dt>Your Spaces</dt><dd>{signedIn ? mySpaces.length : "—"}</dd></div>
             <div><HubIcon name="account" /><dt>Public profile</dt><dd>{myProfile?.profilePublic ? "Live" : profileStatus === "loading" ? "Syncing" : profileStatus === "error" ? "Retry" : signedIn ? "Draft" : "Sign in"}</dd></div>
           </dl>
-
-          <section className="creator-hub__work" aria-labelledby="creator-spaces-title">
-            <div className="creator-hub__work-main">
-              <div className="creator-hub__compact-heading"><div><p className="eyebrow">Spaces first</p><h2 id="creator-spaces-title">Work moving now.</h2></div><a href="/#/create">Create a Space <span>↗</span></a></div>
-              {featuredSpaces.length ? <div className="creator-hub__space-grid">{featuredSpaces.slice(0, 4).map((space) => (
-                <a key={`${space.id}:${space.updatedAt ?? "space"}`} href={spaceCanonicalUrl(space.id)}>
-                  <div><SpaceCover src={space.coverUrl} /></div>
-                  <small>{space.handle ? `@${space.handle}` : space.creator}</small>
-                  <h3>{space.title}</h3><span>Enter Space →</span>
-                </a>
-              ))}</div> : <div className="creator-hub__empty"><HubIcon name="spaces" /><h3>No public Space update yet.</h3><p>Create, publish and share the first place in this view.</p><a href="/#/create">Create a Space →</a></div>}
-            </div>
-
-            <aside className="creator-hub__dashboard-rail">
-              <section id="creator-spaces" aria-labelledby="my-spaces-title">
-                <div><p className="eyebrow" id="my-spaces-title">My Spaces</p><a href={accountOverviewUrl}>View all →</a></div>
-                {visibleMySpaces.length ? <div className="creator-hub__my-spaces">{visibleMySpaces.map((space) => (
-                  <a key={space.id} href={spaceCanonicalUrl(space.id)}>
-                    <span><SpaceCover src={discoverCoverSource(space)} fallback={space.title.slice(0, 1)} /></span>
-                    <div><strong>{space.title}</strong><small>{space.visibility} · {space.lifecycleStatus}</small></div>
-                  </a>
-                ))}</div> : <p>{signedIn ? "Published Spaces from this account appear here." : "Sign in to return to your published Spaces."}</p>}
-              </section>
-
-              <section className="creator-hub__profile-card" id="creator-profile" aria-labelledby="creator-profile-title">
-                <div><p className="eyebrow" id="creator-profile-title">Creator identity</p><span className={myProfile?.profilePublic ? "is-live" : ""}>{myProfile?.profilePublic ? "✓ Live" : profileStatus === "loading" ? "Syncing" : profileStatus === "error" ? "Sync paused" : signedIn ? "Private" : "Signed out"}</span></div>
-                {signedIn && myProfile?.profilePublic ? <>
-                  <div className="creator-hub__my-identity"><span><CreatorMark creator={myProfile} /></span><div><h3>{myProfile.displayName}</h3><p>@{myProfile.handle}</p></div></div>
-                  {myProfile.bio && <p>{myProfile.bio}</p>}
-                  <nav><a href={creatorCanonicalUrl(myProfile.handle)}>Open public profile <b>↗</b></a><a href={accountProfileUrl}>Edit profile <b>→</b></a></nav>
-                </> : profileStatus === "loading" ? <p>Syncing the Creator identity attached to this account…</p> : profileStatus === "error" ? <><p>{profileNotice}</p><button className="creator-hub__primary-action" type="button" onClick={() => setProfileRefresh((value) => value + 1)}>Retry profile sync <span>→</span></button></> : signedIn ? <>
-                  <h3>Introduce your practice.</h3><p>One public profile connects your Spaces, studio notes and follows.</p>
-                  <button className="creator-hub__primary-action" type="button" disabled={profileBusy} onClick={() => void activateCreatorHub()}>{profileBusy ? "Activating…" : myProfile ? "Make profile public" : "Activate Hub profile"} <span>→</span></button>
-                  <a className="creator-hub__secondary-action" href={accountProfileUrl}>Review in Account settings →</a>
-                  {profileNotice && <small className="creator-hub__profile-notice" aria-live="polite">{profileNotice}</small>}
-                </> : <><h3>Bring your practice into the Hub.</h3><p>Sign in to publish notes, follow Creators and keep your work close.</p><a className="creator-hub__primary-action" href="/#/account">Sign in or create account <span>→</span></a></>}
-              </section>
-
-              {home?.notifications?.length ? <section id="creator-activity" className="creator-hub__notifications"><div><p className="eyebrow">Recent activity</p></div>{home.notifications.slice(0, 4).map((notification) => <a key={notification.id} href={creatorCanonicalUrl(notification.actorHandle)}><strong>{notification.actorDisplayName}</strong><span>{notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? " commented on your post" : " appreciated your post"}</span><time>{relativeDate(notification.createdAt)}</time></a>)}</section> : null}
-            </aside>
-          </section>
 
           <section className="creator-hub__social" id="creator-feed" aria-labelledby="creator-feed-title">
             <div className="creator-hub__section-heading"><div><p className="eyebrow">From the feed</p><h2 id="creator-feed-title">Studio notes.</h2></div><p>Process updates from you and the Creators you follow. Spaces remain the work; notes show how it changes.</p></div>
@@ -520,21 +470,58 @@ export default function CreatorHubPage() {
                     {activePost === post.id && <div className="creator-post__discussion"><form onSubmit={(event) => { event.preventDefault(); void engage(post, "comment"); }}><label><span className="visually-hidden">Comment on this post</span><input value={commentDrafts[post.id] ?? ""} onChange={(event) => setCommentDrafts((value) => ({ ...value, [post.id]: event.target.value.slice(0, 280) }))} placeholder="Add a considered comment…" disabled={!signedIn || Boolean(post.demo)} /></label><button type="submit" disabled={!(commentDrafts[post.id] ?? "").trim() || !signedIn || Boolean(post.demo)}>Post</button></form>{(newComments[post.id] ?? []).map((comment) => <p key={comment.id}><strong>{comment.displayName}</strong> {comment.body}</p>)}</div>}
                     {postActions[post.id] && <small className="creator-post__notice" aria-live="polite">{postActions[post.id]}</small>}
                   </article>
-                )) : <div className="creator-hub__empty creator-hub__empty--feed"><HubIcon name="feed" /><h3>Your feed starts with real work.</h3><p>{signedIn ? "Follow a public Creator or publish a studio note. New Spaces and notes will appear here." : "Sign in, follow a Creator and return when their work changes."}</p><a href="#creator-directory">Discover Creators →</a></div>}
+                )) : <div className="creator-hub__empty creator-hub__empty--feed"><HubIcon name="feed" /><h3>{homeStatus === "error" ? "Feed connection paused." : homeStatus === "loading" ? "Loading your circle…" : "Your feed starts with real work."}</h3><p>{homeStatus === "error" ? "Your work is safe. Retry the live community feed." : signedIn ? "Follow a public Creator or publish a studio note. New Spaces and notes will appear here." : "Sign in, follow a Creator and return when their work changes."}</p>{homeStatus === "error" ? <button type="button" onClick={() => setProfileRefresh((value) => value + 1)}>Retry feed →</button> : <a href="/creators">Discover Creators →</a>}</div>}
               </div>
-              <aside className="creator-hub__rail"><p className="eyebrow">Following</p><h3>{home?.following.length ? "Your circle" : "Build your circle"}</h3>{home?.following.length ? <div className="creator-hub__following" aria-label="Creators you follow">{home.following.map((creator) => <a key={creator.handle} href={creatorCanonicalUrl(creator.handle)}><span><CreatorMark creator={creator} /></span><div><strong>{creator.displayName}</strong><small>@{creator.handle}</small></div><b>→</b></a>)}</div> : <p>Follow a public Creator and their newest notes and Spaces will collect here.</p>}<a href="#creator-directory">Discover Creators <span>↓</span></a></aside>
+              <aside className="creator-hub__rail"><p className="eyebrow">Following</p><h3>{home?.following.length ? "Your circle" : "Build your circle"}</h3>{home?.following.length ? <div className="creator-hub__following" aria-label="Creators you follow">{home.following.map((creator) => <a key={creator.handle} href={creatorCanonicalUrl(creator.handle)}><span><CreatorMark creator={creator} /></span><div><strong>{creator.displayName}</strong><small>@{creator.handle}</small></div><b>→</b></a>)}</div> : <p>Follow a public Creator and their newest notes and Spaces will collect here.</p>}<a href="/creators">Discover Creators <span>↗</span></a></aside>
             </div>
           </section>
 
-          <section className="creator-hub__directory" id="creator-directory" aria-labelledby="creator-directory-title">
-            <div className="creator-hub__section-heading"><div><p className="eyebrow">Public directory</p><h2 id="creator-directory-title">Find the work.</h2></div><span>{creatorResults.length} profiles</span></div>
-            <div className={`creator-hub__search-wrap ${query.trim() ? "has-query" : ""}`}>
-              <label className="creator-hub__search"><span>Search Spaces or Creators</span><HubIcon name="search" /><input type="text" role="searchbox" inputMode="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Space title, Creator or @handle" autoComplete="off" />{query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear public directory search">×</button> : null}</label>
-              {query.trim() && <div className="creator-hub__search-results" aria-live="polite"><p>{directory.spaces.length || directory.creators.length ? `${directory.spaces.length} Spaces · ${directory.creators.length} Creators` : "No public Spaces or Creators found"}</p>{directory.spaces.slice(0, 4).map((space) => <a className="is-space" key={space.id} href={spaceCanonicalUrl(space.id)}><span><SpaceCover src={discoverCoverSource(space)} fallback={space.title.slice(0, 1)} /></span><strong>{space.title}</strong><small>Space · {space.artist}</small><b>→</b></a>)}{directory.creators.slice(0, 4).map((creator) => <a key={creator.handle} href={creatorCanonicalUrl(creator.handle)}><span><CreatorMark creator={creator} /></span><strong>{creator.displayName}</strong><small>@{creator.handle}</small><b>→</b></a>)}</div>}
+          <section className="creator-hub__work" aria-labelledby="creator-spaces-title">
+            <div className="creator-hub__work-main">
+              <div className="creator-hub__compact-heading"><div><p className="eyebrow">Your work</p><h2 id="creator-spaces-title">Spaces moving now.</h2></div></div>
+              {featuredSpaces.length ? <div className="creator-hub__space-grid">{featuredSpaces.slice(0, 4).map((space) => (
+                <a key={`${space.id}:${space.updatedAt ?? "space"}`} href={spaceCanonicalUrl(space.id)}>
+                  <div><SpaceCover src={space.coverUrl} /></div>
+                  <small>{space.handle ? `@${space.handle}` : space.creator}</small>
+                  <h3>{space.title}</h3><span>Enter Space →</span>
+                </a>
+              ))}</div> : <div className="creator-hub__empty"><HubIcon name="spaces" /><h3>No public Space update yet.</h3><p>Create, publish and share the first place in this view.</p><a href="/#/create">Create a Space →</a></div>}
             </div>
-            {status === "loading" && <p>Preparing Creator Hub…</p>}
-            {status === "error" && <p>The live directory is temporarily unavailable.</p>}
-            <div className="creator-hub__grid">{creatorResults.map((creator) => <a key={creator.handle} href={creatorCanonicalUrl(creator.handle)}><div className="creator-hub__directory-top"><span><CreatorMark creator={creator} /></span>{creator.demo && <small>Demo profile</small>}</div><p className="creator-hub__handle">@{creator.handle}</p><h3>{creator.displayName}</h3><p>{creator.bio || "Public Creator on LIEUVA"}</p><div><span>{creator.followerCount ?? 0} followers</span><b>View profile →</b></div></a>)}</div>
+
+            <aside className="creator-hub__dashboard-rail">
+              <section id="creator-activity" className="creator-hub__notifications" aria-labelledby="creator-activity-title">
+                <div><p className="eyebrow" id="creator-activity-title">Notifications</p><span>{notificationCount ? `${notificationCount} recent` : "Up to date"}</span></div>
+                {homeStatus === "loading" ? <p role="status">Checking your activity…</p>
+                  : homeStatus === "error" ? <p>Notifications could not sync. Retry from the Feed.</p>
+                    : !signedIn ? <p>Sign in to see follows, comments and appreciations.</p>
+                      : notifications.length ? notifications.map((notification) => <a key={notification.id} href={creatorCanonicalUrl(notification.actorHandle)} aria-label={`${notification.actorDisplayName}${notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? " commented on your studio note" : " appreciated your studio note"}, ${relativeDate(notification.createdAt)}`}><strong>{notification.actorDisplayName}</strong><span>{notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? " commented on your studio note" : " appreciated your studio note"}</span><time dateTime={notification.createdAt}>{relativeDate(notification.createdAt)}</time></a>)
+                        : <p>No notifications yet. New follows, comments and appreciations will appear here.</p>}
+              </section>
+
+              <section id="creator-spaces" aria-labelledby="my-spaces-title">
+                <div><p className="eyebrow" id="my-spaces-title">My Spaces</p><a href={accountOverviewUrl}>View all →</a></div>
+                {visibleMySpaces.length ? <div className="creator-hub__my-spaces">{visibleMySpaces.map((space) => (
+                  <a key={space.id} href={spaceCanonicalUrl(space.id)}>
+                    <span><SpaceCover src={discoverCoverSource(space)} fallback={space.title.slice(0, 1)} /></span>
+                    <div><strong>{space.title}</strong><small>{space.visibility} · {space.lifecycleStatus}</small></div>
+                  </a>
+                ))}</div> : <p>{mySpacesStatus === "error" ? "Spaces could not sync. Retry from your Account." : mySpacesStatus === "loading" ? "Syncing your Spaces…" : signedIn ? "Published Spaces from this account appear here." : "Sign in to return to your published Spaces."}</p>}
+              </section>
+
+              <section className="creator-hub__profile-card" id="creator-profile" aria-labelledby="creator-profile-title">
+                <div><p className="eyebrow" id="creator-profile-title">Creator identity</p><span className={myProfile?.profilePublic ? "is-live" : ""}>{myProfile?.profilePublic ? "✓ Live" : profileStatus === "loading" ? "Syncing" : profileStatus === "error" ? "Sync paused" : signedIn ? "Private" : "Signed out"}</span></div>
+                {signedIn && myProfile?.profilePublic ? <>
+                  <div className="creator-hub__my-identity"><span><CreatorMark creator={myProfile} /></span><div><h3>{myProfile.displayName}</h3><p>@{myProfile.handle}</p></div></div>
+                  {myProfile.bio && <p>{myProfile.bio}</p>}
+                  <nav><a href={creatorCanonicalUrl(myProfile.handle)}>Open public profile <b>↗</b></a><a href={accountProfileUrl}>Edit profile <b>→</b></a></nav>
+                </> : profileStatus === "loading" ? <p>Syncing the Creator identity attached to this account…</p> : profileStatus === "error" ? <><p>{profileNotice}</p><button className="creator-hub__primary-action" type="button" onClick={() => setProfileRefresh((value) => value + 1)}>Retry profile sync <span>→</span></button></> : signedIn ? <>
+                  <h3>Introduce your practice.</h3><p>One public profile connects your Spaces, studio notes and follows.</p>
+                  <button className="creator-hub__primary-action" type="button" disabled={profileBusy} onClick={() => void activateCreatorHub()}>{profileBusy ? "Activating…" : myProfile ? "Make profile public" : "Activate Hub profile"} <span>→</span></button>
+                  <a className="creator-hub__secondary-action" href={accountProfileUrl}>Review in Account settings →</a>
+                  {profileNotice && <small className="creator-hub__profile-notice" aria-live="polite">{profileNotice}</small>}
+                </> : <><h3>Bring your practice into the Hub.</h3><p>Sign in to publish notes, follow Creators and keep your work close.</p><a className="creator-hub__primary-action" href="/#/account">Sign in or create account <span>→</span></a></>}
+              </section>
+            </aside>
           </section>
         </div>
       </div>

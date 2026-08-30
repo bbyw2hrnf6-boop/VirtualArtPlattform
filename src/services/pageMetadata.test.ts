@@ -11,6 +11,22 @@ describe("page metadata policy", () => {
       expect(pageMetadataPolicy(page).robots).toBe("noindex,nofollow");
   });
 
+  it("keeps the public Creator directory indexable after the client application mounts", () => {
+    expect(pageMetadataPolicy("creators")).toMatchObject({
+      title: "Creators — Directory | LIEUVA",
+      canonical: "https://lieuva.com/creators",
+      robots: "index,follow,max-image-preview:large",
+    });
+  });
+
+  it("keeps the personalized Creator Hub out of search with a self-canonical URL", () => {
+    expect(pageMetadataPolicy("creator-hub")).toMatchObject({
+      title: "Creator Hub | LIEUVA",
+      canonical: "https://lieuva.com/creator-hub",
+      robots: "noindex,nofollow,noarchive",
+    });
+  });
+
   it("keeps public Space metadata specific and protected Space metadata generic", () => {
     const publicPolicy = publishedSpaceMetadataPolicy({
       id: "material-futures-123",

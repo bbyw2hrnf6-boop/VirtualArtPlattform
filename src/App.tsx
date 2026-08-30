@@ -80,10 +80,10 @@ import {
   applicationRootUrl,
   creatorCanonicalUrl,
   hashApplicationUrl,
+  legacyCreatorHubRedirectPath,
   matchCreatorRoute,
   matchSpaceRoute,
   spaceCanonicalUrl,
-  spacePath,
 } from "./services/spaceRoutes";
 import { useDialogFocus } from "./hooks/useDialogFocus";
 import { AccountButton, AccountPage } from "./features/account/AccountDialog";
@@ -138,12 +138,14 @@ const PitchSections = lazy(() =>
     default: module.PitchSections,
   })),
 );
+const ExploreSpacesMenu = lazy(() => import("./features/landing/ExploreSpacesMenu"));
 const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
 const CreatorProfilePage = lazy(() => import("./features/creator/CreatorProfilePage"));
 const CreatorHubPage = lazy(() => import("./features/creator/CreatorHubPage"));
+const CreatorDirectoryPage = lazy(() => import("./features/creator/CreatorDirectoryPage"));
 
 type Route = {
-  page: "home" | "create" | "demo" | "gallery" | "creator" | "creators" | "data" | "auth-action" | "account" | "space-not-found";
+  page: "home" | "create" | "demo" | "gallery" | "creator" | "creators" | "creator-hub" | "data" | "auth-action" | "account" | "space-not-found";
   id?: string;
   handle?: string;
   template?: TemplateId;
@@ -303,7 +305,12 @@ const routeFromLocation = (): Route => {
   if (creatorRoute?.kind === "malformed") return { page: "space-not-found" };
   if (creatorRoute?.kind === "creator")
     return { page: "creator", handle: creatorRoute.handle };
-  if (creatorRoute?.kind === "hub") return { page: "creators" };
+  if (creatorRoute?.kind === "directory") {
+    return legacyCreatorHubRedirectPath(location.pathname, location.hash)
+      ? { page: "creator-hub" }
+      : { page: "creators" };
+  }
+  if (creatorRoute?.kind === "hub") return { page: "creator-hub" };
   const hash = location.hash.replace(/^#/, "");
   if (hash === "/create") return { page: "create" };
   const templateMatch =
@@ -333,6 +340,9 @@ const navigate = (path: string) => {
     return;
   } else if (path === "/creators") {
     location.assign(`${new URL(applicationRootUrl(location.href)).origin}/creators`);
+    return;
+  } else if (path === "/creator-hub") {
+    location.assign(`${new URL(applicationRootUrl(location.href)).origin}/creator-hub`);
     return;
   } else if (path.startsWith("/creators/")) {
     const handle = path.slice("/creators/".length);
@@ -366,7 +376,7 @@ function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () =>
       <nav>
         <span className="preview-status">{PRODUCT_BRAND.previewLabel}</span>
         {onSearch && <button className="site-header__search" onClick={onSearch} aria-label="Search public Spaces and Creators"><span>Search</span> <i aria-hidden="true">⌕</i></button>}
-        <button className="site-header__creators" onClick={() => navigate("/creators")}>Creator Hub</button>
+        <a className="site-header__creators" href="/creator-hub">CREATOR HUB</a>
         <button className="site-header__demo" onClick={() => landingNavigate("/demo", "landing_example_entered", "header")}>{PRODUCT_BRAND.secondaryCta}</button>
         <AccountButton light={light} />
         <button className="site-header__create" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "header")}>
@@ -379,16 +389,16 @@ function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () =>
   );
 }
 
-function BrandHero() {
+function BrandHero({ onExplore }: { onExplore: () => void }) {
   return (
     <section className="brand-hero brand-hero--follow" aria-labelledby="brand-hero-title">
       <p className="eyebrow"><i aria-hidden="true" /> Live on LIEUVA</p>
       <h1 id="brand-hero-title">Follow the work.</h1>
       <p>Enter published Spaces. Meet the Creators behind them. Follow new rooms and studio notes as the work develops.</p>
       <div className="brand-hero__actions">
-        <a className="button button--light" href="#discover-spaces">Explore Spaces <span>↓</span></a>
+        <button className="button button--light" type="button" onClick={onExplore} aria-haspopup="dialog">Explore Spaces <span>↓</span></button>
         <button className="text-link" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "hero")}>{PRODUCT_BRAND.primaryCta} →</button>
-        <button className="text-link brand-hero__hub" onClick={() => navigate("/creators")}>Creator Hub ↗</button>
+        <a className="text-link brand-hero__hub" href="/creator-hub">Creator Hub ↗</a>
       </div>
       <ol className="brand-hero__journey" aria-label="LIEUVA community journey">
         <li><b>01</b> Spaces</li>
@@ -431,7 +441,7 @@ function GlobalDirectorySearch({ open, onClose }: { open: boolean; onClose: () =
         <p className="directory-dialog__status" role="status">{status === "idle" || status === "loading" ? "Opening public directory…" : status === "error" ? "Directory temporarily unavailable." : searching ? `${results.spaces.length} Spaces · ${results.creators.length} Creators` : "Search all public Spaces and Creator profiles."}</p>
         {searching && <div className="directory-dialog__results">
           <section aria-labelledby="directory-creators-title"><h3 id="directory-creators-title">Creators</h3>{results.creators.slice(0, 6).map((creator) => <a key={creator.handle} href={creatorCanonicalUrl(creator.handle, location.href)}><span>{creator.imagePresent ? <img src={creatorImageUrl(creator.handle)} alt="" /> : creator.displayName[0]}</span><div><strong>{creator.displayName}</strong><small>@{creator.handle} · {creator.followerCount ?? 0} followers</small></div><b>→</b></a>)}</section>
-          <section aria-labelledby="directory-spaces-title"><h3 id="directory-spaces-title">Spaces</h3>{results.spaces.slice(0, 6).map((space) => <button key={space.id} onClick={() => navigate(spacePath(space.id))}><span>{space.title[0]}</span><div><strong>{space.title}</strong><small>{space.artist}</small></div><b>→</b></button>)}</section>
+          <section aria-labelledby="directory-spaces-title"><h3 id="directory-spaces-title">Spaces</h3>{results.spaces.slice(0, 6).map((space) => <a key={space.id} href={spaceCanonicalUrl(space.id, location.href)}><span>{space.title[0]}</span><div><strong>{space.title}</strong><small>{space.artist}</small></div><b>→</b></a>)}</section>
           {!results.spaces.length && !results.creators.length && <p className="directory-dialog__empty">No public result. Try another title, Creator or @handle.</p>}
         </div>}
       </div>
@@ -509,6 +519,7 @@ function LandingProductProof() {
           ))}
         </ol>
       </div>
+      <RoomShowcase embedded />
     </section>
   );
 }
@@ -565,288 +576,26 @@ function DeferredScrollStory() {
     </div>
   );
 }
-
-function DiscoverGalleries() {
-  const [galleries, setGalleries] = useState<GalleryRecord[]>([]);
-  const [creators, setCreators] = useState<PublicCreatorDirectoryEntry[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [ownerId, setOwnerId] = useState<string | null>(null);
-  const [removingId, setRemovingId] = useState<string>();
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    "idle",
-  );
-  const [page, setPage] = useState(0);
-  const [discoveredAt] = useState(Date.now);
-  const section = useRef<HTMLElement>(null);
-  const requested = useRef(false);
-  const searchId = useId();
-  const load = useCallback(() => {
-    trackTelemetry("discover_viewed", { source: "landing" });
-    requested.current = true;
-    setStatus("loading");
-    void galleryRepository
-      .currentUserId()
-      .then(setOwnerId)
-      .catch(() => setOwnerId(null));
-    void galleryRepository
-      .discover()
-      .then((items) => {
-        setGalleries(items);
-        setStatus("ready");
-      })
-      .catch((error) => {
-        console.error("Discover unavailable", error);
-        setStatus("error");
-      });
-    void loadPublicCreatorDirectory()
-      .then(({ creators: publicCreators }) => setCreators(publicCreators))
-      .catch((error) => console.error("Creator search unavailable", error));
-  }, []);
-  useEffect(() => {
-    const target = section.current;
-    if (!target || requested.current) return undefined;
-    if (!("IntersectionObserver" in window)) {
-      const frame = requestAnimationFrame(load);
-      return () => cancelAnimationFrame(frame);
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting) || requested.current)
-          return;
-        observer.disconnect();
-        load();
-      },
-      { rootMargin: "600px 0px" },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [load]);
-  const directory = useMemo(
-    () => searchPublicDirectory(galleries, creators, searchQuery),
-    [creators, galleries, searchQuery],
-  );
-  const updateSearch = (value: string) => {
-    setSearchQuery(value);
-    setPage(0);
-  };
-  const pageCount = Math.max(1, Math.ceil(directory.spaces.length / 3));
-  const visiblePage = Math.min(page, pageCount - 1);
-  const visibleGalleries = directory.spaces.slice(
-    visiblePage * 3,
-    visiblePage * 3 + 3,
-  );
-  const searching = searchQuery.trim().length > 0;
-  const showEmptyDirectory = !searching && !galleries.length;
-  const removeGallery = async (gallery: GalleryRecord) => {
-    if (
-      !window.confirm(
-        `Remove “${gallery.title}” from Discover? This cannot be undone.`,
-      )
-    )
-      return;
-    setRemovingId(gallery.id);
-    try {
-      await galleryRepository.delete(gallery.id);
-      setGalleries((current) =>
-        current.filter((item) => item.id !== gallery.id),
-      );
-    } catch (error) {
-      console.error("Gallery deletion failed", error);
-      alert(
-        "The Space could not be removed. Deploy the updated Firestore rules, then try again.",
-      );
-    } finally {
-      setRemovingId(undefined);
-    }
-  };
-  return (
-    <section ref={section} className="discover" id="discover-spaces">
-      <div className="discover-heading">
-        <div>
-          <p className="eyebrow">Live from {PRODUCT_BRAND.name}</p>
-          <h2>
-            Discover
-            <br />
-            <em>Spaces.</em>
-          </h2>
-        </div>
-        <div className="discover-intro">
-          <p>
-            Selected public Spaces by creators, studios and institutions using {PRODUCT_BRAND.name}.
-            Enter each presentation directly in your browser.
-          </p>
-          {directory.spaces.length > 3 && (
-            <div
-              className="discover-controls"
-              role="group"
-              aria-label="Browse public Spaces"
-            >
-              <span>
-                {String(visiblePage + 1).padStart(2, "0")} /{" "}
-                {String(pageCount).padStart(2, "0")}
-              </span>
-              <button
-                onClick={() => setPage(Math.max(0, visiblePage - 1))}
-                disabled={visiblePage === 0}
-                aria-label="Previous Spaces"
-              >
-                ←
-              </button>
-              <button
-                onClick={() =>
-                  setPage(Math.min(pageCount - 1, visiblePage + 1))
-                }
-                disabled={visiblePage === pageCount - 1}
-                aria-label="Next Spaces"
-              >
-                →
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="discover-search">
-        <label htmlFor={searchId}>Search public Spaces or Creators</label>
-        <div>
-          <input
-            id={searchId}
-            type="search"
-            value={searchQuery}
-            onChange={(event) => updateSearch(event.target.value)}
-            placeholder="Space title, creator name or @handle"
-            autoComplete="off"
-          />
-          {searching && (
-            <button type="button" onClick={() => updateSearch("")} aria-label="Clear search">×</button>
-          )}
-        </div>
-        <p role="status" aria-live="polite">
-          {searching
-            ? `${directory.spaces.length} Space${directory.spaces.length === 1 ? "" : "s"} · ${directory.creators.length} Creator${directory.creators.length === 1 ? "" : "s"}`
-            : "Search across the public LIEUVA directory."}
-        </p>
-      </div>
-      {searching && directory.creators.length > 0 && (
-        <div className="discover-creators" aria-label="Creator search results">
-          {directory.creators.map((creator) => (
-            <a key={creator.handle} href={creatorCanonicalUrl(creator.handle, location.href)}>
-              <span aria-hidden="true">
-                {creator.imagePresent
-                  ? <img src={creatorImageUrl(creator.handle)} alt="" loading="lazy" decoding="async" />
-                  : creator.displayName.slice(0, 1).toUpperCase()}
-              </span>
-              <div><strong>{creator.displayName}</strong><small>@{creator.handle} · {creator.followerCount ?? 0} followers</small></div>
-              <b aria-hidden="true">→</b>
-            </a>
-          ))}
-        </div>
-      )}
-      <div
-        className={`discover-grid ${showEmptyDirectory ? "discover-grid--empty" : ""}`}
-      >
-        {showEmptyDirectory && (
-          <div className="discover-empty discover-empty--directory">
-            <p className="eyebrow">Public directory</p>
-            <span>
-              {status === "idle"
-                ? "Public Spaces load here."
-                : status === "loading"
-                  ? "Looking for open Spaces…"
-                  : status === "error"
-                    ? "The directory is taking a pause."
-                    : "Be the first Space in this edition."}
-            </span>
-            <p>
-              {status === "error"
-                ? "Retry the directory without leaving the page."
-                : "Publish a public Space to appear in Discover and Creator search."}
-            </p>
-            <button
-              className="text-link"
-              onClick={status === "error" ? load : () => landingNavigate("/create", "landing_create_cta_clicked", "discover_empty")}
-            >
-              {status === "error" ? "Retry directory →" : `${PRODUCT_BRAND.primaryCta} →`}
-            </button>
-          </div>
-        )}
-        {searching && !directory.spaces.length && !directory.creators.length && (
-          <div className="discover-empty discover-empty--search">
-            <span>No public results.</span>
-            <p>Try a Space title, Creator name or public @handle.</p>
-            <button className="text-link" onClick={() => updateSearch("")}>Clear search →</button>
-          </div>
-        )}
-        {visibleGalleries.map((gallery) => {
-          const cover = gallery.coverSrc;
-          const templateCover = `./assets/templates/${gallery.templateId}-preview.webp`;
-          const days = Math.max(
-            1,
-            Math.ceil(
-              (new Date(gallery.expiresAt).getTime() - discoveredAt) / 86400000,
-            ),
-          );
-          return (
-            <article
-              key={gallery.id}
-              className={`discover-card template-card--${gallery.templateId}`}
-            >
-              <button
-                className="discover-card-main"
-                onClick={() => navigate(spacePath(gallery.id))}
-              >
-                <div className="discover-cover">
-                  <img
-                    src={cover ?? templateCover}
-                    alt={`${gallery.title} room view`}
-                    loading="lazy"
-                    decoding="async"
-                    onError={(event) => {
-                      if (event.currentTarget.dataset.fallback === "true") return;
-                      event.currentTarget.dataset.fallback = "true";
-                      event.currentTarget.src = templateCover;
-                    }}
-                  />
-                  <span>{days <= 30 ? `${days} days left` : "Live Space"}</span>
-                </div>
-                <p>{gallery.artist} · {TEMPLATES.find((item) => item.id === gallery.templateId)?.name}</p>
-                <h3>{gallery.title}</h3>
-                <small>Enter Space →</small>
-              </button>
-              <CreatorAttributionLink
-                className="discover-creator-link"
-                spaceId={gallery.id}
-                fallback=""
-              />
-              {gallery.ownerId === ownerId && (
-                <button
-                  className="discover-delete"
-                  disabled={removingId === gallery.id}
-                  onClick={() => removeGallery(gallery)}
-                  aria-label={`Remove ${gallery.title}`}
-                >
-                  {removingId === gallery.id ? "Removing…" : "Remove"}
-                </button>
-              )}
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 function Landing() {
   const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [spacesOpen, setSpacesOpen] = useState(
+    () => new URLSearchParams(location.search).get("explore") === "spaces",
+  );
+  const openSpaces = () => {
+    trackTelemetry("discover_viewed", { source: "landing_menu" });
+    setSpacesOpen(true);
+  };
   return (
     <main className="landing">
       <Header onSearch={() => setDirectoryOpen(true)} />
       <DeferredScrollStory />
-      <BrandHero />
+      <BrandHero onExplore={openSpaces} />
       <GlobalDirectorySearch open={directoryOpen} onClose={() => setDirectoryOpen(false)} />
+      <Suspense fallback={null}>
+        <ExploreSpacesMenu open={spacesOpen} onClose={() => setSpacesOpen(false)} />
+      </Suspense>
       <LandingProductProof />
-      <RoomShowcase />
       <PitchSections />
-      <DiscoverGalleries />
       <section className="closing">
         <p className="eyebrow">Your next Project starts here</p>
         <h2>
@@ -866,9 +615,9 @@ function Landing() {
   );
 }
 
-function RoomShowcase() {
+function RoomShowcase({ embedded = false }: { embedded?: boolean }) {
   return (
-    <section className="room-showcase" aria-labelledby="room-showcase-title">
+    <div className={`room-showcase ${embedded ? "room-showcase--embedded" : ""}`} aria-labelledby="room-showcase-title">
       <div className="room-showcase-heading">
         <p className="eyebrow">Now build your own</p>
         <h2 id="room-showcase-title">
@@ -921,7 +670,7 @@ function RoomShowcase() {
           </article>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -4482,6 +4231,11 @@ export default function App() {
   const routeKey = `${route.page}:${route.id ?? route.handle ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`;
   const previousRoute = useRef(routeKey);
   useEffect(() => {
+    const redirectPath = legacyCreatorHubRedirectPath(location.pathname, location.hash);
+    if (redirectPath) {
+      location.replace(`${new URL(applicationRootUrl(location.href)).origin}${redirectPath}`);
+      return;
+    }
     const handler = () => setRoute(routeFromLocation());
     addEventListener("hashchange", handler);
     addEventListener("popstate", handler);
@@ -4501,7 +4255,7 @@ export default function App() {
       (route.page === "gallery" && document.querySelector('meta[name="lieuva:space-state"]')) ||
       (route.page === "creator" && document.querySelector('meta[name="lieuva:creator-state"]'));
     if (!deliveredServerMetadata) applyPageMetadata(pageMetadataPolicy(
-      route.page === "gallery" || route.page === "creator" || route.page === "creators" ? "other" : route.page,
+      route.page === "gallery" || route.page === "creator" ? "other" : route.page,
     ));
     if (previousRoute.current === routeKey) return;
     previousRoute.current = routeKey;
@@ -4545,7 +4299,8 @@ export default function App() {
     if (route.page === "account") return <AccountPage />;
     if (route.page === "creator" && route.handle)
       return <CreatorProfilePage handle={route.handle} />;
-    if (route.page === "creators") return <CreatorHubPage />;
+    if (route.page === "creators") return <CreatorDirectoryPage />;
+    if (route.page === "creator-hub") return <CreatorHubPage />;
     if (route.page === "auth-action") return <AuthActionPage />;
     if (route.page === "space-not-found")
       return (

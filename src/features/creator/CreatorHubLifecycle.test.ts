@@ -26,28 +26,32 @@ describe("Creator Hub account lifecycle contract", () => {
     expect(hubSource).toContain("galleryRepository.mine()");
     expect(hubSource).toContain("const posts: CreatorPost[] = home?.posts ?? []");
     expect(hubSource).not.toContain("DEMO_CREATOR_POSTS");
-    expect(hubSource).toContain("Spaces first");
+    expect(hubSource).toContain("Your Spaces lead");
   });
 
-  it("searches both public Spaces and Creators from the Hub directory", () => {
-    expect(hubSource).toContain("searchPublicDirectory(spaces, creators, query)");
-    expect(hubSource).toContain("Search Spaces or Creators");
-    expect(hubSource).toContain("Space title, Creator or @handle");
+  it("keeps the personal Hub separate from the public Creator directory", () => {
+    expect(hubSource).toContain('<a href="/creators"><HubIcon name="search" /> Find Creators</a>');
+    expect(hubSource).toContain('<a href="/creators"><HubIcon name="creators" /> Creators</a>');
+    expect(hubSource).not.toContain('id="creator-directory"');
+    expect(hubSource).not.toContain("searchPublicDirectory(spaces, creators, query)");
   });
 
   it("keeps mobile social navigation complete and opens the matching account surface", () => {
     expect(hubSource).toContain("creator-hub__mobile-account");
     expect(hubSource).toContain('href="#creator-profile"');
     expect(hubSource).toContain('accountSectionUrl("creator"');
-    expect(hubSource).toContain('accountSectionUrl("account"');
+    expect(hubSource).not.toContain('accountSectionUrl("account"');
     expect(hubSource).toContain('aria-current={activeSection === "feed" ? "page" : undefined}');
     expect(hubSource).not.toContain("Draft enabled · activate your profile to publish");
     expect(hubSource).toContain('record.ownerId === sessionUid || record.effectiveRole === "owner"');
   });
 
   it("surfaces only real activity on mobile and isolates comment drafts per post", () => {
-    expect(hubSource).toContain('className="creator-hub__feed-badge"');
-    expect(hubSource).toContain("Feed (${notificationCount} new)");
+    expect(hubSource).toContain("creator-hub__mobile-notifications");
+    expect(hubSource).toContain('href="#creator-activity"');
+    expect(hubSource).toContain('notification.kind === "follow"');
+    expect(hubSource).toContain('notification.kind === "comment"');
+    expect(hubSource).toContain('notification.kind === "reaction"');
     expect(hubSource).toContain("notificationCount ?");
     expect(hubSource).toContain('commentDrafts[post.id] ?? ""');
     expect(hubSource).not.toContain('const [commentBody, setCommentBody]');

@@ -249,7 +249,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           </fieldset>
           <div className="creator-settings__actions">
             <button className="account-primary" disabled={state === "loading" || state === "saving"}>{creatorProfileSaveLabel(published, profile.profilePublic, state === "saving")}</button>
-            {published && <a href="/creators#creator-profile">Open in Creator Hub →</a>}
+            {published && <a href="/creator-hub#creator-profile">Open in Creator Hub →</a>}
             {published && publicUrl && <a href={publicUrl}>View public page ↗</a>}
           </div>
           <p className={`creator-settings__status ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>

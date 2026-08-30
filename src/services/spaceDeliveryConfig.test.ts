@@ -20,11 +20,13 @@ describe("WP5 delivery configuration", () => {
   it("routes clean documents, cards and sitemap through the intended Functions", () => {
     expect(firebase.hosting.public).toBe("dist");
     expect(firebase.hosting.rewrites).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: "/creator-hub{,/**}", function: expect.objectContaining({ functionId: "creatorDocument", region: "europe-west1" }) }),
+      expect.objectContaining({ source: "/creators{,/**}", function: expect.objectContaining({ functionId: "creatorDocument", region: "europe-west1" }) }),
       expect.objectContaining({ source: "/spaces{,/**}", function: expect.objectContaining({ functionId: "spaceDocument", region: "europe-west1" }) }),
       expect.objectContaining({ source: "/space-cards/**", function: expect.objectContaining({ functionId: "spaceCard", region: "europe-west1" }) }),
       expect.objectContaining({ source: "/sitemap.xml", function: expect.objectContaining({ functionId: "spaceSitemap", region: "europe-west1" }) }),
-      expect.objectContaining({ source: "**", destination: "/index.html" }),
     ]));
+    expect(firebase.hosting.rewrites).not.toContainEqual(expect.objectContaining({ source: "**", destination: "/index.html" }));
   });
 
   it("builds the matching hashed app shell before a Functions deployment", () => {

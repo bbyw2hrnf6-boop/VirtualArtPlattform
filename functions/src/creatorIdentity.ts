@@ -3,7 +3,7 @@ export const CREATOR_HANDLE_MAX = 30;
 export const CREATOR_HANDLE_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
 const RESERVED_HANDLES = new Set([
-  "account", "admin", "api", "app", "auth", "create", "creator", "creators",
+  "account", "admin", "api", "app", "auth", "create", "creator", "creator-hub", "creators",
   "data", "demo", "discover", "help", "home", "legal", "login", "logout",
   "lieuva", "moderator", "privacy", "root", "settings", "signin", "signup",
   "sitemap", "space", "spaces", "studio", "support", "system", "terms", "www",
@@ -53,6 +53,12 @@ export type CreatorDelivery =
   | { kind: "public"; profile: PublicCreatorProfile; spaces: PublicCreatorSpace[]; posts: PublicCreatorPost[] }
   | { kind: "not-found"; handle?: string }
   | { kind: "temporary-error"; handle?: string };
+
+export type CreatorDocumentRoute =
+  | { kind: "directory" }
+  | { kind: "hub" }
+  | { kind: "profile"; handle: string }
+  | { kind: "malformed" };
 
 export function normalizeCreatorHandle(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -166,6 +172,19 @@ export function creatorCanonicalUrl(handle: string): string {
   return `https://lieuva.com/creators/${normalized}`;
 }
 
+export function classifyCreatorDocumentRoute(path: string): CreatorDocumentRoute {
+  const normalizedPath = path.replace(/\/+$/, "") || "/";
+  if (normalizedPath === "/creators") return { kind: "directory" };
+  if (normalizedPath === "/creator-hub") return { kind: "hub" };
+  const match = /^\/creators\/([^/]+)$/.exec(normalizedPath);
+  if (!match) return { kind: "malformed" };
+  try {
+    return { kind: "profile", handle: decodeURIComponent(match[1]) };
+  } catch {
+    return { kind: "malformed" };
+  }
+}
+
 function escapeHtml(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
@@ -174,7 +193,7 @@ function stripMetadata(html: string): string {
   return html
     .replace(/<title>[\s\S]*?<\/title>/i, "")
     .replace(/<link\s+[^>]*rel=["']canonical["'][^>]*>/gi, "")
-    .replace(/<meta\s+[^>]*(?:name|property)=["'](?:description|robots|og:type|og:site_name|og:url|og:title|og:description|og:image|og:image:alt|twitter:card|twitter:title|twitter:description|twitter:image)["'][^>]*>/gi, "")
+    .replace(/<meta\s+[^>]*(?:name|property)=["'](?:description|robots|lieuva:creator-state|lieuva:creator-route|og:type|og:site_name|og:url|og:title|og:description|og:image|og:image:alt|og:image:width|og:image:height|og:locale|twitter:card|twitter:title|twitter:description|twitter:image|twitter:image:alt)["'][^>]*>/gi, "")
     .replace(/<script\s+[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, "");
 }
 
@@ -208,29 +227,37 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
     `<meta name="twitter:title" content="${escapeHtml(title)}">`,
     `<meta name="twitter:description" content="${escapeHtml(description)}">`,
     `<meta name="twitter:image" content="${escapeHtml(image)}">`,
+    `<meta name="twitter:image:alt" content="Public Creator profile for ${escapeHtml(profile?.displayName ?? "LIEUVA")}">`,
     ...(profile ? [`<script type="application/ld+json">${JSON.stringify({
       "@context": "https://schema.org",
       "@type": "ProfilePage",
       url: canonical,
       name: profile.displayName,
       description,
+      mainEntity: {
+        "@type": "Person",
+        name: profile.displayName,
+        alternateName: `@${profile.handle}`,
+        url: canonical,
+        ...(profile.imagePresent ? { image } : {}),
+        ...(profile.links.length ? { sameAs: profile.links.map((link) => link.url) } : {}),
+      },
     }).replaceAll("<", "\\u003c")}</script>`] : []),
   ].join("\n    ");
   return stripMetadata(shell).replace("</head>", `    ${tags}\n  </head>`);
 }
 
-/** Server metadata for the Creator Hub itself. The Hub is a real application
- * route, not a missing Creator profile, so direct visits and reloads must keep
- * returning the SPA shell with directory-level metadata. */
-export function renderCreatorHubDocument(shell: string): string {
+/** Indexable server metadata for the public Creator directory. */
+export function renderCreatorDirectoryDocument(shell: string): string {
   const canonical = "https://lieuva.com/creators";
-  const title = "Creator Hub — Community | LIEUVA";
-  const description = "Discover public Creators and Spaces, follow practices, and share updates in the LIEUVA Creator Hub.";
+  const title = "Creators — Directory | LIEUVA";
+  const description = "Discover public Creators and their immersive Spaces in the LIEUVA Creator directory.";
   const image = "https://lieuva.com/assets/demo/aura-hero-gallery.webp";
   const tags = [
     `<title>${title}</title>`,
     `<meta name="description" content="${description}">`,
     `<meta name="robots" content="index,follow,max-image-preview:large">`,
+    `<meta name="lieuva:creator-route" content="directory">`,
     `<link rel="canonical" href="${canonical}">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="LIEUVA">`,
@@ -238,18 +265,47 @@ export function renderCreatorHubDocument(shell: string): string {
     `<meta property="og:title" content="${title}">`,
     `<meta property="og:description" content="${description}">`,
     `<meta property="og:image" content="${image}">`,
-    `<meta property="og:image:alt" content="The LIEUVA Creator community">`,
+    `<meta property="og:image:alt" content="The public LIEUVA Creator directory">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${title}">`,
     `<meta name="twitter:description" content="${description}">`,
     `<meta name="twitter:image" content="${image}">`,
+    `<meta name="twitter:image:alt" content="The public LIEUVA Creator directory">`,
     `<script type="application/ld+json">${JSON.stringify({
       "@context": "https://schema.org",
       "@type": "CollectionPage",
       url: canonical,
-      name: "LIEUVA Creator Hub",
+      name: "LIEUVA Creator directory",
       description,
     }).replaceAll("<", "\\u003c")}</script>`,
+  ].join("\n    ");
+  return stripMetadata(shell).replace("</head>", `    ${tags}\n  </head>`);
+}
+
+/** Noindex server metadata for the personalized Creator Hub application. */
+export function renderCreatorHubDocument(shell: string): string {
+  const canonical = "https://lieuva.com/creator-hub";
+  const title = "Creator Hub | LIEUVA";
+  const description = "Manage your Creator profile, follow practices, and share updates in the LIEUVA Creator Hub.";
+  const image = "https://lieuva.com/assets/demo/aura-hero-gallery.webp";
+  const tags = [
+    `<title>${title}</title>`,
+    `<meta name="description" content="${description}">`,
+    `<meta name="robots" content="noindex,nofollow,noarchive">`,
+    `<meta name="lieuva:creator-route" content="hub">`,
+    `<link rel="canonical" href="${canonical}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="LIEUVA">`,
+    `<meta property="og:url" content="${canonical}">`,
+    `<meta property="og:title" content="${title}">`,
+    `<meta property="og:description" content="${description}">`,
+    `<meta property="og:image" content="${image}">`,
+    `<meta property="og:image:alt" content="The personalized LIEUVA Creator Hub">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${title}">`,
+    `<meta name="twitter:description" content="${description}">`,
+    `<meta name="twitter:image" content="${image}">`,
+    `<meta name="twitter:image:alt" content="The personalized LIEUVA Creator Hub">`,
   ].join("\n    ");
   return stripMetadata(shell).replace("</head>", `    ${tags}\n  </head>`);
 }
