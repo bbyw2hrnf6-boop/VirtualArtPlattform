@@ -1,6 +1,6 @@
 # Danny Hirsch demo delivery files
 
-`danny-gallery.glb` is the full authored exhibition. `danny-gallery-mobile.glb` is its low-tier delivery derivative; the app selects it only when runtime quality detection returns `low`.
+`danny-gallery.glb` is the full authored exhibition. `danny-gallery-mobile.glb` is its compact/mobile delivery derivative; the homepage scroll story selects it for compact interaction layouts, while the gallery runtime also uses it for its low quality tier.
 
 The `danny-emil-finale-v2` desktop and mobile captures are loading and WebGL-failure posters only. They show the corrected material contract: matte plaster walls and marble only on the floor. Once the model is ready, the complete blueprint-to-walk sequence stays inside the live GLB. Superseded non-v2 captures were removed.
 
@@ -13,7 +13,7 @@ SHA-256:
 - Full GLB: `2901b6c7de51612ee21e3c85e6d42bc81697c1978df707b1e9110b3b65fc7a1b`
 - Mobile GLB: `8421fb83e0e74737d5be24d6d096623126cfc9e7f4faf891aa9722b3e465a4cf`
 - Cover: `ed9d32cb2fcef6f3d5b39119ab3955f0222b3b3b37a02b68b2b16db8356b5c1d`
-- Emil finale, desktop: `4035d20e55d9c0ddf9b1d7d2d368f3ae245074466bc66ef9a0765c2e06ff171d`
-- Emil finale, mobile: `cb1a2c9abf758d11f2a1e5fc985f95d723256ba31f716d0ce257a0972ae699a4`
+- Emil finale, desktop: `8f7f9464464856bbf344443f74e03388f68511b0c2e5a27c9ff60b4c9274e8e3`
+- Emil finale, mobile: `566c54195fd088d172503647addd96e2cb02da1d01181586456d443e6bc5963c`
 
 The project-specific rights restrictions in [`ASSET_LICENSES.md`](../../../ASSET_LICENSES.md) apply to both GLBs and the derived stills.

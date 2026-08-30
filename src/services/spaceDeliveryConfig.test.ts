@@ -11,10 +11,15 @@ type HostingRewrite = {
   function?: { functionId: string; region: string };
 };
 
+type HostingHeader = {
+  source: string;
+  headers: Array<{ key: string; value: string }>;
+};
+
 describe("WP5 delivery configuration", () => {
   const firebase = JSON.parse(firebaseSource) as {
     functions: { predeploy: string[] };
-    hosting: { public: string; rewrites: HostingRewrite[] };
+    hosting: { public: string; rewrites: HostingRewrite[]; headers: HostingHeader[] };
   };
 
   it("routes clean documents, cards and sitemap through the intended Functions", () => {
@@ -40,5 +45,18 @@ describe("WP5 delivery configuration", () => {
     expect(robotsSource.trim()).toContain("Sitemap: https://lieuva.com/sitemap.xml");
     expect(indexSource).toContain('<link rel="canonical" href="https://lieuva.com/"');
     expect(indexSource).toContain('href="/site.webmanifest"');
+  });
+
+  it("always revalidates the unhashed application shell", () => {
+    for (const source of ["/", "/index.html"]) {
+      const cacheControl = firebase.hosting.headers
+        .find((rule) => rule.source === source)
+        ?.headers.find((header) => header.key === "Cache-Control")
+        ?.value;
+      expect(cacheControl).toContain("no-cache");
+      expect(cacheControl).toContain("max-age=0");
+      expect(cacheControl).toContain("s-maxage=0");
+      expect(cacheControl).toContain("must-revalidate");
+    }
   });
 });

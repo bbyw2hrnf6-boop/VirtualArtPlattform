@@ -534,8 +534,8 @@ function DeferredScrollStory() {
     };
     const reveal = () => setReady(true);
     if (compact) {
-      // Give mobile navigation, typography and the authored poster the first
-      // frame before Three.js parsing and GLB decoding enter the main thread.
+      // Give mobile navigation and the opening blueprint state the first frame
+      // before Three.js parsing and GLB decoding enter the main thread.
       const handle = window.setTimeout(reveal, 900);
       return () => window.clearTimeout(handle);
     }
@@ -550,14 +550,10 @@ function DeferredScrollStory() {
     <div className="story-deferred">
       {!ready ? (
         <section
-          className="story-placeholder"
+          className="story-placeholder story-placeholder--opening"
           aria-label="Preparing the interactive Space story"
         >
-          <picture aria-hidden="true">
-            <source media="(max-width: 900px)" srcSet="./assets/demo/danny-emil-finale-mobile-v2.webp" />
-            <img src="./assets/demo/danny-emil-finale-v2.webp" alt="" />
-          </picture>
-          <span>Preparing Danny Hirsch Arts…</span>
+          <span>01 / 05 · Preparing the blueprint…</span>
         </section>
       ) : (
       <Suspense

@@ -5,6 +5,7 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { reportApplicationError } from './services/telemetry';
 import { startWebVitals } from './services/webVitals';
 import { canonicalHostRedirectUrl } from './services/spaceRoutes';
+import { resetFreshLandingEntryScroll } from './services/landingEntry';
 import './styles/global.css';
 import './styles/generatedAssets.css';
 import './styles/visitorControls.css';
@@ -16,6 +17,7 @@ const canonicalRedirect = canonicalHostRedirectUrl(window.location.href);
 if (canonicalRedirect) {
   window.location.replace(canonicalRedirect);
 } else {
+  resetFreshLandingEntryScroll();
   startWebVitals();
   addEventListener('error', (event) => reportApplicationError(event.error, 'window_error'));
   addEventListener('unhandledrejection', (event) => reportApplicationError(event.reason, 'unhandled_rejection'));

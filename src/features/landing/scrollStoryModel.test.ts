@@ -6,6 +6,8 @@ import {
   isMisplacedMarble,
   storyCamera,
   storyFrame,
+  storyScrollProgress,
+  visibleStoryEyebrow,
 } from "./scrollStoryModel";
 
 describe("Danny scroll-story material contract", () => {
@@ -39,6 +41,29 @@ describe("Danny scroll-story material contract", () => {
 });
 
 describe("Emil story progression", () => {
+  it("renumbers the five visible compact chapters without legacy gaps", () => {
+    const legacyEyebrows = [
+      "01 · Blueprint",
+      "02 · Build",
+      "04 · Artwork",
+      "06 · Camera and visitor",
+      "08 · DannyHirschArts",
+    ];
+    expect(legacyEyebrows.map(visibleStoryEyebrow)).toEqual([
+      "01 · Blueprint",
+      "02 · Build",
+      "03 · Artwork",
+      "04 · Camera and visitor",
+      "05 · DannyHirschArts",
+    ]);
+  });
+
+  it("keeps reduced-motion visitors at chapter one instead of auto-entering the room", () => {
+    expect(storyScrollProgress(8_000, 2_000, 6_000, true)).toBe(0);
+    expect(storyFrame(storyScrollProgress(8_000, 2_000, 6_000, true)).chapter).toBe(0);
+    expect(storyScrollProgress(5_000, 2_000, 6_000)).toBe(0.5);
+  });
+
   it("builds floor before wall, wall before ceiling, then resolves to the visitor finale", () => {
     expect(storyFrame(0.15).floor).toBeGreaterThan(0);
     expect(storyFrame(0.15).wall).toBe(0);

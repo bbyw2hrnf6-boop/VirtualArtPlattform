@@ -15,7 +15,9 @@ import {
   range,
   storyCamera,
   storyFrame,
+  storyScrollProgress,
   type StoryPart,
+  visibleStoryEyebrow,
 } from "./scrollStoryModel";
 import {
   VISITOR_KEYBOARD_HINT,
@@ -171,9 +173,20 @@ export function ScrollGalleryStory() {
     if (typeof window === "undefined") return false;
     return usesCompactInteractionLayout() || emilStoryCompleted();
   });
-  const storyChapters = useMemo(() => condensed
-    ? CONDENSED_CHAPTER_INDEXES.map((sourceIndex) => ({ sourceIndex, chapter: CHAPTERS[sourceIndex] }))
-    : CHAPTERS.map((chapter, sourceIndex) => ({ sourceIndex, chapter })), [condensed]);
+  const storyChapters = useMemo(() => {
+    const chapters = condensed
+      ? CONDENSED_CHAPTER_INDEXES.map((sourceIndex) => ({ sourceIndex, chapter: CHAPTERS[sourceIndex] }))
+      : CHAPTERS.map((chapter, sourceIndex) => ({ sourceIndex, chapter }));
+    return chapters.map(({ sourceIndex, chapter }, visibleIndex) => ({
+      sourceIndex,
+      chapter: {
+        ...chapter,
+        eyebrow: condensed
+          ? visibleStoryEyebrow(chapter.eyebrow, visibleIndex)
+          : chapter.eyebrow,
+      },
+    }));
+  }, [condensed]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -593,7 +606,9 @@ export function ScrollGalleryStory() {
     );
 
     const renderProgress = (rawProgress: number) => {
-      const progress = reducedMotion ? 1 : THREE.MathUtils.clamp(rawProgress, 0, 1);
+      // Reduced-motion selection is resolved by storyScrollProgress. Never
+      // override its safe opening frame with the old interactive finale here.
+      const progress = THREE.MathUtils.clamp(rawProgress, 0, 1);
       const state = storyFrame(progress);
       const stage = buildStage(progress);
       section.style.setProperty("--sgs-progress", progress.toFixed(4));
@@ -700,9 +715,12 @@ export function ScrollGalleryStory() {
     const renderFrame = (frameAt: number) => {
       frameRequest = 0;
       resizeRenderer();
-      targetProgress = reducedMotion
-        ? 1
-        : THREE.MathUtils.clamp((window.scrollY - storyTop) / storyTravel, 0, 1);
+      targetProgress = storyScrollProgress(
+        window.scrollY,
+        storyTop,
+        storyTravel,
+        reducedMotion,
+      );
       if (targetProgress >= 0.985) rememberEmilStory();
       if (!hasProgress) {
         renderedProgress = targetProgress;

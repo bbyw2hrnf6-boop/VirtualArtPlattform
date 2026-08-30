@@ -19,6 +19,27 @@ export type CameraPose = {
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
+/** Keeps a shortened story numbered as one continuous visible sequence. */
+export function visibleStoryEyebrow(eyebrow: string, visibleIndex: number) {
+  const label = eyebrow.replace(/^\d+\s*·\s*/, "");
+  return `${String(visibleIndex + 1).padStart(2, "0")} · ${label}`;
+}
+
+/**
+ * Resolves document scroll to the cinematic playhead. Reduced-motion users
+ * get the authored opening frame plus the accessible text sequence below it;
+ * they must never be dropped into the interactive finale on page load.
+ */
+export function storyScrollProgress(
+  scrollY: number,
+  storyTop: number,
+  storyTravel: number,
+  reducedMotion = false,
+) {
+  if (reducedMotion) return 0;
+  return clamp01((scrollY - storyTop) / Math.max(1, storyTravel));
+}
+
 export const smoothstep = (value: number) => {
   const t = clamp01(value);
   return t * t * (3 - 2 * t);

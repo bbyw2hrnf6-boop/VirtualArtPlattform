@@ -79,9 +79,15 @@
   display: block;
 }
 
-.sgs[data-room-state="loading"] .sgs__poster,
 .sgs[data-room-state="error"] .sgs__poster {
   opacity: 1;
+}
+
+.sgs[data-room-state="loading"] .sgs__visual {
+  background:
+    linear-gradient(90deg, transparent 49.9%, rgb(217 255 67 / 10%) 50%, transparent 50.1%),
+    linear-gradient(transparent 49.9%, rgb(217 255 67 / 8%) 50%, transparent 50.1%),
+    #0c0f0d;
 }
 
 .sgs__poster img {
