@@ -16,6 +16,8 @@ const liveRoom = (): GalleryRecord => ({
   accessVersion: 1,
   revision: 4,
   lifecycleStatus: "active",
+  exploreListed: true,
+  creatorProfileListed: true,
 });
 
 const localProject = (room: GalleryRecord): StoredGalleryDraft => ({

@@ -80,7 +80,7 @@ export function announceCreatorProfileUpdated(profile: CreatorProfile) {
 export function creatorProfileSaveLabel(published: boolean, nextPublic: boolean, saving = false) {
   if (saving) return "Saving…";
   if (published && nextPublic) return "Save profile changes";
-  if (nextPublic) return "Save and activate Hub profile";
+  if (nextPublic) return "Save and publish profile";
   return published ? "Save and make private" : "Save private draft";
 }
 

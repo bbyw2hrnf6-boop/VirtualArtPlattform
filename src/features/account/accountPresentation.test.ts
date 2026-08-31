@@ -41,6 +41,17 @@ describe("account presentation", () => {
     expect(creatorSettingsSource).not.toContain('<dd>Profile status</dd>');
   });
 
+  it("keeps public visibility separate from homepage and profile placement", () => {
+    expect(accountSource).toContain("galleryRepository.updateDistribution");
+    expect(accountSource).toContain('field: "exploreListed" | "creatorProfileListed"');
+    expect(accountSource).toContain("In Explore Spaces");
+    expect(accountSource).not.toContain("In Discover");
+    expect(creatorSettingsSource).toContain("spaces.filter((space) => space.creatorProfileListed)");
+    expect(creatorSettingsSource).toContain("Spaces on your public profile");
+    expect(creatorSettingsSource).toContain("Space preview image");
+    expect(creatorSettingsSource).not.toContain("Hub profile");
+  });
+
   it("shows only real connected sign-in methods", () => {
     expect(accountSignInMethods(["password", "google.com"]))
       .toEqual(["Email and password", "Google"]);

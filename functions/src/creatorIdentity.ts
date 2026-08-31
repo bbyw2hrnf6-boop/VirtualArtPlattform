@@ -166,6 +166,11 @@ export function creatorFollowTransition(
   return { following: exists, followerCount: count, changed: false };
 }
 
+/** Legacy Spaces predate placement controls and remain visible by default. */
+export function isCreatorProfileSpaceListed(data: Record<string, unknown>): boolean {
+  return data.creatorProfileListed !== false;
+}
+
 export function creatorCanonicalUrl(handle: string): string {
   const normalized = normalizeCreatorHandle(handle);
   if (!normalized) throw new Error("Invalid Creator handle.");
@@ -175,7 +180,8 @@ export function creatorCanonicalUrl(handle: string): string {
 export function classifyCreatorDocumentRoute(path: string): CreatorDocumentRoute {
   const normalizedPath = path.replace(/\/+$/, "") || "/";
   if (normalizedPath === "/creators") return { kind: "directory" };
-  if (normalizedPath === "/creator-hub") return { kind: "hub" };
+  if (normalizedPath === "/creator-hub" || normalizedPath === "/creator-hub/profile")
+    return { kind: "hub" };
   const match = /^\/creators\/([^/]+)$/.exec(normalizedPath);
   if (!match) return { kind: "malformed" };
   try {
@@ -250,8 +256,8 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
 /** Indexable server metadata for the public Creator directory. */
 export function renderCreatorDirectoryDocument(shell: string): string {
   const canonical = "https://lieuva.com/creators";
-  const title = "Creators — Directory | LIEUVA";
-  const description = "Discover public Creators and their immersive Spaces in the LIEUVA Creator directory.";
+  const title = "Creators | LIEUVA";
+  const description = "Explore public Creators and their immersive Spaces in the LIEUVA Creator Hub.";
   const image = "https://lieuva.com/assets/demo/aura-hero-gallery.webp";
   const tags = [
     `<title>${title}</title>`,
@@ -265,17 +271,17 @@ export function renderCreatorDirectoryDocument(shell: string): string {
     `<meta property="og:title" content="${title}">`,
     `<meta property="og:description" content="${description}">`,
     `<meta property="og:image" content="${image}">`,
-    `<meta property="og:image:alt" content="The public LIEUVA Creator directory">`,
+    `<meta property="og:image:alt" content="Public Creators and Spaces in the LIEUVA Creator Hub">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${title}">`,
     `<meta name="twitter:description" content="${description}">`,
     `<meta name="twitter:image" content="${image}">`,
-    `<meta name="twitter:image:alt" content="The public LIEUVA Creator directory">`,
+    `<meta name="twitter:image:alt" content="Public Creators and Spaces in the LIEUVA Creator Hub">`,
     `<script type="application/ld+json">${JSON.stringify({
       "@context": "https://schema.org",
       "@type": "CollectionPage",
       url: canonical,
-      name: "LIEUVA Creator directory",
+      name: "LIEUVA Creators",
       description,
     }).replaceAll("<", "\\u003c")}</script>`,
   ].join("\n    ");

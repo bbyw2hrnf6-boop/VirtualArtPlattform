@@ -54,6 +54,7 @@ import {
   isOwnedGalleryStoragePath,
 } from "./galleryStoragePaths";
 import type {
+  GalleryDistribution,
   GalleryEditTarget,
   GalleryMember,
   GalleryRole,
@@ -141,7 +142,7 @@ async function createThumbnail(source?: string) {
     canvas.height = Math.max(1, Math.round(image.height * ratio));
     const context = canvas.getContext("2d");
     if (!context)
-      throw new Error("The Space cover could not be prepared in this browser.");
+      throw new Error("The Space preview image could not be prepared in this browser.");
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     for (const quality of [0.76, 0.64, 0.52, 0.42]) {
       candidate = canvas.toDataURL("image/webp", quality);
@@ -358,6 +359,8 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       const ownerId = owner.uid;
       const verifiedAccount = !owner.isAnonymous && owner.emailVerified;
       const visibility = options.visibility ?? "public";
+      const exploreListed = options.exploreListed ?? true;
+      const creatorProfileListed = options.creatorProfileListed ?? false;
       if (!verifiedAccount)
         throw new Error(
           "Sign in with Google or create and verify a LIEUVA account before publishing. Your Project and Walk Preview remain available.",
@@ -439,6 +442,8 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         visibility,
         retention,
         accessVersion: 1,
+        exploreListed,
+        creatorProfileListed,
         revision: 1,
         updatedAt: publishedAt,
         lifecycleStatus: "active",
@@ -454,6 +459,8 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         visibility,
         retention,
         accessVersion: 1,
+        exploreListed,
+        creatorProfileListed,
         revision: 1,
         updatedAt: now.toISOString(),
         lifecycleStatus: "active",
@@ -595,9 +602,14 @@ export class FirebaseGalleryRepository implements GalleryRepository {
           visibility: current.visibility,
           retention: current.retention,
           accessVersion: current.accessVersion,
+          exploreListed: current.exploreListed,
+          creatorProfileListed: current.creatorProfileListed,
           revision: nextRevision,
           updatedAt: serverTimestamp(),
           lifecycleStatus: current.lifecycleStatus,
+          ...(current.discoverEligible !== undefined
+            ? { discoverEligible: current.discoverEligible }
+            : {}),
         });
       });
       return {
@@ -611,6 +623,8 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         visibility: current.visibility,
         retention: current.retention,
         accessVersion: current.accessVersion,
+        exploreListed: current.exploreListed,
+        creatorProfileListed: current.creatorProfileListed,
         revision: nextRevision,
         updatedAt: updatedAt.toISOString(),
         effectiveRole: role,
@@ -917,6 +931,8 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         retention: gallery.retention,
         accessVersion: gallery.accessVersion,
         revision: gallery.revision,
+        exploreListed: gallery.exploreListed,
+        creatorProfileListed: gallery.creatorProfileListed,
         role,
       },
     };
@@ -1038,6 +1054,19 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       galleryId: id,
       action,
       ...(visibility ? { visibility } : {}),
+    });
+  }
+
+  async updateDistribution(
+    id: string,
+    distribution: GalleryDistribution,
+  ): Promise<void> {
+    await this.authenticatedUser();
+    await httpsCallable(firebaseFunctions, "manageAuraGalleryLifecycle")({
+      galleryId: id,
+      action: "distribution",
+      exploreListed: distribution.exploreListed,
+      creatorProfileListed: distribution.creatorProfileListed,
     });
   }
 

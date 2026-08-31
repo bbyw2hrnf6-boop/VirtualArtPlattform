@@ -1,6 +1,6 @@
 import { PRODUCT_BRAND, productTitle } from "../config/brand";
 import type { GalleryVisibility } from "./galleryAccess";
-import { spaceCanonicalUrl } from "./spaceRoutes";
+import { creatorCanonicalUrl, spaceCanonicalUrl } from "./spaceRoutes";
 
 const HOME_CANONICAL = "https://lieuva.com/";
 const CREATOR_DIRECTORY_CANONICAL = `${HOME_CANONICAL}creators`;
@@ -34,8 +34,8 @@ export function pageMetadataPolicy(
     image: HOME_IMAGE,
   };
   if (page === "creators") return {
-    title: productTitle("Creators — Directory"),
-    description: "Discover public Creators and their immersive Spaces in the LIEUVA Creator directory.",
+    title: productTitle("Creators"),
+    description: "Explore public Creators and their immersive Spaces in the LIEUVA Creator Hub.",
     canonical: CREATOR_DIRECTORY_CANONICAL,
     robots: "index,follow,max-image-preview:large",
     image: HOME_IMAGE,
@@ -95,6 +95,24 @@ export function publishedSpaceMetadataPolicy(space: {
       ? "noindex,follow,noarchive"
       : "index,follow,max-image-preview:large",
     image: space.coverSrc ?? `${SPACE_CARD_ENDPOINT}${encodeURIComponent(space.id)}`,
+  };
+}
+
+export function publicCreatorMetadataPolicy(profile: {
+  handle: string;
+  displayName: string;
+  bio?: string;
+  imagePresent?: boolean;
+}, featuredImage?: string): PageMetadataPolicy {
+  const canonical = creatorCanonicalUrl(profile.handle);
+  return {
+    title: `${profile.displayName} — Creator | LIEUVA`,
+    description: profile.bio || `Explore public immersive Spaces by ${profile.displayName} on LIEUVA.`,
+    canonical,
+    robots: "index,follow,max-image-preview:large",
+    image: profile.imagePresent
+      ? `${HOME_CANONICAL}creator-images/${profile.handle}.webp`
+      : featuredImage || HOME_IMAGE,
   };
 }
 

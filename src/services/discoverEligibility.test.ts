@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { GalleryRecord } from "./galleryRepository";
-import { discoverEligibility, isDiscoverEligible } from "./discoverEligibility";
+import {
+  discoverEligibility,
+  isDiscoverEligible,
+  isPublicSpaceIndexEligible,
+} from "./discoverEligibility";
 
 const future = "2030-01-01T00:00:00.000Z";
 const base = {
@@ -40,5 +44,11 @@ describe("Discover eligibility", () => {
       ...base,
       artworks: [{ id: "work-1", src: "", storagePath: "published/owner/room/artworks/1.webp" }],
     } as GalleryRecord, 0)).toBe(true);
+  });
+
+  it("keeps homepage placement separate from direct-URL indexing", () => {
+    expect(discoverEligibility({ ...base, exploreListed: false }, 0).reason).toBe("not-listed");
+    expect(isDiscoverEligible({ ...base, exploreListed: false }, 0)).toBe(false);
+    expect(isPublicSpaceIndexEligible({ ...base, exploreListed: false }, 0)).toBe(true);
   });
 });

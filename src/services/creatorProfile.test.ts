@@ -10,7 +10,7 @@ describe("Creator profile URLs", () => {
 describe("Creator profile lifecycle labels", () => {
   it.each([
     [false, false, "Save private draft"],
-    [false, true, "Save and activate Hub profile"],
+    [false, true, "Save and publish profile"],
     [true, true, "Save profile changes"],
     [true, false, "Save and make private"],
   ])("distinguishes persisted and edited visibility", (published, nextPublic, label) => {

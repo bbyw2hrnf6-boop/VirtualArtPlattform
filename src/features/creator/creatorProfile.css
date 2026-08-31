@@ -5,6 +5,42 @@
   color: #171814;
 }
 
+.creator-profile--embedded { min-height: 0; }
+.creator-profile__embedded-toolbar {
+  position: sticky;
+  z-index: 18;
+  top: 72px;
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 7px clamp(22px, 4vw, 56px);
+  border-bottom: 1px solid #c3c2bb;
+  background: #f2f1ecef;
+  backdrop-filter: blur(18px);
+}
+.creator-profile__embedded-toolbar > a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.creator-profile__embedded-toolbar .space-share--compact .space-share__trigger {
+  border-color: #aeada6;
+  background: transparent;
+  backdrop-filter: none;
+  color: #171814;
+}
+.creator-profile--embedded .creator-profile__hero {
+  min-height: min(700px, calc(100svh - 130px));
+}
+
 .creator-profile__nav {
   position: relative;
   z-index: 20;
@@ -207,6 +243,7 @@
 .creator-profile__footer a { min-height: 44px; display: inline-flex; align-items: center; color: inherit; font-size: 9px; text-decoration: none; }
 
 .creator-profile-state { min-height: 100dvh; display: grid; place-content: center; justify-items: start; gap: 16px; padding: 28px; background: #e7e5dd; color: #191a17; }
+.creator-profile-state--embedded { min-height: calc(100dvh - 72px); }
 .creator-profile-state h1 { max-width: 720px; margin: 0; font: clamp(48px, 8vw, 100px)/.9 Instrument; }
 .creator-profile-state p { max-width: 540px; }
 .creator-profile-state a,
@@ -223,6 +260,11 @@
 }
 
 @media (max-width: 620px) {
+  .creator-profile__embedded-toolbar { top: 68px; min-height: 52px; padding: 4px 16px; }
+  .creator-profile__embedded-toolbar .space-share__trigger { width: 44px; padding: 0; font-size: 0; }
+  .creator-profile__embedded-toolbar .space-share__trigger::before { content: "↗"; font-size: 15px; }
+  .creator-profile__embedded-toolbar .space-share__trigger span { display: none; }
+  .creator-profile-state--embedded { min-height: calc(100dvh - 68px); padding-bottom: 92px; }
   .creator-profile__nav { min-height: 70px; padding: 11px 16px; }
   .creator-profile__nav .logo b { font-size: 12px; }
   .creator-profile__nav-actions { gap: 7px; }

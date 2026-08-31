@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
+import appSource from "../../App.tsx?raw";
 import accountSource from "../account/AccountDialog.tsx?raw";
 import hubSource from "./CreatorHubPage.tsx?raw";
 
 describe("Creator Hub account lifecycle contract", () => {
+  it("routes every clean Creator URL through the persistent Hub shell", () => {
+    expect(appSource).toContain('<CreatorHubPage view={{ kind: "profile", handle: route.handle }} onNavigate={navigate} />');
+    expect(appSource).toContain('<CreatorHubPage view={{ kind: "directory" }} onNavigate={navigate} />');
+    expect(appSource).toContain('route.hubView === "settings" ? "settings" : "home"');
+    expect(appSource).toContain('hubView: "settings"');
+    expect(appSource).toContain("creatorExperienceNavigationPath(path, location.href)");
+    expect(appSource).not.toContain('lazy(() => import("./features/creator/CreatorProfilePage")');
+    expect(appSource).not.toContain('lazy(() => import("./features/creator/CreatorDirectoryPage")');
+  });
+
   it("keeps account subscriptions stable when parents pass a fresh callback", () => {
     expect(accountSource).toContain("const onSessionChangeRef = useRef(onSessionChange)");
     expect(accountSource).toContain("onSessionChangeRef.current?.(next)");
@@ -11,7 +22,7 @@ describe("Creator Hub account lifecycle contract", () => {
 
   it("loads the canonical profile once per account identity, not per hydrated session object", () => {
     expect(hubSource).toContain("const sessionUid = session && !session.isAnonymous ? session.uid : \"\"");
-    expect(hubSource).toContain("}, [profileRefresh, sessionUid]);");
+    expect(hubSource).toContain("}, [dashboardView, profileRefresh, sessionUid]);");
     expect(hubSource).not.toContain("<AccountButton light onSessionChange={(next)");
   });
 
@@ -29,26 +40,31 @@ describe("Creator Hub account lifecycle contract", () => {
     expect(hubSource).toContain("Your Spaces lead");
   });
 
-  it("keeps the personal Hub separate from the public Creator directory", () => {
-    expect(hubSource).toContain('<a href="/creators"><HubIcon name="search" /> Find Creators</a>');
-    expect(hubSource).toContain('<a href="/creators"><HubIcon name="creators" /> Creators</a>');
-    expect(hubSource).not.toContain('id="creator-directory"');
-    expect(hubSource).not.toContain("searchPublicDirectory(spaces, creators, query)");
+  it("renders directory and public profiles inside the persistent Hub shell", () => {
+    expect(hubSource).toContain('import CreatorDirectoryPage from "./CreatorDirectoryPage"');
+    expect(hubSource).toContain('import CreatorProfilePage from "./CreatorProfilePage"');
+    expect(hubSource).toContain('view.kind === "directory"');
+    expect(hubSource).toContain('<CreatorDirectoryPage embedded />');
+    expect(hubSource).toContain('<CreatorProfilePage');
+    expect(hubSource).toContain('className={creatorsView ? "is-active" : ""}');
+    expect(hubSource).toContain("creatorExperienceNavigationPath");
   });
 
-  it("keeps mobile social navigation complete and opens the matching account surface", () => {
+  it("keeps mobile social navigation complete and opens the profile editor inside the Hub", () => {
     expect(hubSource).toContain("creator-hub__mobile-account");
-    expect(hubSource).toContain('href="#creator-profile"');
-    expect(hubSource).toContain('accountSectionUrl("creator"');
+    expect(hubSource).toContain('href={profileSettingsUrl}');
+    expect(hubSource).toContain('view.kind === "settings"');
+    expect(hubSource).toContain('<CreatorProfileSettings account={session} />');
+    expect(hubSource).not.toContain('accountSectionUrl("creator"');
     expect(hubSource).not.toContain('accountSectionUrl("account"');
-    expect(hubSource).toContain('aria-current={activeSection === "feed" ? "page" : undefined}');
+    expect(hubSource).toContain('aria-current={dashboardView && activeSection === "feed" ? "location" : undefined}');
     expect(hubSource).not.toContain("Draft enabled · activate your profile to publish");
     expect(hubSource).toContain('record.ownerId === sessionUid || record.effectiveRole === "owner"');
   });
 
   it("surfaces only real activity on mobile and isolates comment drafts per post", () => {
     expect(hubSource).toContain("creator-hub__mobile-notifications");
-    expect(hubSource).toContain('href="#creator-activity"');
+    expect(hubSource).toContain('href={dashboardHref("creator-activity")}');
     expect(hubSource).toContain('notification.kind === "follow"');
     expect(hubSource).toContain('notification.kind === "comment"');
     expect(hubSource).toContain('notification.kind === "reaction"');

@@ -77,13 +77,15 @@ service cloud.firestore {
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
           'lighting', 'decor', 'artworks', 'coverPath', 'ownerId',
           'publishedAt', 'expiresAt', 'schemaVersion', 'visibility',
-          'retention', 'accessVersion', 'revision', 'updatedAt'
+          'retention', 'accessVersion', 'exploreListed',
+          'creatorProfileListed', 'revision', 'updatedAt'
         ])
         && data.keys().hasOnly([
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
           'lighting', 'decor', 'artworks', 'coverPath', 'ownerId',
           'publishedAt', 'expiresAt', 'schemaVersion', 'visibility',
           'retention', 'accessVersion', 'revision', 'updatedAt',
+          'exploreListed', 'creatorProfileListed', 'discoverEligible',
           'lifecycleStatus', 'trashedAt', 'purgeAt'
         ])
         && data.title is string
@@ -122,6 +124,10 @@ service cloud.firestore {
         && data.visibility in ['public', 'unlisted', 'private']
         && data.retention in ['guest-10-days', 'account-preview']
         && data.accessVersion == 1
+        && data.exploreListed is bool
+        && data.creatorProfileListed is bool
+        && (!data.keys().hasAny(['discoverEligible'])
+          || data.discoverEligible is bool)
         && data.revision is int
         && data.revision > 0
         && data.revision <= 1000000
@@ -169,6 +175,23 @@ service cloud.firestore {
       return data.keys().hasAny(['accessVersion']) ? data.accessVersion : 1;
     }
 
+    function currentExploreListed(data) {
+      return data.keys().hasAny(['exploreListed']) ? data.exploreListed : true;
+    }
+
+    function currentCreatorProfileListed(data) {
+      return data.keys().hasAny(['creatorProfileListed'])
+        ? data.creatorProfileListed
+        : true;
+    }
+
+    function preservesDiscoverEligibility(before, data) {
+      return before.keys().hasAny(['discoverEligible'])
+        ? data.keys().hasAny(['discoverEligible'])
+          && data.discoverEligible == before.discoverEligible
+        : !data.keys().hasAny(['discoverEligible']);
+    }
+
     function isValidGalleryUpdate(galleryId) {
       let before = resource.data;
       let data = request.resource.data;
@@ -183,6 +206,9 @@ service cloud.firestore {
         && data.visibility == currentVisibility(before)
         && data.retention == currentRetention(before)
         && data.accessVersion == currentAccessVersion(before)
+        && data.exploreListed == currentExploreListed(before)
+        && data.creatorProfileListed == currentCreatorProfileListed(before)
+        && preservesDiscoverEligibility(before, data)
         && data.revision == currentRevision(before) + 1
         && data.updatedAt == request.time
         && (!data.keys().hasAny(['lifecycleStatus']) || data.lifecycleStatus == 'active')

@@ -13,6 +13,7 @@ import {
 import type { AccountSession } from "../../services/accountTypes";
 import { spaceCanonicalUrl } from "../../services/spaceRoutes";
 import { trackTelemetry } from "../../services/telemetry";
+import { applyPageMetadata, publicCreatorMetadataPolicy } from "../../services/pageMetadata";
 import { isDemoCreatorHandle } from "./demoCreators";
 import "./creatorProfile.css";
 
@@ -22,19 +23,36 @@ type LoadState =
   | { status: "not-found" }
   | { status: "error" };
 
-export default function CreatorProfilePage({ handle }: { handle: string }) {
-  const serverState = document
-    .querySelector('meta[name="lieuva:creator-state"]')
-    ?.getAttribute("content");
+type CreatorProfilePageProps = {
+  handle: string;
+  embedded?: boolean;
+  hubSession?: AccountSession | null;
+  onRequireAccount?: () => void;
+};
+
+export default function CreatorProfilePage({
+  handle,
+  embedded = false,
+  hubSession,
+  onRequireAccount,
+}: CreatorProfilePageProps) {
+  const deliveredCanonical = document
+    .querySelector<HTMLLinkElement>('link[rel="canonical"]')
+    ?.href;
+  const serverState = deliveredCanonical
+    && new URL(deliveredCanonical, window.location.href).pathname === new URL(creatorProfileUrl(handle)).pathname
+      ? document.querySelector('meta[name="lieuva:creator-state"]')?.getAttribute("content")
+      : undefined;
   const demoProfile = isDemoCreatorHandle(handle);
   const [state, setState] = useState<LoadState>(() =>
     serverState === "unavailable" && !demoProfile ? { status: "not-found" } : { status: "loading" },
   );
   const [attempt, setAttempt] = useState(0);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [session, setSession] = useState<AccountSession | null>(null);
+  const [localSession, setLocalSession] = useState<AccountSession | null>(null);
   const [followState, setFollowState] = useState<CreatorFollowState>();
   const [followBusy, setFollowBusy] = useState(false);
+  const session = embedded ? hubSession ?? null : localSession;
 
   useEffect(() => {
     if (serverState === "unavailable" && !demoProfile) return;
@@ -61,8 +79,14 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
     return () => { active = false; };
   }, [profile, session]);
   useEffect(() => {
-    if (state.status === "ready") trackTelemetry("creator_profile_viewed", { outcome: "ready" });
-  }, [state.status]);
+    if (state.status === "ready") {
+      trackTelemetry("creator_profile_viewed", { outcome: "ready" });
+      applyPageMetadata(publicCreatorMetadataPolicy(
+        state.payload.profile,
+        state.payload.spaces[0]?.coverUrl,
+      ));
+    }
+  }, [state]);
   const initials = useMemo(() => profile?.displayName
     .split(/\s+/)
     .slice(0, 2)
@@ -70,29 +94,31 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
     .join("")
     .toUpperCase() ?? "L", [profile?.displayName]);
 
-  if (state.status === "loading") return <main className="creator-profile-state" role="status">Preparing Creator profile…</main>;
+  const StateRoot = embedded ? "section" : "main";
+  if (state.status === "loading") return <StateRoot className={`creator-profile-state${embedded ? " creator-profile-state--embedded" : ""}`} role="status">Preparing Creator profile…</StateRoot>;
   if (state.status === "error") return (
-    <main className="creator-profile-state creator-profile-state--error">
-      <Logo dark />
+    <StateRoot className={`creator-profile-state creator-profile-state--error${embedded ? " creator-profile-state--embedded" : ""}`}>
+      {!embedded ? <Logo dark /> : null}
       <p className="eyebrow">Connection interrupted</p>
       <h1>Profile unavailable.</h1>
       <p>The public profile may still be live. Try again.</p>
       <button type="button" onClick={() => { setState({ status: "loading" }); setAttempt((value) => value + 1); }}>Try again</button>
-    </main>
+    </StateRoot>
   );
   if (state.status === "not-found" || !profile) return (
-    <main className="creator-profile-state">
-      <Logo dark />
+    <StateRoot className={`creator-profile-state${embedded ? " creator-profile-state--embedded" : ""}`}>
+      {!embedded ? <Logo dark /> : null}
       <p className="eyebrow">Private or unavailable</p>
       <h1>This Creator profile isn’t public.</h1>
       <p>Nothing private is shown here.</p>
       <a href="/creators">Return to Creator directory</a>
-    </main>
+    </StateRoot>
   );
 
+  const Root = embedded ? "section" : "main";
   return (
-    <main className="creator-profile">
-      <header className="creator-profile__nav">
+    <Root className={`creator-profile${embedded ? " creator-profile--embedded" : ""}`}>
+      {!embedded ? <header className="creator-profile__nav">
         <Logo dark />
         <nav aria-label="LIEUVA navigation">
           <a href="/">LIEUVA home</a>
@@ -109,9 +135,22 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
             source="creator_profile"
             subject="Creator profile"
           />
-          <AccountButton light open={accountOpen} onOpenChange={setAccountOpen} onSessionChange={(next) => { setSession(next); if (!next || next.isAnonymous) setFollowState(undefined); }} />
+          <AccountButton light open={accountOpen} onOpenChange={setAccountOpen} onSessionChange={(next) => { setLocalSession(next); if (!next || next.isAnonymous) setFollowState(undefined); }} />
         </div>
-      </header>
+      </header> : (
+        <header className="creator-profile__embedded-toolbar">
+          <a href="/creators"><span aria-hidden="true">←</span> All Creators</a>
+          <SpaceShareMenu
+            compact
+            url={creatorProfileUrl(profile.handle)}
+            title={profile.displayName}
+            creator={profile.displayName}
+            visibility="public"
+            source="creator_profile"
+            subject="Creator profile"
+          />
+        </header>
+      )}
       <section className="creator-profile__hero" aria-labelledby="creator-profile-title">
         <div className="creator-profile__identity">
           <div className="creator-profile__mark" aria-hidden="true">
@@ -132,7 +171,8 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
                 disabled={followBusy || (Boolean(session && !session.isAnonymous) && followState?.canFollow === false)}
                 onClick={() => {
                   if (!session || session.isAnonymous) {
-                    setAccountOpen(true);
+                    if (embedded) onRequireAccount?.();
+                    else setAccountOpen(true);
                     return;
                   }
                   if (!followState?.canFollow) return;
@@ -173,7 +213,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
                 : <span aria-hidden="true">01</span>}
             </div>
             <div className="creator-profile__featured-copy">
-              <p><span>Featured Space</span><small>01 / {String(spaces.length).padStart(2, "0")}</small></p>
+              <p><span>Latest Space</span><small>01 / {String(spaces.length).padStart(2, "0")}</small></p>
               <h2>{featuredSpace.title}</h2>
               <span>Enter immersive Space <b aria-hidden="true">↗</b></span>
             </div>
@@ -187,7 +227,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
       </section>
       <section className="creator-profile__portfolio" aria-labelledby="creator-spaces-title">
         <div className="creator-profile__section-heading">
-          <div><p className="eyebrow">Public portfolio</p><h2 id="creator-spaces-title">Selected Spaces.</h2></div>
+          <div><p className="eyebrow">Public portfolio</p><h2 id="creator-spaces-title">Spaces on this profile.</h2></div>
           <p>Immersive work published by {profile.displayName}. Enter each Space directly in your browser.</p>
           <span>{String(spaces.length).padStart(2, "0")}</span>
         </div>
@@ -226,7 +266,7 @@ export default function CreatorProfilePage({ handle }: { handle: string }) {
           </div>
         </section>
       ) : null}
-      <footer className="creator-profile__footer"><div><Logo /><p>Immersive Spaces, published in the browser.</p></div><nav aria-label="Creator profile footer"><a href="/creator-hub">Creator Hub →</a><a href="/creators">Creator directory →</a><a href="/?explore=spaces">Explore Spaces →</a><a href="/#/create">Create a Space →</a></nav></footer>
-    </main>
+      {!embedded ? <footer className="creator-profile__footer"><div><Logo /><p>Immersive Spaces, published in the browser.</p></div><nav aria-label="Creator profile footer"><a href="/creator-hub">Creator Hub →</a><a href="/creators">Creator directory →</a><a href="/?explore=spaces">Explore Spaces →</a><a href="/#/create">Create a Space →</a></nav></footer> : null}
+    </Root>
   );
 }

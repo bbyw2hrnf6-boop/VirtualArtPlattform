@@ -11,6 +11,7 @@ import "./exploreSpacesMenu.css";
 type ExploreSpacesMenuProps = {
   open: boolean;
   onClose: () => void;
+  focusSpaceId?: string;
 };
 
 const normalized = (value: string) => value.trim().toLocaleLowerCase();
@@ -32,7 +33,7 @@ function SpaceCover({ space }: { space: GalleryRecord }) {
   );
 }
 
-export default function ExploreSpacesMenu({ open, onClose }: ExploreSpacesMenuProps) {
+export default function ExploreSpacesMenu({ open, onClose, focusSpaceId }: ExploreSpacesMenuProps) {
   const panel = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
@@ -69,6 +70,13 @@ export default function ExploreSpacesMenu({ open, onClose }: ExploreSpacesMenuPr
       normalized(`${space.title} ${space.artist}`).includes(term),
     );
   }, [query, spaces]);
+  const orderedSpaces = useMemo(() => {
+    if (!focusSpaceId) return visibleSpaces;
+    const focused = visibleSpaces.find((space) => space.id === focusSpaceId);
+    return focused
+      ? [focused, ...visibleSpaces.filter((space) => space.id !== focusSpaceId)]
+      : visibleSpaces;
+  }, [focusSpaceId, visibleSpaces]);
 
   if (!open) return null;
 
@@ -131,15 +139,15 @@ export default function ExploreSpacesMenu({ open, onClose }: ExploreSpacesMenuPr
             <small>Enter pinned Space <b>↗</b></small>
           </a>
 
-          {visibleSpaces.slice(0, 8).map((space) => (
+          {orderedSpaces.slice(0, 8).map((space) => (
             <a
-              className="space-menu-card"
+              className={`space-menu-card${space.id === focusSpaceId ? " space-menu-card--focused" : ""}`}
               href={spaceCanonicalUrl(space.id, location.href)}
               key={space.id}
             >
               <div className="space-menu-card__visual">
                 <SpaceCover space={space} />
-                <span>Live Space</span>
+                <span>{space.id === focusSpaceId ? "Just published" : "Live Space"}</span>
               </div>
               <p>
                 {space.artist} · {TEMPLATES.find((template) => template.id === space.templateId)?.name ?? "LIEUVA"}
@@ -165,7 +173,7 @@ export default function ExploreSpacesMenu({ open, onClose }: ExploreSpacesMenuPr
 
         <footer className="space-menu__footer">
           <p>One menu for every published room. No page hunting.</p>
-          <a href="/creators">Browse Creators <span>→</span></a>
+          <a href="/creators">Find Creators <span>→</span></a>
         </footer>
       </div>
     </div>

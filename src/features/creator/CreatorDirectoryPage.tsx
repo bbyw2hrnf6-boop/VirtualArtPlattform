@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Logo } from "../../components/Logo";
 import {
   creatorImageUrl,
-  creatorProfileUrl,
   loadPublicCreatorDirectory,
   type PublicCreatorDirectoryEntry,
 } from "../../services/creatorProfile";
@@ -11,7 +10,7 @@ import {
   galleryRepository,
   type GalleryRecord,
 } from "../../services/galleryRepository";
-import { spaceCanonicalUrl } from "../../services/spaceRoutes";
+import { creatorCanonicalUrl, spaceCanonicalUrl } from "../../services/spaceRoutes";
 import { TEMPLATES } from "../gallery/templates";
 import "./creatorDirectory.css";
 
@@ -108,7 +107,7 @@ function LoadingCards({ label }: { label: string }) {
   );
 }
 
-export default function CreatorDirectoryPage() {
+export default function CreatorDirectoryPage({ embedded = false }: { embedded?: boolean }) {
   const [state, setState] = useState<DirectoryState>(INITIAL_STATE);
   const [query, setQuery] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -166,10 +165,11 @@ export default function CreatorDirectoryPage() {
   const allSettled = state.creators.status !== "loading" && state.spaces.status !== "loading";
   const noResults = allSettled && !allFailed && !results.creators.length && !results.spaces.length;
   const resultCount = results.creators.length + results.spaces.length;
+  const Root = embedded ? "section" : "main";
 
   return (
-    <main className="creator-directory">
-      <header className="creator-directory__nav">
+    <Root className={`creator-directory${embedded ? " creator-directory--embedded" : ""}`}>
+      {!embedded ? <header className="creator-directory__nav">
         <Logo dark />
         <nav aria-label="Public Creator directory navigation">
           <a href="/">Home</a>
@@ -179,7 +179,7 @@ export default function CreatorDirectoryPage() {
         <a className="creator-directory__hub-link" href="/creator-hub">
           Open Creator Hub <span aria-hidden="true">↗</span>
         </a>
-      </header>
+      </header> : null}
 
       <section className="creator-directory__hero" aria-labelledby="creator-directory-title">
         <div>
@@ -255,7 +255,7 @@ export default function CreatorDirectoryPage() {
                   {results.creators.map((creator, index) => (
                     <a
                       className="creator-directory-card"
-                      href={creatorProfileUrl(creator.handle)}
+                      href={creatorCanonicalUrl(creator.handle, window.location.href)}
                       key={creator.handle}
                     >
                       <span className="creator-directory-card__number">{String(index + 1).padStart(2, "0")}</span>
@@ -315,14 +315,14 @@ export default function CreatorDirectoryPage() {
         )}
       </div>
 
-      <footer className="creator-directory__footer">
+      {!embedded ? <footer className="creator-directory__footer">
         <div><Logo /><p>Public profiles, published Spaces and the work between them.</p></div>
         <nav aria-label="Creator directory footer">
           <a href="/">LIEUVA Home</a>
           <a href="/creator-hub">Creator Hub</a>
           <a href="/#/create">Create a Space <span aria-hidden="true">↗</span></a>
         </nav>
-      </footer>
-    </main>
+      </footer> : null}
+    </Root>
   );
 }

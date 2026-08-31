@@ -6,6 +6,7 @@ export type DiscoverEligibilityReason =
   | "not-active"
   | "expired"
   | "moderation-disabled"
+  | "not-listed"
   | "invalid-identity"
   | "no-visible-content";
 
@@ -43,7 +44,7 @@ export function discoverEligibility(
     | "artist"
     | "artworks"
     | "discoverEligible"
-  >,
+  > & { exploreListed?: boolean },
   now = Date.now(),
 ): DiscoverEligibility {
   if (record.visibility !== "public")
@@ -55,6 +56,8 @@ export function discoverEligibility(
     return { eligible: false, reason: "expired" };
   if (record.discoverEligible === false)
     return { eligible: false, reason: "moderation-disabled" };
+  if (record.exploreListed === false)
+    return { eligible: false, reason: "not-listed" };
   if (!hasPublicIdentity(record))
     return { eligible: false, reason: "invalid-identity" };
   if (!hasVisibleMedia(record))
@@ -67,4 +70,16 @@ export function isDiscoverEligible(
   now = Date.now(),
 ) {
   return discoverEligibility(record, now).eligible;
+}
+
+/**
+ * Public URL indexing is independent from optional homepage placement. A
+ * Creator can remove a Space from Explore without breaking its direct URL or
+ * creating a client/server robots mismatch.
+ */
+export function isPublicSpaceIndexEligible(
+  record: Parameters<typeof discoverEligibility>[0],
+  now = Date.now(),
+) {
+  return discoverEligibility({ ...record, exploreListed: true }, now).eligible;
 }

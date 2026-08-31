@@ -8,6 +8,7 @@ import type {
   GalleryInvite,
   GalleryRole,
   GalleryVisibility,
+  GalleryDistribution,
 } from './galleryAccess';
 import type { AccountSession } from './accountTypes';
 
@@ -29,6 +30,10 @@ export interface GalleryRecord extends GalleryDraft {
   purgeAt?: string;
   /** Optional moderation override. Missing legacy values use the quality gate. */
   discoverEligible?: boolean;
+  /** User-controlled homepage placement. Missing legacy values resolve to true. */
+  exploreListed: boolean;
+  /** User-controlled public Creator-profile placement. Missing legacy values resolve to true. */
+  creatorProfileListed: boolean;
 }
 
 /** Resolve the public image used by Discover without exposing Storage URLs. */
@@ -87,6 +92,7 @@ export interface GalleryRepository {
     action: "archive" | "restore" | "renew" | "trash" | "visibility",
     visibility?: GalleryVisibility,
   ): Promise<void>;
+  updateDistribution(id: string, distribution: GalleryDistribution): Promise<void>;
   delete(id: string): Promise<void>;
 }
 
@@ -121,5 +127,6 @@ export const galleryRepository: GalleryRepository = {
   async setMember(id, email, role) { return (await loadRepository()).setMember(id, email, role); },
   async removeMember(id, email) { return (await loadRepository()).removeMember(id, email); },
   async updateLifecycle(id, action, visibility) { return (await loadRepository()).updateLifecycle(id, action, visibility); },
+  async updateDistribution(id, distribution) { return (await loadRepository()).updateDistribution(id, distribution); },
   async delete(id) { return (await loadRepository()).delete(id); }
 };

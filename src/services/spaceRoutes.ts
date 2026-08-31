@@ -14,6 +14,7 @@ export type SpaceRouteMatch =
 export type CreatorRouteMatch =
   | { kind: "directory" }
   | { kind: "hub" }
+  | { kind: "settings" }
   | { kind: "creator"; handle: string }
   | { kind: "malformed" }
   | null;
@@ -72,6 +73,14 @@ export function spaceCanonicalUrl(spaceId: string, currentHref?: string): string
   return `${appOrigin(currentHref)}${spacePath(spaceId)}`;
 }
 
+export function exploreSpacesUrl(spaceId?: string, currentHref?: string): string {
+  if (spaceId && !isValidSpaceIdentifier(spaceId)) throw new Error("Invalid Space ID.");
+  const url = new URL(`${appOrigin(currentHref)}/`);
+  url.searchParams.set("explore", "spaces");
+  if (spaceId) url.searchParams.set("space", spaceId);
+  return url.href;
+}
+
 function safelyDecoded(value: string): string | null {
   try {
     return decodeURIComponent(value);
@@ -101,6 +110,8 @@ export function matchSpaceRoute(pathname: string, hash: string): SpaceRouteMatch
 
 export function matchCreatorRoute(pathname: string): CreatorRouteMatch {
   if (pathname === "/creator-hub" || pathname === "/creator-hub/") return { kind: "hub" };
+  if (pathname === "/creator-hub/profile" || pathname === "/creator-hub/profile/")
+    return { kind: "settings" };
   if (pathname.startsWith("/creator-hub/")) return { kind: "malformed" };
   if (pathname === "/creators" || pathname === "/creators/") return { kind: "directory" };
   const match = /^\/creators\/([^/]+)\/?$/.exec(pathname);
@@ -113,6 +124,17 @@ export function matchCreatorRoute(pathname: string): CreatorRouteMatch {
   return pathname.startsWith("/creators/")
     ? { kind: "malformed" }
     : null;
+}
+
+/** Returns a same-origin clean Creator route that can be handled by the SPA
+ * without tearing down the persistent Creator Hub shell. */
+export function creatorExperienceNavigationPath(targetHref: string, currentHref: string): string | null {
+  const current = new URL(currentHref);
+  const target = new URL(targetHref, current);
+  if (target.origin !== current.origin) return null;
+  const route = matchCreatorRoute(target.pathname);
+  if (!route || route.kind === "malformed") return null;
+  return `${target.pathname}${target.search}${target.hash}`;
 }
 
 /** Maps only the historical personalized Hub anchors away from the public

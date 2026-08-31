@@ -4,6 +4,7 @@ import {
   creatorFollowTransition,
   creatorCanonicalUrl,
   isReservedCreatorHandle,
+  isCreatorProfileSpaceListed,
   isValidCreatorWebp,
   normalizeCreatorHandle,
   parseCreatorPostInput,
@@ -22,6 +23,7 @@ describe("Creator identity contract", () => {
   it("separates the public directory, private Hub and stable profile routes", () => {
     expect(classifyCreatorDocumentRoute("/creators")).toEqual({ kind: "directory" });
     expect(classifyCreatorDocumentRoute("/creator-hub/")).toEqual({ kind: "hub" });
+    expect(classifyCreatorDocumentRoute("/creator-hub/profile")).toEqual({ kind: "hub" });
     expect(classifyCreatorDocumentRoute("/creators/studio-north")).toEqual({
       kind: "profile",
       handle: "studio-north",
@@ -34,6 +36,12 @@ describe("Creator identity contract", () => {
     expect(normalizeCreatorHandle(" Studio-North ")).toBe("studio-north");
     for (const value of ["st", "studio north", "studio_north", "studio--north", "-studio", "crëator"])
       expect(normalizeCreatorHandle(value)).toBeNull();
+  });
+
+  it("keeps legacy profile Spaces visible but honors an explicit profile opt-out", () => {
+    expect(isCreatorProfileSpaceListed({})).toBe(true);
+    expect(isCreatorProfileSpaceListed({ creatorProfileListed: true })).toBe(true);
+    expect(isCreatorProfileSpaceListed({ creatorProfileListed: false })).toBe(false);
   });
 
   it("reserves product and routing names", () => {
@@ -126,7 +134,7 @@ describe("Creator identity contract", () => {
 
   it("renders the public Creator directory as a canonical indexable route", () => {
     const html = renderCreatorDirectoryDocument(SHELL);
-    expect(html).toContain("Creators — Directory | LIEUVA");
+    expect(html).toContain("Creators | LIEUVA");
     expect(html).toContain("https://lieuva.com/creators");
     expect(html).toContain("index,follow,max-image-preview:large");
     expect(html).toContain('name="lieuva:creator-route" content="directory"');

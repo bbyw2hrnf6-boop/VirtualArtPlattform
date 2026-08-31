@@ -77,6 +77,8 @@ export interface ParsedGalleryDocument extends GalleryDraft {
   trashedAt?: string;
   purgeAt?: string;
   discoverEligible?: boolean;
+  exploreListed: boolean;
+  creatorProfileListed: boolean;
 }
 
 export interface ParsedArtworkAsset {
@@ -324,6 +326,8 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
   const coverSrc = optionalImageSource(data.coverSrc, recordId, 'coverSrc', MAX_LEGACY_COVER_SOURCE_LENGTH);
   const coverPath = optionalStoragePath(data.coverPath, recordId, 'coverPath');
   const discoverEligible = optionalBoolean(data.discoverEligible, recordId, 'discoverEligible');
+  const exploreListed = optionalBoolean(data.exploreListed, recordId, 'exploreListed') ?? true;
+  const creatorProfileListed = optionalBoolean(data.creatorProfileListed, recordId, 'creatorProfileListed') ?? true;
   const lifecycleStatus = data.lifecycleStatus === undefined
     ? 'active'
     : enumValue(data.lifecycleStatus, GALLERY_LIFECYCLE_STATUSES, recordId, 'lifecycleStatus');
@@ -353,6 +357,8 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
     ...(trashedAt ? { trashedAt } : {}),
     ...(purgeAt ? { purgeAt } : {}),
     ...(discoverEligible !== undefined ? { discoverEligible } : {}),
+    exploreListed,
+    creatorProfileListed,
   };
 }
 

@@ -79,10 +79,12 @@ import { firebaseActionErrorMessage } from "./services/firebaseActionError";
 import {
   applicationRootUrl,
   creatorCanonicalUrl,
+  creatorExperienceNavigationPath,
   hashApplicationUrl,
   legacyCreatorHubRedirectPath,
   matchCreatorRoute,
   matchSpaceRoute,
+  exploreSpacesUrl,
   spaceCanonicalUrl,
 } from "./services/spaceRoutes";
 import { useDialogFocus } from "./hooks/useDialogFocus";
@@ -116,7 +118,7 @@ import {
   pageMetadataPolicy,
   publishedSpaceMetadataPolicy,
 } from "./services/pageMetadata";
-import { isDiscoverEligible } from "./services/discoverEligibility";
+import { isPublicSpaceIndexEligible } from "./services/discoverEligibility";
 
 const GalleryScene = lazy(() =>
   import("./features/gallery/GalleryScene").then((module) => ({
@@ -140,9 +142,7 @@ const PitchSections = lazy(() =>
 );
 const ExploreSpacesMenu = lazy(() => import("./features/landing/ExploreSpacesMenu"));
 const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
-const CreatorProfilePage = lazy(() => import("./features/creator/CreatorProfilePage"));
 const CreatorHubPage = lazy(() => import("./features/creator/CreatorHubPage"));
-const CreatorDirectoryPage = lazy(() => import("./features/creator/CreatorDirectoryPage"));
 
 type Route = {
   page: "home" | "create" | "demo" | "gallery" | "creator" | "creators" | "creator-hub" | "data" | "auth-action" | "account" | "space-not-found";
@@ -152,6 +152,7 @@ type Route = {
   demoArt?: boolean;
   projectId?: string;
   legacySpace?: boolean;
+  hubView?: "home" | "settings";
 };
 type ViewMode = "walk" | "overview";
 type ArtworkFocus = {
@@ -310,7 +311,8 @@ const routeFromLocation = (): Route => {
       ? { page: "creator-hub" }
       : { page: "creators" };
   }
-  if (creatorRoute?.kind === "hub") return { page: "creator-hub" };
+  if (creatorRoute?.kind === "hub") return { page: "creator-hub", hubView: "home" };
+  if (creatorRoute?.kind === "settings") return { page: "creator-hub", hubView: "settings" };
   const hash = location.hash.replace(/^#/, "");
   if (hash === "/create") return { page: "create" };
   const templateMatch =
@@ -333,21 +335,14 @@ const routeFromLocation = (): Route => {
   return { page: "home" };
 };
 const navigate = (path: string) => {
+  const creatorTarget = creatorExperienceNavigationPath(path, location.href);
   if (path.startsWith("/spaces/")) {
     const id = path.slice("/spaces/".length);
     const target = spaceCanonicalUrl(id, location.href);
     location.assign(target);
     return;
-  } else if (path === "/creators") {
-    location.assign(`${new URL(applicationRootUrl(location.href)).origin}/creators`);
-    return;
-  } else if (path === "/creator-hub") {
-    location.assign(`${new URL(applicationRootUrl(location.href)).origin}/creator-hub`);
-    return;
-  } else if (path.startsWith("/creators/")) {
-    const handle = path.slice("/creators/".length);
-    location.assign(creatorCanonicalUrl(handle, location.href));
-    return;
+  } else if (creatorTarget) {
+    history.pushState(null, "", creatorTarget);
   } else {
     const target = hashApplicationUrl(path, location.href);
     if (location.pathname !== new URL(applicationRootUrl(location.href)).pathname) {
@@ -573,10 +568,12 @@ function DeferredScrollStory() {
   );
 }
 function Landing() {
+  const landingQuery = new URLSearchParams(location.search);
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const [spacesOpen, setSpacesOpen] = useState(
-    () => new URLSearchParams(location.search).get("explore") === "spaces",
+    () => landingQuery.get("explore") === "spaces",
   );
+  const focusedSpaceId = landingQuery.get("space") ?? undefined;
   const openSpaces = () => {
     trackTelemetry("discover_viewed", { source: "landing_menu" });
     setSpacesOpen(true);
@@ -588,7 +585,11 @@ function Landing() {
       <BrandHero onExplore={openSpaces} />
       <GlobalDirectorySearch open={directoryOpen} onClose={() => setDirectoryOpen(false)} />
       <Suspense fallback={null}>
-        <ExploreSpacesMenu open={spacesOpen} onClose={() => setSpacesOpen(false)} />
+        <ExploreSpacesMenu
+          open={spacesOpen}
+          onClose={() => setSpacesOpen(false)}
+          focusSpaceId={focusedSpaceId}
+        />
       </Suspense>
       <LandingProductProof />
       <PitchSections />
@@ -1066,6 +1067,8 @@ function Studio({
   const [publishCover, setPublishCover] = useState<string>();
   const [publishVisibility, setPublishVisibility] =
     useState<GalleryVisibility>("public");
+  const [publishExploreListed, setPublishExploreListed] = useState(true);
+  const [publishCreatorProfileListed, setPublishCreatorProfileListed] = useState(false);
   const [accountSession, setAccountSession] =
     useState<AccountSession | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -1184,6 +1187,8 @@ function Studio({
             setEditTarget(stored.publication);
             setPublishedDraftSignature(stored.publishedDraftSignature);
             setPublishVisibility(stored.publication.visibility);
+            setPublishExploreListed(stored.publication.exploreListed ?? true);
+            setPublishCreatorProfileListed(stored.publication.creatorProfileListed ?? true);
             resetDraft(stored.draft);
             setStorageReady(true);
             setSaveStatus("saved");
@@ -1741,7 +1746,7 @@ function Studio({
         )?.dataUrl;
       } catch (captureError) {
         console.warn(
-          "Space cover capture unavailable; using work fallback.",
+          "Space preview image capture unavailable; using work fallback.",
           captureError,
         );
       }
@@ -1756,7 +1761,11 @@ function Studio({
         : await galleryRepository.publish(
             finalDraft,
             roomCoverSource,
-            { visibility: publishVisibility },
+            {
+              visibility: publishVisibility,
+              exploreListed: publishExploreListed,
+              creatorProfileListed: publishCreatorProfileListed,
+            },
           );
       const editingAccountUid = await galleryRepository.currentUserId();
       const nextTarget: GalleryEditTarget = {
@@ -1769,12 +1778,16 @@ function Studio({
         retention: publishedGallery.retention,
         accessVersion: publishedGallery.accessVersion,
         revision: publishedGallery.revision,
+        exploreListed: publishedGallery.exploreListed,
+        creatorProfileListed: publishedGallery.creatorProfileListed,
         role: publishedGallery.effectiveRole === "editor"
           ? "editor"
           : editTarget?.role ?? "owner",
       };
       setEditTarget(nextTarget);
       setPublishVisibility(nextTarget.visibility);
+      setPublishExploreListed(publishedGallery.exploreListed);
+      setPublishCreatorProfileListed(publishedGallery.creatorProfileListed);
       await saveGalleryDraft(
         initialProjectId,
         finalDraft,
@@ -1949,8 +1962,10 @@ function Studio({
               <em>{wasUpdate ? "now live." : "ready to share."}</em>
             </h1>
             <p>
-              {published.visibility === "public"
-                ? `Your Space is listed in Discover and live until ${expiry}.`
+              {published.visibility === "public" && published.exploreListed
+                ? `Your Space is shown in Explore Spaces and live until ${expiry}.`
+                : published.visibility === "public"
+                  ? `Your Space is public by direct link and live until ${expiry}.`
                 : published.visibility === "unlisted"
                   ? `Only people with this link can find the Space. It is live until ${expiry}.`
                   : `Only the owner and invited accounts can enter. It is live until ${expiry}.`}
@@ -1976,10 +1991,13 @@ function Studio({
               <a className="button button--light" href={url}>
                 Enter the Space <span aria-hidden="true">↗</span>
               </a>
-              {published.visibility === "public" && (
-                <button className="text-link" onClick={() => navigate("/")}>
-                  View in Discover
-                </button>
+              {published.visibility === "public" && published.exploreListed && (
+                <a
+                  className="text-link"
+                  href={exploreSpacesUrl(published.id, window.location.href)}
+                >
+                  View in Explore Spaces
+                </a>
               )}
               <button
                 className="text-link"
@@ -1995,7 +2013,7 @@ function Studio({
         </section>
         <section
           className="publish-success__preview"
-          aria-label="Published Space cover"
+          aria-label="Published Space preview image"
         >
           {coverSrc ? (
             <img src={coverSrc} alt={`Published view of ${published.title}`} />
@@ -2967,9 +2985,13 @@ function Studio({
           publishError={publishError}
           coverSrc={publishCover}
           visibility={publishVisibility}
+          exploreListed={publishExploreListed}
+          creatorProfileListed={publishCreatorProfileListed}
           editing={editTarget}
           accountEligible={isVerifiedAccount(accountSession)}
           onVisibilityChange={setPublishVisibility}
+          onExploreListedChange={setPublishExploreListed}
+          onCreatorProfileListedChange={setPublishCreatorProfileListed}
           onOpenAccount={() => {
             resumePublishAfterAccount.current = true;
             setPublishReviewOpen(false);
@@ -3043,6 +3065,8 @@ function PublishReviewDialog({
   publishError,
   coverSrc,
   visibility,
+  exploreListed,
+  creatorProfileListed,
   editing,
   accountEligible,
   returnFocus,
@@ -3050,6 +3074,8 @@ function PublishReviewDialog({
   onPublish,
   onFocusIssue,
   onVisibilityChange,
+  onExploreListedChange,
+  onCreatorProfileListedChange,
   onOpenAccount,
 }: {
   issues: PublishReviewIssue[];
@@ -3059,6 +3085,8 @@ function PublishReviewDialog({
   publishError?: string;
   coverSrc?: string;
   visibility: GalleryVisibility;
+  exploreListed: boolean;
+  creatorProfileListed: boolean;
   editing?: GalleryEditTarget;
   accountEligible: boolean;
   returnFocus: React.RefObject<HTMLElement | null>;
@@ -3066,6 +3094,8 @@ function PublishReviewDialog({
   onPublish: () => void;
   onFocusIssue: (issue: PublishReviewIssue) => void;
   onVisibilityChange: (visibility: GalleryVisibility) => void;
+  onExploreListedChange: (listed: boolean) => void;
+  onCreatorProfileListedChange: (listed: boolean) => void;
   onOpenAccount: () => void;
 }) {
   const dialog = useRef<HTMLElement>(null);
@@ -3112,14 +3142,14 @@ function PublishReviewDialog({
           {coverSrc ? (
             <img
               src={coverSrc}
-              alt="Space cover captured from the current Studio view"
+              alt="Space preview image captured from the current Studio view"
             />
           ) : (
-            <span aria-live="polite">Rendering Space cover…</span>
+            <span aria-live="polite">Rendering Space preview image…</span>
           )}
           <p>
-            <strong>Share cover</strong>Current editor view. Close this review
-            to choose another angle.
+            <strong>Space preview image</strong>Captured from this Studio view.
+            Used in Explore Spaces, your public profile when selected, and link previews.
           </p>
         </div>
         {issues.length > 0 && (
@@ -3157,7 +3187,7 @@ function PublishReviewDialog({
             (option) => {
               const description =
                 option === "public"
-                  ? "Listed in Discover · Account preview"
+                  ? "Anyone can open this Space · Account preview"
                   : option === "unlisted"
                     ? "Anyone with the link · Account preview"
                     : "Owner and invited accounts · Account preview";
@@ -3177,6 +3207,36 @@ function PublishReviewDialog({
           )}
           <small>Billing is not active. Account Spaces use an extended preview period for now.</small>
         </fieldset>}
+        {!editing && (
+          <fieldset className="publish-visibility publish-placement" disabled={visibility !== "public"}>
+            <legend>Where this Space appears</legend>
+            <label>
+              <input
+                type="checkbox"
+                checked={exploreListed}
+                onChange={(event) => onExploreListedChange(event.target.checked)}
+              />
+              <span>
+                <strong>Show in Explore Spaces</strong>
+                Adds the Space preview image to the homepage Explore Spaces menu.
+              </span>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={creatorProfileListed}
+                onChange={(event) => onCreatorProfileListedChange(event.target.checked)}
+              />
+              <span>
+                <strong>Show on my public profile</strong>
+                Adds this Space to your public Creator profile and follower updates.
+              </span>
+            </label>
+            {visibility !== "public" && (
+              <small>Placement becomes available when visibility is Public.</small>
+            )}
+          </fieldset>
+        )}
         {publishError && (
           <p className="publish-review-error" role="alert">
             {publishError}
@@ -3189,7 +3249,7 @@ function PublishReviewDialog({
             disabled={publishing || (accountEligible && blockers > 0)}
           >
             {publishStatus === "preparing"
-              ? "Preparing Space cover…"
+              ? "Preparing Space preview image…"
               : publishStatus === "publishing"
                 ? "Publishing…"
                 : !accountEligible
@@ -4049,7 +4109,7 @@ function PublishedGallery({ id }: { id: string }) {
       title: loadState.gallery.title,
       artist: loadState.gallery.artist,
       coverSrc: loadState.gallery.coverSrc,
-      indexEligible: isDiscoverEligible(loadState.gallery),
+      indexEligible: isPublicSpaceIndexEligible(loadState.gallery),
     }));
   }, [loadState]);
   useEffect(() => {
@@ -4224,7 +4284,7 @@ function PublishedGallery({ id }: { id: string }) {
 
 export default function App() {
   const [route, setRoute] = useState(routeFromLocation);
-  const routeKey = `${route.page}:${route.id ?? route.handle ?? route.projectId ?? route.template ?? ""}:${route.demoArt ? "demo-art" : ""}`;
+  const routeKey = `${route.page}:${route.id ?? route.handle ?? route.projectId ?? route.template ?? route.hubView ?? ""}:${route.demoArt ? "demo-art" : ""}`;
   const previousRoute = useRef(routeKey);
   useEffect(() => {
     const redirectPath = legacyCreatorHubRedirectPath(location.pathname, location.hash);
@@ -4250,8 +4310,8 @@ export default function App() {
     const deliveredServerMetadata =
       (route.page === "gallery" && document.querySelector('meta[name="lieuva:space-state"]')) ||
       (route.page === "creator" && document.querySelector('meta[name="lieuva:creator-state"]'));
-    if (!deliveredServerMetadata) applyPageMetadata(pageMetadataPolicy(
-      route.page === "gallery" || route.page === "creator" ? "other" : route.page,
+    if (route.page !== "creator" && !deliveredServerMetadata) applyPageMetadata(pageMetadataPolicy(
+      route.page === "gallery" ? "other" : route.page,
     ));
     if (previousRoute.current === routeKey) return;
     previousRoute.current = routeKey;
@@ -4294,9 +4354,11 @@ export default function App() {
     if (route.page === "data") return <MvpDataNotice />;
     if (route.page === "account") return <AccountPage />;
     if (route.page === "creator" && route.handle)
-      return <CreatorProfilePage handle={route.handle} />;
-    if (route.page === "creators") return <CreatorDirectoryPage />;
-    if (route.page === "creator-hub") return <CreatorHubPage />;
+      return <CreatorHubPage view={{ kind: "profile", handle: route.handle }} onNavigate={navigate} />;
+    if (route.page === "creators")
+      return <CreatorHubPage view={{ kind: "directory" }} onNavigate={navigate} />;
+    if (route.page === "creator-hub")
+      return <CreatorHubPage view={{ kind: route.hubView === "settings" ? "settings" : "home" }} onNavigate={navigate} />;
     if (route.page === "auth-action") return <AuthActionPage />;
     if (route.page === "space-not-found")
       return (

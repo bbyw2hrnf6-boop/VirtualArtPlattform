@@ -6,7 +6,6 @@ import {
   creatorHandleBase,
   creatorImageUrl,
   creatorProfileUrl,
-  creatorProfileSaveLabel,
   loadMyCreatorProfile,
   saveCreatorProfile,
   saveCreatorProfileImage,
@@ -43,6 +42,13 @@ function errorMessage(error: unknown): string {
 
 const emptyLink = (): CreatorLink => ({ label: "", url: "" });
 
+function profileSaveLabel(published: boolean, nextPublic: boolean, saving: boolean): string {
+  if (saving) return "Saving…";
+  if (published && nextPublic) return "Save profile changes";
+  if (nextPublic) return "Save and publish profile";
+  return published ? "Save and make private" : "Save private draft";
+}
+
 export function CreatorProfileSettings({ account }: { account: AccountSession }) {
   const { uid, displayName, nickname, email } = account;
   const [profile, setProfile] = useState<CreatorProfile>({
@@ -61,10 +67,17 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
   const [image, setImage] = useState<File>();
   const [removeImage, setRemoveImage] = useState(false);
   const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
+  const [spaceBusyId, setSpaceBusyId] = useState<string>();
+  const [spaceMessage, setSpaceMessage] = useState("");
+  const [spaceError, setSpaceError] = useState(false);
   const handleValid = isValidCreatorHandle(profile.handle);
   const publicUrl = handleValid ? creatorProfileUrl(profile.handle) : "";
   const completeLinks = useMemo(() => links.filter((link) => link.label.trim() || link.url.trim()), [links]);
   const imagePreview = useMemo(() => image ? URL.createObjectURL(image) : "", [image]);
+  const profileSpaces = useMemo(
+    () => spaces.filter((space) => space.creatorProfileListed),
+    [spaces],
+  );
 
   useEffect(() => {
     let active = true;
@@ -101,7 +114,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           }));
         }
         setState("idle");
-        setMessage(existing ? "Creator Hub profile settings loaded." : "Review your suggested identity, then switch the Creator Hub profile on.");
+        setMessage(existing ? "Public profile settings loaded." : "Review your suggested identity, then publish your public profile when ready.");
       })
       .catch((error) => {
         if (!active) return;
@@ -192,6 +205,32 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
     }
   };
 
+  const updateProfileSpace = async (space: GalleryRecord, creatorProfileListed: boolean) => {
+    setSpaceBusyId(space.id);
+    setSpaceError(false);
+    setSpaceMessage(`Saving ${space.title}…`);
+    try {
+      await galleryRepository.updateDistribution(space.id, {
+        exploreListed: space.exploreListed,
+        creatorProfileListed,
+      });
+      setSpaces((current) => current.map((item) => item.id === space.id
+        ? { ...item, creatorProfileListed }
+        : item));
+      setSpaceMessage(creatorProfileListed
+        ? `${space.title} now appears on your public profile.`
+        : `${space.title} was removed from your public profile.`);
+    } catch (error) {
+      setSpaceError(true);
+      setSpaceMessage(creatorActionErrorMessage(
+        error,
+        "This Space placement could not be saved. Retry shortly.",
+      ));
+    } finally {
+      setSpaceBusyId(undefined);
+    }
+  };
+
   const portraitSource = imagePreview
     || (!removeImage && profile.imagePresent && handleValid ? creatorImageUrl(profile.handle) : "");
   const previewLinks = completeLinks.filter((link) => link.label.trim() && /^https:\/\//i.test(link.url.trim()));
@@ -199,14 +238,14 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
     <form className="creator-settings" onSubmit={(event) => void submit(event)}>
       <div className="creator-settings__intro">
         <p>This is how others see you on LIEUVA. Your public profile keeps your identity, Spaces and studio notes together.</p>
-        <span className={published ? "is-live" : ""}>{published ? "✓ Live in Creator Hub" : "Private draft"}</span>
+        <span className={published ? "is-live" : ""}>{published ? "✓ Public profile live" : "Private draft"}</span>
       </div>
       <div className="creator-settings__layout">
         <div className="creator-settings__editor">
           <section className="creator-settings__visibility">
             <div>
               <strong>Profile visibility</strong>
-              <p>One profile powers your Hub identity, search, follows and studio notes. Public Spaces remain separate work.</p>
+              <p>One profile powers your Hub identity, search, follows and studio notes. Choose which public Spaces appear below.</p>
             </div>
             <label className="creator-settings__switch">
               <b>Publish profile</b>
@@ -247,18 +286,40 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
             ))}
             {links.length < 4 && <button type="button" className="account-reset" onClick={() => setLinks((current) => [...current, emptyLink()])}>Add link</button>}
           </fieldset>
+          <fieldset disabled={Boolean(spaceBusyId)}>
+            <legend>Spaces on your public profile</legend>
+            <p className="creator-settings__help">Choose which active public Spaces appear on your public profile. Selected Spaces also contribute future publishing updates to follower feeds.</p>
+            {spaces.length ? spaces.map((space) => (
+              <section className="creator-settings__visibility" key={space.id}>
+                <div>
+                  <strong>{space.title}</strong>
+                  <p>Uses the Space preview image and title. {space.exploreListed ? "Also listed in Explore Spaces." : "Not listed in Explore Spaces."}</p>
+                </div>
+                <label className="creator-settings__switch">
+                  <b>{spaceBusyId === space.id ? "Saving…" : space.creatorProfileListed ? "Shown" : "Hidden"}</b>
+                  <input
+                    type="checkbox"
+                    checked={space.creatorProfileListed}
+                    onChange={(event) => void updateProfileSpace(space, event.target.checked)}
+                  />
+                  <span aria-hidden="true" />
+                </label>
+              </section>
+            )) : <p className="creator-settings__help">Publish an active Space with Public visibility to choose it here.</p>}
+          </fieldset>
+          {spaceMessage && <p className={`creator-settings__status ${spaceError ? "is-error" : ""}`} role={spaceError ? "alert" : "status"}>{spaceMessage}</p>}
           <div className="creator-settings__actions">
-            <button className="account-primary" disabled={state === "loading" || state === "saving"}>{creatorProfileSaveLabel(published, profile.profilePublic, state === "saving")}</button>
-            {published && <a href="/creator-hub#creator-profile">Open in Creator Hub →</a>}
-            {published && publicUrl && <a href={publicUrl}>View public page ↗</a>}
+            <button className="account-primary" disabled={state === "loading" || state === "saving"}>{profileSaveLabel(published, profile.profilePublic, state === "saving")}</button>
+            {published && <a href="/creator-hub/profile">Open in Creator Hub →</a>}
+            {published && publicUrl && <a href={publicUrl}>View public profile ↗</a>}
           </div>
           <p className={`creator-settings__status ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>
         </div>
         <aside className="creator-settings__preview" aria-label="Live public profile preview">
           <div className="creator-settings__preview-label"><span>Live preview</span></div>
-          <div className="creator-settings__preview-cover" aria-hidden="true">
-            {spaces[0] && discoverCoverSource(spaces[0])
-              ? <img src={discoverCoverSource(spaces[0])} alt="" />
+          <div className="creator-settings__preview-cover" aria-label="Space preview image">
+            {profileSpaces[0] && discoverCoverSource(profileSpaces[0])
+              ? <img src={discoverCoverSource(profileSpaces[0])} alt={`${profileSpaces[0].title} Space preview image`} />
               : <span />}
           </div>
           <div className="creator-settings__preview-identity">
@@ -271,15 +332,15 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
             {previewLinks.length > 0 && <div>{previewLinks.map((link) => <a key={`${link.label}:${link.url}`} href={link.url}>{link.label} ↗</a>)}</div>}
           </div>
           <dl className="creator-settings__preview-stats">
-            <div><dt>{spaces.length}</dt><dd>Public Spaces</dd></div>
+            <div><dt>{profileSpaces.length}</dt><dd>Public Spaces</dd></div>
             <div><dt>{previewLinks.length}</dt><dd>Public links</dd></div>
           </dl>
           <section className="creator-settings__preview-spaces">
-            <header><strong>Featured Spaces</strong><span>{spaces.length ? `${spaces.length} public` : "None published yet"}</span></header>
-            {spaces.length ? <div>{spaces.slice(0, 3).map((space) => {
+            <header><strong>Spaces on your public profile</strong><span>{profileSpaces.length ? `${profileSpaces.length} shown` : "None selected"}</span></header>
+            {profileSpaces.length ? <div>{profileSpaces.slice(0, 3).map((space) => {
               const cover = discoverCoverSource(space);
-              return <a href={galleryShareUrl(space.id, window.location.href)} key={space.id}><span>{cover ? <img src={cover} alt="" /> : "Space"}</span><strong>{space.title}</strong><small>Published</small></a>;
-            })}</div> : <p>Publish a Space publicly and it will become the strongest part of your profile.</p>}
+              return <a href={galleryShareUrl(space.id, window.location.href)} key={space.id}><span>{cover ? <img src={cover} alt={`${space.title} Space preview image`} /> : "Space"}</span><strong>{space.title}</strong><small>Published</small></a>;
+            })}</div> : <p>Select an active public Space to show it on your public profile.</p>}
           </section>
         </aside>
       </div>

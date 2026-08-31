@@ -15,6 +15,9 @@
 
 @media (min-width: 761px) and (max-width: 860px) {
   .creator-hub__hero { grid-template-columns: 1fr; }
+  .creator-hub__profile-settings { min-height: 100dvh; padding: 28px 16px 96px; }
+  .creator-hub__profile-settings>header { margin-bottom: 24px; }
+  .creator-hub__profile-settings>header h1 { font-size: clamp(42px,13vw,58px); }
 }
 
 @media (max-width: 760px) {

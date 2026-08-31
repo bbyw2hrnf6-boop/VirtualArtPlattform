@@ -17,6 +17,7 @@
 .space-menu__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:#ffffff20}
 .space-menu-card{min-width:0;padding:18px 18px 22px;background:#11130f;color:inherit;text-decoration:none;transition:background .25s}
 .space-menu-card:hover,.space-menu-card:focus-visible{background:#181a15}
+.space-menu-card--focused{outline:1px solid var(--acid);outline-offset:-1px;background:#171a12}
 .space-menu-card--pinned{grid-column:span 2;background:#181a14}
 .space-menu-card__visual{position:relative;overflow:hidden;aspect-ratio:4/3;background:#252721}
 .space-menu-card--pinned .space-menu-card__visual{aspect-ratio:16/7}

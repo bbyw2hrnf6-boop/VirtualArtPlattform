@@ -172,6 +172,31 @@ function AccountRooms({ session }: { session: AccountSession }) {
       setLifecycleBusyId(undefined);
     }
   };
+  const updateRoomDistribution = async (
+    room: GalleryRecord,
+    field: "exploreListed" | "creatorProfileListed",
+    value: boolean,
+  ) => {
+    setLifecycleBusyId(room.id);
+    setError(undefined);
+    try {
+      await galleryRepository.updateDistribution(room.id, {
+        exploreListed: field === "exploreListed" ? value : room.exploreListed,
+        creatorProfileListed: field === "creatorProfileListed" ? value : room.creatorProfileListed,
+      });
+      setRooms((current) => current.map((item) => item.id === room.id
+        ? { ...item, [field]: value }
+        : item));
+    } catch (caught) {
+      console.error("Space placement update failed", caught);
+      setError(firebaseActionErrorMessage(
+        caught,
+        "The Space placement could not be saved.",
+      ));
+    } finally {
+      setLifecycleBusyId(undefined);
+    }
+  };
   const exportRoom = async (room: GalleryRecord) => {
     setLifecycleBusyId(room.id);
     setError(undefined);
@@ -201,7 +226,9 @@ function AccountRooms({ session }: { session: AccountSession }) {
   const activeRooms = rooms.filter(
     (room) => room.lifecycleStatus === "active" && new Date(room.expiresAt).getTime() > currentTime,
   );
-  const publicRooms = activeRooms.filter((room) => room.visibility === "public");
+  const exploreRooms = activeRooms.filter(
+    (room) => room.visibility === "public" && room.exploreListed,
+  );
   const sharedRooms = activeRooms.filter((room) => room.ownerId !== session.uid);
   return (
     <section className="account-rooms" aria-labelledby="account-rooms-title">
@@ -215,7 +242,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
       <div className="account-room-stats" aria-label="Space overview">
         <article><span>Drafts here</span><strong>{drafts.length}</strong></article>
         <article><span>Live</span><strong>{activeRooms.length}</strong></article>
-        <article><span>In Discover</span><strong>{publicRooms.length}</strong></article>
+        <article><span>In Explore Spaces</span><strong>{exploreRooms.length}</strong></article>
         <article><span>Shared with you</span><strong>{sharedRooms.length}</strong></article>
       </div>
       {drafts.length > 0 && (
@@ -321,6 +348,37 @@ function AccountRooms({ session }: { session: AccountSession }) {
                       <option value="private">Private</option>
                     </select>
                   </label>
+                  <fieldset
+                    className="account-room-placement"
+                    disabled={
+                      lifecycleBusyId === room.id
+                      || room.lifecycleStatus === "trashed"
+                      || room.visibility !== "public"
+                    }
+                  >
+                    <legend>Public placement</legend>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={room.exploreListed}
+                        onChange={(event) => void updateRoomDistribution(room, "exploreListed", event.target.checked)}
+                      />
+                      <span>Explore Spaces</span>
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={room.creatorProfileListed}
+                        onChange={(event) => void updateRoomDistribution(room, "creatorProfileListed", event.target.checked)}
+                      />
+                      <span>Public profile</span>
+                    </label>
+                  </fieldset>
+                  <small className="account-room-placement__note">
+                    {room.visibility === "public"
+                      ? "Choose whether this Space appears on the homepage and your public profile."
+                      : "Set visibility to Public before choosing public placement."}
+                  </small>
                   {available && <button type="button" onClick={() => {
                     const shareUrl = galleryShareUrl(room.id, window.location.href);
                     void navigator.clipboard.writeText(shareUrl).catch(() => {
@@ -826,7 +884,7 @@ export function AccountDialog({
                 })} disabled={busy}>I verified</button>
               </div>
             )}
-            <p className="account-note">LIEUVA Early Access is available now. Public Spaces appear in Discover; unlisted and private Spaces stay in Your Spaces. Professional plans and additional tools are in development—billing is not active.</p>
+            <p className="account-note">LIEUVA Early Access is available now. Public Spaces can be listed in Explore Spaces; unlisted and private Spaces stay in Your Spaces. Professional plans and additional tools are in development—billing is not active.</p>
             <button className="account-secondary" onClick={() => void run(async () => {
               await service?.signOutAccount();
               setSession(null);

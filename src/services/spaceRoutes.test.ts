@@ -4,7 +4,9 @@ import {
   applicationRootUrl,
   canonicalHostRedirectUrl,
   creatorCanonicalUrl,
+  creatorExperienceNavigationPath,
   creatorPath,
+  exploreSpacesUrl,
   legacyCreatorHubRedirectPath,
   matchCreatorRoute,
   matchSpaceRoute,
@@ -22,6 +24,7 @@ describe("Space route contract", () => {
   it("builds and matches a clean Creator profile without exposing an account ID", () => {
     expect(matchCreatorRoute("/creators")).toEqual({ kind: "directory" });
     expect(matchCreatorRoute("/creator-hub")).toEqual({ kind: "hub" });
+    expect(matchCreatorRoute("/creator-hub/profile")).toEqual({ kind: "settings" });
     expect(creatorCanonicalUrl("studio-north")).toBe("https://lieuva.com/creators/studio-north");
     expect(creatorPath("studio-north")).toBe("/creators/studio-north");
     expect(matchCreatorRoute("/creators/studio-north")).toEqual({
@@ -51,6 +54,31 @@ describe("Space route contract", () => {
   it("keeps clean routes on the local origin during development", () => {
     expect(spaceCanonicalUrl("room-123", "http://localhost:5173/#/g/room-123")).toBe(
       "http://localhost:5173/spaces/room-123",
+    );
+  });
+
+  it("keeps every same-origin Creator view inside one client navigation shell", () => {
+    const current = "http://localhost:5173/creator-hub#creator-feed";
+    expect(creatorExperienceNavigationPath("/creators", current)).toBe("/creators");
+    expect(creatorExperienceNavigationPath("/creators/studio-north?from=feed#work", current)).toBe(
+      "/creators/studio-north?from=feed#work",
+    );
+    expect(creatorExperienceNavigationPath("/creator-hub#creator-profile", current)).toBe(
+      "/creator-hub#creator-profile",
+    );
+    expect(creatorExperienceNavigationPath("/creator-hub/profile", current)).toBe(
+      "/creator-hub/profile",
+    );
+    expect(creatorExperienceNavigationPath("https://lieuva.com/creators/studio-north", current)).toBeNull();
+    expect(creatorExperienceNavigationPath("/creators/studio/extra", current)).toBeNull();
+  });
+
+  it("deep-links a published Space into the homepage Explore menu", () => {
+    expect(exploreSpacesUrl("room-123")).toBe(
+      "https://lieuva.com/?explore=spaces&space=room-123",
+    );
+    expect(exploreSpacesUrl("room-123", "http://localhost:5173/#/create")).toBe(
+      "http://localhost:5173/?explore=spaces&space=room-123",
     );
   });
 

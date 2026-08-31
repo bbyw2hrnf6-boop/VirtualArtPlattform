@@ -48,6 +48,7 @@ import {
   classifyCreatorDocumentRoute,
   creatorFollowTransition,
   creatorCanonicalUrl,
+  isCreatorProfileSpaceListed,
   isValidCreatorWebp,
   normalizeCreatorHandle,
   parseCreatorCommentInput,
@@ -82,7 +83,7 @@ const LEGAL_FOOTER = defineString("AURA_LEGAL_FOOTER", {
 const db = getFirestore();
 const sources = new Set(["email-create", "email-signin", "google-create", "google-signin", "account-settings"]);
 const galleryVisibilities = new Set<string>(GALLERY_VISIBILITIES);
-const galleryLifecycleActions = new Set(["archive", "restore", "renew", "trash", "visibility"]);
+const galleryLifecycleActions = new Set(["archive", "restore", "renew", "trash", "visibility", "distribution"]);
 const galleryRoles = new Set(["viewer", "editor"]);
 const publicDeliveryFields = [
   "schemaVersion",
@@ -97,6 +98,8 @@ const publicDeliveryFields = [
   "ownerId",
   "coverPath",
   "discoverEligible",
+  "exploreListed",
+  "creatorProfileListed",
   "artworks",
 ] as const;
 
@@ -249,6 +252,7 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
       .get(),
   ]);
   const spaces: PublicCreatorSpace[] = spacesSnapshot.docs
+    .filter((document) => isCreatorProfileSpaceListed(document.data()))
     .map((document) => classifySpaceForDelivery(document.id, document.data()))
     .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public")
     .sort((left, right) => (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
@@ -1200,6 +1204,17 @@ export const manageAuraGalleryLifecycle = onCall(
         throw new HttpsError("failed-precondition", "Use a verified account for this Space action.");
       if (status === "trashed")
         throw new HttpsError("failed-precondition", "Restore this Space before changing it.");
+      if (action === "distribution") {
+        const exploreListed = request.data?.exploreListed;
+        const creatorProfileListed = request.data?.creatorProfileListed;
+        if (typeof exploreListed !== "boolean" || typeof creatorProfileListed !== "boolean")
+          throw new HttpsError("invalid-argument", "Invalid Space placement settings.");
+        transaction.update(galleryReference, {
+          exploreListed,
+          creatorProfileListed,
+        });
+        return;
+      }
       if (action === "archive") {
         transaction.update(galleryReference, {
           lifecycleStatus: status === "archived" ? "active" : "archived",

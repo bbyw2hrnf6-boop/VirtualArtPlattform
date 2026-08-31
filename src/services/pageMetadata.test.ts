@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pageMetadataPolicy, publishedSpaceMetadataPolicy } from "./pageMetadata";
+import { pageMetadataPolicy, publicCreatorMetadataPolicy, publishedSpaceMetadataPolicy } from "./pageMetadata";
 
 describe("page metadata policy", () => {
   it("indexes only the public marketing surface by default", () => {
@@ -13,7 +13,7 @@ describe("page metadata policy", () => {
 
   it("keeps the public Creator directory indexable after the client application mounts", () => {
     expect(pageMetadataPolicy("creators")).toMatchObject({
-      title: "Creators — Directory | LIEUVA",
+      title: "Creators | LIEUVA",
       canonical: "https://lieuva.com/creators",
       robots: "index,follow,max-image-preview:large",
     });
@@ -24,6 +24,21 @@ describe("page metadata policy", () => {
       title: "Creator Hub | LIEUVA",
       canonical: "https://lieuva.com/creator-hub",
       robots: "noindex,nofollow,noarchive",
+    });
+  });
+
+  it("updates public Creator metadata when profiles change inside the Hub shell", () => {
+    expect(publicCreatorMetadataPolicy({
+      handle: "studio-north",
+      displayName: "Studio North",
+      bio: "Spatial work in progress.",
+      imagePresent: true,
+    })).toMatchObject({
+      title: "Studio North — Creator | LIEUVA",
+      description: "Spatial work in progress.",
+      canonical: "https://lieuva.com/creators/studio-north",
+      robots: "index,follow,max-image-preview:large",
+      image: "https://lieuva.com/creator-images/studio-north.webp",
     });
   });
 

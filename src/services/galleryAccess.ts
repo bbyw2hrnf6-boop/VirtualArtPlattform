@@ -5,6 +5,15 @@ export type GalleryLifecycleStatus = "active" | "archived" | "trashed";
 
 export type GalleryPublishOptions = {
   visibility: GalleryVisibility;
+  /** List this public Space in the homepage Explore Spaces surface. */
+  exploreListed?: boolean;
+  /** Also show this public Space on the owner's public Creator profile. */
+  creatorProfileListed?: boolean;
+};
+
+export type GalleryDistribution = {
+  exploreListed: boolean;
+  creatorProfileListed: boolean;
 };
 
 export type GalleryMember = {
@@ -35,6 +44,8 @@ export type GalleryEditTarget = {
   retention: GalleryRetention;
   accessVersion: number;
   revision: number;
+  exploreListed?: boolean;
+  creatorProfileListed?: boolean;
   role: Extract<GalleryRole, "owner" | "editor">;
 };
 

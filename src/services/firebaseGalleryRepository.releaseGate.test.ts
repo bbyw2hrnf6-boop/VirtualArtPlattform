@@ -183,7 +183,9 @@ vi.mock("firebase/functions", () => ({
     role,
     inviteId,
     action,
-  }: Record<string, string>) => {
+    exploreListed,
+    creatorProfileListed,
+  }: Record<string, unknown>) => {
     if (mock.state.callableFailure) throw mock.state.callableFailure;
     const user = mock.state.currentUser;
     if (name === "beginAuraGalleryPublication") {
@@ -192,11 +194,11 @@ vi.mock("firebase/functions", () => ({
       return { data: { expiresAt: "2027-08-23T10:00:00.000Z", retention: "account-preview" } };
     }
     if (name === "abortAuraGalleryPublication") {
-      mock.state.abortedGalleryIds.push(galleryId);
+      mock.state.abortedGalleryIds.push(String(galleryId));
       return { data: { status: "clean" } };
     }
     if (name === "createAuraGalleryInvite") {
-      const id = `invite-${galleryId}-${email}`;
+      const id = `invite-${String(galleryId)}-${String(email)}`;
       mock.state.documents.set(`galleryInvites/${id}`, {
         galleryId, galleryTitle: mock.state.documents.get(`galleries/${galleryId}`)?.title,
         ownerId: user?.uid, email, role, status: "pending",
@@ -208,7 +210,7 @@ vi.mock("firebase/functions", () => ({
     if (name === "acceptAuraGalleryInvite") {
       const path = `galleryInvites/${inviteId}`;
       const invite = mock.state.documents.get(path)!;
-      mock.state.documents.set(`galleries/${invite.galleryId}/members/${invite.email}`, {
+      mock.state.documents.set(`galleries/${String(invite.galleryId)}/members/${String(invite.email)}`, {
         email: invite.email, role: invite.role, status: "active",
         addedAt: mock.Timestamp.fromDate(mock.state.clock),
       });
@@ -216,7 +218,7 @@ vi.mock("firebase/functions", () => ({
       return { data: { status: "accepted" } };
     }
     if (name === "revokeAuraGalleryAccess") {
-      mock.state.documents.delete(`galleries/${galleryId}/members/${email}`);
+      mock.state.documents.delete(`galleries/${String(galleryId)}/members/${String(email)}`);
       for (const [path, data] of mock.state.documents) {
         if (path.startsWith("galleryInvites/") && data.galleryId === galleryId && data.email === email)
           mock.state.documents.delete(path);
@@ -224,11 +226,15 @@ vi.mock("firebase/functions", () => ({
       return { data: { status: "removed" } };
     }
     if (name === "manageAuraGalleryLifecycle") {
-      const path = `galleries/${galleryId}`;
+      const path = `galleries/${String(galleryId)}`;
       const current = mock.state.documents.get(path)!;
-      mock.state.documents.set(path, action === "visibility"
-        ? { ...current, visibility }
-        : current);
+      mock.state.documents.set(path,
+        action === "visibility"
+          ? { ...current, visibility }
+          : action === "distribution"
+            ? { ...current, exploreListed, creatorProfileListed }
+            : current,
+      );
       return { data: { status: "ok" } };
     }
     return { data: { status: "ok" } };
@@ -355,12 +361,37 @@ describe("publish → visit → edit → update release gate", () => {
   it("publishes and hydrates public JPG, PNG, and WebP media", async () => {
     const repository = new FirebaseGalleryRepository();
     const published = await repository.publish(draft(), media.webp, { visibility: "public" });
-    expect(published).toMatchObject({ visibility: "public", revision: 1, accessVersion: 1 });
+    expect(published).toMatchObject({
+      visibility: "public",
+      exploreListed: true,
+      creatorProfileListed: false,
+      revision: 1,
+      accessVersion: 1,
+    });
     expect(mock.state.objects.size).toBe(4);
 
     mock.state.currentUser = null;
     const visited = await repository.find(published.id);
     expect(visited?.artworks.every((artwork) => artwork.src.startsWith("blob:"))).toBe(true);
+    expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
+  });
+
+  it("keeps homepage and public-profile placement independent and editable by the owner", async () => {
+    const repository = new FirebaseGalleryRepository();
+    const published = await repository.publish(draft(), media.webp, {
+      visibility: "public",
+      exploreListed: false,
+      creatorProfileListed: true,
+    });
+    expect(published).toMatchObject({ exploreListed: false, creatorProfileListed: true });
+    expect((await repository.discover()).map((record) => record.id)).not.toContain(published.id);
+
+    await repository.updateDistribution(published.id, {
+      exploreListed: true,
+      creatorProfileListed: false,
+    });
+    const replaced = await repository.findManifest(published.id);
+    expect(replaced).toMatchObject({ exploreListed: true, creatorProfileListed: false });
     expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
   });
 
@@ -374,7 +405,15 @@ describe("publish → visit → edit → update release gate", () => {
 
   it("rejects private content before authorization and permits an accepted viewer", async () => {
     const repository = new FirebaseGalleryRepository();
-    const published = await repository.publish(draft(), media.webp, { visibility: "private" });
+    const published = await repository.publish(draft(), media.webp, {
+      visibility: "private",
+      exploreListed: false,
+      creatorProfileListed: true,
+    });
+    mock.state.documents.set(`galleries/${published.id}`, {
+      ...mock.state.documents.get(`galleries/${published.id}`),
+      discoverEligible: false,
+    });
     mock.state.currentUser = null;
     await expect(repository.find(published.id)).rejects.toBeInstanceOf(GalleryAccessDeniedError);
 
@@ -389,7 +428,15 @@ describe("publish → visit → edit → update release gate", () => {
 
   it("updates in place, increments revision, preserves identity/access, and resolves new media", async () => {
     const repository = new FirebaseGalleryRepository();
-    const published = await repository.publish(draft(), media.webp, { visibility: "private" });
+    const published = await repository.publish(draft(), media.webp, {
+      visibility: "private",
+      exploreListed: false,
+      creatorProfileListed: true,
+    });
+    mock.state.documents.set(`galleries/${published.id}`, {
+      ...mock.state.documents.get(`galleries/${published.id}`),
+      discoverEligible: false,
+    });
     mock.state.documents.set(`galleries/${published.id}/members/editor@example.test`, {
       email: "editor@example.test", role: "editor", status: "active",
       addedAt: mock.Timestamp.fromDate(mock.state.clock),
@@ -405,9 +452,12 @@ describe("publish → visit → edit → update release gate", () => {
     expect(updated.revision).toBe(2);
     expect(updated.visibility).toBe("private");
     expect(updated.accessVersion).toBe(published.accessVersion);
+    expect(updated.exploreListed).toBe(false);
+    expect(updated.creatorProfileListed).toBe(true);
     expect(updated.effectiveRole).toBe("editor");
     expect(beforePaths.every((path) => mock.state.objects.has(path))).toBe(true);
     const persisted = await repository.findManifest(updated.id);
+    expect(persisted?.discoverEligible).toBe(false);
     expect(persisted?.artworks.every((artwork) => artwork.storagePath?.includes("/revisions/"))).toBe(true);
     expect((await repository.find(updated.id))?.artworks.every((artwork) => artwork.src.startsWith("blob:"))).toBe(true);
   });

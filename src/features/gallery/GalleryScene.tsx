@@ -5196,7 +5196,7 @@ function GallerySceneRenderer({
       const context = output.getContext("2d");
       if (!context)
         throw new Error(
-          "The Space cover could not be prepared in this browser.",
+          "The Space preview image could not be prepared in this browser.",
         );
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);

@@ -131,6 +131,8 @@ describe('gallery publication payload', () => {
     expect(parsed.artworks[0].storagePath).toBe(value.artworks[0].storagePath);
     expect(parsed.visibility).toBe('public');
     expect(parsed.retention).toBe('guest-10-days');
+    expect(parsed.exploreListed).toBe(true);
+    expect(parsed.creatorProfileListed).toBe(true);
   });
 
   it('accepts account-backed schema v3 access settings', () => {
@@ -148,6 +150,8 @@ describe('gallery publication payload', () => {
       visibility: 'private',
       retention: 'account-preview',
       accessVersion: 1,
+      exploreListed: false,
+      creatorProfileListed: true,
       revision: 2,
       updatedAt: Timestamp.fromDate(new Date('2026-08-14T12:00:00.000Z')),
       schemaVersion: 3,
@@ -155,6 +159,8 @@ describe('gallery publication payload', () => {
     expect(parsed.visibility).toBe('private');
     expect(parsed.retention).toBe('account-preview');
     expect(parsed.accessVersion).toBe(1);
+    expect(parsed.exploreListed).toBe(false);
+    expect(parsed.creatorProfileListed).toBe(true);
     expect(parsed.revision).toBe(2);
     expect(parsed.updatedAt).toBe('2026-08-14T12:00:00.000Z');
   });

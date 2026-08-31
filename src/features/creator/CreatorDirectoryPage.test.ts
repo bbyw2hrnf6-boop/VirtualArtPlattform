@@ -10,7 +10,7 @@ describe("public Creator directory contract", () => {
   });
 
   it("uses crawlable public links for Creator profiles and Spaces", () => {
-    expect(directorySource).toContain("href={creatorProfileUrl(creator.handle)}");
+    expect(directorySource).toContain("href={creatorCanonicalUrl(creator.handle, window.location.href)}");
     expect(directorySource).toContain("href={spaceCanonicalUrl(space.id, location.href)}");
     expect(directorySource).toContain('href="/creator-hub"');
     expect(directorySource).toContain('href="/"');
@@ -27,5 +27,12 @@ describe("public Creator directory contract", () => {
     expect(directorySource).toContain('import "./creatorDirectory.css"');
     expect(directorySource).not.toContain('import "./creatorHub.css"');
     expect(directorySource).not.toContain('import "./creatorHubMobile.css"');
+  });
+
+  it("can remove duplicate navigation when rendered inside the Hub shell", () => {
+    expect(directorySource).toContain('const Root = embedded ? "section" : "main"');
+    expect(directorySource).toContain("creator-directory--embedded");
+    expect(directorySource).toContain("{!embedded ? <header");
+    expect(directorySource).toContain("{!embedded ? <footer");
   });
 });
