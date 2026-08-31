@@ -3149,7 +3149,7 @@ function PublishReviewDialog({
           )}
           <p>
             <strong>Space preview image</strong>Captured from this Studio view.
-            Used in Explore Spaces, your public profile when selected, and link previews.
+            Used in Explore Spaces, your Creator Hub profile when selected, and link previews.
           </p>
         </div>
         {issues.length > 0 && (
@@ -3217,7 +3217,7 @@ function PublishReviewDialog({
                 onChange={(event) => onExploreListedChange(event.target.checked)}
               />
               <span>
-                <strong>Show in Explore Spaces</strong>
+                <strong>Show in Explore Spaces (Main homepage)</strong>
                 Adds the Space preview image to the homepage Explore Spaces menu.
               </span>
             </label>
@@ -3228,8 +3228,8 @@ function PublishReviewDialog({
                 onChange={(event) => onCreatorProfileListedChange(event.target.checked)}
               />
               <span>
-                <strong>Show on my public profile</strong>
-                Adds this Space to your public Creator profile and follower updates.
+                <strong>Show in Creator Hub</strong>
+                Adds this Space to your Hub profile and future follower updates.
               </span>
             </label>
             {visibility !== "public" && (

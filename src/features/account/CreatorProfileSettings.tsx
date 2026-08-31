@@ -21,7 +21,7 @@ import {
   type GalleryRecord,
 } from "../../services/galleryRepository";
 import { galleryShareUrl } from "../../services/galleryShareUrl";
-import { isPublicProfileSpace } from "./accountPresentation";
+import { accountSectionUrl, isPublicProfileSpace } from "./accountPresentation";
 import "./creatorProfileSettings.css";
 
 type SaveState = "loading" | "idle" | "checking" | "saving" | "saved" | "error";
@@ -67,9 +67,6 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
   const [image, setImage] = useState<File>();
   const [removeImage, setRemoveImage] = useState(false);
   const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
-  const [spaceBusyId, setSpaceBusyId] = useState<string>();
-  const [spaceMessage, setSpaceMessage] = useState("");
-  const [spaceError, setSpaceError] = useState(false);
   const handleValid = isValidCreatorHandle(profile.handle);
   const publicUrl = handleValid ? creatorProfileUrl(profile.handle) : "";
   const completeLinks = useMemo(() => links.filter((link) => link.label.trim() || link.url.trim()), [links]);
@@ -205,32 +202,6 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
     }
   };
 
-  const updateProfileSpace = async (space: GalleryRecord, creatorProfileListed: boolean) => {
-    setSpaceBusyId(space.id);
-    setSpaceError(false);
-    setSpaceMessage(`Saving ${space.title}…`);
-    try {
-      await galleryRepository.updateDistribution(space.id, {
-        exploreListed: space.exploreListed,
-        creatorProfileListed,
-      });
-      setSpaces((current) => current.map((item) => item.id === space.id
-        ? { ...item, creatorProfileListed }
-        : item));
-      setSpaceMessage(creatorProfileListed
-        ? `${space.title} now appears on your public profile.`
-        : `${space.title} was removed from your public profile.`);
-    } catch (error) {
-      setSpaceError(true);
-      setSpaceMessage(creatorActionErrorMessage(
-        error,
-        "This Space placement could not be saved. Retry shortly.",
-      ));
-    } finally {
-      setSpaceBusyId(undefined);
-    }
-  };
-
   const portraitSource = imagePreview
     || (!removeImage && profile.imagePresent && handleValid ? creatorImageUrl(profile.handle) : "");
   const previewLinks = completeLinks.filter((link) => link.label.trim() && /^https:\/\//i.test(link.url.trim()));
@@ -245,7 +216,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           <section className="creator-settings__visibility">
             <div>
               <strong>Profile visibility</strong>
-              <p>One profile powers your Hub identity, search, follows and studio notes. Choose which public Spaces appear below.</p>
+              <p>One profile powers your Hub identity, search, follows and studio notes. Space placement stays with each Space in Your Spaces.</p>
             </div>
             <label className="creator-settings__switch">
               <b>Publish profile</b>
@@ -286,31 +257,21 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
             ))}
             {links.length < 4 && <button type="button" className="account-reset" onClick={() => setLinks((current) => [...current, emptyLink()])}>Add link</button>}
           </fieldset>
-          <fieldset disabled={Boolean(spaceBusyId)}>
-            <legend>Spaces on your public profile</legend>
-            <p className="creator-settings__help">Choose which active public Spaces appear on your public profile. Selected Spaces also contribute future publishing updates to follower feeds.</p>
-            {spaces.length ? spaces.map((space) => (
-              <section className="creator-settings__visibility" key={space.id}>
-                <div>
-                  <strong>{space.title}</strong>
-                  <p>Uses the Space preview image and title. {space.exploreListed ? "Also listed in Explore Spaces." : "Not listed in Explore Spaces."}</p>
-                </div>
-                <label className="creator-settings__switch">
-                  <b>{spaceBusyId === space.id ? "Saving…" : space.creatorProfileListed ? "Shown" : "Hidden"}</b>
-                  <input
-                    type="checkbox"
-                    checked={space.creatorProfileListed}
-                    onChange={(event) => void updateProfileSpace(space, event.target.checked)}
-                  />
-                  <span aria-hidden="true" />
-                </label>
-              </section>
-            )) : <p className="creator-settings__help">Publish an active Space with Public visibility to choose it here.</p>}
-          </fieldset>
-          {spaceMessage && <p className={`creator-settings__status ${spaceError ? "is-error" : ""}`} role={spaceError ? "alert" : "status"}>{spaceMessage}</p>}
+          <section className="creator-settings__space-placement" aria-labelledby="hub-space-placement-title">
+            <div>
+              <p className="eyebrow">Hub Space placement</p>
+              <h3 id="hub-space-placement-title">Choose Spaces where their settings live.</h3>
+              <p>Hub placement is controlled once per Space in Your Spaces. This avoids duplicate switches and keeps visibility, Explore Spaces and Hub placement together.</p>
+            </div>
+            <dl>
+              <div><dt>{profileSpaces.length}</dt><dd>In Hub</dd></div>
+              <div><dt>{spaces.length}</dt><dd>Eligible public Spaces</dd></div>
+            </dl>
+            <a href={accountSectionUrl("rooms", window.location.href)}>Manage Hub placement in Your Spaces <span aria-hidden="true">→</span></a>
+          </section>
           <div className="creator-settings__actions">
             <button className="account-primary" disabled={state === "loading" || state === "saving"}>{profileSaveLabel(published, profile.profilePublic, state === "saving")}</button>
-            {published && <a href="/creator-hub/profile">Open in Creator Hub →</a>}
+            {published && <a href="/creator-hub#creator-profile">Open profile in Creator Hub →</a>}
             {published && publicUrl && <a href={publicUrl}>View public profile ↗</a>}
           </div>
           <p className={`creator-settings__status ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>
@@ -336,11 +297,11 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
             <div><dt>{previewLinks.length}</dt><dd>Public links</dd></div>
           </dl>
           <section className="creator-settings__preview-spaces">
-            <header><strong>Spaces on your public profile</strong><span>{profileSpaces.length ? `${profileSpaces.length} shown` : "None selected"}</span></header>
+            <header><strong>Spaces shown in Creator Hub</strong><span>{profileSpaces.length ? `${profileSpaces.length} shown` : "None selected"}</span></header>
             {profileSpaces.length ? <div>{profileSpaces.slice(0, 3).map((space) => {
               const cover = discoverCoverSource(space);
               return <a href={galleryShareUrl(space.id, window.location.href)} key={space.id}><span>{cover ? <img src={cover} alt={`${space.title} Space preview image`} /> : "Space"}</span><strong>{space.title}</strong><small>Published</small></a>;
-            })}</div> : <p>Select an active public Space to show it on your public profile.</p>}
+            })}</div> : <p>Choose Hub placement in Your Spaces to show a Space here.</p>}
           </section>
         </aside>
       </div>

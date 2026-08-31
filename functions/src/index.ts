@@ -46,6 +46,7 @@ import {
 import {
   CREATOR_HANDLE_CHANGE_COOLDOWN_MS,
   classifyCreatorDocumentRoute,
+  creatorNotificationProjection,
   creatorFollowTransition,
   creatorCanonicalUrl,
   isCreatorProfileSpaceListed,
@@ -496,6 +497,8 @@ export const manageLieuvaCreatorFollow = onCall(
       return { following: false, followerCount: target.followerCount, canFollow: false, isSelf: false };
     const isSelf = followerCreatorId === followedCreatorId;
     const followReference = db.collection("creatorFollows").doc(`${followerCreatorId}_${followedCreatorId}`);
+    const actorProfileReference = db.collection("creatorProfiles").doc(followerCreatorId);
+    const followNotificationReference = db.collection("creatorNotifications").doc(followedCreatorId).collection("items").doc();
     const [outgoingBlock, incomingBlock] = isSelf ? [undefined, undefined] : await Promise.all([
       db.collection("creatorBlocks").doc(`${followerCreatorId}_${followedCreatorId}`).get(),
       db.collection("creatorBlocks").doc(`${followedCreatorId}_${followerCreatorId}`).get(),
@@ -503,18 +506,34 @@ export const manageLieuvaCreatorFollow = onCall(
     const blocked = outgoingBlock?.exists === true || incomingBlock?.exists === true;
     if (action === "status" || isSelf) {
       const follow = isSelf ? undefined : await followReference.get();
-      return { following: blocked ? false : follow?.exists === true, followerCount: target.followerCount, canFollow: !isSelf && !blocked, isSelf, blocked };
+      const actorProfile = isSelf
+        ? target
+        : parseCreatorProfileInput((await actorProfileReference.get()).data());
+      return {
+        following: blocked ? false : follow?.exists === true,
+        followerCount: target.followerCount,
+        canFollow: !isSelf && !blocked && actorProfile?.profilePublic === true,
+        isSelf,
+        blocked,
+      };
     }
     if (blocked) throw new HttpsError("failed-precondition", "This Creator connection is blocked.");
     const transitionResult = await db.runTransaction(async (transaction) => {
-      const [followSnapshot, currentTarget] = await Promise.all([
+      const [followSnapshot, currentTarget, actorProfileSnapshot] = await Promise.all([
         transaction.get(followReference),
         transaction.get(targetReference),
+        transaction.get(actorProfileReference),
       ]);
       const exists = followSnapshot.exists;
-      const count = typeof currentTarget.data()?.followerCount === "number" ? currentTarget.data()!.followerCount : 0;
+      const currentTargetProfile = parseCreatorProfileInput(currentTarget.data());
+      const actorProfile = parseCreatorProfileInput(actorProfileSnapshot.data());
+      const count = currentTargetProfile?.followerCount ?? 0;
       const transition = creatorFollowTransition(action, exists, count);
       if (action === "follow" && transition.changed) {
+        if (!currentTargetProfile?.profilePublic)
+          throw new HttpsError("not-found", "Creator profile not found.");
+        if (!actorProfile?.profilePublic)
+          throw new HttpsError("failed-precondition", "Make your Creator profile public before following.");
         transaction.create(followReference, {
           followerCreatorId,
           followedCreatorId,
@@ -522,29 +541,26 @@ export const manageLieuvaCreatorFollow = onCall(
           schemaVersion: 1,
         });
         transaction.set(targetReference, { followerCount: transition.followerCount }, { merge: true });
-        return { following: true, changed: true };
+        transaction.create(followNotificationReference, {
+          kind: "follow",
+          actorCreatorId: followerCreatorId,
+          actorHandle: actorProfile.handle,
+          actorDisplayName: actorProfile.displayName,
+          createdAt: FieldValue.serverTimestamp(),
+          read: false,
+          schemaVersion: 1,
+        });
+        return { following: true, changed: true, actorProfilePublic: true };
       }
       if (action === "unfollow" && transition.changed) {
         transaction.delete(followReference);
         transaction.set(targetReference, { followerCount: transition.followerCount }, { merge: true });
-        return { following: false, changed: true };
+        return { following: false, changed: true, actorProfilePublic: actorProfile?.profilePublic === true };
       }
-      return { following: exists, changed: false };
+      return { following: exists, changed: false, actorProfilePublic: actorProfile?.profilePublic === true };
     });
-    if (action === "follow" && transitionResult.changed) {
-      const actorProfile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(followerCreatorId).get()).data());
-      await db.collection("creatorNotifications").doc(followedCreatorId).collection("items").add({
-        kind: "follow",
-        actorCreatorId: followerCreatorId,
-        actorHandle: actorProfile?.handle ?? "creator",
-        actorDisplayName: actorProfile?.displayName ?? "A Creator",
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
-        schemaVersion: 1,
-      });
-    }
     const updated = parseCreatorProfileInput((await targetReference.get()).data());
-    return { following: transitionResult.following, followerCount: updated?.followerCount ?? 0, canFollow: true, isSelf: false, blocked: false };
+    return { following: transitionResult.following, followerCount: updated?.followerCount ?? 0, canFollow: transitionResult.actorProfilePublic, isSelf: false, blocked: false };
   },
 );
 
@@ -655,6 +671,7 @@ export const manageLieuvaCreatorPostInteraction = onCall(
       const body = parseCreatorCommentInput(request.data?.body);
       if (!body) throw new HttpsError("invalid-argument", "Write between 1 and 280 characters.");
       const commentReference = postReference.collection("comments").doc();
+      const commentNotificationReference = db.collection("creatorNotifications").doc(targetCreatorId).collection("items").doc();
       await db.runTransaction(async (transaction) => {
         const [currentPost, actorAccount] = await Promise.all([
           transaction.get(postReference),
@@ -677,15 +694,23 @@ export const manageLieuvaCreatorPostInteraction = onCall(
         });
         transaction.set(postReference, { commentCount: commentCount + 1 }, { merge: true });
         transaction.set(db.collection("creatorAccounts").doc(actorCreatorId), { lastCommentAt: FieldValue.serverTimestamp() }, { merge: true });
-      });
-      if (actorCreatorId !== targetCreatorId) await db.collection("creatorNotifications").doc(targetCreatorId).collection("items").add({
-        kind: "comment", actorCreatorId, actorHandle: actorProfile.handle, actorDisplayName: actorProfile.displayName,
-        postId, bodyPreview: body.slice(0, 100), createdAt: FieldValue.serverTimestamp(), read: false, schemaVersion: 1,
+        if (actorCreatorId !== targetCreatorId) transaction.create(commentNotificationReference, {
+          kind: "comment",
+          actorCreatorId,
+          actorHandle: actorProfile.handle,
+          actorDisplayName: actorProfile.displayName,
+          postId,
+          bodyPreview: body.slice(0, 100),
+          createdAt: FieldValue.serverTimestamp(),
+          read: false,
+          schemaVersion: 1,
+        });
       });
       return { comment: { id: commentReference.id, handle: actorProfile.handle, displayName: actorProfile.displayName, body, createdAt: new Date().toISOString() } };
     }
 
     const reactionReference = postReference.collection("reactions").doc(actorCreatorId);
+    const reactionNotificationReference = db.collection("creatorNotifications").doc(targetCreatorId).collection("items").doc();
     const reactionResult = await db.runTransaction(async (transaction) => {
       const [currentPost, currentReaction] = await Promise.all([
         transaction.get(postReference),
@@ -697,6 +722,16 @@ export const manageLieuvaCreatorPostInteraction = onCall(
       if (action === "react" && !currentReaction.exists) {
         transaction.create(reactionReference, { creatorId: actorCreatorId, createdAt: FieldValue.serverTimestamp(), schemaVersion: 1 });
         transaction.set(postReference, { reactionCount: currentCount + 1 }, { merge: true });
+        if (actorCreatorId !== targetCreatorId) transaction.create(reactionNotificationReference, {
+          kind: "reaction",
+          actorCreatorId,
+          actorHandle: actorProfile.handle,
+          actorDisplayName: actorProfile.displayName,
+          postId,
+          createdAt: FieldValue.serverTimestamp(),
+          read: false,
+          schemaVersion: 1,
+        });
         return { reacted: true, reactionCount: currentCount + 1, changed: true };
       }
       if (action === "unreact" && currentReaction.exists) {
@@ -706,11 +741,6 @@ export const manageLieuvaCreatorPostInteraction = onCall(
       }
       return { reacted: currentReaction.exists, reactionCount: currentCount, changed: false };
     });
-    if (action === "react" && reactionResult.changed && actorCreatorId !== targetCreatorId)
-      await db.collection("creatorNotifications").doc(targetCreatorId).collection("items").add({
-        kind: "reaction", actorCreatorId, actorHandle: actorProfile.handle, actorDisplayName: actorProfile.displayName,
-        postId, createdAt: FieldValue.serverTimestamp(), read: false, schemaVersion: 1,
-      });
     return reactionResult;
   },
 );
@@ -813,10 +843,58 @@ export const getMyLieuvaCreatorHome = onCall(
     const notifications = notificationsSnapshot.docs.flatMap((document) => {
       const data = document.data();
       const createdAt = timestampMilliseconds(data.createdAt);
-      if (typeof data.kind !== "string" || typeof data.actorHandle !== "string" || typeof data.actorDisplayName !== "string" || createdAt === undefined) return [];
-      return [{ id: document.id, kind: data.kind, actorHandle: data.actorHandle, actorDisplayName: data.actorDisplayName, createdAt: new Date(createdAt).toISOString(), read: data.read === true }];
+      if (createdAt === undefined) return [];
+      const notification = creatorNotificationProjection(data, new Date(createdAt).toISOString());
+      return notification ? [{ id: document.id, ...notification }] : [];
     });
     return { schemaVersion: 1, following, updates, posts, notifications };
+  },
+);
+
+/** Marks only the authenticated Creator's own notification documents as read. */
+export const markMyLieuvaCreatorNotificationsRead = onCall(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const owner = await db.collection("creatorAccountOwners").doc(uid).get();
+    const creatorId = owner.data()?.creatorId;
+    if (typeof creatorId !== "string") return { marked: 0 };
+
+    const markAll = request.data?.all === true;
+    const requestedIds = Array.isArray(request.data?.notificationIds)
+      ? [...new Set(request.data.notificationIds)]
+      : [];
+    if (!markAll && (!requestedIds.length || requestedIds.length > 20 || requestedIds.some((id) => typeof id !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(id))))
+      throw new HttpsError("invalid-argument", "Choose up to 20 valid notifications.");
+
+    const notificationCollection = db.collection("creatorNotifications").doc(creatorId).collection("items");
+    if (markAll) {
+      let marked = 0;
+      while (true) {
+        const unreadPage = await notificationCollection.where("read", "==", false).limit(400).get();
+        if (unreadPage.empty) break;
+        const batch = db.batch();
+        for (const snapshot of unreadPage.docs) batch.set(snapshot.ref, {
+          read: true,
+          readAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        await batch.commit();
+        marked += unreadPage.size;
+        if (unreadPage.size < 400) break;
+      }
+      return { marked };
+    }
+
+    const snapshots = await Promise.all((requestedIds as string[]).map((id) => notificationCollection.doc(id).get()));
+    const unread = snapshots.filter((snapshot) => snapshot.exists && snapshot.data()?.read !== true);
+    if (!unread.length) return { marked: 0 };
+    const batch = db.batch();
+    for (const snapshot of unread) batch.set(snapshot.ref, {
+      read: true,
+      readAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await batch.commit();
+    return { marked: unread.length };
   },
 );
 

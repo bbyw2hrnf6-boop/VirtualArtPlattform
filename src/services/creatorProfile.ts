@@ -254,7 +254,19 @@ export type CreatorNotification = {
   actorDisplayName: string;
   createdAt: string;
   read: boolean;
+  postId?: string;
+  bodyPreview?: string;
 };
+
+export function unreadCreatorNotificationCount(notifications: readonly CreatorNotification[]) {
+  return notifications.reduce((count, notification) => count + (notification.read ? 0 : 1), 0);
+}
+
+export function creatorNotificationPostAnchor(notification: CreatorNotification) {
+  return notification.postId && (notification.kind === "comment" || notification.kind === "reaction")
+    ? `creator-post-${notification.postId}`
+    : null;
+}
 
 export type CreatorPost = {
   id: string;
@@ -281,6 +293,17 @@ export async function loadCreatorHome() {
     firebaseFunctions,
     "getMyLieuvaCreatorHome",
   )({});
+  return result.data;
+}
+
+export async function markCreatorNotificationsRead(notificationIds: readonly string[] | "all") {
+  const input: { all?: true; notificationIds?: string[] } = notificationIds === "all"
+    ? { all: true }
+    : { notificationIds: [...new Set(notificationIds)].slice(0, 20) };
+  const result = await creatorCallableWithRetry(() => httpsCallable<
+      { all?: true; notificationIds?: string[] },
+      { marked: number }
+    >(firebaseFunctions, "markMyLieuvaCreatorNotificationsRead")(input));
   return result.data;
 }
 

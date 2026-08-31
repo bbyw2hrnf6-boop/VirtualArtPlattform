@@ -92,12 +92,16 @@
   .creator-hub__dashboard-rail { grid-template-columns: 1fr; }
   .creator-hub__notifications { padding: 20px !important; border: 1px solid #34362e !important; background: var(--hub-ink); color: #f1eee6; }
   .creator-hub__notifications > div:first-child { padding-bottom: 11px; }
-  .creator-hub__notifications > div:first-child > span,
+  .creator-hub__notifications > div:first-child span,
   .creator-hub__notifications > p,
-  .creator-hub__notifications > a span,
+  .creator-hub__notifications > :is(a, button) span,
+  .creator-hub__notifications > :is(a, button) small,
   .creator-hub__notifications time { color: #aaa9a2; }
-  .creator-hub__notifications > a { grid-template-columns: minmax(0,1fr) auto; min-height: 58px; border-color: #ffffff24; font-size: 11px; }
-  .creator-hub__notifications > a strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .creator-hub__notifications > div:first-child button { min-height: 44px; border-color: #ffffff35; color: #f1eee6; font-size: 9px; }
+  .creator-hub__notifications > :is(a, button) { grid-template-columns: minmax(0,1fr) auto; min-height: 58px; border-color: #ffffff24; color: #f1eee6; font-size: 11px; }
+  .creator-hub__notifications > :is(a, button).is-unread::before { background: var(--hub-acid); }
+  .creator-hub__notifications > :is(a, button).is-unread strong::after { color: var(--hub-acid); }
+  .creator-hub__notifications > :is(a, button) strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .creator-hub__section-heading h2 { margin-bottom: 18px; font-size: 54px; }
   .creator-hub__section-heading > p,
   .creator-hub__section-heading > span { padding-bottom: 24px; }
@@ -131,7 +135,7 @@
   .creator-hub__empty :is(a, button) { min-height: 44px; font-size: 11px; }
   .creator-hub__search > span,
   .creator-hub__search-results > p,
-  .creator-hub__notifications > a { font-size: 11px; }
+  .creator-hub__notifications > :is(a, button) { font-size: 11px; }
 }
 
 @media (max-width: 390px) {

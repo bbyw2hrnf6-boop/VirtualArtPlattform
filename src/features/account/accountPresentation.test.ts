@@ -41,15 +41,27 @@ describe("account presentation", () => {
     expect(creatorSettingsSource).not.toContain('<dd>Profile status</dd>');
   });
 
-  it("keeps public visibility separate from homepage and profile placement", () => {
+  it("keeps public visibility separate from homepage and Hub placement", () => {
     expect(accountSource).toContain("galleryRepository.updateDistribution");
     expect(accountSource).toContain('field: "exploreListed" | "creatorProfileListed"');
-    expect(accountSource).toContain("In Explore Spaces");
+    expect(accountSource).toContain("Explore Spaces (Main homepage)");
+    expect(accountSource).toContain("Show in Creator Hub");
     expect(accountSource).not.toContain("In Discover");
     expect(creatorSettingsSource).toContain("spaces.filter((space) => space.creatorProfileListed)");
-    expect(creatorSettingsSource).toContain("Spaces on your public profile");
+    expect(creatorSettingsSource).toContain("Hub Space placement");
+    expect(creatorSettingsSource).toContain('accountSectionUrl("rooms", window.location.href)');
+    expect(creatorSettingsSource).not.toContain("galleryRepository.updateDistribution");
+    expect(creatorSettingsSource).not.toContain("updateProfileSpace");
     expect(creatorSettingsSource).toContain("Space preview image");
-    expect(creatorSettingsSource).not.toContain("Hub profile");
+  });
+
+  it("offers one accessible filter system across the Space overview and list", () => {
+    expect(accountSource).toContain('type AccountRoomFilter = "all" | "live" | "explore" | "hub" | "shared"');
+    expect(accountSource).toContain('aria-label="Filter Spaces by status"');
+    expect(accountSource).toContain('aria-label="Space filters"');
+    expect(accountSource).toContain('aria-pressed={roomFilter === "hub"}');
+    expect(accountSource).toContain('aria-controls="account-room-list"');
+    expect(accountSource).toContain("filteredRooms.map");
   });
 
   it("shows only real connected sign-in methods", () => {

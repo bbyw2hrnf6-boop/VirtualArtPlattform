@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { Logo } from "../../components/Logo";
 import { AccountButton } from "../account/AccountDialog";
-import { CreatorProfileSettings } from "../account/CreatorProfileSettings";
 import { accountSectionUrl } from "../account/accountPresentation";
 import type { AccountSession } from "../../services/accountTypes";
 import { discoverCoverSource, galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
@@ -13,16 +12,20 @@ import {
   createCreatorPost,
   creatorHandleBase,
   creatorImageUrl,
+  creatorNotificationPostAnchor,
   loadCreatorHome,
   loadMyCreatorProfile,
   interactCreatorPost,
   manageCreatorBlock,
+  markCreatorNotificationsRead,
   saveCreatorProfile,
   type CreatorComment,
   type CreatorHomePayload,
+  type CreatorNotification,
   type CreatorPost,
   type CreatorProfile,
   type PublicCreatorDirectoryEntry,
+  unreadCreatorNotificationCount,
 } from "../../services/creatorProfile";
 import { creatorCanonicalUrl, creatorExperienceNavigationPath, spaceCanonicalUrl } from "../../services/spaceRoutes";
 import {
@@ -113,11 +116,18 @@ export default function CreatorHubPage({
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [postActions, setPostActions] = useState<Record<string, string>>({});
   const [newComments, setNewComments] = useState<Record<string, CreatorComment[]>>({});
+  const [notificationNotice, setNotificationNotice] = useState("");
   const [activeSection, setActiveSection] = useState<CreatorHubSection>(() => creatorHubSectionFromHash(window.location.hash));
   const dashboardView = view.kind === "home";
   const settingsView = view.kind === "settings";
   const creatorsView = view.kind === "directory" || view.kind === "profile";
   const sessionUid = session && !session.isAnonymous ? session.uid : "";
+  const profileSettingsUrl = accountSectionUrl("creator", window.location.href);
+
+  useEffect(() => {
+    if (!settingsView) return;
+    window.location.replace(profileSettingsUrl);
+  }, [profileSettingsUrl, settingsView]);
 
   useEffect(() => {
     if (!dashboardView) return;
@@ -199,11 +209,7 @@ export default function CreatorHubPage({
     setProfileStatus("loading");
     setMyProfile(undefined);
     if (dashboardView) {
-      setHomeStatus("loading");
       setMySpacesStatus("loading");
-      void loadCreatorHome()
-        .then((nextHome) => { if (active) { setHome(nextHome); setHomeStatus(undefined); } })
-        .catch(() => { if (active) { setHome(undefined); setHomeStatus("error"); } });
       void galleryRepository.mine()
         .then((records) => {
           if (active) {
@@ -233,17 +239,52 @@ export default function CreatorHubPage({
   }, [dashboardView, profileRefresh, sessionUid]);
 
   useEffect(() => {
+    if (!sessionUid) return;
+    let active = true;
+    let inFlight = false;
+    const refreshHome = async (initial = false) => {
+      if (inFlight) return;
+      inFlight = true;
+      if (initial) setHomeStatus("loading");
+      try {
+        const nextHome = await loadCreatorHome();
+        if (active) {
+          setHome(nextHome);
+          setHomeStatus(undefined);
+        }
+      } catch {
+        if (active && initial) setHomeStatus("error");
+      } finally {
+        inFlight = false;
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshHome();
+    };
+    void refreshHome(true);
+    const poll = window.setInterval(refreshWhenVisible, 60_000);
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      active = false;
+      window.clearInterval(poll);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [profileRefresh, sessionUid]);
+
+  useEffect(() => {
     const syncProfile = (event: Event) => {
       const profile = (event as CustomEvent<CreatorProfile>).detail;
       if (profile) {
         setMyProfile(profile);
         setProfileStatus("ready");
-        if (dashboardView) void loadCreatorHome().then(setHome).catch(() => undefined);
+        void loadCreatorHome().then(setHome).catch(() => undefined);
       }
     };
     window.addEventListener(CREATOR_PROFILE_UPDATED_EVENT, syncProfile);
     return () => window.removeEventListener(CREATOR_PROFILE_UPDATED_EVENT, syncProfile);
-  }, [dashboardView]);
+  }, []);
 
   const signedIn = Boolean(session && !session.isAnonymous);
   const posts: CreatorPost[] = home?.posts ?? [];
@@ -252,7 +293,7 @@ export default function CreatorHubPage({
     || notification.kind === "comment"
     || notification.kind === "reaction"
   )), [home?.notifications]);
-  const notificationCount = notifications.length;
+  const notificationCount = unreadCreatorNotificationCount(notifications);
   const featuredSpaces = useMemo(() => {
     if (home?.updates?.length) return home.updates.map((space) => ({
       id: space.id,
@@ -276,7 +317,6 @@ export default function CreatorHubPage({
     ?? "";
   const visibleMySpaces = mySpaces.slice(0, 4);
   const accountOverviewUrl = accountSectionUrl("rooms", window.location.href);
-  const profileSettingsUrl = "/creator-hub/profile";
   const creatorHref = (handle: string) => creatorCanonicalUrl(handle, window.location.href);
   const dashboardHref = (target: string) => dashboardView ? `#${target}` : `/creator-hub#${target}`;
 
@@ -387,6 +427,52 @@ export default function CreatorHubPage({
     posts: current.posts.map((post) => post.id === postId ? { ...post, ...update } : post),
   }) : current);
 
+  const markNotificationsRead = async (selection: readonly string[] | "all") => {
+    const ids = selection === "all"
+      ? notifications.filter((notification) => !notification.read).map((notification) => notification.id)
+      : selection.filter((id) => notifications.some((notification) => notification.id === id && !notification.read));
+    if (!ids.length) return;
+    setNotificationNotice("");
+    setHome((current) => current ? ({
+      ...current,
+      notifications: current.notifications.map((notification) => ids.includes(notification.id)
+        ? { ...notification, read: true }
+        : notification),
+    }) : current);
+    try {
+      await markCreatorNotificationsRead(selection === "all" ? "all" : ids);
+    } catch {
+      setNotificationNotice("Alert state could not sync. It will retry when the Hub refreshes.");
+      void loadCreatorHome().then(setHome).catch(() => undefined);
+    }
+  };
+
+  const openPostNotification = (notification: CreatorNotification) => {
+    void markNotificationsRead([notification.id]);
+    const anchor = creatorNotificationPostAnchor(notification);
+    if (!anchor) return;
+    if (notification.kind === "comment") setActivePost(notification.postId);
+    window.requestAnimationFrame(() => {
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      const post = document.getElementById(anchor);
+      if (!post) {
+        setNotificationNotice("That studio note is no longer in your current feed.");
+        document.getElementById("creator-feed")?.scrollIntoView({ block: "start", behavior });
+        return;
+      }
+      post.scrollIntoView({ block: "center", behavior });
+      post.focus({ preventScroll: true });
+    });
+  };
+
+  const openFollowNotification = (notification: CreatorNotification) => {
+    void markNotificationsRead([notification.id]);
+    const href = creatorHref(notification.actorHandle);
+    const path = creatorExperienceNavigationPath(href, window.location.href);
+    if (onNavigate && path) onNavigate(path);
+    else window.location.assign(href);
+  };
+
   const engage = async (post: CreatorPost, action: "reaction" | "comment" | "report" | "block") => {
     if (!signedIn) { setPostActions((value) => ({ ...value, [post.id]: "Sign in to join the conversation." })); return; }
     if (post.demo) { setPostActions((value) => ({ ...value, [post.id]: "Demo profiles are read-only." })); return; }
@@ -440,13 +526,13 @@ export default function CreatorHubPage({
             <a className={dashboardView && activeSection === "home" ? "is-active" : ""} aria-current={dashboardView && activeSection === "home" ? "page" : undefined} href={dashboardHref("creator-home")}><HubIcon name="home" /> Hub Home</a>
             <a className={`creator-hub__feed-link ${dashboardView && activeSection === "feed" ? "is-active" : ""}`} aria-current={dashboardView && activeSection === "feed" ? "location" : undefined} href={dashboardHref("creator-feed")}><HubIcon name="feed" /> Feed</a>
             <a className={creatorsView ? "is-active" : ""} aria-current={creatorsView ? "page" : undefined} href="/creators"><HubIcon name="creators" /> Creators</a>
-            <a className={`creator-hub__mobile-notifications ${dashboardView && activeSection === "notifications" ? "is-active" : ""}`} aria-current={dashboardView && activeSection === "notifications" ? "location" : undefined} href={dashboardHref("creator-activity")} aria-label={notificationCount ? `Notifications (${notificationCount} recent)` : "Notifications"}><HubIcon name="bell" /> Alerts {notificationCount ? <b className="creator-hub__notification-badge">{notificationCount}</b> : null}</a>
+            <a className={`creator-hub__mobile-notifications ${dashboardView && activeSection === "notifications" ? "is-active" : ""}`} aria-current={dashboardView && activeSection === "notifications" ? "location" : undefined} href={dashboardHref("creator-activity")} aria-label={notificationCount ? `Alerts (${notificationCount} unread)` : "Alerts"}><HubIcon name="bell" /> Alerts {notificationCount ? <b className="creator-hub__notification-badge">{notificationCount}</b> : null}</a>
             <a className={dashboardView && activeSection === "spaces" ? "is-active" : ""} aria-current={dashboardView && activeSection === "spaces" ? "location" : undefined} href={dashboardHref("creator-spaces")}><HubIcon name="spaces" /> My Spaces</a>
             <a className={`creator-hub__mobile-account ${settingsView ? "is-active" : ""}`} aria-current={settingsView ? "page" : undefined} href={profileSettingsUrl}><HubIcon name="account" /> Profile</a>
           </nav>
-          {notificationCount ? <nav className="creator-hub__sidebar-utility">
-            <a className={dashboardView && activeSection === "notifications" ? "is-active" : ""} aria-current={dashboardView && activeSection === "notifications" ? "location" : undefined} href={dashboardHref("creator-activity")}><HubIcon name="bell" /> Notifications <b>{notificationCount}</b></a>
-          </nav> : null}
+          <nav className="creator-hub__sidebar-utility">
+            <a className={dashboardView && activeSection === "notifications" ? "is-active" : ""} aria-current={dashboardView && activeSection === "notifications" ? "location" : undefined} href={dashboardHref("creator-activity")}><HubIcon name="bell" /> Alerts {notificationCount ? <b>{notificationCount}</b> : null}</a>
+          </nav>
           <a className="creator-hub__sidebar-identity" href={signedIn ? profileSettingsUrl : "/#/account"}>
             <span>{myProfile ? <CreatorMark creator={myProfile} /> : (session?.displayName || session?.nickname || "L").slice(0, 1).toUpperCase()}</span>
             <div><strong>{myProfile?.displayName || session?.displayName || session?.nickname || "Your profile"}</strong><small>{myProfile ? `@${myProfile.handle}` : signedIn ? "Complete your profile" : "Sign in"}</small></div>
@@ -468,19 +554,15 @@ export default function CreatorHubPage({
           ) : view.kind === "settings" ? (
             <section className="creator-hub__profile-settings" aria-labelledby="creator-profile-settings-title">
               <header>
-                <p className="eyebrow">Public profile</p>
-                <h1 id="creator-profile-settings-title">Shape how your practice appears.</h1>
-                <p>Edit one identity for Creator search, your public profile, studio notes and selected Spaces.</p>
+                <p className="eyebrow">Account settings</p>
+                <h1 id="creator-profile-settings-title">Profile settings moved.</h1>
+                <p>Public profile editing now lives in one central Account section. Your identity, profile lifecycle and Space placement remain unchanged.</p>
               </header>
-              {signedIn && session ? (
-                <CreatorProfileSettings account={session} />
-              ) : (
-                <div className="creator-hub__profile-settings-gate">
-                  <h2>Sign in to edit your profile.</h2>
-                  <p>Your public identity and Space selections stay attached to your verified account.</p>
-                  <button type="button" onClick={() => setAccountOpen(true)}>Sign in or create account →</button>
-                </div>
-              )}
+              <div className="creator-hub__profile-settings-gate" role="status">
+                <h2>Opening Public profile…</h2>
+                <p>If the Account page does not open automatically, continue below.</p>
+                <a href={profileSettingsUrl}>Continue to Account settings →</a>
+              </div>
             </section>
           ) : <>
           <section className="creator-hub__hero" id="creator-home">
@@ -525,7 +607,7 @@ export default function CreatorHubPage({
             <div className="creator-hub__social-grid">
               <div className="creator-hub__timeline">
                 {posts.length ? posts.map((post) => (
-                  <article className="creator-post" key={post.id}>
+                  <article className="creator-post" id={`creator-post-${post.id}`} tabIndex={-1} key={post.id}>
                     <header><a href={creatorHref(post.handle)} className="creator-post__mark" aria-label={`${post.displayName} profile`}>{post.displayName.slice(0, 1)}</a><div><a href={creatorHref(post.handle)}>{post.displayName}</a><span>@{post.handle}</span></div><time dateTime={post.createdAt}>{relativeDate(post.createdAt)}</time></header>
                     <p>{post.body}</p>
                     <footer className="creator-post__actions">
@@ -557,12 +639,19 @@ export default function CreatorHubPage({
 
             <aside className="creator-hub__dashboard-rail">
               <section id="creator-activity" className="creator-hub__notifications" aria-labelledby="creator-activity-title">
-                <div><p className="eyebrow" id="creator-activity-title">Notifications</p><span>{notificationCount ? `${notificationCount} recent` : "Up to date"}</span></div>
+                <div><p className="eyebrow" id="creator-activity-title">Alerts</p><div><span>{notificationCount ? `${notificationCount} unread` : "Up to date"}</span>{notificationCount ? <button type="button" onClick={() => void markNotificationsRead("all")}>Mark all read</button> : null}</div></div>
                 {homeStatus === "loading" ? <p role="status">Checking your activity…</p>
-                  : homeStatus === "error" ? <p>Notifications could not sync. Retry from the Feed.</p>
+                  : homeStatus === "error" ? <p>Alerts could not sync. Retry from the Feed.</p>
                     : !signedIn ? <p>Sign in to see follows, comments and appreciations.</p>
-                      : notifications.length ? notifications.map((notification) => <a key={notification.id} href={creatorHref(notification.actorHandle)} aria-label={`${notification.actorDisplayName}${notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? " commented on your studio note" : " appreciated your studio note"}, ${relativeDate(notification.createdAt)}`}><strong>{notification.actorDisplayName}</strong><span>{notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? " commented on your studio note" : " appreciated your studio note"}</span><time dateTime={notification.createdAt}>{relativeDate(notification.createdAt)}</time></a>)
-                        : <p>No notifications yet. New follows, comments and appreciations will appear here.</p>}
+                      : notifications.length ? notifications.map((notification) => {
+                        const action = notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? " commented on your studio note" : " appreciated your studio note";
+                        const content = <><strong>{notification.actorDisplayName}</strong><span>{action}</span>{notification.bodyPreview ? <small>“{notification.bodyPreview}”</small> : null}<time dateTime={notification.createdAt}>{relativeDate(notification.createdAt)}</time></>;
+                        return creatorNotificationPostAnchor(notification)
+                          ? <button type="button" className={notification.read ? "" : "is-unread"} key={notification.id} onClick={() => openPostNotification(notification)} aria-label={`${notification.actorDisplayName}${action}, open affected studio note, ${relativeDate(notification.createdAt)}`}>{content}</button>
+                          : <button type="button" className={notification.read ? "" : "is-unread"} key={notification.id} onClick={() => openFollowNotification(notification)} aria-label={`${notification.actorDisplayName}${action}, open Creator profile, ${relativeDate(notification.createdAt)}`}>{content}</button>;
+                      })
+                        : <p>No alerts yet. New follows, comments and appreciations will appear here.</p>}
+                {notificationNotice ? <small className="creator-hub__notification-notice" role="status">{notificationNotice}</small> : null}
               </section>
 
               <section id="creator-spaces" aria-labelledby="my-spaces-title">

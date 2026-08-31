@@ -50,12 +50,15 @@ describe("Creator Hub account lifecycle contract", () => {
     expect(hubSource).toContain("creatorExperienceNavigationPath");
   });
 
-  it("keeps mobile social navigation complete and opens the profile editor inside the Hub", () => {
+  it("keeps mobile social navigation complete and uses one central profile editor", () => {
     expect(hubSource).toContain("creator-hub__mobile-account");
     expect(hubSource).toContain('href={profileSettingsUrl}');
+    expect(hubSource).toContain('const profileSettingsUrl = accountSectionUrl("creator", window.location.href)');
     expect(hubSource).toContain('view.kind === "settings"');
-    expect(hubSource).toContain('<CreatorProfileSettings account={session} />');
-    expect(hubSource).not.toContain('accountSectionUrl("creator"');
+    expect(hubSource).toContain("window.location.replace(profileSettingsUrl)");
+    expect(hubSource).toContain("Continue to Account settings →");
+    expect(hubSource).not.toContain('import { CreatorProfileSettings }');
+    expect(hubSource).not.toContain('<CreatorProfileSettings');
     expect(hubSource).not.toContain('accountSectionUrl("account"');
     expect(hubSource).toContain('aria-current={dashboardView && activeSection === "feed" ? "location" : undefined}');
     expect(hubSource).not.toContain("Draft enabled · activate your profile to publish");

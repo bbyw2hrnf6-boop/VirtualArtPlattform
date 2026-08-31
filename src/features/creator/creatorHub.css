@@ -111,7 +111,7 @@
 .creator-hub__profile-settings-gate h2,.creator-hub__profile-settings-gate p { margin: 0; }
 .creator-hub__profile-settings-gate h2 { font: 34px/1 Instrument; }
 .creator-hub__profile-settings-gate p { color: #63655d; line-height: 1.6; }
-.creator-hub__profile-settings-gate button { justify-self: start; min-height: 46px; border: 0; background: var(--hub-ink); color: #f4f1e9; padding: 0 18px; cursor: pointer; }
+.creator-hub__profile-settings-gate button,.creator-hub__profile-settings-gate>a { display: inline-flex; justify-self: start; min-height: 46px; align-items: center; border: 0; background: var(--hub-ink); color: #f4f1e9; padding: 0 18px; text-decoration: none; cursor: pointer; }
 .creator-hub__hero,
 .creator-hub__work,
 .creator-hub__social,
@@ -291,11 +291,19 @@
 .creator-hub__grid h3 { margin: 0 0 10px; font: 28px Instrument; font-weight: 400; }
 .creator-hub__grid > a > p { min-height: 56px; margin: 0 0 18px; color: var(--hub-muted); font-size: 10px; line-height: 1.5; }
 .creator-hub__grid > a > div:last-child { display: flex; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 13px; border-top: 1px solid #c3bfb5; font-size: 8px; letter-spacing: .08em; text-transform: uppercase; }
-.creator-hub__notifications > a { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; min-height: 48px; align-content: center; border-top: 1px solid #cfcbc2; font-size: 9px; text-decoration: none; }
-.creator-hub__notifications > div:first-child > span { color: var(--hub-muted); font-size: 8px; letter-spacing: .09em; text-transform: uppercase; }
+.creator-hub__notifications > :is(a, button) { position: relative; display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; min-height: 48px; align-content: center; padding: 6px 0 6px 10px; border: 0; border-top: 1px solid #cfcbc2; background: transparent; color: inherit; font: inherit; font-size: 9px; text-align: left; text-decoration: none; cursor: pointer; }
+.creator-hub__notifications > :is(a, button)::before { position: absolute; top: 9px; bottom: 9px; left: 0; width: 2px; background: transparent; content: ""; }
+.creator-hub__notifications > :is(a, button).is-unread::before { background: #71851f; }
+.creator-hub__notifications > :is(a, button).is-unread strong::after { margin-left: 6px; color: #71851f; content: "●"; font-size: 6px; vertical-align: middle; }
+.creator-hub__notifications > div:first-child > div { display: flex; align-items: center; gap: 10px; }
+.creator-hub__notifications > div:first-child span { color: var(--hub-muted); font-size: 8px; letter-spacing: .09em; text-transform: uppercase; }
+.creator-hub__notifications > div:first-child button { min-height: 44px; padding: 0 10px; border: 1px solid #aaa89f; background: transparent; color: inherit; font-size: 8px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 .creator-hub__notifications > p { margin: 12px 0 0; color: var(--hub-muted); font-size: 10px; line-height: 1.55; }
-.creator-hub__notifications > a span { color: var(--hub-muted); }
+.creator-hub__notifications > :is(a, button) span { color: var(--hub-muted); }
+.creator-hub__notifications > :is(a, button) small { grid-column: 1; overflow: hidden; color: var(--hub-muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .creator-hub__notifications time { grid-row: 1 / 3; grid-column: 2; color: var(--hub-muted); font-size: 8px; }
+.creator-hub__notification-notice { display: block; margin-top: 9px; color: var(--hub-muted); font-size: 9px; line-height: 1.45; }
+.creator-post:focus { outline: 2px solid #71851f; outline-offset: 4px; }
 
 .creator-hub :is(a, button, input, textarea, summary):focus-visible { outline: 2px solid var(--hub-acid); outline-offset: 3px; }
 

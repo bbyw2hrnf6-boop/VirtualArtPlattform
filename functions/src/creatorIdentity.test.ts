@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyCreatorDocumentRoute,
+  creatorNotificationProjection,
   creatorFollowTransition,
   creatorCanonicalUrl,
   isReservedCreatorHandle,
@@ -158,5 +159,27 @@ describe("Creator identity contract", () => {
     expect(creatorFollowTransition("follow", true, 3)).toEqual({ following: true, followerCount: 3, changed: false });
     expect(creatorFollowTransition("unfollow", true, 0)).toEqual({ following: false, followerCount: 0, changed: true });
     expect(creatorFollowTransition("unfollow", false, 0)).toEqual({ following: false, followerCount: 0, changed: false });
+  });
+
+  it("allow-lists notification targets and preserves bounded comment context", () => {
+    expect(creatorNotificationProjection({
+      kind: "comment",
+      actorHandle: "studio-north",
+      actorDisplayName: "Studio North",
+      postId: "post_123",
+      bodyPreview: `  ${"x".repeat(120)}  `,
+      read: false,
+      privateOwnerId: "never-return-this",
+    }, "2026-08-31T12:00:00.000Z")).toEqual({
+      kind: "comment",
+      actorHandle: "studio-north",
+      actorDisplayName: "Studio North",
+      postId: "post_123",
+      bodyPreview: "x".repeat(100),
+      createdAt: "2026-08-31T12:00:00.000Z",
+      read: false,
+    });
+    expect(creatorNotificationProjection({ kind: "unknown", actorHandle: "x", actorDisplayName: "X" }, "2026-08-31T12:00:00.000Z")).toBeNull();
+    expect(creatorNotificationProjection({ kind: "follow", actorHandle: "studio-north", actorDisplayName: "Studio North" }, "not-a-date")).toBeNull();
   });
 });

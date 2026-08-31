@@ -49,6 +49,16 @@ export type PublicCreatorDirectoryEntry = {
   followerCount: number;
 };
 
+export type CreatorNotificationProjection = {
+  kind: "follow" | "reaction" | "comment";
+  actorHandle: string;
+  actorDisplayName: string;
+  createdAt: string;
+  read: boolean;
+  postId?: string;
+  bodyPreview?: string;
+};
+
 export type CreatorDelivery =
   | { kind: "public"; profile: PublicCreatorProfile; spaces: PublicCreatorSpace[]; posts: PublicCreatorPost[] }
   | { kind: "not-found"; handle?: string }
@@ -164,6 +174,34 @@ export function creatorFollowTransition(
   if (action === "follow" && !exists) return { following: true, followerCount: count + 1, changed: true };
   if (action === "unfollow" && exists) return { following: false, followerCount: Math.max(0, count - 1), changed: true };
   return { following: exists, followerCount: count, changed: false };
+}
+
+/** Allow-listed private projection returned to the notification owner. */
+export function creatorNotificationProjection(
+  value: unknown,
+  createdAt: string,
+): CreatorNotificationProjection | null {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !Number.isFinite(Date.parse(createdAt))) return null;
+  const record = value as Record<string, unknown>;
+  if (record.kind !== "follow" && record.kind !== "reaction" && record.kind !== "comment") return null;
+  const actorHandle = boundedText(record.actorHandle, 30, true);
+  const actorDisplayName = boundedText(record.actorDisplayName, 60, true);
+  if (!actorHandle || !actorDisplayName) return null;
+  const postId = typeof record.postId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(record.postId)
+    ? record.postId
+    : undefined;
+  const bodyPreview = record.kind === "comment" && typeof record.bodyPreview === "string"
+    ? record.bodyPreview.trim().slice(0, 100)
+    : undefined;
+  return {
+    kind: record.kind,
+    actorHandle,
+    actorDisplayName,
+    createdAt,
+    read: record.read === true,
+    ...(postId ? { postId } : {}),
+    ...(bodyPreview ? { bodyPreview } : {}),
+  };
 }
 
 /** Legacy Spaces predate placement controls and remain visible by default. */

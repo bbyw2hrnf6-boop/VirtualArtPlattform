@@ -186,7 +186,7 @@ export default function CreatorProfilePage({
               </button>
             )}
             {!profile.demo && session && !session.isAnonymous && followState?.canFollow === false && !followState.isSelf && (
-              <small>Create your Creator profile to follow.</small>
+              <small>Activate your public Creator profile to follow.</small>
             )}
             {profile.demo && <small>Demo profile · editorial preview</small>}
           </div>

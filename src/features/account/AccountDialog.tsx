@@ -34,6 +34,8 @@ const CreatorProfileSettings = lazy(() => import("./CreatorProfileSettings").the
   default: module.CreatorProfileSettings,
 })));
 
+export type AccountRoomFilter = "all" | "live" | "explore" | "hub" | "shared";
+
 function AccountRooms({ session }: { session: AccountSession }) {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [rooms, setRooms] = useState<GalleryRecord[]>([]);
@@ -46,6 +48,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
   const [error, setError] = useState<string>();
   const [accessRoom, setAccessRoom] = useState<GalleryRecord>();
   const [manageRoomId, setManageRoomId] = useState<string>();
+  const [roomFilter, setRoomFilter] = useState<AccountRoomFilter>("all");
   const [editConflict, setEditConflict] = useState<{
     room: GalleryRecord;
     editable: Awaited<ReturnType<typeof galleryRepository.editableDraft>>;
@@ -229,23 +232,69 @@ function AccountRooms({ session }: { session: AccountSession }) {
   const exploreRooms = activeRooms.filter(
     (room) => room.visibility === "public" && room.exploreListed,
   );
+  const hubRooms = activeRooms.filter(
+    (room) => (
+      room.visibility === "public"
+      && room.creatorProfileListed
+      && (room.ownerId === session.uid || room.effectiveRole === "owner")
+    ),
+  );
   const sharedRooms = activeRooms.filter((room) => room.ownerId !== session.uid);
+  const filteredRooms = rooms.filter((room) => {
+    if (roomFilter === "all") return true;
+    if (roomFilter === "live") return activeRooms.some((activeRoom) => activeRoom.id === room.id);
+    if (roomFilter === "explore") return exploreRooms.some((exploreRoom) => exploreRoom.id === room.id);
+    if (roomFilter === "hub") return hubRooms.some((hubRoom) => hubRoom.id === room.id);
+    return sharedRooms.some((sharedRoom) => sharedRoom.id === room.id);
+  });
+  const roomFilters: { value: AccountRoomFilter; label: string; count: number }[] = [
+    { value: "all", label: "All Spaces", count: rooms.length },
+    { value: "live", label: "Live", count: activeRooms.length },
+    { value: "explore", label: "In Explore", count: exploreRooms.length },
+    { value: "hub", label: "In Hub", count: hubRooms.length },
+    { value: "shared", label: "Shared with you", count: sharedRooms.length },
+  ];
   return (
     <section className="account-rooms" aria-labelledby="account-rooms-title">
       <div className="account-rooms__heading">
         <div>
-          <p className="eyebrow">Space control</p>
+          <p className="eyebrow">Explorer / Your Spaces</p>
           <h3 id="account-rooms-title">Your Spaces</h3>
+          <p>All the Spaces you are creating, sharing and exploring.</p>
         </div>
-        <span>{rooms.length}</span>
+        <div className="account-rooms__heading-actions">
+          <a href={hashApplicationUrl("/create", window.location.href)}>+ Create a Space</a>
+          <span><b>{rooms.length}</b> Total Spaces</span>
+        </div>
       </div>
-      <div className="account-room-stats" aria-label="Space overview">
-        <article><span>Drafts here</span><strong>{drafts.length}</strong></article>
-        <article><span>Live</span><strong>{activeRooms.length}</strong></article>
-        <article><span>In Explore Spaces</span><strong>{exploreRooms.length}</strong></article>
-        <article><span>Shared with you</span><strong>{sharedRooms.length}</strong></article>
+      <div className="account-room-stats" role="group" aria-label="Filter Spaces by status">
+        <button type="button" aria-pressed={roomFilter === "live"} onClick={() => setRoomFilter((current) => current === "live" ? "all" : "live")}>
+          <span>Live</span><strong>{activeRooms.length}</strong><small>Published and active</small><b aria-hidden="true">→</b>
+        </button>
+        <button type="button" aria-pressed={roomFilter === "explore"} onClick={() => setRoomFilter((current) => current === "explore" ? "all" : "explore")}>
+          <span>In Explore</span><strong>{exploreRooms.length}</strong><small>Main homepage</small><b aria-hidden="true">→</b>
+        </button>
+        <button type="button" aria-pressed={roomFilter === "hub"} onClick={() => setRoomFilter((current) => current === "hub" ? "all" : "hub")}>
+          <span>In Hub</span><strong>{hubRooms.length}</strong><small>Your community profile</small><b aria-hidden="true">→</b>
+        </button>
+        <button type="button" aria-pressed={roomFilter === "shared"} onClick={() => setRoomFilter((current) => current === "shared" ? "all" : "shared")}>
+          <span>Shared with you</span><strong>{sharedRooms.length}</strong><small>Collaborative access</small><b aria-hidden="true">→</b>
+        </button>
       </div>
-      {drafts.length > 0 && (
+      <div className="account-room-filters" role="group" aria-label="Space filters">
+        {roomFilters.map((filter) => (
+          <button
+            key={filter.value}
+            type="button"
+            aria-pressed={roomFilter === filter.value}
+            aria-controls="account-room-list"
+            onClick={() => setRoomFilter(filter.value)}
+          >
+            {filter.label}<span>{filter.count}</span>
+          </button>
+        ))}
+      </div>
+      {roomFilter === "all" && drafts.length > 0 && (
         <section className="account-local-drafts" aria-labelledby="account-local-drafts-title">
           <div><strong id="account-local-drafts-title">Drafts on this device</strong><span>Private browser storage · not live</span></div>
           <ul>
@@ -258,7 +307,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
           </ul>
         </section>
       )}
-      {invites.length > 0 && (
+      {(roomFilter === "all" || roomFilter === "shared") && invites.length > 0 && (
         <div className="account-invites" aria-label="Pending Space invitations">
           <strong>Invitations</strong>
           {invites.map((invite) => (
@@ -295,9 +344,9 @@ function AccountRooms({ session }: { session: AccountSession }) {
           <p>Spaces could not be loaded. Your publications remain stored.</p>
           <button type="button" onClick={() => void loadRooms()}>Retry</button>
         </div>
-      ) : rooms.length ? (
-        <ul>
-          {rooms.map((room) => {
+      ) : filteredRooms.length ? (
+        <ul id="account-room-list" aria-label={`${roomFilters.find((filter) => filter.value === roomFilter)?.label ?? "All Spaces"} (${filteredRooms.length})`}>
+          {filteredRooms.map((room) => {
             const role = room.effectiveRole ?? (room.ownerId === session.uid ? "owner" : "viewer");
             const expired = new Date(room.expiresAt).getTime() <= currentTime;
             const available = room.lifecycleStatus === "active" && !expired;
@@ -363,7 +412,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
                         checked={room.exploreListed}
                         onChange={(event) => void updateRoomDistribution(room, "exploreListed", event.target.checked)}
                       />
-                      <span>Explore Spaces</span>
+                      <span>Explore Spaces (Main homepage)</span>
                     </label>
                     <label>
                       <input
@@ -371,12 +420,12 @@ function AccountRooms({ session }: { session: AccountSession }) {
                         checked={room.creatorProfileListed}
                         onChange={(event) => void updateRoomDistribution(room, "creatorProfileListed", event.target.checked)}
                       />
-                      <span>Public profile</span>
+                      <span>Show in Creator Hub</span>
                     </label>
                   </fieldset>
                   <small className="account-room-placement__note">
                     {room.visibility === "public"
-                      ? "Choose whether this Space appears on the homepage and your public profile."
+                      ? "Choose whether this Space appears in Explore Spaces on the main homepage and/or in your Creator Hub profile."
                       : "Set visibility to Public before choosing public placement."}
                   </small>
                   {available && <button type="button" onClick={() => {
@@ -398,6 +447,12 @@ function AccountRooms({ session }: { session: AccountSession }) {
             </li>;
           })}
         </ul>
+      ) : rooms.length ? (
+        <div className="account-project-empty account-project-empty--filter" id="account-room-list" role="status">
+          <strong>No Spaces in this view.</strong>
+          <p>Choose another filter to see the rest of your Spaces.</p>
+          <button type="button" onClick={() => setRoomFilter("all")}>Show all Spaces</button>
+        </div>
       ) : (
         <div className="account-project-empty">
           <strong>Your first Space starts as a private draft.</strong>
