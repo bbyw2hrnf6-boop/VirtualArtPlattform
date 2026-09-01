@@ -24,6 +24,13 @@ describe("public Creator profile visual contract", () => {
     expect(profileSource).toContain('aria-pressed={Boolean(followState?.following)}');
   });
 
+  it("renders the chosen title image, typography and tone as safe presets", () => {
+    expect(profileSource).toContain("creatorCoverUrl(profile.handle, profile.updatedAt)");
+    expect(profileSource).toContain("creator-profile__title-cover");
+    expect(profileSource).toContain("creator-profile__bio--${profile.bioFont}");
+    expect(profileSource).toContain("creator-profile--${profile.profileTone}");
+  });
+
   it("embeds without a duplicate shell and reuses the Hub account session", () => {
     expect(profileSource).toContain("const session = embedded ? hubSession ?? null : localSession");
     expect(profileSource).toContain('const Root = embedded ? "section" : "main"');

@@ -1,7 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import { firebaseFunctions } from "./firebase";
 import { creatorCanonicalUrl } from "./spaceRoutes";
-import { prepareProfileImage } from "./profileImage";
+import { prepareProfileCover, prepareProfileImage } from "./profileImage";
 import type { AccountSession } from "./accountTypes";
 
 const DEMO_CREATOR_HANDLES = new Set([
@@ -26,6 +26,8 @@ export function creatorHandleBase(session: Pick<AccountSession, "nickname" | "di
 }
 
 export type CreatorLink = { label: string; url: string };
+export type CreatorBioFont = "sans" | "serif" | "editorial";
+export type CreatorProfileTone = "paper" | "warm" | "ink";
 export type CreatorProfile = {
   handle: string;
   displayName: string;
@@ -33,6 +35,9 @@ export type CreatorProfile = {
   links: CreatorLink[];
   profilePublic: boolean;
   imagePresent: boolean;
+  coverPresent: boolean;
+  bioFont: CreatorBioFont;
+  profileTone: CreatorProfileTone;
   followerCount?: number;
   updatedAt?: string;
   demo?: boolean;
@@ -215,21 +220,38 @@ export function creatorImageUrl(handle: string) {
   return `/creator-images/${encodeURIComponent(handle)}.webp`;
 }
 
+export function creatorCoverUrl(handle: string, version?: string) {
+  const url = `/creator-covers/${encodeURIComponent(handle)}.webp`;
+  return version ? `${url}?v=${encodeURIComponent(version)}` : url;
+}
+
+async function blobBase64(blob: Blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 0x8000)
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  return btoa(binary);
+}
+
 export async function saveCreatorProfileImage(file?: File, remove = false) {
   let base64: string | undefined;
   if (file) {
-    const blob = await prepareProfileImage(file);
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    let binary = "";
-    for (let offset = 0; offset < bytes.length; offset += 0x8000)
-      binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-    base64 = btoa(binary);
+    base64 = await blobBase64(await prepareProfileImage(file));
   }
   const result = await httpsCallable<{ base64?: string; remove?: boolean }, { imagePresent: boolean }>(
     firebaseFunctions,
     "setLieuvaCreatorProfileImage",
   )({ ...(base64 ? { base64 } : {}), ...(remove ? { remove: true } : {}) });
   return result.data.imagePresent;
+}
+
+export async function saveCreatorProfileCover(file?: File, remove = false) {
+  const base64 = file ? await blobBase64(await prepareProfileCover(file)) : undefined;
+  const result = await httpsCallable<{ base64?: string; remove?: boolean }, { coverPresent: boolean }>(
+    firebaseFunctions,
+    "setLieuvaCreatorProfileCover",
+  )({ ...(base64 ? { base64 } : {}), ...(remove ? { remove: true } : {}) });
+  return result.data.coverPresent;
 }
 
 export type CreatorFollowState = {

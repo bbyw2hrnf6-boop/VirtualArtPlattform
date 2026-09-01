@@ -103,6 +103,7 @@ export function publicCreatorMetadataPolicy(profile: {
   displayName: string;
   bio?: string;
   imagePresent?: boolean;
+  coverPresent?: boolean;
 }, featuredImage?: string): PageMetadataPolicy {
   const canonical = creatorCanonicalUrl(profile.handle);
   return {
@@ -110,7 +111,9 @@ export function publicCreatorMetadataPolicy(profile: {
     description: profile.bio || `Explore public immersive Spaces by ${profile.displayName} on LIEUVA.`,
     canonical,
     robots: "index,follow,max-image-preview:large",
-    image: profile.imagePresent
+    image: profile.coverPresent
+      ? `${HOME_CANONICAL}creator-covers/${profile.handle}.webp`
+      : profile.imagePresent
       ? `${HOME_CANONICAL}creator-images/${profile.handle}.webp`
       : featuredImage || HOME_IMAGE,
   };

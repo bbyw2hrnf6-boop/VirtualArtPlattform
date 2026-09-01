@@ -4,6 +4,7 @@ import { SpaceShareMenu } from "../../components/SpaceShareMenu";
 import { AccountButton } from "../account/AccountDialog";
 import {
   creatorProfileUrl,
+  creatorCoverUrl,
   creatorImageUrl,
   loadPublicCreatorProfile,
   manageCreatorFollow,
@@ -117,7 +118,7 @@ export default function CreatorProfilePage({
 
   const Root = embedded ? "section" : "main";
   return (
-    <Root className={`creator-profile${embedded ? " creator-profile--embedded" : ""}`}>
+    <Root className={`creator-profile creator-profile--${profile.profileTone}${embedded ? " creator-profile--embedded" : ""}`}>
       {!embedded ? <header className="creator-profile__nav">
         <Logo dark />
         <nav aria-label="LIEUVA navigation">
@@ -152,6 +153,12 @@ export default function CreatorProfilePage({
         </header>
       )}
       <section className="creator-profile__hero" aria-labelledby="creator-profile-title">
+        {profile.coverPresent && (
+          <div className="creator-profile__title-cover">
+            <img src={creatorCoverUrl(profile.handle, profile.updatedAt)} alt="" decoding="async" fetchPriority="high" />
+            <span aria-hidden="true">@{profile.handle}</span>
+          </div>
+        )}
         <div className="creator-profile__identity">
           <div className="creator-profile__mark" aria-hidden="true">
             {profile.imagePresent
@@ -161,7 +168,7 @@ export default function CreatorProfilePage({
           <p className="eyebrow"><span aria-hidden="true" /> LIEUVA Creator</p>
           <h1 id="creator-profile-title">{profile.displayName}</h1>
           <p className="creator-profile__handle">@{profile.handle}</p>
-          {profile.bio && <p className="creator-profile__bio">{profile.bio}</p>}
+          {profile.bio && <p className={`creator-profile__bio creator-profile__bio--${profile.bioFont}`}>{profile.bio}</p>}
           <div className="creator-profile__social">
             {!profile.demo && !followState?.isSelf && (
               <button

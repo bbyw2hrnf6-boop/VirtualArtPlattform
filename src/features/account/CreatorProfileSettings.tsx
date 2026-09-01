@@ -3,14 +3,18 @@ import {
   announceCreatorProfileUpdated,
   checkCreatorHandle,
   creatorActionErrorMessage,
+  creatorCoverUrl,
   creatorHandleBase,
   creatorImageUrl,
   creatorProfileUrl,
   loadMyCreatorProfile,
   saveCreatorProfile,
+  saveCreatorProfileCover,
   saveCreatorProfileImage,
+  type CreatorBioFont,
   type CreatorLink,
   type CreatorProfile,
+  type CreatorProfileTone,
 } from "../../services/creatorProfile";
 import { isValidCreatorHandle } from "../../services/spaceRoutes";
 import type { AccountSession } from "../../services/accountTypes";
@@ -58,6 +62,9 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
     links: [],
     profilePublic: false,
     imagePresent: false,
+    coverPresent: false,
+    bioFont: "sans",
+    profileTone: "paper",
   });
   const [links, setLinks] = useState<CreatorLink[]>([emptyLink()]);
   const [originalHandle, setOriginalHandle] = useState("");
@@ -66,11 +73,14 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
   const [message, setMessage] = useState("Loading public profile…");
   const [image, setImage] = useState<File>();
   const [removeImage, setRemoveImage] = useState(false);
+  const [cover, setCover] = useState<File>();
+  const [removeCover, setRemoveCover] = useState(false);
   const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
   const handleValid = isValidCreatorHandle(profile.handle);
   const publicUrl = handleValid ? creatorProfileUrl(profile.handle) : "";
   const completeLinks = useMemo(() => links.filter((link) => link.label.trim() || link.url.trim()), [links]);
   const imagePreview = useMemo(() => image ? URL.createObjectURL(image) : "", [image]);
+  const coverPreview = useMemo(() => cover ? URL.createObjectURL(cover) : "", [cover]);
   const profileSpaces = useMemo(
     () => spaces.filter((space) => space.creatorProfileListed),
     [spaces],
@@ -92,6 +102,12 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
       if (imagePreview) URL.revokeObjectURL(imagePreview);
     };
   }, [imagePreview]);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+    };
+  }, [coverPreview]);
 
   useEffect(() => {
     let active = true;
@@ -166,6 +182,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
         links: completeLinks.map((link) => ({ label: link.label.trim(), url: link.url.trim() })),
       });
       let imagePresent = result.profile.imagePresent;
+      let coverPresent = result.profile.coverPresent;
       setPublished(result.profile.profilePublic);
       announceCreatorProfileUpdated(result.profile);
       if (image || removeImage) {
@@ -184,10 +201,27 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           return;
         }
       }
-      setProfile({ ...result.profile, imagePresent });
-      announceCreatorProfileUpdated({ ...result.profile, imagePresent });
+      if (cover || removeCover) {
+        try {
+          coverPresent = await saveCreatorProfileCover(cover, removeCover);
+        } catch {
+          const savedProfile = { ...result.profile, imagePresent };
+          setProfile(savedProfile);
+          announceCreatorProfileUpdated(savedProfile);
+          setImage(undefined);
+          setRemoveImage(false);
+          setState("error");
+          setMessage("Profile saved. The cover update failed, so the previous title image is unchanged. Retry when ready.");
+          return;
+        }
+      }
+      const savedProfile = { ...result.profile, imagePresent, coverPresent, updatedAt: new Date().toISOString() };
+      setProfile(savedProfile);
+      announceCreatorProfileUpdated(savedProfile);
       setImage(undefined);
       setRemoveImage(false);
+      setCover(undefined);
+      setRemoveCover(false);
       setLinks(result.profile.links.length ? result.profile.links : [emptyLink()]);
       setOriginalHandle(result.profile.handle);
       setState("saved");
@@ -204,6 +238,10 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
 
   const portraitSource = imagePreview
     || (!removeImage && profile.imagePresent && handleValid ? creatorImageUrl(profile.handle) : "");
+  const storedCoverSource = !removeCover && profile.coverPresent && handleValid
+    ? creatorCoverUrl(profile.handle, profile.updatedAt)
+    : "";
+  const coverSource = coverPreview || storedCoverSource;
   const previewLinks = completeLinks.filter((link) => link.label.trim() && /^https:\/\//i.test(link.url.trim()));
   return (
     <form className="creator-settings" onSubmit={(event) => void submit(event)}>
@@ -240,10 +278,44 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
                 {(profile.imagePresent || image) && <button type="button" className="account-profile__remove" onClick={() => { setImage(undefined); setRemoveImage(true); }}>Remove image</button>}
               </div>
             </section>
+            <section className="creator-settings__cover-editor">
+              <div className="creator-settings__cover-thumb" aria-hidden="true">
+                {coverSource ? <img src={coverSource} alt="" /> : <span>Cover</span>}
+              </div>
+              <div>
+                <strong>Title image</strong>
+                <p>Add a wide image that introduces your practice. It becomes the profile cover and social sharing image.</p>
+                <label className="account-profile__upload">Choose cover<input type="file" accept="image/avif,image/jpeg,image/png,image/webp" onChange={(event) => { const next = event.target.files?.[0]; setCover(next); if (next) setRemoveCover(false); }} /></label>
+                {cover && <small>{cover.name}</small>}
+                {(profile.coverPresent || cover) && <button type="button" className="account-profile__remove" onClick={() => { setCover(undefined); setRemoveCover(true); }}>Remove cover</button>}
+              </div>
+            </section>
             <label>Display name<input required maxLength={60} value={profile.displayName} onChange={(event) => setProfile((current) => ({ ...current, displayName: event.target.value }))} /></label>
             <label>Handle<div className="creator-settings__handle"><span>lieuva.com/creators/</span><input required minLength={3} maxLength={30} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={profile.handle} onChange={(event) => setProfile((current) => ({ ...current, handle: event.target.value }))} /></div><small>Lowercase letters, numbers and single hyphens. Handle changes are limited to once every seven days.</small></label>
             <button type="button" className="account-reset" disabled={!handleValid || state === "checking"} onClick={() => void checkHandle()}>{state === "checking" ? "Checking…" : "Check availability"}</button>
             <label>Short bio<textarea maxLength={320} rows={5} value={profile.bio} onChange={(event) => setProfile((current) => ({ ...current, bio: event.target.value }))} /><small>{profile.bio.length}/320 characters</small></label>
+          </fieldset>
+          <fieldset className="creator-settings__appearance" disabled={state === "loading" || state === "saving"}>
+            <legend>Profile style</legend>
+            <p className="creator-settings__help">Choose a controlled visual system. Your profile stays readable, fast and recognizably LIEUVA.</p>
+            <div className="creator-settings__choice-group" role="radiogroup" aria-label="Bio typography">
+              <strong>Bio typography</strong>
+              {(["sans", "serif", "editorial"] as CreatorBioFont[]).map((font) => (
+                <label className={`creator-settings__style-card creator-settings__style-card--${font}`} key={font}>
+                  <input type="radio" name="bio-font" value={font} checked={profile.bioFont === font} onChange={() => setProfile((current) => ({ ...current, bioFont: font }))} />
+                  <span><b>{font === "sans" ? "Modern" : font === "serif" ? "Gallery" : "Editorial"}</b><small>The work is always changing.</small></span>
+                </label>
+              ))}
+            </div>
+            <div className="creator-settings__choice-group" role="radiogroup" aria-label="Profile header color mood">
+              <strong>Profile header color mood</strong>
+              {(["paper", "warm", "ink"] as CreatorProfileTone[]).map((tone) => (
+                <label className={`creator-settings__tone-card creator-settings__tone-card--${tone}`} key={tone}>
+                  <input type="radio" name="profile-tone" value={tone} checked={profile.profileTone === tone} onChange={() => setProfile((current) => ({ ...current, profileTone: tone }))} />
+                  <span aria-hidden="true" /><b>{tone === "paper" ? "Paper" : tone === "warm" ? "Warm studio" : "Ink"}</b>
+                </label>
+              ))}
+            </div>
           </fieldset>
           <fieldset disabled={state === "loading" || state === "saving"}>
             <legend>Public links</legend>
@@ -276,11 +348,11 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           </div>
           <p className={`creator-settings__status ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>
         </div>
-        <aside className="creator-settings__preview" aria-label="Live public profile preview">
+        <aside className={`creator-settings__preview creator-settings__preview--${profile.profileTone}`} aria-label="Live public profile preview">
           <div className="creator-settings__preview-label"><span>Live preview</span></div>
-          <div className="creator-settings__preview-cover" aria-label="Space preview image">
-            {profileSpaces[0] && discoverCoverSource(profileSpaces[0])
-              ? <img src={discoverCoverSource(profileSpaces[0])} alt={`${profileSpaces[0].title} Space preview image`} />
+          <div className="creator-settings__preview-cover" aria-label="Public profile title image">
+            {coverSource
+              ? <img src={coverSource} alt="Public profile title image preview" />
               : <span />}
           </div>
           <div className="creator-settings__preview-identity">
@@ -289,7 +361,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
             </div>
             <h4>{profile.displayName.trim() || "Your public name"}</h4>
             <small>@{profile.handle || "your-handle"}</small>
-            <p>{profile.bio.trim() || "Your concise public bio will appear here."}</p>
+            <p className={`creator-settings__preview-bio creator-settings__preview-bio--${profile.bioFont}`}>{profile.bio.trim() || "Your concise public bio will appear here."}</p>
             {previewLinks.length > 0 && <div>{previewLinks.map((link) => <a key={`${link.label}:${link.url}`} href={link.url}>{link.label} ↗</a>)}</div>}
           </div>
           <dl className="creator-settings__preview-stats">

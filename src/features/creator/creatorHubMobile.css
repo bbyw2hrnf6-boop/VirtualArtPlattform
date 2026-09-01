@@ -108,12 +108,11 @@
   .creator-hub__timeline { grid-template-columns: 1fr; }
   .creator-post { min-height: 280px; padding: 19px 16px; }
   .creator-post > p { font-size: 24px; }
-  .creator-post__actions { flex-wrap: wrap; gap: 8px 14px; }
-  .creator-post__actions > button,
+  .creator-post__actions { gap: 10px 18px; }
+  .creator-post__actions > .creator-post__action,
   .creator-post__actions summary,
-  .creator-post__actions details div button,
-  .creator-post__actions > a { min-height: 44px; font-size: 11px; }
-  .creator-post__actions > a { width: 100%; margin-left: 0; border-top: 1px solid #ccc8be; }
+  .creator-post__actions details div button { min-height: 44px; font-size: 11px; }
+  .creator-post__action span{font-size:10px}
   .creator-post__discussion form { grid-template-columns: 1fr; }
   .creator-post__discussion form button { min-height: 44px; }
   .creator-hub__rail { padding: 22px; }

@@ -42,6 +42,15 @@ describe("page metadata policy", () => {
     });
   });
 
+  it("uses a custom Creator cover as the large sharing image", () => {
+    expect(publicCreatorMetadataPolicy({
+      handle: "studio-north",
+      displayName: "Studio North",
+      coverPresent: true,
+      imagePresent: true,
+    }).image).toBe("https://lieuva.com/creator-covers/studio-north.webp");
+  });
+
   it("keeps public Space metadata specific and protected Space metadata generic", () => {
     const publicPolicy = publishedSpaceMetadataPolicy({
       id: "material-futures-123",

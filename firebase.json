@@ -65,6 +65,14 @@
         }
       },
       {
+        "source": "/creator-covers/**",
+        "function": {
+          "functionId": "creatorCover",
+          "region": "europe-west1",
+          "pinTag": true
+        }
+      },
+      {
         "source": "/creator-attributions/**",
         "function": {
           "functionId": "creatorAttribution",

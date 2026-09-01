@@ -411,6 +411,9 @@ export const saveLieuvaCreatorProfile = onCall(
         links: input.links,
         profilePublic: input.profilePublic,
         imagePresent: profileSnapshot.data()?.imagePresent === true,
+        coverPresent: profileSnapshot.data()?.coverPresent === true,
+        bioFont: input.bioFont,
+        profileTone: input.profileTone,
         followerCount: typeof profileSnapshot.data()?.followerCount === "number"
           ? Math.max(0, profileSnapshot.data()!.followerCount)
           : 0,
@@ -469,6 +472,38 @@ export const setLieuvaCreatorProfileImage = onCall(
     });
     await profileReference.set({ imagePresent: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     return { imagePresent: true };
+  },
+);
+
+/** Updates the optional landscape title image. It follows the same mediated
+ * public-delivery contract as the profile image. */
+export const setLieuvaCreatorProfileCover = onCall(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    const owner = await db.collection("creatorAccountOwners").doc(uid).get();
+    const creatorId = owner.data()?.creatorId;
+    if (typeof creatorId !== "string") throw new HttpsError("failed-precondition", "Save the public profile first.");
+    const profileReference = db.collection("creatorProfiles").doc(creatorId);
+    if (!(await profileReference.get()).exists) throw new HttpsError("failed-precondition", "Save the public profile first.");
+    const object = getStorage().bucket().file(`creator-public/${creatorId}/cover.webp`);
+    if (request.data?.remove === true) {
+      await object.delete({ ignoreNotFound: true });
+      await profileReference.set({ coverPresent: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      return { coverPresent: false };
+    }
+    const encoded = typeof request.data?.base64 === "string" ? request.data.base64 : "";
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded) || encoded.length > 720_000)
+      throw new HttpsError("invalid-argument", "Choose a supported cover image under 512 KB.");
+    const bytes = Buffer.from(encoded, "base64");
+    if (!isValidCreatorWebp(bytes))
+      throw new HttpsError("invalid-argument", "Choose a supported cover image under 512 KB.");
+    await object.save(bytes, {
+      resumable: false,
+      metadata: { contentType: "image/webp", cacheControl: "private, no-store", metadata: { kind: "creator-cover", schemaVersion: "1" } },
+    });
+    await profileReference.set({ coverPresent: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return { coverPresent: true };
   },
 );
 
@@ -1774,7 +1809,7 @@ export const creatorDirectoryData = onRequest(
     try {
       const snapshot = await db.collection("creatorProfiles")
         .where("profilePublic", "==", true)
-        .select("handle", "displayName", "bio", "links", "profilePublic", "imagePresent", "followerCount")
+        .select("handle", "displayName", "bio", "links", "profilePublic", "imagePresent", "coverPresent", "bioFont", "profileTone", "followerCount")
         .limit(500)
         .get();
       const creators = snapshot.docs
@@ -1813,6 +1848,36 @@ export const creatorImage = onRequest(
       const profile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
       if (!profile?.profilePublic || !profile.imagePresent) throw new Error("not-found");
       const [bytes] = await getStorage().bucket().file(`creator-public/${creatorId}/avatar.webp`).download();
+      response.set("Content-Type", "image/webp");
+      response.set("Cache-Control", "public, max-age=300, s-maxage=3600");
+      response.status(200).send(request.method === "HEAD" ? undefined : bytes);
+    } catch {
+      response.set("Cache-Control", "private, no-store");
+      response.status(404).send("Not found");
+    }
+  },
+);
+
+/** Public cover proxy. It checks profile visibility before serving title art. */
+export const creatorCover = onRequest(
+  { region: REGION, timeoutSeconds: 30, memory: "256MiB", invoker: "public" },
+  async (request, response) => {
+    response.set("X-Content-Type-Options", "nosniff");
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("Allow", "GET, HEAD");
+      response.status(405).send("Method not allowed");
+      return;
+    }
+    const handle = requestRouteValue(request.path, "creator-covers", ".webp");
+    try {
+      const normalized = normalizeCreatorHandle(handle);
+      if (!normalized) throw new Error("not-found");
+      const handleSnapshot = await db.collection("creatorHandles").doc(normalized).get();
+      const creatorId = handleSnapshot.data()?.creatorId;
+      if (typeof creatorId !== "string") throw new Error("not-found");
+      const profile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
+      if (!profile?.profilePublic || !profile.coverPresent) throw new Error("not-found");
+      const [bytes] = await getStorage().bucket().file(`creator-public/${creatorId}/cover.webp`).download();
       response.set("Content-Type", "image/webp");
       response.set("Cache-Control", "public, max-age=300, s-maxage=3600");
       response.status(200).send(request.method === "HEAD" ? undefined : bytes);

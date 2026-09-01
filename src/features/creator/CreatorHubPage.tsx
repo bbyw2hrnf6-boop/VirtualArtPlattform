@@ -56,7 +56,7 @@ function CreatorMark({ creator }: { creator: Pick<PublicCreatorDirectoryEntry, "
     : <>{creator.displayName.slice(0, 1).toUpperCase()}</>;
 }
 
-type HubIconName = "home" | "feed" | "creators" | "spaces" | "account" | "bell" | "search";
+type HubIconName = "home" | "feed" | "creators" | "spaces" | "account" | "bell" | "search" | "heart" | "comment";
 
 function HubIcon({ name }: { name: HubIconName }) {
   const paths: Record<HubIconName, ReactNode> = {
@@ -67,6 +67,8 @@ function HubIcon({ name }: { name: HubIconName }) {
     account: <><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21c.5-5.2 2.8-7.7 7.5-7.7s7 2.5 7.5 7.7"/></>,
     bell: <><path d="M6.5 9a5.5 5.5 0 0 1 11 0c0 6 2.5 6.5 2.5 6.5H4S6.5 15 6.5 9Z"/><path d="M9.5 19a3 3 0 0 0 5 0"/></>,
     search: <><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></>,
+    heart: <path d="M20.7 5.8c-1.8-2.1-5.1-1.8-6.8.3L12 8.4l-1.9-2.3C8.4 4 5.1 3.7 3.3 5.8 1.4 8 1.7 11.3 3.8 13.3L12 21l8.2-7.7c2.1-2 2.4-5.3.5-7.5Z"/>,
+    comment: <><path d="M20.5 11.5a8.5 8.5 0 0 1-9 8.5 9.2 9.2 0 0 1-3.7-.9L3 20.5l1.5-4.4A8.4 8.4 0 1 1 20.5 11.5Z"/></>,
   };
   return <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">{paths[name]}</svg>;
 }
@@ -374,6 +376,9 @@ export default function CreatorHubPage({
         links: currentProfile?.links ?? [],
         profilePublic: true,
         imagePresent: currentProfile?.imagePresent ?? false,
+        coverPresent: currentProfile?.coverPresent ?? false,
+        bioFont: currentProfile?.bioFont ?? "sans",
+        profileTone: currentProfile?.profileTone ?? "paper",
       });
       setMyProfile(saved.profile);
       setProfileStatus("ready");
@@ -613,20 +618,30 @@ export default function CreatorHubPage({
             <div className="creator-hub__section-heading"><div><p className="eyebrow">From the feed</p><h2 id="creator-feed-title">Studio notes.</h2></div><p>Process updates from you and the Creators you follow. Spaces remain the work; notes show how it changes.</p></div>
             <div className="creator-hub__social-grid">
               <div className="creator-hub__timeline">
-                {posts.length ? posts.map((post) => (
+                {posts.length ? posts.map((post) => {
+                  const creator = post.handle === myProfile?.handle
+                    ? myProfile
+                    : home?.following.find((candidate) => candidate.handle === post.handle);
+                  return (
                   <article className="creator-post" id={`creator-post-${post.id}`} tabIndex={-1} key={post.id}>
-                    <header><a href={creatorHref(post.handle)} className="creator-post__mark" aria-label={`${post.displayName} profile`}>{post.displayName.slice(0, 1)}</a><div><a href={creatorHref(post.handle)}>{post.displayName}</a><span>@{post.handle}</span></div><time dateTime={post.createdAt}>{relativeDate(post.createdAt)}</time></header>
+                    <header>
+                      <a href={creatorHref(post.handle)} className="creator-post__identity" aria-label={`Visit ${post.displayName} profile`}>
+                        <span className="creator-post__mark" aria-hidden="true">{creator?.imagePresent ? <img src={creatorImageUrl(post.handle)} alt="" loading="lazy" /> : post.displayName.slice(0, 1)}</span>
+                        <span><strong>{post.displayName}</strong><small>@{post.handle}</small></span>
+                      </a>
+                      <time dateTime={post.createdAt}>{relativeDate(post.createdAt)}</time>
+                    </header>
                     <p>{post.body}</p>
                     <footer className="creator-post__actions">
-                      <button type="button" className={post.viewerReacted ? "is-active" : ""} onClick={() => void engage(post, "reaction")}>◇ Appreciate <b>{post.reactionCount ?? 0}</b></button>
-                      <button type="button" onClick={() => setActivePost(activePost === post.id ? undefined : post.id)}>Discuss <b>{post.commentCount ?? 0}</b></button>
-                      <details><summary>Safety ···</summary><div><button type="button" onClick={() => void engage(post, "report")}>Report post</button><button type="button" onClick={() => void engage(post, "block")}>Block Creator</button></div></details>
-                      <a href={creatorHref(post.handle)}>Visit Creator <b>→</b></a>
+                      <button type="button" className={`creator-post__action${post.viewerReacted ? " is-active" : ""}`} aria-pressed={Boolean(post.viewerReacted)} onClick={() => void engage(post, "reaction")}><HubIcon name="heart" /><b>{post.reactionCount ?? 0}</b><span>Appreciate</span></button>
+                      <button type="button" className="creator-post__action" aria-expanded={activePost === post.id} onClick={() => setActivePost(activePost === post.id ? undefined : post.id)}><HubIcon name="comment" /><b>{post.commentCount ?? 0}</b><span>Discuss</span></button>
+                      <details className="creator-post__overflow"><summary aria-label="More post actions">•••</summary><div><small>Safety and reporting</small><button type="button" onClick={() => void engage(post, "report")}>Report post</button><button type="button" onClick={() => void engage(post, "block")}>Block Creator</button></div></details>
                     </footer>
                     {activePost === post.id && <div className="creator-post__discussion"><form onSubmit={(event) => { event.preventDefault(); void engage(post, "comment"); }}><label><span className="visually-hidden">Comment on this post</span><input value={commentDrafts[post.id] ?? ""} onChange={(event) => setCommentDrafts((value) => ({ ...value, [post.id]: event.target.value.slice(0, 280) }))} placeholder="Add a considered comment…" disabled={!signedIn || Boolean(post.demo)} /></label><button type="submit" disabled={!(commentDrafts[post.id] ?? "").trim() || !signedIn || Boolean(post.demo)}>Post</button></form>{(newComments[post.id] ?? []).map((comment) => <p key={comment.id}><strong>{comment.displayName}</strong> {comment.body}</p>)}</div>}
                     {postActions[post.id] && <small className="creator-post__notice" aria-live="polite">{postActions[post.id]}</small>}
                   </article>
-                )) : <div className="creator-hub__empty creator-hub__empty--feed"><HubIcon name="feed" /><h3>{homeStatus === "error" ? "Feed connection paused." : homeStatus === "loading" ? "Loading your circle…" : "Your feed starts with real work."}</h3><p>{homeStatus === "error" ? "Your work is safe. Retry the live community feed." : signedIn ? "Follow a public Creator or publish a studio note. New Spaces and notes will appear here." : "Sign in, follow a Creator and return when their work changes."}</p>{homeStatus === "error" ? <button type="button" onClick={() => setProfileRefresh((value) => value + 1)}>Retry feed →</button> : <a href="/creators">Find Creators →</a>}</div>}
+                  );
+                }) : <div className="creator-hub__empty creator-hub__empty--feed"><HubIcon name="feed" /><h3>{homeStatus === "error" ? "Feed connection paused." : homeStatus === "loading" ? "Loading your circle…" : "Your feed starts with real work."}</h3><p>{homeStatus === "error" ? "Your work is safe. Retry the live community feed." : signedIn ? "Follow a public Creator or publish a studio note. New Spaces and notes will appear here." : "Sign in, follow a Creator and return when their work changes."}</p>{homeStatus === "error" ? <button type="button" onClick={() => setProfileRefresh((value) => value + 1)}>Retry feed →</button> : <a href="/creators">Find Creators →</a>}</div>}
               </div>
               <aside className="creator-hub__rail"><p className="eyebrow">Following</p><h3>{home?.following.length ? "Your circle" : "Build your circle"}</h3>{home?.following.length ? <div className="creator-hub__following" aria-label="Creators you follow">{home.following.map((creator) => <a key={creator.handle} href={creatorHref(creator.handle)}><span><CreatorMark creator={creator} /></span><div><strong>{creator.displayName}</strong><small>@{creator.handle}</small></div><b>→</b></a>)}</div> : <p>Follow a public Creator and their newest notes and Spaces will collect here.</p>}<a href="/creators">Find Creators <span>↗</span></a></aside>
             </div>

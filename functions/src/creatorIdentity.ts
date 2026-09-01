@@ -11,6 +11,8 @@ const RESERVED_HANDLES = new Set([
 ]);
 
 export type CreatorLink = { label: string; url: string };
+export type CreatorBioFont = "sans" | "serif" | "editorial";
+export type CreatorProfileTone = "paper" | "warm" | "ink";
 
 export type PublicCreatorProfile = {
   handle: string;
@@ -19,6 +21,9 @@ export type PublicCreatorProfile = {
   links: CreatorLink[];
   profilePublic: boolean;
   imagePresent: boolean;
+  coverPresent: boolean;
+  bioFont: CreatorBioFont;
+  profileTone: CreatorProfileTone;
   followerCount: number;
   updatedAt?: string;
 };
@@ -93,6 +98,9 @@ export function isValidCreatorWebp(bytes: Buffer): boolean {
     bytes.subarray(8, 12).toString("ascii") === "WEBP";
 }
 
+const CREATOR_BIO_FONTS = new Set<CreatorBioFont>(["sans", "serif", "editorial"]);
+const CREATOR_PROFILE_TONES = new Set<CreatorProfileTone>(["paper", "warm", "ink"]);
+
 function boundedText(value: unknown, maximum: number, required = false): string | null {
   if (typeof value !== "string") return required ? null : "";
   const text = value.trim().replace(/\s+/g, " ");
@@ -149,7 +157,24 @@ export function parseCreatorProfileInput(value: unknown): PublicCreatorProfile |
   const followerCount = typeof record.followerCount === "number" && Number.isSafeInteger(record.followerCount)
     ? Math.max(0, record.followerCount)
     : 0;
-  return { handle, displayName, bio, links, profilePublic: record.profilePublic, imagePresent: record.imagePresent === true, followerCount };
+  if (record.bioFont !== undefined && (typeof record.bioFont !== "string" || !CREATOR_BIO_FONTS.has(record.bioFont as CreatorBioFont)))
+    return null;
+  if (record.profileTone !== undefined && (typeof record.profileTone !== "string" || !CREATOR_PROFILE_TONES.has(record.profileTone as CreatorProfileTone)))
+    return null;
+  const bioFont = (record.bioFont as CreatorBioFont | undefined) ?? "sans";
+  const profileTone = (record.profileTone as CreatorProfileTone | undefined) ?? "paper";
+  return {
+    handle,
+    displayName,
+    bio,
+    links,
+    profilePublic: record.profilePublic,
+    imagePresent: record.imagePresent === true,
+    coverPresent: record.coverPresent === true,
+    bioFont,
+    profileTone,
+    followerCount,
+  };
 }
 
 /** Minimal allow-listed projection used by public Creator search. */
@@ -250,7 +275,9 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
     ? profile.bio || `Explore public immersive Spaces by ${profile.displayName} on LIEUVA.`
     : "This LIEUVA Creator profile is not public.";
   const spaces = delivery.kind === "public" ? delivery.spaces : [];
-  const image = profile?.imagePresent
+  const image = profile?.coverPresent
+    ? `https://lieuva.com/creator-covers/${profile.handle}.webp`
+    : profile?.imagePresent
     ? `https://lieuva.com/creator-images/${profile.handle}.webp`
     : profile && spaces[0] ? spaces[0].coverUrl
     : "https://lieuva.com/assets/demo/aura-hero-gallery.webp";
@@ -283,7 +310,7 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
         name: profile.displayName,
         alternateName: `@${profile.handle}`,
         url: canonical,
-        ...(profile.imagePresent ? { image } : {}),
+        ...(profile.coverPresent || profile.imagePresent ? { image } : {}),
         ...(profile.links.length ? { sameAs: profile.links.map((link) => link.url) } : {}),
       },
     }).replaceAll("<", "\\u003c")}</script>`] : []),

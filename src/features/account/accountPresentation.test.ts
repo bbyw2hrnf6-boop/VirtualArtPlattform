@@ -41,6 +41,14 @@ describe("account presentation", () => {
     expect(creatorSettingsSource).not.toContain('<dd>Profile status</dd>');
   });
 
+  it("offers a real cover and safe profile style presets with live preview", () => {
+    expect(creatorSettingsSource).toContain("Title image");
+    expect(creatorSettingsSource).toContain("saveCreatorProfileCover");
+    expect(creatorSettingsSource).toContain('aria-label="Bio typography"');
+    expect(creatorSettingsSource).toContain('aria-label="Profile header color mood"');
+    expect(creatorSettingsSource).toContain("creator-settings__preview-bio--");
+  });
+
   it("keeps public visibility separate from homepage and Hub placement", () => {
     expect(accountSource).toContain("galleryRepository.updateDistribution");
     expect(accountSource).toContain('field: "exploreListed" | "creatorProfileListed"');

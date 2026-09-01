@@ -70,7 +70,28 @@ describe("Creator identity contract", () => {
       profilePublic: true,
       imagePresent: false,
       links: [{ label: "Website", url: "https://example.com" }],
-    })).toMatchObject({ handle: "studio-north", profilePublic: true });
+    })).toMatchObject({
+      handle: "studio-north",
+      profilePublic: true,
+      coverPresent: false,
+      bioFont: "sans",
+      profileTone: "paper",
+    });
+    expect(parseCreatorProfileInput({
+      handle: "studio-north",
+      displayName: "Studio North",
+      bio: "Spatial work.",
+      profilePublic: true,
+      imagePresent: true,
+      coverPresent: true,
+      bioFont: "editorial",
+      profileTone: "ink",
+      links: [],
+    })).toMatchObject({ coverPresent: true, bioFont: "editorial", profileTone: "ink" });
+    expect(parseCreatorProfileInput({
+      handle: "studio-north", displayName: "Studio North", bio: "", profilePublic: true,
+      bioFont: "comic-sans", links: [],
+    })).toBeNull();
     expect(parseCreatorProfileInput({
       handle: "studio-north", displayName: "Studio North", bio: "", profilePublic: true,
       links: [{ label: "Bad", url: "http://example.com" }],
@@ -111,7 +132,7 @@ describe("Creator identity contract", () => {
   it("renders public metadata without an internal identifier", () => {
     const html = renderCreatorDocument(SHELL, {
       kind: "public",
-      profile: { handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [{ label: "Website", url: "https://example.com" }], profilePublic: true, imagePresent: true, followerCount: 0 },
+      profile: { handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [{ label: "Website", url: "https://example.com" }], profilePublic: true, imagePresent: true, coverPresent: true, bioFont: "serif", profileTone: "warm", followerCount: 0 },
       spaces: [{ id: "space-safe", title: "Material Futures", creator: "Studio North", coverUrl: "https://lieuva.com/space-cards/space-safe" }],
       posts: [],
     });
@@ -121,6 +142,7 @@ describe("Creator identity contract", () => {
     expect(html).toContain('"alternateName":"@studio-north"');
     expect(html).toContain('"sameAs":["https://example.com"]');
     expect(html).toContain('name="twitter:image:alt" content="Public Creator profile for Studio North"');
+    expect(html).toContain("https://lieuva.com/creator-covers/studio-north.webp");
     expect(html).not.toContain("og:image:width");
     expect(html).not.toContain("Old alt");
     expect(html).not.toContain("ownerId");
