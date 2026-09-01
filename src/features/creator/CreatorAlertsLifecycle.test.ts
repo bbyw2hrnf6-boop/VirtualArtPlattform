@@ -12,6 +12,14 @@ describe("Creator Hub alerts lifecycle", () => {
     expect(functionsSource).toContain("creatorNotificationProjection(data");
   });
 
+  it("keeps self interactions visible and restores the signed-in Creator's appreciation state", () => {
+    expect(functionsSource).not.toContain("actorCreatorId !== targetCreatorId");
+    expect(functionsSource).toContain("viewerReacted: reactedPostIndexes.has(index)");
+    expect(functionsSource).toContain("posts: postsWithViewerState");
+    expect(hubSource).toContain("result.reacted && post.handle === myProfile?.handle");
+    expect(hubSource).toContain('notification.actorHandle === myProfile?.handle ? "You"');
+  });
+
   it("keeps notification writes server-owned and exposes a bounded read action", () => {
     expect(functionsSource).toContain("export const markMyLieuvaCreatorNotificationsRead = onCall(");
     expect(functionsSource).toContain("requestedIds.length > 20");

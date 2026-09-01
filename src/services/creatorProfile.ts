@@ -280,6 +280,24 @@ export type CreatorPost = {
   demo?: boolean;
 };
 
+export function mergeCreatorHomeViewerState(
+  previous: CreatorHomePayload | undefined,
+  next: CreatorHomePayload,
+) {
+  if (!previous) return next;
+  const previousStates = new Map(previous.posts.flatMap((post) => post.viewerReacted === undefined
+    ? []
+    : [[`${post.handle}\0${post.id}`, post.viewerReacted] as const]));
+  return {
+    ...next,
+    posts: next.posts.map((post) => {
+      if (post.viewerReacted !== undefined) return post;
+      const viewerReacted = previousStates.get(`${post.handle}\0${post.id}`);
+      return viewerReacted === undefined ? post : { ...post, viewerReacted };
+    }),
+  };
+}
+
 export type CreatorComment = {
   id: string;
   handle: string;
@@ -288,11 +306,11 @@ export type CreatorComment = {
   createdAt: string;
 };
 
-export async function loadCreatorHome() {
-  const result = await httpsCallable<Record<string, never>, CreatorHomePayload>(
+export async function loadCreatorHome(includeViewerState = true) {
+  const result = await httpsCallable<{ includeViewerState: boolean }, CreatorHomePayload>(
     firebaseFunctions,
     "getMyLieuvaCreatorHome",
-  )({});
+  )({ includeViewerState });
   return result.data;
 }
 

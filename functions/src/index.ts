@@ -694,7 +694,7 @@ export const manageLieuvaCreatorPostInteraction = onCall(
         });
         transaction.set(postReference, { commentCount: commentCount + 1 }, { merge: true });
         transaction.set(db.collection("creatorAccounts").doc(actorCreatorId), { lastCommentAt: FieldValue.serverTimestamp() }, { merge: true });
-        if (actorCreatorId !== targetCreatorId) transaction.create(commentNotificationReference, {
+        transaction.create(commentNotificationReference, {
           kind: "comment",
           actorCreatorId,
           actorHandle: actorProfile.handle,
@@ -722,7 +722,7 @@ export const manageLieuvaCreatorPostInteraction = onCall(
       if (action === "react" && !currentReaction.exists) {
         transaction.create(reactionReference, { creatorId: actorCreatorId, createdAt: FieldValue.serverTimestamp(), schemaVersion: 1 });
         transaction.set(postReference, { reactionCount: currentCount + 1 }, { merge: true });
-        if (actorCreatorId !== targetCreatorId) transaction.create(reactionNotificationReference, {
+        transaction.create(reactionNotificationReference, {
           kind: "reaction",
           actorCreatorId,
           actorHandle: actorProfile.handle,
@@ -810,8 +810,12 @@ export const getMyLieuvaCreatorHome = onCall(
       .map((document) => document.data().followedCreatorId)
       .filter((value): value is string => typeof value === "string" && !blockedIds.has(value));
     const profiles = await Promise.all(followedIds.map((id) => db.collection("creatorProfiles").doc(id).get()));
-    const publicProfiles = profiles
-      .map((snapshot) => parseCreatorProfileInput(snapshot.data()))
+    const parsedFollowedProfiles = profiles.map((snapshot) => ({
+      creatorId: snapshot.id,
+      profile: parseCreatorProfileInput(snapshot.data()),
+    }));
+    const publicProfiles = parsedFollowedProfiles
+      .map(({ profile }) => profile)
       .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile?.profilePublic));
     const ownProfile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
     const feedProfiles = [
@@ -840,6 +844,29 @@ export const getMyLieuvaCreatorHome = onCall(
     const posts = feedDeliveries.flatMap((delivery) => delivery.kind === "public" ? delivery.posts : [])
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .slice(0, 30);
+    let postsWithViewerState = posts;
+    if (request.data?.includeViewerState === true) {
+      const creatorIdsByHandle = new Map<string, string>();
+      if (ownProfile?.profilePublic) creatorIdsByHandle.set(ownProfile.handle, creatorId);
+      for (const { creatorId: followedCreatorId, profile } of parsedFollowedProfiles)
+        if (profile?.profilePublic) creatorIdsByHandle.set(profile.handle, followedCreatorId);
+      const reactionLookups = posts.flatMap((post, index) => {
+        const postCreatorId = creatorIdsByHandle.get(post.handle);
+        return postCreatorId ? [{
+          index,
+          reference: db.collection("creatorAccounts").doc(postCreatorId).collection("posts").doc(post.id).collection("reactions").doc(creatorId),
+        }] : [];
+      });
+      const reactionSnapshots = reactionLookups.length
+        ? await db.getAll(...reactionLookups.map(({ reference }) => reference))
+        : [];
+      const reactedPostIndexes = new Set(reactionSnapshots.flatMap((snapshot, lookupIndex) =>
+        snapshot.exists ? [reactionLookups[lookupIndex]!.index] : []));
+      postsWithViewerState = posts.map((post, index) => ({
+        ...post,
+        viewerReacted: reactedPostIndexes.has(index),
+      }));
+    }
     const notifications = notificationsSnapshot.docs.flatMap((document) => {
       const data = document.data();
       const createdAt = timestampMilliseconds(data.createdAt);
@@ -847,7 +874,7 @@ export const getMyLieuvaCreatorHome = onCall(
       const notification = creatorNotificationProjection(data, new Date(createdAt).toISOString());
       return notification ? [{ id: document.id, ...notification }] : [];
     });
-    return { schemaVersion: 1, following, updates, posts, notifications };
+    return { schemaVersion: 1, following, updates, posts: postsWithViewerState, notifications };
   },
 );
 

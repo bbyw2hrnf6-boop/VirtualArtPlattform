@@ -14,6 +14,7 @@ import {
   creatorImageUrl,
   creatorNotificationPostAnchor,
   loadCreatorHome,
+  mergeCreatorHomeViewerState,
   loadMyCreatorProfile,
   interactCreatorPost,
   manageCreatorBlock,
@@ -247,9 +248,9 @@ export default function CreatorHubPage({
       inFlight = true;
       if (initial) setHomeStatus("loading");
       try {
-        const nextHome = await loadCreatorHome();
+        const nextHome = await loadCreatorHome(initial);
         if (active) {
-          setHome(nextHome);
+          setHome((current) => mergeCreatorHomeViewerState(current, nextHome));
           setHomeStatus(undefined);
         }
       } catch {
@@ -279,7 +280,7 @@ export default function CreatorHubPage({
       if (profile) {
         setMyProfile(profile);
         setProfileStatus("ready");
-        void loadCreatorHome().then(setHome).catch(() => undefined);
+        void loadCreatorHome().then((nextHome) => setHome((current) => mergeCreatorHomeViewerState(current, nextHome))).catch(() => undefined);
       }
     };
     window.addEventListener(CREATOR_PROFILE_UPDATED_EVENT, syncProfile);
@@ -378,7 +379,7 @@ export default function CreatorHubPage({
       setProfileStatus("ready");
       announceCreatorProfileUpdated(saved.profile);
       setProfileNotice(`Creator Hub active as @${saved.profile.handle}.`);
-      void loadCreatorHome().then(setHome).catch(() => undefined);
+      void loadCreatorHome().then((nextHome) => setHome((current) => mergeCreatorHomeViewerState(current, nextHome))).catch(() => undefined);
     } catch (error) {
       setProfileNotice(creatorActionErrorMessage(
         error,
@@ -443,7 +444,7 @@ export default function CreatorHubPage({
       await markCreatorNotificationsRead(selection === "all" ? "all" : ids);
     } catch {
       setNotificationNotice("Alert state could not sync. It will retry when the Hub refreshes.");
-      void loadCreatorHome().then(setHome).catch(() => undefined);
+      void loadCreatorHome(false).then((nextHome) => setHome((current) => mergeCreatorHomeViewerState(current, nextHome))).catch(() => undefined);
     }
   };
 
@@ -482,6 +483,9 @@ export default function CreatorHubPage({
         const result = await interactCreatorPost(post.handle, post.id, { action: post.viewerReacted ? "unreact" : "react" });
         updatePost(post.id, { viewerReacted: result.reacted, reactionCount: result.reactionCount ?? post.reactionCount });
         setPostActions((value) => ({ ...value, [post.id]: result.reacted ? "Appreciated." : "Appreciation removed." }));
+        if (result.reacted && post.handle === myProfile?.handle) {
+          void loadCreatorHome(false).then((nextHome) => setHome((current) => mergeCreatorHomeViewerState(current, nextHome))).catch(() => undefined);
+        }
       } else if (action === "comment") {
         const body = (commentDrafts[post.id] ?? "").trim();
         if (!body) return;
@@ -490,6 +494,9 @@ export default function CreatorHubPage({
         updatePost(post.id, { commentCount: post.commentCount + 1 });
         setCommentDrafts((value) => ({ ...value, [post.id]: "" }));
         setPostActions((value) => ({ ...value, [post.id]: "Comment posted." }));
+        if (post.handle === myProfile?.handle) {
+          void loadCreatorHome(false).then((nextHome) => setHome((current) => mergeCreatorHomeViewerState(current, nextHome))).catch(() => undefined);
+        }
       } else if (action === "report") {
         await interactCreatorPost(post.handle, post.id, { action: "report", reason: "other" });
         setPostActions((value) => ({ ...value, [post.id]: "Report received for review." }));
@@ -645,10 +652,11 @@ export default function CreatorHubPage({
                     : !signedIn ? <p>Sign in to see follows, comments and appreciations.</p>
                       : notifications.length ? notifications.map((notification) => {
                         const action = notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? " commented on your studio note" : " appreciated your studio note";
-                        const content = <><strong>{notification.actorDisplayName}</strong><span>{action}</span>{notification.bodyPreview ? <small>“{notification.bodyPreview}”</small> : null}<time dateTime={notification.createdAt}>{relativeDate(notification.createdAt)}</time></>;
+                        const actorLabel = notification.actorHandle === myProfile?.handle ? "You" : notification.actorDisplayName;
+                        const content = <><strong>{actorLabel}</strong><span>{action}</span>{notification.bodyPreview ? <small>“{notification.bodyPreview}”</small> : null}<time dateTime={notification.createdAt}>{relativeDate(notification.createdAt)}</time></>;
                         return creatorNotificationPostAnchor(notification)
-                          ? <button type="button" className={notification.read ? "" : "is-unread"} key={notification.id} onClick={() => openPostNotification(notification)} aria-label={`${notification.actorDisplayName}${action}, open affected studio note, ${relativeDate(notification.createdAt)}`}>{content}</button>
-                          : <button type="button" className={notification.read ? "" : "is-unread"} key={notification.id} onClick={() => openFollowNotification(notification)} aria-label={`${notification.actorDisplayName}${action}, open Creator profile, ${relativeDate(notification.createdAt)}`}>{content}</button>;
+                          ? <button type="button" className={notification.read ? "" : "is-unread"} key={notification.id} onClick={() => openPostNotification(notification)} aria-label={`${actorLabel}${action}, open affected studio note, ${relativeDate(notification.createdAt)}`}>{content}</button>
+                          : <button type="button" className={notification.read ? "" : "is-unread"} key={notification.id} onClick={() => openFollowNotification(notification)} aria-label={`${actorLabel}${action}, open Creator profile, ${relativeDate(notification.createdAt)}`}>{content}</button>;
                       })
                         : <p>No alerts yet. New follows, comments and appreciations will appear here.</p>}
                 {notificationNotice ? <small className="creator-hub__notification-notice" role="status">{notificationNotice}</small> : null}

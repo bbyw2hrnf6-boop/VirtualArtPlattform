@@ -3,7 +3,9 @@ import {
   creatorNotificationPostAnchor,
   creatorProfileSaveLabel,
   creatorProfileUrl,
+  mergeCreatorHomeViewerState,
   unreadCreatorNotificationCount,
+  type CreatorHomePayload,
   type CreatorNotification,
 } from "./creatorProfile";
 
@@ -49,5 +51,32 @@ describe("Creator notification presentation", () => {
     expect(creatorNotificationPostAnchor(notification({ kind: "reaction" }))).toBe("creator-post-post_123");
     expect(creatorNotificationPostAnchor(notification({ kind: "follow" }))).toBeNull();
     expect(creatorNotificationPostAnchor(notification({ postId: undefined }))).toBeNull();
+  });
+});
+
+describe("Creator home interaction state", () => {
+  const payload = (viewerReacted?: boolean): CreatorHomePayload => ({
+    schemaVersion: 1,
+    following: [],
+    updates: [],
+    notifications: [],
+    posts: [{
+      id: "post_123",
+      handle: "studio-north",
+      displayName: "Studio North",
+      body: "Working note",
+      createdAt: "2026-08-31T12:00:00.000Z",
+      reactionCount: 1,
+      commentCount: 0,
+      ...(viewerReacted === undefined ? {} : { viewerReacted }),
+    }],
+  });
+
+  it("preserves an optimistic appreciation during lightweight home refreshes", () => {
+    expect(mergeCreatorHomeViewerState(payload(true), payload()).posts[0]?.viewerReacted).toBe(true);
+  });
+
+  it("prefers fresh server state when the full viewer state was requested", () => {
+    expect(mergeCreatorHomeViewerState(payload(true), payload(false)).posts[0]?.viewerReacted).toBe(false);
   });
 });
