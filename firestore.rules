@@ -78,7 +78,7 @@ service cloud.firestore {
           'lighting', 'decor', 'artworks', 'coverPath', 'ownerId',
           'publishedAt', 'expiresAt', 'schemaVersion', 'visibility',
           'retention', 'accessVersion', 'exploreListed',
-          'creatorProfileListed', 'revision', 'updatedAt'
+          'creatorProfileListed', 'discoverEligible', 'revision', 'updatedAt'
         ])
         && data.keys().hasOnly([
           'title', 'artist', 'templateId', 'wall', 'floor', 'ceiling',
@@ -126,8 +126,7 @@ service cloud.firestore {
         && data.accessVersion == 1
         && data.exploreListed is bool
         && data.creatorProfileListed is bool
-        && (!data.keys().hasAny(['discoverEligible'])
-          || data.discoverEligible is bool)
+        && data.discoverEligible is bool
         && data.revision is int
         && data.revision > 0
         && data.revision <= 1000000
@@ -155,6 +154,9 @@ service cloud.firestore {
         && data.revision == 1
         && data.updatedAt == data.publishedAt
         && data.lifecycleStatus == 'active'
+        // Review approval is trusted state. Every client publication begins
+        // outside discovery and indexing; only Admin SDK operations can opt in.
+        && data.discoverEligible == false
         && validPublicationPermit(galleryId, data)
         && validPublicationWindow(data);
     }
@@ -185,13 +187,6 @@ service cloud.firestore {
         : true;
     }
 
-    function preservesDiscoverEligibility(before, data) {
-      return before.keys().hasAny(['discoverEligible'])
-        ? data.keys().hasAny(['discoverEligible'])
-          && data.discoverEligible == before.discoverEligible
-        : !data.keys().hasAny(['discoverEligible']);
-    }
-
     function isValidGalleryUpdate(galleryId) {
       let before = resource.data;
       let data = request.resource.data;
@@ -208,7 +203,8 @@ service cloud.firestore {
         && data.accessVersion == currentAccessVersion(before)
         && data.exploreListed == currentExploreListed(before)
         && data.creatorProfileListed == currentCreatorProfileListed(before)
-        && preservesDiscoverEligibility(before, data)
+        // Any published-content revision requires a fresh trusted review.
+        && data.discoverEligible == false
         && data.revision == currentRevision(before) + 1
         && data.updatedAt == request.time
         && (!data.keys().hasAny(['lifecycleStatus']) || data.lifecycleStatus == 'active')
@@ -326,6 +322,14 @@ service cloud.firestore {
     }
 
     match /creatorReports/{reportId} {
+      allow read, write: if false;
+    }
+
+    match /moderationCases/{caseId}/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /publicContentReviews/{reviewId}/{document=**} {
       allow read, write: if false;
     }
 

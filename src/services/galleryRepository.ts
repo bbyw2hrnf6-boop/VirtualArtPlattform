@@ -28,7 +28,7 @@ export interface GalleryRecord extends GalleryDraft {
   lifecycleStatus: GalleryLifecycleStatus;
   trashedAt?: string;
   purgeAt?: string;
-  /** Optional moderation override. Missing legacy values use the quality gate. */
+  /** Trusted public-review gate. Only `true` is approved; false/missing stays direct-link only. */
   discoverEligible?: boolean;
   /** User-controlled homepage placement. Missing legacy values resolve to true. */
   exploreListed: boolean;

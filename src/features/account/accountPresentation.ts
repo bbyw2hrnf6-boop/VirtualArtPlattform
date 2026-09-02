@@ -41,6 +41,7 @@ export function isPublicProfileSpace(
   const owned = record.ownerId === ownerId || record.effectiveRole === "owner";
   return owned
     && record.visibility === "public"
+    && record.discoverEligible === true
     && record.lifecycleStatus === "active"
     && new Date(record.expiresAt).getTime() > now;
 }

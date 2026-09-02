@@ -38,6 +38,8 @@ export type CreatorProfile = {
   coverPresent: boolean;
   bioFont: CreatorBioFont;
   profileTone: CreatorProfileTone;
+  /** Trusted directory approval. Public intent alone never makes a profile discoverable. */
+  discoverEligible?: boolean;
   followerCount?: number;
   updatedAt?: string;
   demo?: boolean;
@@ -84,8 +86,8 @@ export function announceCreatorProfileUpdated(profile: CreatorProfile) {
 
 export function creatorProfileSaveLabel(published: boolean, nextPublic: boolean, saving = false) {
   if (saving) return "Saving…";
-  if (published && nextPublic) return "Save profile changes";
-  if (nextPublic) return "Save and publish profile";
+  if (published && nextPublic) return "Save changes for review";
+  if (nextPublic) return "Save and submit profile";
   return published ? "Save and make private" : "Save private draft";
 }
 
@@ -153,27 +155,12 @@ export async function loadPublicCreatorProfile(handle: string, signal?: AbortSig
 }
 
 export async function loadPublicCreatorDirectory(signal?: AbortSignal) {
-  try {
-    const response = await fetch("/creator-directory.json", {
-      headers: { Accept: "application/json" },
-      signal,
-    });
-    if (!response.ok) throw new Error("Creator search is temporarily unavailable.");
-    const payload = await response.json() as PublicCreatorDirectoryPayload;
-    const { DEMO_CREATORS } = await import("../features/creator/demoCreators");
-    const liveHandles = new Set(payload.creators.map((creator) => creator.handle));
-    return {
-      ...payload,
-      creators: [
-        ...payload.creators,
-        ...DEMO_CREATORS.filter((creator) => !liveHandles.has(creator.handle)),
-      ],
-    };
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") throw error;
-    const { DEMO_CREATORS } = await import("../features/creator/demoCreators");
-    return { schemaVersion: 1 as const, creators: DEMO_CREATORS };
-  }
+  const response = await fetch("/creator-directory.json", {
+    headers: { Accept: "application/json" },
+    signal,
+  });
+  if (!response.ok) throw new Error("Creator search is temporarily unavailable.");
+  return await response.json() as PublicCreatorDirectoryPayload;
 }
 
 export async function loadCreatorAttribution(spaceId: string, signal?: AbortSignal) {
@@ -362,7 +349,7 @@ export async function interactCreatorPost(
 ) {
   const result = await httpsCallable<
     { handle: string; postId: string } & typeof input,
-    { reacted?: boolean; reactionCount?: number; comment?: CreatorComment; reported?: boolean }
+    { reacted?: boolean; reactionCount?: number; comment?: CreatorComment; reported?: boolean; receiptId?: string }
   >(firebaseFunctions, "manageLieuvaCreatorPostInteraction")({ handle, postId, ...input });
   return result.data;
 }

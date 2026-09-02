@@ -22,7 +22,10 @@ function publicSpaceIndexEligibility(
   title: string,
   creator: string,
 ): boolean {
-  if (data.discoverEligible === false) return false;
+  // Public access and reviewed distribution are deliberately separate. Only a
+  // trusted operator can set this gate to true; missing legacy values therefore
+  // fail closed without breaking direct public links.
+  if (data.discoverEligible !== true) return false;
   if (PLACEHOLDER_TITLE.test(title) || PLACEHOLDER_CREATOR.test(creator)) return false;
   if (!Array.isArray(data.artworks)) return false;
   return data.artworks.some((value) => {

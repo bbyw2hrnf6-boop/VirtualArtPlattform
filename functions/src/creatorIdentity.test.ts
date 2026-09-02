@@ -4,8 +4,10 @@ import {
   creatorNotificationProjection,
   creatorFollowTransition,
   creatorCanonicalUrl,
+  creatorPublicContentMatches,
   isReservedCreatorHandle,
   isCreatorProfileSpaceListed,
+  isReviewedPublicCreatorProfile,
   isValidCreatorWebp,
   normalizeCreatorHandle,
   parseCreatorPostInput,
@@ -68,11 +70,13 @@ describe("Creator identity contract", () => {
       displayName: "Studio North",
       bio: "Spatial work.",
       profilePublic: true,
+      discoverEligible: true,
       imagePresent: false,
       links: [{ label: "Website", url: "https://example.com" }],
     })).toMatchObject({
       handle: "studio-north",
       profilePublic: true,
+      discoverEligible: true,
       coverPresent: false,
       bioFont: "sans",
       profileTone: "paper",
@@ -106,14 +110,35 @@ describe("Creator identity contract", () => {
       links: [],
       imagePresent: true,
     };
-    expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: true })).toEqual({
+    expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: true, discoverEligible: true })).toEqual({
       handle: "studio-north",
       displayName: "Studio North",
       bio: "Spatial work.",
       imagePresent: true,
       followerCount: 0,
     });
+    expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: true })).toBeNull();
+    expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: true, discoverEligible: false })).toBeNull();
     expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: false })).toBeNull();
+  });
+
+  it("requires trusted review and detects owner-controlled public changes", () => {
+    const approved = parseCreatorProfileInput({
+      handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [],
+      profilePublic: true, discoverEligible: true,
+    });
+    expect(isReviewedPublicCreatorProfile(approved)).toBe(true);
+    const same = parseCreatorProfileInput({
+      handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [],
+      profilePublic: true,
+    });
+    expect(same?.discoverEligible).toBe(false);
+    expect(approved && same && creatorPublicContentMatches(approved, same)).toBe(true);
+    const changed = parseCreatorProfileInput({
+      handle: "studio-north", displayName: "Studio North", bio: "Changed.", links: [],
+      profilePublic: true,
+    });
+    expect(approved && changed && creatorPublicContentMatches(approved, changed)).toBe(false);
   });
 
   it("accepts bounded Creator posts and preserves intentional paragraph breaks", () => {
@@ -132,7 +157,7 @@ describe("Creator identity contract", () => {
   it("renders public metadata without an internal identifier", () => {
     const html = renderCreatorDocument(SHELL, {
       kind: "public",
-      profile: { handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [{ label: "Website", url: "https://example.com" }], profilePublic: true, imagePresent: true, coverPresent: true, bioFont: "serif", profileTone: "warm", followerCount: 0 },
+      profile: { handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [{ label: "Website", url: "https://example.com" }], profilePublic: true, discoverEligible: true, imagePresent: true, coverPresent: true, bioFont: "serif", profileTone: "warm", followerCount: 0 },
       spaces: [{ id: "space-safe", title: "Material Futures", creator: "Studio North", coverUrl: "https://lieuva.com/space-cards/space-safe" }],
       posts: [],
     });

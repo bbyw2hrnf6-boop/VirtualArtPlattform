@@ -20,6 +20,32 @@
       "collectionGroup": "galleries",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "discoverEligible", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "galleries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "schemaVersion", "order": "ASCENDING" },
+        { "fieldPath": "discoverEligible", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "creatorProfiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "profilePublic", "order": "ASCENDING" },
+        { "fieldPath": "discoverEligible", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "galleries",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "ownerId", "order": "ASCENDING" },
         { "fieldPath": "lifecycleStatus", "order": "ASCENDING" },
         { "fieldPath": "expiresAt", "order": "ASCENDING" }

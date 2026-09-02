@@ -35,6 +35,7 @@ function record(overrides: Record<string, unknown> = {}) {
     updatedAt: new Date(NOW - 3_600_000),
     revision: 4,
     ownerId: "owner-safe",
+    discoverEligible: true,
     coverPath: "published/owner-safe/material-futures-abc123/revisions/r4-safe/cover.webp",
     artworks: [{ storagePath: "published/owner-safe/material-futures-abc123/revisions/r4-safe/artwork-1.webp" }],
     ...overrides,
@@ -195,7 +196,12 @@ describe("Space SEO delivery policy", () => {
     expect(sitemap).not.toContain("#/g/");
   });
 
-  it("keeps ineligible public Spaces shareable but out of indexing and sitemap", () => {
+  it("keeps unreviewed and ineligible public Spaces shareable but out of indexing and sitemap", () => {
+    const missingReview = classifySpaceForDelivery(
+      "missing-review-space-123",
+      record({ discoverEligible: undefined }),
+      NOW,
+    );
     const moderated = classifySpaceForDelivery(
       "moderated-space-123",
       record({ discoverEligible: false }),
@@ -211,7 +217,7 @@ describe("Space SEO delivery policy", () => {
       record({ title: "Untitled Space" }),
       NOW,
     );
-    for (const delivery of [moderated, incomplete, placeholder]) {
+    for (const delivery of [missingReview, moderated, incomplete, placeholder]) {
       expect(delivery.kind).toBe("public");
       expect(metadataForSpace(delivery).status).toBe(200);
       expect(metadataForSpace(delivery).robots).toContain("noindex");
@@ -222,6 +228,7 @@ describe("Space SEO delivery policy", () => {
       ),
     );
     expect(sitemap).not.toContain("moderated-space-123");
+    expect(sitemap).not.toContain("missing-review-space-123");
     expect(sitemap).not.toContain("incomplete-space-123");
     expect(sitemap).not.toContain("placeholder-space-123");
   });

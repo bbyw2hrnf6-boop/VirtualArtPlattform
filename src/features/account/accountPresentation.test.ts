@@ -35,7 +35,7 @@ describe("account presentation", () => {
 
   it("keeps one profile state instead of repeating activation headings", () => {
     expect(creatorSettingsSource).toContain('<strong>Profile visibility</strong>');
-    expect(creatorSettingsSource).toContain('<b>Publish profile</b>');
+    expect(creatorSettingsSource).toContain('<b>Submit public profile</b>');
     expect(creatorSettingsSource).not.toContain('Public profile is live');
     expect(creatorSettingsSource).not.toContain('Publish public profile');
     expect(creatorSettingsSource).not.toContain('<dd>Profile status</dd>');
@@ -82,10 +82,12 @@ describe("account presentation", () => {
     const space = {
       ownerId: "owner-1",
       visibility: "public",
+      discoverEligible: true,
       lifecycleStatus: "active",
       expiresAt: "2030-01-01T00:00:00.000Z",
     } as GalleryRecord;
     expect(isPublicProfileSpace(space, "owner-1", Date.parse("2029-01-01"))).toBe(true);
+    expect(isPublicProfileSpace({ ...space, discoverEligible: false }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
     expect(isPublicProfileSpace({ ...space, visibility: "private" }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
     expect(isPublicProfileSpace({ ...space, ownerId: "other", effectiveRole: "viewer" }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
     expect(isPublicProfileSpace({ ...space, expiresAt: "2028-01-01T00:00:00.000Z" }, "owner-1", Date.parse("2029-01-01"))).toBe(false);

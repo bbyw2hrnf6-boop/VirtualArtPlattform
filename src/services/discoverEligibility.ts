@@ -5,7 +5,7 @@ export type DiscoverEligibilityReason =
   | "not-public"
   | "not-active"
   | "expired"
-  | "moderation-disabled"
+  | "review-pending"
   | "not-listed"
   | "invalid-identity"
   | "no-visible-content";
@@ -18,7 +18,12 @@ export type DiscoverEligibility = {
 function hasPublicIdentity(record: Pick<GalleryRecord, "title" | "artist">) {
   const title = record.title.trim();
   const creator = record.artist.trim();
-  return title.length >= 3 && creator.length >= 2;
+  const placeholderTitle = /^(?:untitled|test|demo)(?:\b|[-_\s])/i;
+  const placeholderCreator = /^(?:your(?:[-_\s]*name|\d)|test(?:\b|[-_\s])|demo(?:\b|[-_\s]))/i;
+  return title.length >= 3
+    && creator.length >= 2
+    && !placeholderTitle.test(title)
+    && !placeholderCreator.test(creator);
 }
 
 function hasVisibleMedia(record: Pick<GalleryRecord, "artworks">) {
@@ -30,9 +35,10 @@ function hasVisibleMedia(record: Pick<GalleryRecord, "artworks">) {
 /**
  * Public access and Discover eligibility are deliberately separate concepts.
  * A public Space remains reachable by URL even when it is held out of the
- * curated Discover surface. An optional persisted `discoverEligible: false`
- * is a backwards-compatible moderation switch. Published public Spaces are
- * not silently hidden just because their creator has not renamed starter text.
+ * curated Discover surface. `discoverEligible: true` is a trusted operator
+ * approval. False or missing values remain shareable by direct URL, but stay
+ * out of public discovery and indexing until review. Defensive placeholder and
+ * visible-media checks mirror the server response policy.
  */
 export function discoverEligibility(
   record: Pick<
@@ -54,8 +60,8 @@ export function discoverEligibility(
   const expiry = new Date(record.expiresAt).getTime();
   if (!Number.isFinite(expiry) || expiry <= now)
     return { eligible: false, reason: "expired" };
-  if (record.discoverEligible === false)
-    return { eligible: false, reason: "moderation-disabled" };
+  if (record.discoverEligible !== true)
+    return { eligible: false, reason: "review-pending" };
   if (record.exploreListed === false)
     return { eligible: false, reason: "not-listed" };
   if (!hasPublicIdentity(record))

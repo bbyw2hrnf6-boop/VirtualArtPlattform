@@ -409,18 +409,21 @@ function GlobalDirectorySearch({ open, onClose }: { open: boolean; onClose: () =
   const [query, setQuery] = useState("");
   const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
   const [creators, setCreators] = useState<PublicCreatorDirectoryEntry[]>([]);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "partial" | "error">("idle");
   const close = useCallback(() => { setQuery(""); if (status === "error") setStatus("idle"); onClose(); }, [onClose, status]);
   useDialogFocus(dialog, close, undefined, open);
   useEffect(() => {
     if (!open || status !== "idle") return;
-    void Promise.all([galleryRepository.discover(), loadPublicCreatorDirectory()])
-      .then(([publicSpaces, directory]) => {
-        setSpaces(publicSpaces);
-        setCreators(directory.creators);
-        setStatus("ready");
-      })
-      .catch(() => setStatus("error"));
+    void Promise.allSettled([galleryRepository.discover(), loadPublicCreatorDirectory()])
+      .then(([spaceResult, creatorResult]) => {
+        if (spaceResult.status === "fulfilled") setSpaces(spaceResult.value);
+        if (creatorResult.status === "fulfilled") setCreators(creatorResult.value.creators);
+        setStatus(spaceResult.status === "rejected" && creatorResult.status === "rejected"
+          ? "error"
+          : spaceResult.status === "rejected" || creatorResult.status === "rejected"
+            ? "partial"
+            : "ready");
+      });
   }, [open, status]);
   const results = useMemo(() => searchPublicDirectory(spaces, creators, query), [creators, query, spaces]);
   if (!open) return null;
@@ -433,7 +436,7 @@ function GlobalDirectorySearch({ open, onClose }: { open: boolean; onClose: () =
           <span>Search by title, name or @handle</span>
           <input autoFocus type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Start typing…" autoComplete="off" />
         </label>
-        <p className="directory-dialog__status" role="status">{status === "idle" || status === "loading" ? "Opening public directory…" : status === "error" ? "Directory temporarily unavailable." : searching ? `${results.spaces.length} Spaces · ${results.creators.length} Creators` : "Search all public Spaces and Creator profiles."}</p>
+        <p className="directory-dialog__status" role="status">{status === "idle" || status === "loading" ? "Opening public directory…" : status === "error" ? "Directory temporarily unavailable." : status === "partial" ? "Some public results are temporarily unavailable." : searching ? `${results.spaces.length} Spaces · ${results.creators.length} Creators` : "Search all public Spaces and Creator profiles."}</p>
         {searching && <div className="directory-dialog__results">
           <section aria-labelledby="directory-creators-title"><h3 id="directory-creators-title">Creators</h3>{results.creators.slice(0, 6).map((creator) => <a key={creator.handle} href={creatorCanonicalUrl(creator.handle, location.href)}><span>{creator.imagePresent ? <img src={creatorImageUrl(creator.handle)} alt="" /> : creator.displayName[0]}</span><div><strong>{creator.displayName}</strong><small>@{creator.handle} · {creator.followerCount ?? 0} followers</small></div><b>→</b></a>)}</section>
           <section aria-labelledby="directory-spaces-title"><h3 id="directory-spaces-title">Spaces</h3>{results.spaces.slice(0, 6).map((space) => <a key={space.id} href={spaceCanonicalUrl(space.id, location.href)}><span>{space.title[0]}</span><div><strong>{space.title}</strong><small>{space.artist}</small></div><b>→</b></a>)}</section>
@@ -731,9 +734,12 @@ function MvpDataNotice() {
           <p>
             Only upload artwork and text you are allowed to share. Private
             access reduces discoverability but is not yet a contractual
-            confidential-data service. Community reporting and blocking are available;
-            guaranteed moderation response times, payments and contractual archival
-            promises are not yet offered.
+            confidential-data service. New or revised public Spaces and Creator
+            profiles stay out of search, discovery, feeds and follows until an
+            operator approves the exact revision. Community reporting creates a
+            private receipt and auditable case record; blocking is also available.
+            Named moderation ownership and guaranteed response times still require
+            the pilot operator agreement.
           </p>
         </section>
         <section>
@@ -786,6 +792,7 @@ function MvpDataNotice() {
             Account → Data &amp; rights. It includes profile and preference data,
             owned-Space manifests, revision and media references, access-role
             summaries, invitations, Creator profile and feed posts, and
+            reports submitted from the account, plus
             account-linked drafts on the current browser. The existing single-Space .aura.json export remains a
             separate tool.
           </p>
@@ -793,7 +800,7 @@ function MvpDataNotice() {
             Permanent account deletion requires a fresh Google or password
             confirmation. It deletes Spaces owned by the account, their
             published Storage files and revisions, profile/avatar, Creator posts,
-            invitations, newsletter state, and authentication. Memberships in Spaces owned
+            submitted report records, invitations, newsletter state, and authentication. Memberships in Spaces owned
             by other people are removed without deleting those Spaces. Local
             drafts linked to the deleted account are cleared only after the
             server confirms completion; unrelated anonymous browser drafts stay.
@@ -1962,7 +1969,9 @@ function Studio({
               <em>{wasUpdate ? "now live." : "ready to share."}</em>
             </h1>
             <p>
-              {published.visibility === "public" && published.exploreListed
+              {published.visibility === "public" && published.discoverEligible !== true
+                ? `Your Space is available by direct link and queued for public review until ${expiry}. It is not in Explore or search yet.`
+                : published.visibility === "public" && published.exploreListed
                 ? `Your Space is shown in Explore Spaces and live until ${expiry}.`
                 : published.visibility === "public"
                   ? `Your Space is public by direct link and live until ${expiry}.`
@@ -1991,7 +2000,7 @@ function Studio({
               <a className="button button--light" href={url}>
                 Enter the Space <span aria-hidden="true">↗</span>
               </a>
-              {published.visibility === "public" && published.exploreListed && (
+              {published.visibility === "public" && published.discoverEligible === true && published.exploreListed && (
                 <a
                   className="text-link"
                   href={exploreSpacesUrl(published.id, window.location.href)}
@@ -3149,7 +3158,7 @@ function PublishReviewDialog({
           )}
           <p>
             <strong>Space preview image</strong>Captured from this Studio view.
-            Used in Explore Spaces, your Creator Hub profile when selected, and link previews.
+            Requested for Explore Spaces and your Creator Hub profile after review; used immediately in direct-link previews.
           </p>
         </div>
         {issues.length > 0 && (
@@ -3179,7 +3188,7 @@ function PublishReviewDialog({
         ) : editing ? (
           <div className="publish-edit-target">
             <strong>Same Space. Same share URL.</strong>
-            <span>{visibilityLabel[editing.visibility]} · Revision {editing.revision + 1} · Visibility and expiry stay unchanged.</span>
+            <span>{visibilityLabel[editing.visibility]} · Revision {editing.revision + 1} · Visibility and expiry stay unchanged; public discovery returns to review.</span>
           </div>
         ) : <fieldset className="publish-visibility">
           <legend>Visibility and duration</legend>
@@ -3218,7 +3227,7 @@ function PublishReviewDialog({
               />
               <span>
                 <strong>Show in Explore Spaces (Main homepage)</strong>
-                Adds the Space preview image to the homepage Explore Spaces menu.
+                Requests homepage placement after LIEUVA review.
               </span>
             </label>
             <label>
@@ -3229,11 +3238,14 @@ function PublishReviewDialog({
               />
               <span>
                 <strong>Show in Creator Hub</strong>
-                Adds this Space to your Hub profile and future follower updates.
+                Requests Hub profile and follower placement after LIEUVA review.
               </span>
             </label>
             {visibility !== "public" && (
               <small>Placement becomes available when visibility is Public.</small>
+            )}
+            {visibility === "public" && (
+              <small>New and revised public Spaces stay out of discovery until operator approval.</small>
             )}
           </fieldset>
         )}

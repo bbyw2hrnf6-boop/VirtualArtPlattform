@@ -330,6 +330,8 @@ class MockFileReader {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-08-23T10:00:00.000Z"));
   mock.state.documents.clear();
   mock.state.objects.clear();
   mock.state.currentUser = makeUser("wp1-owner", "owner@example.test");
@@ -340,7 +342,7 @@ beforeEach(() => {
   mock.state.callableFailure = null;
   mock.state.deletedObjects = [];
   mock.state.abortedGalleryIds = [];
-  mock.state.clock = new Date(Date.now() + 1_000);
+  mock.state.clock = new Date("2026-08-23T10:00:01.000Z");
   vi.stubGlobal("Image", MockImage);
   vi.stubGlobal("FileReader", MockFileReader);
   vi.stubGlobal("location", { origin: "https://example.test" });
@@ -355,7 +357,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 describe("publish → visit → edit → update release gate", () => {
   it("publishes and hydrates public JPG, PNG, and WebP media", async () => {
@@ -373,6 +378,11 @@ describe("publish → visit → edit → update release gate", () => {
     mock.state.currentUser = null;
     const visited = await repository.find(published.id);
     expect(visited?.artworks.every((artwork) => artwork.src.startsWith("blob:"))).toBe(true);
+    expect((await repository.discover()).map((record) => record.id)).not.toContain(published.id);
+    mock.state.documents.set(`galleries/${published.id}`, {
+      ...mock.state.documents.get(`galleries/${published.id}`),
+      discoverEligible: true,
+    });
     expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
   });
 
@@ -384,6 +394,10 @@ describe("publish → visit → edit → update release gate", () => {
       creatorProfileListed: true,
     });
     expect(published).toMatchObject({ exploreListed: false, creatorProfileListed: true });
+    mock.state.documents.set(`galleries/${published.id}`, {
+      ...mock.state.documents.get(`galleries/${published.id}`),
+      discoverEligible: true,
+    });
     expect((await repository.discover()).map((record) => record.id)).not.toContain(published.id);
 
     await repository.updateDistribution(published.id, {
@@ -454,6 +468,7 @@ describe("publish → visit → edit → update release gate", () => {
     expect(updated.accessVersion).toBe(published.accessVersion);
     expect(updated.exploreListed).toBe(false);
     expect(updated.creatorProfileListed).toBe(true);
+    expect(updated.discoverEligible).toBe(false);
     expect(updated.effectiveRole).toBe("editor");
     expect(beforePaths.every((path) => mock.state.objects.has(path))).toBe(true);
     const persisted = await repository.findManifest(updated.id);

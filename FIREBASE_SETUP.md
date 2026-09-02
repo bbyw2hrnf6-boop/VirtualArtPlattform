@@ -48,7 +48,7 @@ verify the sending domain, and create a real sender address such as
 1. Install the official **Trigger Email from Firestore** extension:
 
    ```bash
-   npx firebase-tools@latest ext:install firebase/firestore-send-email \
+   npx firebase-tools@15.28.2 ext:install firebase/firestore-send-email \
      --project virtualartplattform
    ```
 
@@ -61,7 +61,7 @@ verify the sending domain, and create a real sender address such as
 3. Deploy the repository's Cloud Functions:
 
    ```bash
-   npx firebase-tools@latest deploy --only functions \
+   npx firebase-tools@15.28.2 deploy --only functions \
      --project virtualartplattform
    ```
 
@@ -131,24 +131,72 @@ Indexes:
 1. Open **Firestore Database → Indexes → Composite**.
 2. Create `galleries`: `visibility` ascending, `expiresAt` descending.
 3. Create `galleries`: `schemaVersion` ascending, `expiresAt` descending.
-4. Create `galleries`: `ownerId` ascending, `expiresAt` descending.
-5. Deploy the collection-group `members.email` index from `firestore.indexes.json`; it lets invited Editors and Viewers find shared rooms in Account.
-6. Wait until all indexes show **Enabled**. The exact repository set can be deployed without rules or data changes:
+4. Create `galleries`: `visibility` ascending, `discoverEligible` ascending, `expiresAt` descending.
+5. Create `galleries`: `schemaVersion` ascending, `discoverEligible` ascending, `expiresAt` descending.
+6. Create `creatorProfiles`: `profilePublic` ascending, `discoverEligible` ascending.
+7. Create `galleries`: `ownerId` ascending, `expiresAt` descending.
+8. Deploy the collection-group `members.email` index from `firestore.indexes.json`; it lets invited Editors and Viewers find shared rooms in Account.
+9. Wait until all indexes show **Enabled**. The exact repository set can be deployed without rules or data changes:
 
    ```bash
-   npx firebase-tools@latest deploy --only firestore:indexes --project virtualartplattform
+   npx firebase-tools@15.28.2 deploy --only firestore:indexes --project virtualartplattform
    ```
 
 Storage rules read the matching Firestore gallery and ACL before returning an
 image. The first Firebase Console publish may ask to enable cross-service
 permissions; accept that prompt for this project.
 
-The GitHub Pages workflow intentionally does not deploy Firebase rules. If you later choose the CLI:
+The Firebase Hosting/Functions workflow currently does not deploy Firebase rules. For a manual rules/index promotion:
 
 ```bash
-npx firebase-tools@latest login
-npx firebase-tools@latest deploy --only firestore:rules,firestore:indexes,storage --project virtualartplattform
+npx firebase-tools@15.28.2 login
+npx firebase-tools@15.28.2 deploy --only firestore:rules,firestore:indexes,storage --project virtualartplattform
 ```
+
+### WP1 production record — 2026-09-02
+
+The first reviewed-content containment is live:
+
+- ten known fixture Spaces and one test Creator were backed up and removed from
+  discovery without deleting their records or assets;
+- all three new composite indexes are `READY`;
+- active Firestore ruleset
+  `220efd97-efc8-4995-a622-42382d03ff46` has source-hash parity with
+  `firestore.rules`;
+- Hosting and the 20 scoped public/callable Functions were deployed with CLI
+  `15.28.2`, and all report `ACTIVE`;
+- the live directory has zero approved Creators and zero approved Spaces; the
+  sitemap contains only `/` and `/creators`; quarantined direct Space links are
+  `noindex`.
+
+The executed order was backup/containment, indexes, strict rules, Hosting plus
+its pinned routes, then the remaining callable Functions. Strict rules briefly
+froze old-client publication until Hosting completed; the deployed client now
+writes the required fail-closed state. Already-open pre-WP1 Studio tabs should
+be reloaded before publishing.
+
+### WP1 reviewed-content rollout order
+
+`discoverEligible: true` is trusted approval state. Do not deploy Functions that
+trust it while production still has older Firestore rules that let clients
+preserve or introduce that field.
+
+1. Back up and set all unreviewed live records to `discoverEligible: false`.
+2. Deploy `firestore:indexes` and wait until every new index is **Enabled**.
+3. Deploy Hosting only, so new and reloaded Studio clients always write `false`
+   for creates and revisions.
+4. Deploy the strict `firestore:rules`. Older already-open Studio tabs may then
+   fail a publish once; reloading moves them to the compatible client.
+5. Deploy Functions only after the strict rules are active.
+6. Inspect exact revisions with `npm run review:public-content -- ...`, then use
+   `npm run review:public-content:decision -- ...` first as a dry-run and only
+   then with its exact execution guard. Never edit the gate directly in Firebase
+   Console.
+7. Verify the directory, sitemap, one approved target, and one pending target.
+
+The current production GitHub workflow deploys only Hosting and Functions. It
+must not be used for the first WP1 rollout or as proof that repository rules and
+indexes are in parity.
 
 ## 5. Apply CORS once
 
@@ -178,7 +226,7 @@ lifecycle Functions require a valid App Check token.
 4. Deploy only the trusted room Functions (email remains independent):
 
    ```bash
-   npx firebase-tools@latest deploy \
+   npx firebase-tools@15.28.2 deploy \
      --only functions:beginAuraGalleryPublication,functions:abortAuraGalleryPublication,functions:manageAuraGalleryLifecycle,functions:purgeAuraGallery,functions:createAuraGalleryInvite,functions:acceptAuraGalleryInvite,functions:revokeAuraGalleryAccess \
      --project virtualartplattform
    ```
@@ -283,7 +331,7 @@ No Firestore ID, collection, Storage path, callable name, ACL or revision migrat
 4. During the explicitly approved external preview window, deploy only the three new delivery Functions. This does not change DNS or the currently served site:
 
    ```bash
-   npx --yes firebase-tools@latest deploy \
+   npx --yes firebase-tools@15.28.2 deploy \
      --only functions:spaceDocument,functions:spaceCard,functions:spaceSitemap \
      --project virtualartplattform
    ```
@@ -291,7 +339,7 @@ No Firestore ID, collection, Storage path, callable name, ACL or revision migrat
 5. Create a Firebase Hosting preview channel that can now resolve those rewrites. Do not change DNS:
 
    ```bash
-   npx --yes firebase-tools@latest hosting:channel:deploy wp5-review \
+   npx --yes firebase-tools@15.28.2 hosting:channel:deploy wp5-review \
      --project virtualartplattform
    ```
 
@@ -309,7 +357,7 @@ No Firestore ID, collection, Storage path, callable name, ACL or revision migrat
 7. After preview acceptance, deploy production Hosting while the custom domain still points at its current host, then repeat the checks on the Firebase `web.app` host:
 
    ```bash
-   npx --yes firebase-tools@latest deploy --only hosting \
+   npx --yes firebase-tools@15.28.2 deploy --only hosting \
      --project virtualartplattform
    ```
 

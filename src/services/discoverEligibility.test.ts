@@ -14,14 +14,16 @@ const base = {
   title: "Material Futures",
   artist: "Field Office",
   artworks: [{ id: "work-1", src: "data:image/webp;base64,AA==" }],
+  discoverEligible: true,
 } as unknown as GalleryRecord;
 
 describe("Discover eligibility", () => {
   it("keeps public access separate from curated discovery", () => {
     expect(discoverEligibility({ ...base, discoverEligible: false }, 0)).toEqual({
       eligible: false,
-      reason: "moderation-disabled",
+      reason: "review-pending",
     });
+    expect(discoverEligibility({ ...base, discoverEligible: undefined }, 0).reason).toBe("review-pending");
     expect(discoverEligibility({ ...base, visibility: "unlisted" }, 0).reason).toBe("not-public");
     expect(discoverEligibility({ ...base, visibility: "private" }, 0).reason).toBe("not-public");
   });
@@ -34,12 +36,13 @@ describe("Discover eligibility", () => {
     expect(discoverEligibility({ ...base, artworks: [] }, 0).reason).toBe("no-visible-content");
   });
 
-  it("keeps active public starter-titled Spaces visible until their Creator renames them", () => {
-    expect(discoverEligibility({ ...base, title: "Untitled exhibition", artist: "Your nameefefef" }, 0).reason).toBe("eligible");
+  it("keeps approved starter placeholders out of both Discover and indexing", () => {
+    expect(discoverEligibility({ ...base, title: "Untitled exhibition", artist: "Field Office" }, 0).reason).toBe("invalid-identity");
+    expect(discoverEligibility({ ...base, title: "Material Futures", artist: "Your nameefefef" }, 0).reason).toBe("invalid-identity");
   });
 
-  it("accepts legacy records without a moderation override when quality checks pass", () => {
-    expect(isDiscoverEligible(base, 0)).toBe(true);
+  it("requires explicit review approval even when quality checks pass", () => {
+    expect(isDiscoverEligible({ ...base, discoverEligible: undefined }, 0)).toBe(false);
     expect(isDiscoverEligible({
       ...base,
       artworks: [{ id: "work-1", src: "", storagePath: "published/owner/room/artworks/1.webp" }],

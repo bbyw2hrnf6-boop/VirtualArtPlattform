@@ -38,6 +38,7 @@ import {
 } from "./creatorHubNavigation";
 import CreatorDirectoryPage from "./CreatorDirectoryPage";
 import CreatorProfilePage from "./CreatorProfilePage";
+import { CreatorReportDialog, type CreatorReportReason } from "./CreatorReportDialog";
 import "./creatorHub.css";
 import "./creatorHubMobile.css";
 
@@ -50,8 +51,8 @@ function relativeDate(value: string) {
   return days === 1 ? "Yesterday" : `${days}d ago`;
 }
 
-function CreatorMark({ creator }: { creator: Pick<PublicCreatorDirectoryEntry, "displayName" | "handle" | "imagePresent"> }) {
-  return creator.imagePresent
+function CreatorMark({ creator, allowImage = true }: { creator: Pick<PublicCreatorDirectoryEntry, "displayName" | "handle" | "imagePresent">; allowImage?: boolean }) {
+  return allowImage && creator.imagePresent
     ? <img src={creatorImageUrl(creator.handle)} alt="" loading="lazy" />
     : <>{creator.displayName.slice(0, 1).toUpperCase()}</>;
 }
@@ -118,6 +119,9 @@ export default function CreatorHubPage({
   const [activePost, setActivePost] = useState<string>();
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [postActions, setPostActions] = useState<Record<string, string>>({});
+  const [reportPost, setReportPost] = useState<CreatorPost>();
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportError, setReportError] = useState("");
   const [newComments, setNewComments] = useState<Record<string, CreatorComment[]>>({});
   const [notificationNotice, setNotificationNotice] = useState("");
   const [activeSection, setActiveSection] = useState<CreatorHubSection>(() => creatorHubSectionFromHash(window.location.hash));
@@ -290,6 +294,7 @@ export default function CreatorHubPage({
   }, []);
 
   const signedIn = Boolean(session && !session.isAnonymous);
+  const profileApproved = myProfile?.profilePublic === true && myProfile.discoverEligible === true;
   const posts: CreatorPost[] = home?.posts ?? [];
   const notifications = useMemo(() => (home?.notifications ?? []).filter((notification) => (
     notification.kind === "follow"
@@ -344,7 +349,9 @@ export default function CreatorHubPage({
       if (currentProfile?.profilePublic) {
         setMyProfile(currentProfile);
         setProfileStatus("ready");
-        setProfileNotice(`Creator Hub already active as @${currentProfile.handle}.`);
+        setProfileNotice(currentProfile.discoverEligible === true
+          ? `Creator Hub already active as @${currentProfile.handle}.`
+          : `Public profile @${currentProfile.handle} is waiting for review.`);
         return;
       }
       let handle = currentProfile?.handle;
@@ -383,7 +390,7 @@ export default function CreatorHubPage({
       setMyProfile(saved.profile);
       setProfileStatus("ready");
       announceCreatorProfileUpdated(saved.profile);
-      setProfileNotice(`Creator Hub active as @${saved.profile.handle}.`);
+      setProfileNotice(`Public profile @${saved.profile.handle} submitted for review.`);
       void loadCreatorHome().then((nextHome) => setHome((current) => mergeCreatorHomeViewerState(current, nextHome))).catch(() => undefined);
     } catch (error) {
       setProfileNotice(creatorActionErrorMessage(
@@ -479,7 +486,7 @@ export default function CreatorHubPage({
     else window.location.assign(href);
   };
 
-  const engage = async (post: CreatorPost, action: "reaction" | "comment" | "report" | "block") => {
+  const engage = async (post: CreatorPost, action: "reaction" | "comment" | "block") => {
     if (!signedIn) { setPostActions((value) => ({ ...value, [post.id]: "Sign in to join the conversation." })); return; }
     if (post.demo) { setPostActions((value) => ({ ...value, [post.id]: "Demo profiles are read-only." })); return; }
     setPostActions((value) => ({ ...value, [post.id]: "Working…" }));
@@ -502,9 +509,6 @@ export default function CreatorHubPage({
         if (post.handle === myProfile?.handle) {
           void loadCreatorHome(false).then((nextHome) => setHome((current) => mergeCreatorHomeViewerState(current, nextHome))).catch(() => undefined);
         }
-      } else if (action === "report") {
-        await interactCreatorPost(post.handle, post.id, { action: "report", reason: "other" });
-        setPostActions((value) => ({ ...value, [post.id]: "Report received for review." }));
       } else {
         await manageCreatorBlock(post.handle, "block");
         setHome((current) => current ? ({
@@ -515,6 +519,45 @@ export default function CreatorHubPage({
       }
     } catch (error) {
       setPostActions((value) => ({ ...value, [post.id]: error instanceof Error ? error.message.replace(/^Firebase:\s*/i, "") : "Action failed." }));
+    }
+  };
+
+  const closeReport = useCallback(() => {
+    if (!reportBusy) {
+      setReportPost(undefined);
+      setReportError("");
+    }
+  }, [reportBusy]);
+
+  const openReport = (post: CreatorPost) => {
+    if (!signedIn) {
+      setPostActions((value) => ({ ...value, [post.id]: "Sign in to report this post." }));
+      return;
+    }
+    if (post.demo) {
+      setPostActions((value) => ({ ...value, [post.id]: "Editorial previews are not member posts." }));
+      return;
+    }
+    setReportError("");
+    setReportPost(post);
+  };
+
+  const submitReport = async (reason: CreatorReportReason) => {
+    const post = reportPost;
+    if (!post || reportBusy) return;
+    setReportBusy(true);
+    try {
+      const result = await interactCreatorPost(post.handle, post.id, { action: "report", reason });
+      const receipt = result.receiptId ? ` Receipt ${result.receiptId}.` : "";
+      setPostActions((value) => ({ ...value, [post.id]: `Report received for operator review.${receipt}` }));
+      setReportPost(undefined);
+      setReportError("");
+    } catch (error) {
+      setReportError(error instanceof Error
+        ? error.message.replace(/^Firebase:\s*/i, "")
+        : "Report could not be sent. Please retry.");
+    } finally {
+      setReportBusy(false);
     }
   };
 
@@ -546,7 +589,7 @@ export default function CreatorHubPage({
             <a className={dashboardView && activeSection === "notifications" ? "is-active" : ""} aria-current={dashboardView && activeSection === "notifications" ? "location" : undefined} href={dashboardHref("creator-activity")}><HubIcon name="bell" /> Alerts {notificationCount ? <b>{notificationCount}</b> : null}</a>
           </nav>
           <a className="creator-hub__sidebar-identity" href={signedIn ? profileSettingsUrl : "/#/account"}>
-            <span>{myProfile ? <CreatorMark creator={myProfile} /> : (session?.displayName || session?.nickname || "L").slice(0, 1).toUpperCase()}</span>
+            <span>{myProfile ? <CreatorMark creator={myProfile} allowImage={profileApproved} /> : (session?.displayName || session?.nickname || "L").slice(0, 1).toUpperCase()}</span>
             <div><strong>{myProfile?.displayName || session?.displayName || session?.nickname || "Your profile"}</strong><small>{myProfile ? `@${myProfile.handle}` : signedIn ? "Complete your profile" : "Sign in"}</small></div>
             <b>···</b>
           </a>
@@ -594,15 +637,15 @@ export default function CreatorHubPage({
                 aria-label="Studio note"
                 value={postBody}
                 onChange={(event) => setPostBody(event.target.value.slice(0, 600))}
-                placeholder={signedIn ? myProfile?.profilePublic ? "What are you working on?" : "Write a note. Activate your profile to publish." : "Sign in to write a studio note."}
+                placeholder={signedIn ? profileApproved ? "What are you working on?" : "Write a note. Reviewed profiles can publish." : "Sign in to write a studio note."}
                 disabled={!signedIn || postBusy}
                 rows={5}
               />
               <div className="creator-hub__composer-actions">
-                <small aria-live="polite">{postNotice || (myProfile?.profilePublic ? "Public to the Creator community" : signedIn ? "Activate profile to publish" : "Sign in to write")}</small>
-                {myProfile?.profilePublic
+                <small aria-live="polite">{postNotice || (profileApproved ? "Public to the Creator community" : myProfile?.profilePublic ? "Profile review pending" : signedIn ? "Submit profile to publish" : "Sign in to write")}</small>
+                {profileApproved
                   ? <button type="submit" disabled={!postBody.trim() || postBusy}>{postBusy ? "Posting…" : "Post to feed"}</button>
-                  : <a className="creator-hub__composer-action" href={signedIn ? profileSettingsUrl : "/#/account"}>{signedIn ? "Publish profile" : "Sign in to post"} <span aria-hidden="true">→</span></a>}
+                  : <a className="creator-hub__composer-action" href={signedIn ? profileSettingsUrl : "/#/account"}>{myProfile?.profilePublic ? "View review status" : signedIn ? "Submit profile" : "Sign in to post"} <span aria-hidden="true">→</span></a>}
               </div>
             </form>
           </section>
@@ -611,7 +654,7 @@ export default function CreatorHubPage({
             <div><HubIcon name="creators" /><dt>Followers</dt><dd>{signedIn ? myProfile?.followerCount ?? 0 : "—"}</dd></div>
             <div><HubIcon name="feed" /><dt>Feed notes</dt><dd>{signedIn ? home?.posts?.length ?? 0 : "—"}</dd></div>
             <div><HubIcon name="spaces" /><dt>Your Spaces</dt><dd>{signedIn ? mySpaces.length : "—"}</dd></div>
-            <div><HubIcon name="account" /><dt>Public profile</dt><dd>{myProfile?.profilePublic ? "Live" : profileStatus === "loading" ? "Syncing" : profileStatus === "error" ? "Retry" : signedIn ? "Draft" : "Sign in"}</dd></div>
+            <div><HubIcon name="account" /><dt>Public profile</dt><dd>{profileApproved ? "Live" : myProfile?.profilePublic ? "Review" : profileStatus === "loading" ? "Syncing" : profileStatus === "error" ? "Retry" : signedIn ? "Draft" : "Sign in"}</dd></div>
           </dl>
 
           <section className="creator-hub__social" id="creator-feed" aria-labelledby="creator-feed-title">
@@ -635,7 +678,7 @@ export default function CreatorHubPage({
                     <footer className="creator-post__actions">
                       <button type="button" className={`creator-post__action${post.viewerReacted ? " is-active" : ""}`} aria-pressed={Boolean(post.viewerReacted)} onClick={() => void engage(post, "reaction")}><HubIcon name="heart" /><b>{post.reactionCount ?? 0}</b><span>Appreciate</span></button>
                       <button type="button" className="creator-post__action" aria-expanded={activePost === post.id} onClick={() => setActivePost(activePost === post.id ? undefined : post.id)}><HubIcon name="comment" /><b>{post.commentCount ?? 0}</b><span>Discuss</span></button>
-                      <details className="creator-post__overflow"><summary aria-label="More post actions">•••</summary><div><small>Safety and reporting</small><button type="button" onClick={() => void engage(post, "report")}>Report post</button><button type="button" onClick={() => void engage(post, "block")}>Block Creator</button></div></details>
+                      <details className="creator-post__overflow"><summary aria-label="More post actions">•••</summary><div><small>Safety and reporting</small><button type="button" onClick={() => openReport(post)}>Report post</button><button type="button" onClick={() => void engage(post, "block")}>Block Creator</button></div></details>
                     </footer>
                     {activePost === post.id && <div className="creator-post__discussion"><form onSubmit={(event) => { event.preventDefault(); void engage(post, "comment"); }}><label><span className="visually-hidden">Comment on this post</span><input value={commentDrafts[post.id] ?? ""} onChange={(event) => setCommentDrafts((value) => ({ ...value, [post.id]: event.target.value.slice(0, 280) }))} placeholder="Add a considered comment…" disabled={!signedIn || Boolean(post.demo)} /></label><button type="submit" disabled={!(commentDrafts[post.id] ?? "").trim() || !signedIn || Boolean(post.demo)}>Post</button></form>{(newComments[post.id] ?? []).map((comment) => <p key={comment.id}><strong>{comment.displayName}</strong> {comment.body}</p>)}</div>}
                     {postActions[post.id] && <small className="creator-post__notice" aria-live="polite">{postActions[post.id]}</small>}
@@ -688,12 +731,16 @@ export default function CreatorHubPage({
               </section>
 
               <section className="creator-hub__profile-card" id="creator-profile" aria-labelledby="creator-profile-title">
-                <div><p className="eyebrow" id="creator-profile-title">Creator identity</p><span className={myProfile?.profilePublic ? "is-live" : ""}>{myProfile?.profilePublic ? "✓ Live" : profileStatus === "loading" ? "Syncing" : profileStatus === "error" ? "Sync paused" : signedIn ? "Private" : "Signed out"}</span></div>
-                {signedIn && myProfile?.profilePublic ? <>
+                <div><p className="eyebrow" id="creator-profile-title">Creator identity</p><span className={profileApproved ? "is-live" : ""}>{profileApproved ? "✓ Live" : myProfile?.profilePublic ? "Review pending" : profileStatus === "loading" ? "Syncing" : profileStatus === "error" ? "Sync paused" : signedIn ? "Private" : "Signed out"}</span></div>
+                {signedIn && profileApproved ? <>
                   <div className="creator-hub__my-identity"><span><CreatorMark creator={myProfile} /></span><div><h3>{myProfile.displayName}</h3><p>@{myProfile.handle}</p></div></div>
                   {myProfile.bio && <p>{myProfile.bio}</p>}
                   <nav><a href={creatorHref(myProfile.handle)}>Open public profile <b>↗</b></a><a href={profileSettingsUrl}>Edit profile <b>→</b></a></nav>
-                </> : profileStatus === "loading" ? <p>Syncing the Creator identity attached to this account…</p> : profileStatus === "error" ? <><p>{profileNotice}</p><button className="creator-hub__primary-action" type="button" onClick={() => setProfileRefresh((value) => value + 1)}>Retry profile sync <span>→</span></button></> : signedIn ? <>
+                </> : profileStatus === "loading" ? <p>Syncing the Creator identity attached to this account…</p> : profileStatus === "error" ? <><p>{profileNotice}</p><button className="creator-hub__primary-action" type="button" onClick={() => setProfileRefresh((value) => value + 1)}>Retry profile sync <span>→</span></button></> : signedIn && myProfile?.profilePublic ? <>
+                  <h3>Public review pending.</h3><p>Your profile is saved, but it stays out of public search, feeds and follows until a LIEUVA operator approves it.</p>
+                  <a className="creator-hub__primary-action" href={profileSettingsUrl}>Review profile submission <span>→</span></a>
+                  {profileNotice && <small className="creator-hub__profile-notice" aria-live="polite">{profileNotice}</small>}
+                </> : signedIn ? <>
                   <h3>Introduce your practice.</h3><p>One public profile connects your Spaces, studio notes and follows.</p>
                   <button className="creator-hub__primary-action" type="button" disabled={profileBusy} onClick={() => void activateCreatorHub()}>{profileBusy ? "Activating…" : myProfile ? "Make profile public" : "Activate public profile"} <span>→</span></button>
                   <a className="creator-hub__secondary-action" href={profileSettingsUrl}>Edit public profile →</a>
@@ -705,6 +752,7 @@ export default function CreatorHubPage({
           </>}
         </div>
       </div>
+      {reportPost ? <CreatorReportDialog creator={reportPost.handle} busy={reportBusy} error={reportError} onClose={closeReport} onSubmit={(reason) => void submitReport(reason)} /> : null}
     </main>
   );
 }

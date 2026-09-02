@@ -46,10 +46,12 @@ import {
 import {
   CREATOR_HANDLE_CHANGE_COOLDOWN_MS,
   classifyCreatorDocumentRoute,
+  creatorPublicContentMatches,
   creatorNotificationProjection,
   creatorFollowTransition,
   creatorCanonicalUrl,
   isCreatorProfileSpaceListed,
+  isReviewedPublicCreatorProfile,
   isValidCreatorWebp,
   normalizeCreatorHandle,
   parseCreatorCommentInput,
@@ -64,6 +66,15 @@ import {
   type PublicCreatorPost,
   type PublicCreatorSpace,
 } from "./creatorIdentity.js";
+import {
+  boundedModerationSourceReports,
+  creatorPostModerationCaseId,
+  creatorPostReportId,
+  creatorReportPrincipal,
+  creatorReportIntakePatch,
+  highestModerationPriority,
+  moderationPriorityForReason,
+} from "./moderationPolicy.js";
 
 if (!getApps().length) initializeApp();
 
@@ -234,13 +245,13 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
   const profileData = profileSnapshot.data();
   const accountData = accountSnapshot.data();
   if (
-    !profileData || profileData.profilePublic !== true ||
+    !profileData || profileData.profilePublic !== true || profileData.discoverEligible !== true ||
     typeof profileData.handle !== "string" ||
     typeof profileData.displayName !== "string" ||
     typeof accountData?.ownerId !== "string"
   ) return { kind: "not-found", handle: requestedHandle };
   const profile = parseCreatorProfileInput(profileData);
-  if (!profile || !profile.profilePublic) return { kind: "not-found", handle: requestedHandle };
+  if (!isReviewedPublicCreatorProfile(profile)) return { kind: "not-found", handle: requestedHandle };
   const [spacesSnapshot, postsSnapshot] = await Promise.all([
     db.collection("galleries")
       .where("ownerId", "==", accountData.ownerId)
@@ -255,7 +266,8 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
   const spaces: PublicCreatorSpace[] = spacesSnapshot.docs
     .filter((document) => isCreatorProfileSpaceListed(document.data()))
     .map((document) => classifySpaceForDelivery(document.id, document.data()))
-    .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public")
+    .filter((delivery): delivery is PublicSpaceDelivery =>
+      delivery.kind === "public" && delivery.indexEligible)
     .sort((left, right) => (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
     .map((space) => ({
       id: space.id,
@@ -383,6 +395,7 @@ export const saveLieuvaCreatorProfile = onCall(
         transaction.get(profileReference),
       ]);
       const account = accountSnapshot.data();
+      const currentProfile = parseCreatorProfileInput(profileSnapshot.data());
       const currentHandle = typeof account?.currentHandle === "string" ? account.currentHandle : undefined;
       if (handleSnapshot.exists && handleSnapshot.data()?.creatorId !== creatorId)
         throw new HttpsError("already-exists", "That public handle is already in use.");
@@ -410,6 +423,11 @@ export const saveLieuvaCreatorProfile = onCall(
         bio: input.bio,
         links: input.links,
         profilePublic: input.profilePublic,
+        // Approval is preserved only for a byte-for-byte equivalent normalized
+        // public projection. Any owner-controlled public change returns to the
+        // review queue; request input can never self-approve it.
+        discoverEligible: creatorPublicContentMatches(currentProfile, input)
+          && currentProfile?.discoverEligible === true,
         imagePresent: profileSnapshot.data()?.imagePresent === true,
         coverPresent: profileSnapshot.data()?.coverPresent === true,
         bioFont: input.bioFont,
@@ -438,7 +456,8 @@ export const saveLieuvaCreatorProfile = onCall(
       }
     });
     const savedProfile = parseCreatorProfileInput((await db.collection("creatorProfiles")
-      .where("handle", "==", input.handle).limit(1).get()).docs[0]?.data()) ?? input;
+      .where("handle", "==", input.handle).limit(1).get()).docs[0]?.data())
+      ?? { ...input, discoverEligible: false };
     return { profile: savedProfile, publicUrl: creatorCanonicalUrl(input.handle) };
   },
 );
@@ -456,8 +475,12 @@ export const setLieuvaCreatorProfileImage = onCall(
     if (!(await profileReference.get()).exists) throw new HttpsError("failed-precondition", "Save the public profile first.");
     const object = getStorage().bucket().file(`creator-public/${creatorId}/avatar.webp`);
     if (request.data?.remove === true) {
+      await profileReference.set({
+        imagePresent: false,
+        discoverEligible: false,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
       await object.delete({ ignoreNotFound: true });
-      await profileReference.set({ imagePresent: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       return { imagePresent: false };
     }
     const encoded = typeof request.data?.base64 === "string" ? request.data.base64 : "";
@@ -466,11 +489,21 @@ export const setLieuvaCreatorProfileImage = onCall(
     const bytes = Buffer.from(encoded, "base64");
     if (!isValidCreatorWebp(bytes))
       throw new HttpsError("invalid-argument", "Choose a supported profile image under 512 KB.");
+    // Fail closed before touching the object. If Storage fails, the previous
+    // image is no longer publicly mediated as reviewed content.
+    await profileReference.set({
+      discoverEligible: false,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
     await object.save(bytes, {
       resumable: false,
       metadata: { contentType: "image/webp", cacheControl: "private, no-store", metadata: { kind: "creator-avatar", schemaVersion: "1" } },
     });
-    await profileReference.set({ imagePresent: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    await profileReference.set({
+      imagePresent: true,
+      discoverEligible: false,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
     return { imagePresent: true };
   },
 );
@@ -488,8 +521,12 @@ export const setLieuvaCreatorProfileCover = onCall(
     if (!(await profileReference.get()).exists) throw new HttpsError("failed-precondition", "Save the public profile first.");
     const object = getStorage().bucket().file(`creator-public/${creatorId}/cover.webp`);
     if (request.data?.remove === true) {
+      await profileReference.set({
+        coverPresent: false,
+        discoverEligible: false,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
       await object.delete({ ignoreNotFound: true });
-      await profileReference.set({ coverPresent: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       return { coverPresent: false };
     }
     const encoded = typeof request.data?.base64 === "string" ? request.data.base64 : "";
@@ -498,11 +535,19 @@ export const setLieuvaCreatorProfileCover = onCall(
     const bytes = Buffer.from(encoded, "base64");
     if (!isValidCreatorWebp(bytes))
       throw new HttpsError("invalid-argument", "Choose a supported cover image under 512 KB.");
+    await profileReference.set({
+      discoverEligible: false,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
     await object.save(bytes, {
       resumable: false,
       metadata: { contentType: "image/webp", cacheControl: "private, no-store", metadata: { kind: "creator-cover", schemaVersion: "1" } },
     });
-    await profileReference.set({ coverPresent: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    await profileReference.set({
+      coverPresent: true,
+      discoverEligible: false,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
     return { coverPresent: true };
   },
 );
@@ -527,7 +572,8 @@ export const manageLieuvaCreatorFollow = onCall(
     const targetReference = db.collection("creatorProfiles").doc(followedCreatorId);
     const targetSnapshot = await targetReference.get();
     const target = parseCreatorProfileInput(targetSnapshot.data());
-    if (!target?.profilePublic) throw new HttpsError("not-found", "Creator profile not found.");
+    if (!isReviewedPublicCreatorProfile(target))
+      throw new HttpsError("not-found", "Creator profile not found.");
     if (typeof followerCreatorId !== "string")
       return { following: false, followerCount: target.followerCount, canFollow: false, isSelf: false };
     const isSelf = followerCreatorId === followedCreatorId;
@@ -547,7 +593,7 @@ export const manageLieuvaCreatorFollow = onCall(
       return {
         following: blocked ? false : follow?.exists === true,
         followerCount: target.followerCount,
-        canFollow: !isSelf && !blocked && actorProfile?.profilePublic === true,
+        canFollow: !isSelf && !blocked && isReviewedPublicCreatorProfile(actorProfile),
         isSelf,
         blocked,
       };
@@ -565,10 +611,10 @@ export const manageLieuvaCreatorFollow = onCall(
       const count = currentTargetProfile?.followerCount ?? 0;
       const transition = creatorFollowTransition(action, exists, count);
       if (action === "follow" && transition.changed) {
-        if (!currentTargetProfile?.profilePublic)
+        if (!isReviewedPublicCreatorProfile(currentTargetProfile))
           throw new HttpsError("not-found", "Creator profile not found.");
-        if (!actorProfile?.profilePublic)
-          throw new HttpsError("failed-precondition", "Make your Creator profile public before following.");
+        if (!isReviewedPublicCreatorProfile(actorProfile))
+          throw new HttpsError("failed-precondition", "Your public Creator profile must be reviewed before following.");
         transaction.create(followReference, {
           followerCreatorId,
           followedCreatorId,
@@ -590,9 +636,9 @@ export const manageLieuvaCreatorFollow = onCall(
       if (action === "unfollow" && transition.changed) {
         transaction.delete(followReference);
         transaction.set(targetReference, { followerCount: transition.followerCount }, { merge: true });
-        return { following: false, changed: true, actorProfilePublic: actorProfile?.profilePublic === true };
+        return { following: false, changed: true, actorProfilePublic: isReviewedPublicCreatorProfile(actorProfile) };
       }
-      return { following: exists, changed: false, actorProfilePublic: actorProfile?.profilePublic === true };
+      return { following: exists, changed: false, actorProfilePublic: isReviewedPublicCreatorProfile(actorProfile) };
     });
     const updated = parseCreatorProfileInput((await targetReference.get()).data());
     return { following: transitionResult.following, followerCount: updated?.followerCount ?? 0, canFollow: transitionResult.actorProfilePublic, isSelf: false, blocked: false };
@@ -613,8 +659,8 @@ export const createLieuvaCreatorPost = onCall(
       throw new HttpsError("failed-precondition", "Create your Creator profile before posting.");
     const profileReference = db.collection("creatorProfiles").doc(creatorId);
     const profile = parseCreatorProfileInput((await profileReference.get()).data());
-    if (!profile?.profilePublic)
-      throw new HttpsError("failed-precondition", "Make your Creator profile public before posting.");
+    if (!isReviewedPublicCreatorProfile(profile))
+      throw new HttpsError("failed-precondition", "Your public Creator profile must be reviewed before posting.");
     const accountReference = db.collection("creatorAccounts").doc(creatorId);
     const postReference = accountReference.collection("posts").doc();
     const createdAt = new Date();
@@ -669,38 +715,113 @@ export const manageLieuvaCreatorPostInteraction = onCall(
     ]);
     const actorCreatorId = actorOwner.data()?.creatorId;
     const targetCreatorId = targetHandle.data()?.creatorId;
-    if (typeof actorCreatorId !== "string")
-      throw new HttpsError("failed-precondition", "Create your Creator profile before joining the conversation.");
     if (typeof targetCreatorId !== "string") throw new HttpsError("not-found", "Creator post not found.");
-    const actorProfile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(actorCreatorId).get()).data());
-    if (!actorProfile?.profilePublic)
-      throw new HttpsError("failed-precondition", "Make your Creator profile public before joining the conversation.");
+    const [targetProfileSnapshot, post] = await Promise.all([
+      db.collection("creatorProfiles").doc(targetCreatorId).get(),
+      db.collection("creatorAccounts").doc(targetCreatorId).collection("posts").doc(postId).get(),
+    ]);
+    const targetProfile = parseCreatorProfileInput(targetProfileSnapshot.data());
+    if (!isReviewedPublicCreatorProfile(targetProfile))
+      throw new HttpsError("not-found", "Creator post not found.");
     const postReference = db.collection("creatorAccounts").doc(targetCreatorId).collection("posts").doc(postId);
-    const post = await postReference.get();
     if (!post.exists || post.data()?.moderationStatus === "removed")
       throw new HttpsError("not-found", "Creator post not found.");
-    const [outgoingBlock, incomingBlock] = await Promise.all([
-      db.collection("creatorBlocks").doc(`${actorCreatorId}_${targetCreatorId}`).get(),
-      db.collection("creatorBlocks").doc(`${targetCreatorId}_${actorCreatorId}`).get(),
-    ]);
-    if ((outgoingBlock.exists || incomingBlock.exists) && action !== "report")
-      throw new HttpsError("failed-precondition", "This Creator connection is blocked.");
 
     if (action === "report") {
       const reason = parseCreatorReportReason(request.data?.reason);
       if (!reason) throw new HttpsError("invalid-argument", "Choose a valid report reason.");
-      const reportId = createHash("sha256").update(`${actorCreatorId}:${targetCreatorId}:${postId}`).digest("hex");
-      await db.collection("creatorReports").doc(reportId).set({
-        reporterCreatorId: actorCreatorId,
-        targetCreatorId,
-        postId,
+      // Keep legacy Creator-keyed report IDs stable. Accounts without a public
+      // Creator identity still receive a private, deterministic reporting key.
+      const reporterKey = creatorReportPrincipal(uid, actorCreatorId);
+      const reportId = creatorPostReportId(reporterKey, targetCreatorId, postId);
+      const computedCaseId = creatorPostModerationCaseId(targetCreatorId, postId);
+      const reportReference = db.collection("creatorReports").doc(reportId);
+      const caseReference = db.collection("moderationCases").doc(computedCaseId);
+      const eventReference = caseReference.collection("events").doc();
+      const intake = await db.runTransaction(async (transaction) => {
+        const [currentPost, existingReport, existingCase] = await Promise.all([
+          transaction.get(postReference),
+          transaction.get(reportReference),
+          transaction.get(caseReference),
+        ]);
+        if (!currentPost.exists || currentPost.data()?.moderationStatus === "removed")
+          throw new HttpsError("not-found", "Creator post not found.");
+        const reportData = existingReport.data();
+        const caseData = existingCase.data();
+        const caseId = typeof reportData?.caseId === "string" && /^[a-f0-9]{64}$/.test(reportData.caseId)
+          ? reportData.caseId
+          : computedCaseId;
+        if (caseId !== computedCaseId)
+          throw new HttpsError("failed-precondition", "This report needs operator reconciliation.");
+        const incomingPriority = moderationPriorityForReason(reason);
+        const reportPatch = creatorReportIntakePatch(reportData, reason, caseId);
+        transaction.set(reportReference, {
+          ...(existingReport.exists ? {} : {
+            ...(typeof actorCreatorId === "string" ? { reporterCreatorId: actorCreatorId } : {}),
+            targetCreatorId,
+            postId,
+            targetKind: "creator-post",
+            firstReportedAt: FieldValue.serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
+          }),
+          reporterAccountId: uid,
+          ...reportPatch,
+          lastReportedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        transaction.set(caseReference, {
+          ...(existingCase.exists ? {} : {
+            targetKind: "creator-post",
+            target: { creatorId: targetCreatorId, postId },
+            targetCreatorId,
+            postId,
+            status: "received",
+            openedAt: FieldValue.serverTimestamp(),
+          }),
+          sourceReportIds: boundedModerationSourceReports(caseData?.sourceReportIds, reportId),
+          reportCount: (typeof caseData?.reportCount === "number" && Number.isSafeInteger(caseData.reportCount) && caseData.reportCount >= 0
+            ? caseData.reportCount
+            : 0) + 1,
+          priority: highestModerationPriority(caseData?.priority, incomingPriority),
+          lastReportReason: reason,
+          newReportPending: true,
+          lastReportedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          version: (typeof caseData?.version === "number" && Number.isSafeInteger(caseData.version) && caseData.version >= 1
+            ? caseData.version
+            : 0) + 1,
+          schemaVersion: 1,
+        }, { merge: true });
+        transaction.create(eventReference, {
+          kind: "report-received",
+          reasonCode: reason,
+          repeatedByReporter: existingReport.exists,
+          priority: incomingPriority,
+          createdAt: FieldValue.serverTimestamp(),
+          schemaVersion: 1,
+        });
+        return { repeated: existingReport.exists };
+      });
+      logger.info("creator_report_received", {
+        schema: "lieuva_moderation_intake_v1",
         reason,
-        status: "open",
-        createdAt: FieldValue.serverTimestamp(),
-        schemaVersion: 1,
-      }, { merge: false });
-      return { reported: true };
+        repeated: intake.repeated,
+      });
+      return { reported: true, receiptId: eventReference.id };
     }
+
+    if (typeof actorCreatorId !== "string")
+      throw new HttpsError("failed-precondition", "Create your Creator profile before joining the conversation.");
+    const actorProfile = parseCreatorProfileInput(
+      (await db.collection("creatorProfiles").doc(actorCreatorId).get()).data(),
+    );
+    if (!isReviewedPublicCreatorProfile(actorProfile))
+      throw new HttpsError("failed-precondition", "Your public Creator profile must be reviewed before joining the conversation.");
+    const [outgoingBlock, incomingBlock] = await Promise.all([
+      db.collection("creatorBlocks").doc(`${actorCreatorId}_${targetCreatorId}`).get(),
+      db.collection("creatorBlocks").doc(`${targetCreatorId}_${actorCreatorId}`).get(),
+    ]);
+    if (outgoingBlock.exists || incomingBlock.exists)
+      throw new HttpsError("failed-precondition", "This Creator connection is blocked.");
 
     if (action === "comment") {
       const body = parseCreatorCommentInput(request.data?.body);
@@ -851,10 +972,10 @@ export const getMyLieuvaCreatorHome = onCall(
     }));
     const publicProfiles = parsedFollowedProfiles
       .map(({ profile }) => profile)
-      .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile?.profilePublic));
+      .filter(isReviewedPublicCreatorProfile);
     const ownProfile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
     const feedProfiles = [
-      ...(ownProfile?.profilePublic ? [ownProfile] : []),
+      ...(isReviewedPublicCreatorProfile(ownProfile) ? [ownProfile] : []),
       ...publicProfiles,
     ].filter((profile, index, profilesValue) => profilesValue.findIndex((candidate) => candidate.handle === profile.handle) === index);
     const feedDeliveries = await Promise.all(feedProfiles.map((profile) => creatorDeliveryForHandle(profile.handle)));
@@ -882,9 +1003,9 @@ export const getMyLieuvaCreatorHome = onCall(
     let postsWithViewerState = posts;
     if (request.data?.includeViewerState === true) {
       const creatorIdsByHandle = new Map<string, string>();
-      if (ownProfile?.profilePublic) creatorIdsByHandle.set(ownProfile.handle, creatorId);
+      if (isReviewedPublicCreatorProfile(ownProfile)) creatorIdsByHandle.set(ownProfile.handle, creatorId);
       for (const { creatorId: followedCreatorId, profile } of parsedFollowedProfiles)
-        if (profile?.profilePublic) creatorIdsByHandle.set(profile.handle, followedCreatorId);
+        if (isReviewedPublicCreatorProfile(profile)) creatorIdsByHandle.set(profile.handle, followedCreatorId);
       const reactionLookups = posts.flatMap((post, index) => {
         const postCreatorId = creatorIdsByHandle.get(post.handle);
         return postCreatorId ? [{
@@ -970,7 +1091,7 @@ export const exportAuraAccountData = onCall(
     const email = user.email?.trim().toLowerCase();
     const ownedSnapshot = await db.collection("galleries").where("ownerId", "==", uid).get();
     const [profile, newsletter, publicationUsage, sharedMemberships, receivedInvites, sentInvites,
-      permits, unsubscribeTokens, verificationLimit, creatorOwner] = await Promise.all([
+      permits, unsubscribeTokens, verificationLimit, creatorOwner, submittedReports] = await Promise.all([
       db.collection("profiles").doc(uid).get(),
       db.collection("newsletterSubscriptions").doc(uid).get(),
       db.collection("galleryPublicationQuotas").doc(uid).get(),
@@ -985,6 +1106,7 @@ export const exportAuraAccountData = onCall(
       db.collection("newsletterUnsubscribeTokens").where("uid", "==", uid).get(),
       db.collection("verificationMailRateLimits").doc(uid).get(),
       db.collection("creatorAccountOwners").doc(uid).get(),
+      db.collection("creatorReports").where("reporterAccountId", "==", uid).get(),
     ]);
     const creatorId = creatorOwner.data()?.creatorId;
     const [creatorProfile, creatorAccount, creatorHandles, creatorPosts, creatorFollowing, creatorFollowers,
@@ -1036,6 +1158,10 @@ export const exportAuraAccountData = onCall(
         .map((member) => ({ galleryId: member.ref.parent.parent!.id, ...member.data() })) ?? [],
       receivedInvitations: receivedInvites?.docs.map((invite) => invite.data()) ?? [],
       sentInvitations: sentInvites.docs.map((invite) => invite.data()),
+      submittedModerationReports: submittedReports.docs.map((report) => ({
+        id: report.id,
+        ...report.data(),
+      })),
       operationalState: {
         pendingPublicationPermits: permits.size,
         newsletterUnsubscribeRecords: unsubscribeTokens.size,
@@ -1085,7 +1211,8 @@ export const deleteAuraAccount = onCall(
     let phase = "inventory";
     await job.set({ uid, status: "running", phase, startedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     try {
-      const [owned, memberships, ownedInvites, receivedInvites, permits, tokens, queuedMail, creatorOwner] = await Promise.all([
+      const [owned, memberships, ownedInvites, receivedInvites, permits, tokens, queuedMail, creatorOwner,
+        accountReportsMade] = await Promise.all([
         db.collection("galleries").where("ownerId", "==", uid).get(),
         email
           ? db.collectionGroup("members").where("email", "==", email).get()
@@ -1098,6 +1225,7 @@ export const deleteAuraAccount = onCall(
         db.collection("newsletterUnsubscribeTokens").where("uid", "==", uid).get(),
         db.collection("mail").where("accountUid", "==", uid).get(),
         db.collection("creatorAccountOwners").doc(uid).get(),
+        db.collection("creatorReports").where("reporterAccountId", "==", uid).get(),
       ]);
       const creatorId = creatorOwner.data()?.creatorId;
       const creatorHandles = typeof creatorId === "string"
@@ -1149,6 +1277,7 @@ export const deleteAuraAccount = onCall(
             ...(creatorBlocksIn?.docs ?? []),
             ...(creatorReportsMade?.docs ?? []),
             ...(creatorReportsAgainst?.docs ?? []),
+            ...accountReportsMade.docs,
             ...(creatorComments?.docs ?? []),
             ...(creatorReactions?.docs ?? []),
             ...(creatorNotificationActors?.docs ?? []),
@@ -1372,6 +1501,11 @@ export const manageAuraGalleryLifecycle = onCall(
           throw new HttpsError("invalid-argument", "Invalid Space visibility.");
         transaction.update(galleryReference, {
           visibility,
+          // Returning protected content to Public requires a fresh operator
+          // review. Repeating Public on an already-public Space is a no-op.
+          ...(visibility === "public" && data.visibility !== "public"
+            ? { discoverEligible: false }
+            : {}),
           updatedAt: FieldValue.serverTimestamp(),
         });
       }
@@ -1742,7 +1876,7 @@ export const creatorDocument = onRequest(
       const requestedHandle = route.handle;
       const delivery = await creatorDeliveryForHandle(requestedHandle);
       if (delivery.kind === "public" && requestedHandle !== delivery.profile.handle) {
-        response.set("Cache-Control", "public, max-age=300, s-maxage=3600");
+        response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
         response.redirect(301, creatorCanonicalUrl(delivery.profile.handle));
         return;
       }
@@ -1809,7 +1943,8 @@ export const creatorDirectoryData = onRequest(
     try {
       const snapshot = await db.collection("creatorProfiles")
         .where("profilePublic", "==", true)
-        .select("handle", "displayName", "bio", "links", "profilePublic", "imagePresent", "coverPresent", "bioFont", "profileTone", "followerCount")
+        .where("discoverEligible", "==", true)
+        .select("handle", "displayName", "bio", "links", "profilePublic", "discoverEligible", "imagePresent", "coverPresent", "bioFont", "profileTone", "followerCount")
         .limit(500)
         .get();
       const creators = snapshot.docs
@@ -1846,10 +1981,10 @@ export const creatorImage = onRequest(
       const creatorId = handleSnapshot.data()?.creatorId;
       if (typeof creatorId !== "string") throw new Error("not-found");
       const profile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
-      if (!profile?.profilePublic || !profile.imagePresent) throw new Error("not-found");
+      if (!isReviewedPublicCreatorProfile(profile) || !profile.imagePresent) throw new Error("not-found");
       const [bytes] = await getStorage().bucket().file(`creator-public/${creatorId}/avatar.webp`).download();
       response.set("Content-Type", "image/webp");
-      response.set("Cache-Control", "public, max-age=300, s-maxage=3600");
+      response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
       response.status(200).send(request.method === "HEAD" ? undefined : bytes);
     } catch {
       response.set("Cache-Control", "private, no-store");
@@ -1876,10 +2011,10 @@ export const creatorCover = onRequest(
       const creatorId = handleSnapshot.data()?.creatorId;
       if (typeof creatorId !== "string") throw new Error("not-found");
       const profile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
-      if (!profile?.profilePublic || !profile.coverPresent) throw new Error("not-found");
+      if (!isReviewedPublicCreatorProfile(profile) || !profile.coverPresent) throw new Error("not-found");
       const [bytes] = await getStorage().bucket().file(`creator-public/${creatorId}/cover.webp`).download();
       response.set("Content-Type", "image/webp");
-      response.set("Cache-Control", "public, max-age=300, s-maxage=3600");
+      response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
       response.status(200).send(request.method === "HEAD" ? undefined : bytes);
     } catch {
       response.set("Cache-Control", "private, no-store");
@@ -1904,13 +2039,14 @@ export const creatorAttribution = onRequest(
       const gallery = await publicDeliveryManifest(spaceId);
       const delivery = classifySpaceForDelivery(spaceId, gallery);
       const ownerId = gallery?.ownerId;
-      if (delivery.kind !== "public" || typeof ownerId !== "string") throw new Error("not-public");
+      if (delivery.kind !== "public" || !delivery.indexEligible || typeof ownerId !== "string")
+        throw new Error("not-public");
       const owner = await db.collection("creatorAccountOwners").doc(ownerId).get();
       const creatorId = owner.data()?.creatorId;
       if (typeof creatorId !== "string") throw new Error("no-creator");
       const profileSnapshot = await db.collection("creatorProfiles").doc(creatorId).get();
       const profile = parseCreatorProfileInput(profileSnapshot.data());
-      if (!profile?.profilePublic) throw new Error("private-creator");
+      if (!isReviewedPublicCreatorProfile(profile)) throw new Error("private-creator");
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
       response.status(200).json({
         schemaVersion: 1,
@@ -1993,6 +2129,7 @@ export const spaceSitemap = onRequest(
       const [modern, legacy] = await Promise.all([
         db.collection("galleries")
           .where("visibility", "==", "public")
+          .where("discoverEligible", "==", true)
           .where("expiresAt", ">", expiryFloor)
           .orderBy("expiresAt", "desc")
           .limit(500)
@@ -2000,6 +2137,7 @@ export const spaceSitemap = onRequest(
           .get(),
         db.collection("galleries")
           .where("schemaVersion", "in", [1, 2])
+          .where("discoverEligible", "==", true)
           .where("expiresAt", ">", expiryFloor)
           .orderBy("expiresAt", "desc")
           .limit(500)
@@ -2012,11 +2150,12 @@ export const spaceSitemap = onRequest(
         .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public");
       const creatorProfiles = await db.collection("creatorProfiles")
         .where("profilePublic", "==", true)
+        .where("discoverEligible", "==", true)
         .limit(500)
         .get();
       const creators = creatorProfiles.docs.flatMap((document) => {
         const profile = parseCreatorProfileInput(document.data());
-        if (!profile?.profilePublic) return [];
+        if (!isReviewedPublicCreatorProfile(profile)) return [];
         const updated = timestampMilliseconds(document.data().updatedAt);
         return [{
           handle: profile.handle,

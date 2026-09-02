@@ -444,6 +444,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         accessVersion: 1,
         exploreListed,
         creatorProfileListed,
+        discoverEligible: false,
         revision: 1,
         updatedAt: publishedAt,
         lifecycleStatus: "active",
@@ -461,6 +462,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         accessVersion: 1,
         exploreListed,
         creatorProfileListed,
+        discoverEligible: false,
         revision: 1,
         updatedAt: now.toISOString(),
         lifecycleStatus: "active",
@@ -604,12 +606,10 @@ export class FirebaseGalleryRepository implements GalleryRepository {
           accessVersion: current.accessVersion,
           exploreListed: current.exploreListed,
           creatorProfileListed: current.creatorProfileListed,
+          discoverEligible: false,
           revision: nextRevision,
           updatedAt: serverTimestamp(),
           lifecycleStatus: current.lifecycleStatus,
-          ...(current.discoverEligible !== undefined
-            ? { discoverEligible: current.discoverEligible }
-            : {}),
         });
       });
       return {
@@ -625,6 +625,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         accessVersion: current.accessVersion,
         exploreListed: current.exploreListed,
         creatorProfileListed: current.creatorProfileListed,
+        discoverEligible: false,
         revision: nextRevision,
         updatedAt: updatedAt.toISOString(),
         effectiveRole: role,
@@ -712,6 +713,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
     const publicActive = query(
       collection(firebaseDb, "galleries"),
       where("visibility", "==", "public"),
+      where("discoverEligible", "==", true),
       where("expiresAt", ">", safelyActiveAt),
       orderBy("expiresAt", "desc"),
       limit(30),
@@ -719,6 +721,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
     const legacyActive = query(
       collection(firebaseDb, "galleries"),
       where("schemaVersion", "in", [1, 2]),
+      where("discoverEligible", "==", true),
       where("expiresAt", ">", safelyActiveAt),
       orderBy("expiresAt", "desc"),
       limit(30),

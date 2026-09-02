@@ -21,6 +21,7 @@ export type AccountExportInput = {
   sharedSpaces: Array<Record<string, unknown>>;
   receivedInvitations: Array<Record<string, unknown>>;
   sentInvitations: Array<Record<string, unknown>>;
+  submittedModerationReports?: Array<Record<string, unknown>>;
   operationalState: Record<string, unknown>;
   creatorIdentity?: Record<string, unknown>;
 };
@@ -142,6 +143,9 @@ export function buildAccountExport(input: AccountExportInput): PortableValue {
     invitations: {
       received: input.receivedInvitations.map((invite) => invitationExport(invite, "received")),
       sent: input.sentInvitations.map((invite) => invitationExport(invite, "sent")),
+    },
+    moderation: {
+      reportsSubmitted: input.submittedModerationReports ?? [],
     },
     operationalState: input.operationalState,
     creatorIdentity: input.creatorIdentity ?? null,

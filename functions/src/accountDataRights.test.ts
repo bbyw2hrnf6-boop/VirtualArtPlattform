@@ -64,6 +64,7 @@ describe("account-wide export", () => {
       sharedSpaces: [{ galleryId: "space-b", ownerId: "other", email: "owner@example.com", role: "viewer" }],
       receivedInvitations: [{ galleryId: "space-c", email: "owner@example.com", role: "viewer" }],
       sentInvitations: [{ galleryId: "space-a", email: "invitee@example.com", role: "editor" }],
+      submittedModerationReports: [{ id: "report-a", reason: "rights", status: "open" }],
       operationalState: { pendingPublicationPermits: 0 },
     });
     const json = JSON.stringify(result);
@@ -74,6 +75,7 @@ describe("account-wide export", () => {
     expect(json).not.toContain("tokenHash");
     expect(json).not.toContain('"ownerId":"other"');
     expect(json).toContain("published/account-a/space-a/cover.webp");
+    expect(json).toContain('"reason":"rights"');
   });
 
   it("normalizes malformed or unsupported values without failing the export", () => {

@@ -93,8 +93,10 @@
 .creator-directory__section { padding: clamp(74px, 9vw, 126px) clamp(22px, 6vw, 94px); }
 .creator-directory__section--creators { background: #dedcd4; }
 .creator-directory__section--spaces { background: #151613; color: #efede5; }
+.creator-directory__section--showcase { background: #e9e7df; }
 .creator-directory__section > header { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(260px, .7fr) auto; gap: clamp(24px, 5vw, 78px); align-items: end; margin-bottom: clamp(38px, 5vw, 70px); padding-bottom: 27px; border-bottom: 1px solid #a7a79f; }
 .creator-directory__section--spaces > header { border-color: #4a4b45; }
+.creator-directory__section--showcase > header { border-color: #aaa99f; }
 .creator-directory__section > header .eyebrow { margin: 0 0 13px; }
 .creator-directory__section > header h2 { margin: 0; font: clamp(54px, 7vw, 105px)/.84 Instrument; letter-spacing: -.05em; }
 .creator-directory__section > header > p { max-width: 480px; margin: 0 0 8px; color: #62645c; font-size: 12px; line-height: 1.7; }
@@ -117,6 +119,11 @@
 .creator-directory-card__meta { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 20px; padding-top: 16px; border-top: 1px solid #b7b6ae; color: #696b62; }
 .creator-directory-card__meta small { font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
 .creator-directory-card__meta b { color: #66770c; font-weight: 400; }
+.creator-directory-card--showcase { border-color: #aaa99f; background: #e9e7df; }
+.creator-directory-card--showcase:hover,
+.creator-directory-card--showcase:focus-visible { background: #f2f0e8; }
+.creator-directory-card--showcase .creator-directory-card__number,
+.creator-directory-card--showcase .creator-directory-card__meta small { color: #5f6651; }
 
 .creator-directory__space-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: #4b4c46; }
 .creator-directory-space { position: relative; display: grid; min-width: 0; padding: 16px; background: #151613; color: inherit; text-decoration: none; transition: background .25s ease; }

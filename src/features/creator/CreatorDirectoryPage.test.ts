@@ -9,6 +9,16 @@ describe("public Creator directory contract", () => {
     expect(directorySource).toContain('spaces: { status: "error", data: [] }');
   });
 
+  it("keeps editorial previews outside live totals and search results", () => {
+    expect(directorySource).toContain('import { DEMO_CREATORS } from "./demoCreators"');
+    expect(directorySource).toContain("Editorial previews are separate.");
+    expect(directorySource).toContain("never included in live community totals or search results");
+    expect(directorySource).toContain("{!isSearching ? (");
+    expect(directorySource).toContain('state.creators.status === "ready" ? state.creators.data.length : "—"');
+    expect(directorySource).toContain("Part of the live directory is unavailable.");
+    expect(directorySource).not.toContain('creator.demo ? "Editorial preview"');
+  });
+
   it("uses crawlable public links for Creator profiles and Spaces", () => {
     expect(directorySource).toContain("href={creatorCanonicalUrl(creator.handle, window.location.href)}");
     expect(directorySource).toContain("href={spaceCanonicalUrl(space.id, location.href)}");

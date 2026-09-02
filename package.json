@@ -9,11 +9,16 @@
     "preview": "vite preview",
     "validate:glb": "node scripts/validate-glb-contract.mjs",
     "test": "vitest run",
+    "test:operator-tools": "node --test scripts/operator-tools.node-test.mjs",
     "test:release-gate": "vitest run src/services/firebaseGalleryRepository.releaseGate.test.ts src/services/draftStorage.test.ts src/services/galleryPublishingError.test.ts src/services/galleryStoragePaths.test.ts src/services/galleryValidation.test.ts src/services/imageBlob.test.ts src/features/gallery/editor/publishReview.test.ts src/features/gallery/editor/publishState.test.ts",
     "lint": "eslint .",
-    "check": "npm run lint && npm test && npm run build",
+    "check": "npm run lint && npm test && npm run test:operator-tools && npm run build",
     "check:functions": "npm --prefix functions run check",
-    "check:performance": "node scripts/check-performance-budgets.mjs"
+    "check:performance": "node scripts/check-performance-budgets.mjs",
+    "review:public-content": "node scripts/review-public-content.mjs",
+    "review:public-content:decision": "node scripts/public-content-decision.mjs",
+    "moderation:queue": "node scripts/moderation-queue.mjs",
+    "moderation:action": "node scripts/moderation-action.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

@@ -29,9 +29,9 @@ describe("Creator Hub alerts lifecycle", () => {
     expect(creatorServiceSource).toContain('"markMyLieuvaCreatorNotificationsRead"');
   });
 
-  it("requires a public actor profile before creating a navigable follow alert", () => {
-    expect(functionsSource).toContain('if (!actorProfile?.profilePublic)');
-    expect(functionsSource).toContain('"Make your Creator profile public before following."');
+  it("requires a reviewed public actor profile before creating a navigable follow alert", () => {
+    expect(functionsSource).toContain("if (!isReviewedPublicCreatorProfile(actorProfile))");
+    expect(functionsSource).toContain('"Your public Creator profile must be reviewed before following."');
     expect(functionsSource).toContain("actorHandle: actorProfile.handle");
     expect(functionsSource).not.toContain('actorHandle: actorProfile?.handle ?? "creator"');
   });

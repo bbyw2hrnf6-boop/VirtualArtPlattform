@@ -230,11 +230,12 @@ function AccountRooms({ session }: { session: AccountSession }) {
     (room) => room.lifecycleStatus === "active" && new Date(room.expiresAt).getTime() > currentTime,
   );
   const exploreRooms = activeRooms.filter(
-    (room) => room.visibility === "public" && room.exploreListed,
+    (room) => room.visibility === "public" && room.discoverEligible === true && room.exploreListed,
   );
   const hubRooms = activeRooms.filter(
     (room) => (
       room.visibility === "public"
+      && room.discoverEligible === true
       && room.creatorProfileListed
       && (room.ownerId === session.uid || room.effectiveRole === "owner")
     ),
@@ -358,7 +359,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
               {available ? <a href={galleryShareUrl(room.id, window.location.href)}>
                 <span className="account-room-cover">{room.coverSrc && <img src={room.coverSrc} alt="" />}</span>
                 <span className="account-room-copy">
-                  <span className="account-room-badges"><i>{visibilityLabel[room.visibility]}</i><i>{role}</i><i data-state={workspace.state}>{workspace.label}</i></span>
+                  <span className="account-room-badges"><i>{visibilityLabel[room.visibility]}</i><i>{role}</i>{room.visibility === "public" && room.discoverEligible !== true && <i>Review pending</i>}<i data-state={workspace.state}>{workspace.label}</i></span>
                   <strong>{room.title}</strong>
                   <small>{workspace.detail} · Live until {new Date(room.expiresAt).toLocaleDateString()}</small>
                 </span>
@@ -424,8 +425,10 @@ function AccountRooms({ session }: { session: AccountSession }) {
                     </label>
                   </fieldset>
                   <small className="account-room-placement__note">
-                    {room.visibility === "public"
-                      ? "Choose whether this Space appears in Explore Spaces on the main homepage and/or in your Creator Hub profile."
+                    {room.visibility === "public" && room.discoverEligible !== true
+                      ? "Placement preferences are saved now, but this Space stays out of Explore, Creator profiles and search until LIEUVA approves it."
+                      : room.visibility === "public"
+                        ? "Choose whether this Space appears in Explore Spaces on the main homepage and/or in your Creator Hub profile."
                       : "Set visibility to Public before choosing public placement."}
                   </small>
                   {available && <button type="button" onClick={() => {
