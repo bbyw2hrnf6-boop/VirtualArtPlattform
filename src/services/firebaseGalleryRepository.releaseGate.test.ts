@@ -203,7 +203,7 @@ vi.mock("firebase/functions", () => ({
         galleryId, galleryTitle: mock.state.documents.get(`galleries/${galleryId}`)?.title,
         ownerId: user?.uid, email, role, status: "pending",
         createdAt: mock.Timestamp.fromDate(mock.state.clock),
-        expiresAt: mock.Timestamp.fromDate(new Date("2026-09-01T10:00:00.000Z")),
+        expiresAt: mock.Timestamp.fromDate(new Date(mock.state.clock.getTime() + 7 * 86_400_000)),
       });
       return { data: { status: "pending" } };
     }
@@ -507,6 +507,19 @@ describe("publish → visit → edit → update release gate", () => {
     await repository.removeMember(published.id, "editor@example.test");
     mock.state.currentUser = makeUser("wp1-editor", "editor@example.test");
     await expect(repository.find(published.id)).rejects.toBeInstanceOf(GalleryAccessDeniedError);
+  });
+
+  it("stops returning an invite when the controlled clock reaches its expiry", async () => {
+    const repository = new FirebaseGalleryRepository();
+    const published = await repository.publish(draft(), media.webp, { visibility: "private" });
+    await repository.setMember(published.id, "viewer@example.test", "viewer");
+    mock.state.currentUser = makeUser("wp1-viewer", "viewer@example.test");
+
+    const [invite] = await repository.listInvites();
+    expect(invite).toBeDefined();
+    vi.setSystemTime(new Date(Date.parse(invite.expiresAt) + 1));
+
+    await expect(repository.listInvites()).resolves.toEqual([]);
   });
 
   it("cleans partial uploads, preserves the manifest, and succeeds on retry", async () => {

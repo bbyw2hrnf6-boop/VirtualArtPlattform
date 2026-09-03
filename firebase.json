@@ -2,9 +2,28 @@
   "functions": {
     "source": "functions",
     "runtime": "nodejs22",
+    "ignore": [
+      ".git",
+      ".runtimeconfig.json",
+      ".env*",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "*.log",
+      "node_modules",
+      "coverage",
+      "scripts",
+      "src",
+      ".gitkeep",
+      "**/*.test.*",
+      "**/*.spec.*",
+      "**/*.map",
+      "vitest.config.*",
+      "tsconfig*.json",
+      "*.tsbuildinfo"
+    ],
     "predeploy": [
-      "npm --prefix \"$PROJECT_DIR\" run build",
-      "npm --prefix \"$RESOURCE_DIR\" run check"
+      "node \"$PROJECT_DIR/scripts/firebase-predeploy.mjs\" build",
+      "node \"$PROJECT_DIR/scripts/firebase-predeploy.mjs\" functions-check"
     ]
   },
   "firestore": {
@@ -17,7 +36,7 @@
   "hosting": {
     "public": "dist",
     "predeploy": [
-      "npm run build"
+      "node \"$PROJECT_DIR/scripts/firebase-predeploy.mjs\" build"
     ],
     "ignore": [
       "firebase.json",

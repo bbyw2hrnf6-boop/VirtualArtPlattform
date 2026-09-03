@@ -1,0 +1,207 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Locked quality gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      CI: "true"
+      NODE_VERSION: 22.23.2
+      NPM_VERSION: 10.9.8
+      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_PROJECT_ID: virtualartplattform
+      LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
+    steps:
+      - name: Check out the revision
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Use the pinned Node.js toolchain
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - name: Install locked dependencies
+        run: |
+          test "$(node --version)" = "v${NODE_VERSION}"
+          test "$(npm --version)" = "$NPM_VERSION"
+          npm ci
+          npm ci --prefix functions
+
+      - name: Verify locked inputs remain unchanged
+        run: |
+          test "$(node --version)" = "v${NODE_VERSION}"
+          test -f package-lock.json
+          test -f functions/package-lock.json
+          git diff --exit-code -- package-lock.json functions/package-lock.json
+
+      - name: Lint repository sources
+        run: npm run lint
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Run repository script tests
+        run: npm run test:scripts
+
+      - name: Verify Firebase Functions
+        run: npm run check:functions
+
+      - name: Build pull-request or manual preview
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: npm run build
+
+      - name: Install the locked Chromium browser
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Smoke the preview build in Chromium
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: npm run test:browser-smoke
+
+      - name: Record verified revision
+        if: always()
+        run: |
+          {
+            echo "### Verification"
+            echo "- Revision: \`${GITHUB_SHA}\`"
+            echo "- Node.js: \`$(node --version)\`"
+            echo "- Event: \`${GITHUB_EVENT_NAME}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  production-artifact:
+    name: Production artifact
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality-gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    env:
+      CI: "true"
+      NODE_VERSION: 22.23.2
+      NPM_VERSION: 10.9.8
+      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_PROJECT_ID: virtualartplattform
+      LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
+      VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
+      VITE_TELEMETRY_MODE: functions
+      VITE_TELEMETRY_ENVIRONMENT: production
+      AURA_PUBLIC_APP_URL: ${{ vars.AURA_PUBLIC_APP_URL }}
+      AURA_REPLY_TO: ${{ vars.AURA_REPLY_TO }}
+      AURA_LEGAL_FOOTER: ${{ vars.AURA_LEGAL_FOOTER }}
+    steps:
+      - name: Check out the verified main revision
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Use the pinned Node.js toolchain
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+            firebase-cli/package-lock.json
+
+      - name: Validate production release configuration
+        run: >-
+          npm run preflight:production --
+          --project-id "${FIREBASE_PROJECT_ID}"
+          --origin "${LIEUVA_PRODUCTION_ORIGIN}"
+          --functions all
+
+      - name: Install locked dependencies
+        run: |
+          test "$(node --version)" = "v${NODE_VERSION}"
+          test "$(npm --version)" = "$NPM_VERSION"
+          npm ci
+          npm ci --prefix functions
+          git diff --exit-code -- package-lock.json functions/package-lock.json
+
+      - name: Compile the production Functions artifact
+        run: npm --prefix functions run build
+
+      - name: Generate the immutable Functions discovery manifest
+        run: npm --prefix functions run manifest:release
+
+      - name: Build the production-configured Hosting artifact
+        run: npm run build
+
+      - name: Install the locked Chromium browser
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Smoke the exact production artifact in Chromium
+        run: npm run test:browser-smoke
+
+      - name: Install and verify the locked Firebase CLI
+        run: |
+          node firebase-cli/validate-lock.mjs
+          npm ci --prefix firebase-cli --ignore-scripts --no-audit --no-fund
+          test "$(node firebase-cli/node_modules/firebase-tools/lib/bin/firebase.js --version)" = "$FIREBASE_CLI_VERSION"
+          git diff --exit-code -- firebase-cli/package-lock.json
+
+      - name: Assemble and verify the immutable release bundle
+        run: |
+          node scripts/wp2-release-artifact.mjs create \
+            --commit-sha "$GITHUB_SHA" \
+            --node-version "$NODE_VERSION" \
+            --firebase-cli-version "$FIREBASE_CLI_VERSION" \
+            --project-id "$FIREBASE_PROJECT_ID" \
+            --origin "$LIEUVA_PRODUCTION_ORIGIN"
+          node scripts/wp2-release-artifact.mjs verify \
+            --commit-sha "$GITHUB_SHA" \
+            --node-version "$NODE_VERSION" \
+            --firebase-cli-version "$FIREBASE_CLI_VERSION" \
+            --project-id "$FIREBASE_PROJECT_ID" \
+            --origin "$LIEUVA_PRODUCTION_ORIGIN"
+          rm functions/functions.yaml
+          git diff --exit-code
+
+      - name: Upload the immutable production release
+        id: upload-release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lieuva-production-${{ github.sha }}-${{ github.run_id }}
+          path: artifacts/wp2-release/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
+          overwrite: false
+          include-hidden-files: true
+
+      - name: Record immutable artifact identity
+        run: |
+          {
+            echo "### Production artifact"
+            echo "- Revision: \`${GITHUB_SHA}\`"
+            echo "- Verify run: \`${GITHUB_RUN_ID}\`"
+            echo "- Artifact ID: \`${ARTIFACT_ID}\`"
+            echo "- Archive digest: \`${ARTIFACT_DIGEST}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          ARTIFACT_ID: ${{ steps.upload-release.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.upload-release.outputs.artifact-digest }}

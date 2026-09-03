@@ -11,6 +11,44 @@ export type AuraMail = {
   html: string;
 };
 
+const PLACEHOLDER = /(?:change[-_ ]?me|example\.(?:com|org|net)|invalid\.example|not[-_ ]?configured|placeholder|replace[-_ ]?me|todo|xxxxx)/i;
+
+export function assertAuraMailBrandConfigured(brand: AuraMailBrand) {
+  if (brand.name !== "LIEUVA") throw new Error("Mail brand name is invalid.");
+
+  let appUrl: URL;
+  try {
+    appUrl = new URL(brand.appUrl);
+  } catch {
+    throw new Error("Mail public URL is invalid.");
+  }
+  if (
+    brand.appUrl !== brand.appUrl.trim()
+    || appUrl.protocol !== "https:"
+    || appUrl.username
+    || appUrl.password
+    || appUrl.pathname !== "/"
+    || appUrl.search
+    || appUrl.hash
+    || appUrl.hostname === "localhost"
+    || appUrl.hostname.endsWith(".local")
+  ) throw new Error("Mail public URL is invalid.");
+
+  if (
+    brand.replyTo !== brand.replyTo.trim()
+    || brand.replyTo.length > 254
+    || !/^[^\s@]+@[^\s@]+[.][^\s@]+$/.test(brand.replyTo)
+    || PLACEHOLDER.test(brand.replyTo)
+  ) throw new Error("Mail reply-to address is invalid.");
+
+  if (
+    brand.legalFooter !== brand.legalFooter.trim()
+    || brand.legalFooter.length < 20
+    || brand.legalFooter.length > 500
+    || PLACEHOLDER.test(brand.legalFooter)
+  ) throw new Error("Mail legal footer is invalid.");
+}
+
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",

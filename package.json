@@ -10,18 +10,24 @@
     "validate:glb": "node scripts/validate-glb-contract.mjs",
     "test": "vitest run",
     "test:operator-tools": "node --test scripts/operator-tools.node-test.mjs",
+    "test:scripts": "node --test scripts/*.node-test.mjs firebase-cli/*.node-test.mjs && node firebase-cli/validate-lock.mjs",
+    "test:browser-smoke": "playwright test",
+    "test:browser-smoke:install": "playwright install chromium",
     "test:release-gate": "vitest run src/services/firebaseGalleryRepository.releaseGate.test.ts src/services/draftStorage.test.ts src/services/galleryPublishingError.test.ts src/services/galleryStoragePaths.test.ts src/services/galleryValidation.test.ts src/services/imageBlob.test.ts src/features/gallery/editor/publishReview.test.ts src/features/gallery/editor/publishState.test.ts",
     "lint": "eslint .",
-    "check": "npm run lint && npm test && npm run test:operator-tools && npm run build",
+    "check": "npm run lint && npm test && npm run test:scripts && npm run build",
     "check:functions": "npm --prefix functions run check",
+    "check:ci": "npm run check && npm run check:functions && npm run test:browser-smoke",
     "check:performance": "node scripts/check-performance-budgets.mjs",
+    "preflight:production": "node scripts/wp2-release-preflight.mjs",
+    "smoke:production": "node scripts/wp2-production-smoke.mjs",
     "review:public-content": "node scripts/review-public-content.mjs",
     "review:public-content:decision": "node scripts/public-content-decision.mjs",
     "moderation:queue": "node scripts/moderation-queue.mjs",
     "moderation:action": "node scripts/moderation-action.mjs"
   },
   "engines": {
-    "node": ">=22.13.0"
+    "node": "22.23.2"
   },
   "dependencies": {
     "firebase": "^12.16.0",
@@ -32,6 +38,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.62.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.185.1",

@@ -1,49 +1,15 @@
-import { createSign } from 'node:crypto';
-
-let credentials = {};
-try {
-  credentials = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
-} catch {
-  throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON. Replace the GitHub secret with the complete downloaded key file.');
-}
-const expectedProjectId = process.env.FIREBASE_PROJECT_ID || 'virtualartplattform';
-const projectId = credentials.project_id || expectedProjectId;
-if (projectId !== expectedProjectId)
-  throw new Error(`Cleanup credential project mismatch: expected ${expectedProjectId}.`);
-
-const encode = (value) => Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url');
-let accessToken = process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
-if (!accessToken) {
-  if (!credentials.client_email || !credentials.private_key)
-    throw new Error('FIREBASE_SERVICE_ACCOUNT must contain the complete service-account JSON.');
-  const issuedAt = Math.floor(Date.now() / 1000);
-  const unsigned = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({
-    iss: credentials.client_email,
-    scope: 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/devstorage.read_write',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: issuedAt,
-    exp: issuedAt + 3600
-  })}`;
-  const signer = createSign('RSA-SHA256'); signer.update(unsigned); signer.end();
-  const privateKey = String(credentials.private_key).replace(/\\n/g, '\n');
-  const assertion = `${unsigned}.${signer.sign(privateKey, 'base64url')}`;
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth2:grant-type:jwt-bearer', assertion })
-  });
-  if (!tokenResponse.ok) {
-    const body = await tokenResponse.json().catch(() => ({}));
-    const reason = [body.error, body.error_description].filter(Boolean).join(': ');
-    throw new Error(`Token request failed: ${tokenResponse.status}${reason ? ` (${reason})` : ''}. Rotate FIREBASE_SERVICE_ACCOUNT or configure Workload Identity.`);
-  }
-  ({ access_token: accessToken } = await tokenResponse.json());
-}
-if (!accessToken) throw new Error('Google authentication returned no access token.');
+const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+if (projectId !== 'virtualartplattform')
+  throw new Error('FIREBASE_PROJECT_ID must explicitly equal virtualartplattform.');
+const accessToken = process.env.GOOGLE_OAUTH_ACCESS_TOKEN?.trim();
+if (!accessToken)
+  throw new Error('GOOGLE_OAUTH_ACCESS_TOKEN is required. Use short-lived Workload Identity credentials.');
 const databaseDocumentRoot = `projects/${projectId}/databases/(default)/documents`;
 const databaseRoot = `https://firestore.googleapis.com/v1/${databaseDocumentRoot}`;
 const headers = { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' };
-const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || `${projectId}.firebasestorage.app`;
+const storageBucket = process.env.FIREBASE_STORAGE_BUCKET?.trim();
+if (storageBucket !== 'virtualartplattform.firebasestorage.app')
+  throw new Error('FIREBASE_STORAGE_BUCKET must explicitly equal the production bucket.');
 
 const runQuery = async (structuredQuery) => {
   const response = await fetch(`${databaseRoot}:runQuery`, { method: 'POST', headers, body: JSON.stringify({ structuredQuery }) });

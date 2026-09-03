@@ -14,6 +14,7 @@ import {
   safeResourceRef,
 } from "./observability.js";
 import {
+  assertAuraMailBrandConfigured,
   verificationMail,
   welcomeMail,
   type AuraMailBrand,
@@ -145,8 +146,11 @@ function brand(): AuraMailBrand {
 }
 
 function requireMailConfiguration() {
-  if (REPLY_TO.value().endsWith("@invalid.example") || LEGAL_FOOTER.value().includes("not configured"))
+  try {
+    assertAuraMailBrandConfigured(brand());
+  } catch {
     throw new HttpsError("failed-precondition", "LIEUVA email delivery is not configured yet.");
+  }
 }
 
 function requireAccount(auth: { uid: string; token: Record<string, unknown> } | undefined) {

@@ -18,8 +18,8 @@ type HostingHeader = {
 
 describe("WP5 delivery configuration", () => {
   const firebase = JSON.parse(firebaseSource) as {
-    functions: { predeploy: string[] };
-    hosting: { public: string; rewrites: HostingRewrite[]; headers: HostingHeader[] };
+    functions: { ignore: string[]; predeploy: string[] };
+    hosting: { predeploy: string[]; public: string; rewrites: HostingRewrite[]; headers: HostingHeader[] };
   };
 
   it("routes clean documents, cards and sitemap through the intended Functions", () => {
@@ -35,8 +35,28 @@ describe("WP5 delivery configuration", () => {
   });
 
   it("builds the matching hashed app shell before a Functions deployment", () => {
-    expect(firebase.functions.predeploy[0]).toContain('run build');
+    expect(firebase.functions.predeploy).toEqual([
+      'node "$PROJECT_DIR/scripts/firebase-predeploy.mjs" build',
+      'node "$PROJECT_DIR/scripts/firebase-predeploy.mjs" functions-check',
+    ]);
+    expect(firebase.hosting.predeploy).toEqual([
+      'node "$PROJECT_DIR/scripts/firebase-predeploy.mjs" build',
+    ]);
     expect(JSON.parse(packageSource).scripts.build).toContain("prepare-space-delivery.mjs");
+  });
+
+  it("excludes source, tests, maps, and build tooling from the Functions upload", () => {
+    expect(firebase.functions.ignore).toEqual(expect.arrayContaining([
+      "node_modules",
+      "scripts",
+      "src",
+      ".gitkeep",
+      "**/*.test.*",
+      "**/*.spec.*",
+      "**/*.map",
+      "vitest.config.*",
+      "tsconfig*.json",
+    ]));
   });
 
   it("keeps root PWA navigation and one canonical sitemap declaration", () => {

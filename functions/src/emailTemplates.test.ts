@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { verificationMail, welcomeMail } from "./emailTemplates.js";
+import {
+  assertAuraMailBrandConfigured,
+  verificationMail,
+  welcomeMail,
+} from "./emailTemplates.js";
 
 const brand = {
   name: "LIEUVA",
@@ -9,6 +13,19 @@ const brand = {
 };
 
 describe("LIEUVA email templates", () => {
+  it("fails closed on empty, placeholder, or malformed production mail configuration", () => {
+    expect(() => assertAuraMailBrandConfigured(brand)).not.toThrow();
+    expect(() => assertAuraMailBrandConfigured({ ...brand, appUrl: "" })).toThrow(/public URL/);
+    expect(() => assertAuraMailBrandConfigured({ ...brand, appUrl: "http://aura.example" })).toThrow(/public URL/);
+    expect(() => assertAuraMailBrandConfigured({ ...brand, replyTo: "" })).toThrow(/reply-to/);
+    expect(() => assertAuraMailBrandConfigured({ ...brand, replyTo: "not-configured@invalid.example" })).toThrow(/reply-to/);
+    expect(() => assertAuraMailBrandConfigured({ ...brand, legalFooter: "" })).toThrow(/legal footer/);
+    expect(() => assertAuraMailBrandConfigured({
+      ...brand,
+      legalFooter: "LIEUVA preview — legal sender details not configured",
+    })).toThrow(/legal footer/);
+  });
+
   it("renders a branded verification email with a fallback link", () => {
     const mail = verificationMail(brand, {
       displayName: "Danny Hirsch",

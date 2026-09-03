@@ -1,6 +1,12 @@
 import { gzipSync } from 'node:zlib';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import {
+  PERFORMANCE_RELEASE_CEILINGS,
+  PERFORMANCE_TARGETS,
+  initialAssetReferences,
+  performanceBudgetOverages,
+} from './lib/performance-budgets.mjs';
 
 const root = new URL('../dist/', import.meta.url);
 const files = [];
@@ -21,26 +27,38 @@ const assets = files
   });
 const js = assets.filter((asset) => asset.file.endsWith('.js'));
 const css = assets.filter((asset) => asset.file.endsWith('.css'));
+const assetByPath = new Map(assets.map((asset) => [asset.file, asset]));
+const initial = initialAssetReferences(readFileSync(join(root.pathname, 'index.html'), 'utf8'));
+const initialAssets = (paths, kind) => paths.map((path) => {
+  const asset = assetByPath.get(path);
+  if (!asset) throw new Error(`Built index references missing ${kind} asset: ${path}`);
+  return asset;
+});
+const initialJs = initialAssets(initial.js, 'JavaScript');
+const initialCss = initialAssets(initial.css, 'CSS');
+const initialJsPaths = new Set(initial.js);
 const totals = {
   jsGzip: js.reduce((sum, asset) => sum + asset.gzip, 0),
   cssGzip: css.reduce((sum, asset) => sum + asset.gzip, 0),
-  largestLazyGzip: Math.max(0, ...js.filter((asset) => !asset.file.startsWith('assets/index-')).map((asset) => asset.gzip)),
-  entryGzip: Math.max(0, ...js.filter((asset) => asset.file.startsWith('assets/index-')).map((asset) => asset.gzip)),
-  entryCssGzip: Math.max(0, ...css.filter((asset) => asset.file.startsWith('assets/index-')).map((asset) => asset.gzip)),
+  largestLazyGzip: Math.max(0, ...js.filter((asset) => !initialJsPaths.has(asset.file)).map((asset) => asset.gzip)),
+  entryGzip: initialJs.reduce((sum, asset) => sum + asset.gzip, 0),
+  entryCssGzip: initialCss.reduce((sum, asset) => sum + asset.gzip, 0),
 };
-// Total ceilings stop silent product-wide growth. Entry ceilings are stricter:
-// route-level social, pitch and 3D code may exist, but must not tax first paint.
-const budgets = { jsGzip: 560_000, cssGzip: 43_000, largestLazyGzip: 195_000, entryGzip: 115_000, entryCssGzip: 32_500 };
-const failures = Object.entries(budgets).filter(([key, limit]) => totals[key] > limit);
+const releaseFailures = performanceBudgetOverages(totals, PERFORMANCE_RELEASE_CEILINGS);
+const targetMisses = performanceBudgetOverages(totals, PERFORMANCE_TARGETS);
 
-console.log('LIEUVA performance budget (warning-only baseline)');
+console.log('LIEUVA performance budget (WP2 enforced release ceilings)');
 console.table({
-  'total JS gzip': { bytes: totals.jsGzip, budget: budgets.jsGzip },
-  'total CSS gzip': { bytes: totals.cssGzip, budget: budgets.cssGzip },
-  'largest lazy JS gzip': { bytes: totals.largestLazyGzip, budget: budgets.largestLazyGzip },
-  'entry JS gzip': { bytes: totals.entryGzip, budget: budgets.entryGzip },
-  'entry CSS gzip': { bytes: totals.entryCssGzip, budget: budgets.entryCssGzip },
+  'total JS gzip': { bytes: totals.jsGzip, ceiling: PERFORMANCE_RELEASE_CEILINGS.jsGzip, target: PERFORMANCE_TARGETS.jsGzip },
+  'total CSS gzip': { bytes: totals.cssGzip, ceiling: PERFORMANCE_RELEASE_CEILINGS.cssGzip, target: PERFORMANCE_TARGETS.cssGzip },
+  'largest lazy JS gzip': { bytes: totals.largestLazyGzip, ceiling: PERFORMANCE_RELEASE_CEILINGS.largestLazyGzip, target: PERFORMANCE_TARGETS.largestLazyGzip },
+  'entry JS gzip': { bytes: totals.entryGzip, ceiling: PERFORMANCE_RELEASE_CEILINGS.entryGzip, target: PERFORMANCE_TARGETS.entryGzip },
+  'entry CSS gzip': { bytes: totals.entryCssGzip, ceiling: PERFORMANCE_RELEASE_CEILINGS.entryCssGzip, target: PERFORMANCE_TARGETS.entryCssGzip },
 });
-for (const [key, limit] of failures)
-  console.warn(`PERFORMANCE BUDGET WARNING: ${key} is ${totals[key]} bytes; budget is ${limit}.`);
-if (failures.length && process.env.LIEUVA_STRICT_PERFORMANCE_BUDGET === '1') process.exitCode = 1;
+for (const { key, actual, limit } of targetMisses)
+  console.warn(`PERFORMANCE TARGET OPEN: ${key} is ${actual} bytes; target is ${limit}.`);
+for (const { key, actual, limit } of releaseFailures)
+  console.error(`PERFORMANCE REGRESSION: ${key} is ${actual} bytes; enforced ceiling is ${limit}.`);
+
+if (releaseFailures.length || (targetMisses.length && process.env.LIEUVA_STRICT_PERFORMANCE_BUDGET === '1'))
+  process.exitCode = 1;

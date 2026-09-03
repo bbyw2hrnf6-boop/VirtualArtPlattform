@@ -1,0 +1,13 @@
+{
+  "name": "@lieuva/firebase-cli-toolchain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Locked Firebase CLI used only by the reviewed LIEUVA release workflow.",
+  "engines": {
+    "node": "22.23.2"
+  },
+  "packageManager": "npm@10.9.8",
+  "dependencies": {
+    "firebase-tools": "15.28.2"
+  }
+}

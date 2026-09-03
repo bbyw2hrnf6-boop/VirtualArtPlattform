@@ -58,17 +58,14 @@ verify the sending domain, and create a real sender address such as
    - Default from address: a verified LIEUVA sender
    - Default reply-to: the public support address
    - Users/templates collection: leave blank unless the extension explicitly requires a value
-3. Deploy the repository's Cloud Functions:
-
-   ```bash
-   npx firebase-tools@15.28.2 deploy --only functions \
-     --project virtualartplattform
-   ```
-
-4. Supply these prompted parameters with real public information:
+3. Add these GitHub repository or organization variables with real public
+   information:
    - `AURA_PUBLIC_APP_URL`: `https://lieuva.com`
    - `AURA_REPLY_TO`: the monitored support email
    - `AURA_LEGAL_FOOTER`: legal sender name and full postal address
+4. Use the immutable production release in sections 8 and 10. It verifies these
+   values, packages the legacy-named Function parameters, and promotes Functions
+   and Hosting together. Do not bypass the gate with a direct Functions deploy.
 5. In **Authentication → Templates → Email address verification**, set the
    custom action URL to:
    `https://lieuva.com/`
@@ -82,8 +79,10 @@ verify the sending domain, and create a real sender address such as
 
 The branded functions use the Admin SDK to create Firebase action links. Do
 not call the Firestore `mail` collection from the browser. Marketing consent
-must remain optional. Before sending recurring campaigns, replace the preview
-data notice with final operator details, privacy policy, imprint/terms where
+must remain optional. Release preflight and the Functions runtime both reject
+empty, malformed, or placeholder URL, reply-to, and legal-footer values before
+mail is queued. Before sending recurring campaigns, replace the preview data
+notice with final operator details, privacy policy, imprint/terms where
 required, and obtain legal review for each target country.
 
 Live email acceptance test:
@@ -146,7 +145,9 @@ Storage rules read the matching Firestore gallery and ACL before returning an
 image. The first Firebase Console publish may ask to enable cross-service
 permissions; accept that prompt for this project.
 
-The Firebase Hosting/Functions workflow currently does not deploy Firebase rules. For a manual rules/index promotion:
+The immutable production artifact contains only Functions and Hosting, which
+the workflow promotes together. It cannot deploy Firestore rules/indexes or
+Storage rules. For a separate manual rules/index promotion:
 
 ```bash
 npx firebase-tools@15.28.2 login
@@ -223,26 +224,21 @@ lifecycle Functions require a valid App Check token.
    `bbyw2hrnf6-boop.github.io` origin.
 3. Add a GitHub repository variable named
    `VITE_FIREBASE_APPCHECK_SITE_KEY` containing that public site key.
-4. Deploy only the trusted room Functions (email remains independent):
-
-   ```bash
-   npx firebase-tools@15.28.2 deploy \
-     --only functions:beginAuraGalleryPublication,functions:abortAuraGalleryPublication,functions:manageAuraGalleryLifecycle,functions:purgeAuraGallery,functions:createAuraGalleryInvite,functions:acceptAuraGalleryInvite,functions:revokeAuraGalleryAccess \
-     --project virtualartplattform
-   ```
-
-   This deploy does **not** need SMTP, a sending domain, or the Trigger Email
-   extension. Firebase may ask to enable Cloud Functions, Cloud Run, Cloud
-   Build, Artifact Registry, and Eventarc APIs on the first deployment; allow
-   those APIs for this project. Until this command succeeds, publishing,
-   visibility changes, Trash/restore, renewal, and ACL invitations intentionally
-   fail closed instead of changing room data directly from the browser.
-
-5. Publish the current Firestore and Storage rules manually.
-6. Deploy the web app, verify publishing and lifecycle actions, then enable
+4. Complete the email parameters in section 2 and the WIF/environment setup in
+   section 8. The production gate validates all deployed Functions together; it
+   intentionally does not offer a partial core-Functions bypass.
+5. On the first deployment, enable Cloud Functions, Cloud Run, Cloud Build,
+   Artifact Registry, and Eventarc APIs for this project if Google Cloud asks.
+   Until the verified combined release succeeds, publishing, visibility
+   changes, Trash/restore, renewal, and ACL invitations intentionally fail
+   closed instead of changing room data directly from the browser.
+6. Publish the current Firestore and Storage rules manually through the separate
+   reviewed rules process.
+7. Promote the verified Functions and Hosting artifact as described in section
+   10, verify publishing and lifecycle actions, then enable
    App Check enforcement for **Cloud Functions, Firestore and Storage** in the
    Firebase Console. Use monitor mode first and review metrics before enforcing.
-7. For local testing, register a Firebase App Check debug token and place it in
+8. For local testing, register a Firebase App Check debug token and place it in
    an uncommitted `.env.local` as
    `VITE_FIREBASE_APPCHECK_DEBUG_TOKEN=...`. Never put a debug token in GitHub
    variables or a production bundle.
@@ -269,25 +265,84 @@ Owner/Editor ACL and App Check.
 - White Cube and Nocturne accept up to eight works; Grand Forum accepts fourteen.
 - Local drafts remain in IndexedDB and never require Firebase.
 
-## 8. Lifecycle and cleanup
+## 8. Lifecycle, cleanup and keyless GitHub authentication
 
 At each room's `expiresAt`, Firestore and Storage rules stop public reads. A room
 in Trash is hidden immediately and receives `purgeAt` seven days later.
 `.github/workflows/cleanup.yml` deletes Storage objects first, then ACL records,
 the gallery manifest, and any legacy artwork documents after either deadline.
 
-The `FIREBASE_SERVICE_ACCOUNT` GitHub secret needs minimum Firestore read/delete
-and Storage object-delete permission. Never grant Owner. The workflow now uses
-Google's official authentication action and prints the OAuth reason without
-printing credentials. A `400 invalid_grant` means the key must be rotated; the
-script cannot repair a revoked key. Prefer Workload Identity Federation for the
-long-term production credential.
+Production promotion and cleanup use GitHub OIDC through Google Cloud Workload
+Identity Federation (WIF). They do not use a long-lived JSON key. Do not create
+or restore a Firebase service-account-key secret.
+
+Configure the external trust once:
+
+1. Create a WIF pool and OIDC provider in project `virtualartplattform` for
+   `https://token.actions.githubusercontent.com/`. Restrict its attribute
+   condition to immutable owner ID `278525962`, repository ID `1315998556`,
+   `refs/heads/main`, and one of these exact workflow/environment pairs:
+   - `bbyw2hrnf6-boop/VirtualArtPlattform/.github/workflows/deploy.yml@refs/heads/main`
+     with subject
+     `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-production`;
+   - `bbyw2hrnf6-boop/VirtualArtPlattform/.github/workflows/cleanup.yml@refs/heads/main`
+     with subject
+     `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-cleanup`.
+   Map `google.subject=assertion.sub` and the numeric owner/repository ID,
+   `ref`, and `workflow_ref` claims before using them in conditions. Do not
+   trust a mutable repository name alone, an organization, or all GitHub
+   repositories broadly.
+2. Create separate deploy and cleanup service accounts. Grant the exact GitHub
+   WIF principals `roles/iam.workloadIdentityUser` only on their service
+   accounts. The deploy identity needs only the Firebase Hosting/Functions and
+   supporting Google Cloud permissions required by `deploy.yml`. The cleanup
+   identity needs Firestore read/delete plus Storage list/delete only for
+   `virtualartplattform.firebasestorage.app`. Never grant Owner.
+3. Add these **repository or organization variables**. They must be available
+   before any protected environment is entered because main `Verify` builds the
+   immutable production artifact and the unprivileged deploy resolver validates
+   it:
+   - `VITE_FIREBASE_APPCHECK_SITE_KEY`;
+   - `AURA_PUBLIC_APP_URL`;
+   - `AURA_REPLY_TO`;
+   - `AURA_LEGAL_FOOTER`;
+   - optional `WP2_NOINDEX_PATH`, set to one exact pending `/spaces/{id}` or
+     `/creators/{handle}` path.
+4. Create and protect `firebase-production`, restrict it to `main`, require an
+   independent reviewer, and add `FIREBASE_DEPLOY_SERVICE_ACCOUNT_EMAIL` plus
+   `GCP_WORKLOAD_IDENTITY_PROVIDER`.
+5. Create and protect `firebase-cleanup`, restrict it to `main`, and add
+   `FIREBASE_CLEANUP_SERVICE_ACCOUNT_EMAIL` plus
+   `GCP_WORKLOAD_IDENTITY_PROVIDER`. A common provider may instead be a shared
+   repository/organization variable. Choose review rules compatible with
+   whether scheduled cleanup should wait for a human.
+6. Do not define environment-level overrides for the four production build
+   variables. The artifact records their fingerprints, and a changed value at
+   deploy time fails closed.
+7. Protect `main` with the pull-request quality gate. Then retain one successful
+   main artifact/run record, approve one production promotion, and manually run
+   cleanup once before relying on either operational path.
+
+Main `Verify` compiles and browser-smokes the exact release, generates and
+validates `functions/functions.yaml`, and uploads a digest-bound artifact.
+Within the production release, only the protected deploy job receives
+`id-token: write`; it deploys Functions and Hosting together without checkout,
+application dependency installation, predeploy hooks, or a rebuild. It installs
+only Firebase CLI `15.28.2` from its verified dedicated lock with lifecycle
+scripts disabled. The Functions environment file is created with mode `0600`;
+because artifact transport resets file modes, the privileged verifier restores
+`0600` after download. A separate job then smokes production without a cloud
+credential. Cleanup independently receives OIDC permission and mints a
+short-lived scoped access token in its own environment. The complete release
+sequence is recorded in
+[WP2 — Deterministic Release Gate](audit/WP2-DETERMINISTIC-RELEASE-GATE.md).
 
 Do not enable Firestore TTL as a replacement without redesigning cleanup: Firestore TTL cannot remove related Storage objects.
 
 ## 9. Live verification
 
-1. Deploy the web app after publishing both rule files.
+1. Promote the verified combined Functions and Hosting artifact after
+   publishing both rule files.
 2. Create a room with one small image and publish it.
 3. Confirm an anonymous user under **Authentication → Users**.
 4. Confirm one schema-v3 document under `galleries`.
@@ -308,9 +363,12 @@ The canonical URL uses the existing Firestore publication ID:
 
 `https://lieuva.com/spaces/{galleryId}`
 
-No Firestore ID, collection, Storage path, callable name, ACL or revision migration is involved. The default root build prepares `functions/generated/app-shell.html`; it is generated, ignored by Git, and included in the Functions upload after the predeploy build.
+No Firestore ID, collection, Storage path, callable name, ACL or revision
+migration is involved. Main `Verify` prepares
+`functions/generated/app-shell.html`, verifies it is byte-equal to the Hosting
+`dist/index.html`, and includes both in one immutable release artifact.
 
-### Preview and cutover order
+### Current release order
 
 1. Run the local gates:
 
@@ -319,51 +377,48 @@ No Firestore ID, collection, Storage path, callable name, ACL or revision migrat
    npm ci --prefix functions
    npm run check
    npm run check:functions
+   npm run test:browser-smoke:install
+   npm run test:browser-smoke
    ```
 
-2. Confirm the generated shell exists after the build:
+2. Merge the reviewed revision to `main`. The `Verify` workflow reruns the
+   non-build quality gate, then builds and smokes the exact production-configured
+   Functions and Hosting artifact. It generates and validates
+   `functions/functions.yaml`, records every file digest, strips Firebase
+   predeploy hooks, and uploads the artifact for 30 days. The bundle has no
+   `node_modules`; it carries dedicated lock metadata for the exact Firebase CLI
+   instead.
+3. Inspect the main Verify result, commit SHA, artifact ID, and archive digest.
+   The automatic deploy resolves that exact successful push-to-main run. A
+   manual deploy requires the full SHA of an unexpired successful main artifact.
+4. The unprivileged resolver downloads and validates the artifact without WIF
+   or a protected environment. Approve `firebase-production` only after this
+   job passes.
+5. The privileged job redownloads and rechecks the same bytes, authenticates
+   with short-lived WIF credentials, and runs one combined
+   `functions,hosting` deployment from the sanitized artifact. It performs no
+   checkout, application dependency install, or build. It installs only the
+   digest-bound Firebase CLI tree with lifecycle scripts disabled. Rules and
+   indexes are not present in its Firebase config.
+6. A separate unprivileged job redownloads the same artifact and smokes the live
+   site without cloud credentials. Configure optional `WP2_NOINDEX_PATH` to
+   include one exact pending Space or Creator in this check.
+7. Inspect representative raw responses as well as the automated result:
 
    ```bash
-   test -f functions/generated/app-shell.html
+   curl -i https://lieuva.com/spaces/PUBLIC_ID
+   curl -i https://lieuva.com/spaces/UNLISTED_ID
+   curl -i https://lieuva.com/spaces/PRIVATE_ID
+   curl -i https://lieuva.com/spaces/does-not-exist
+   curl -i https://lieuva.com/sitemap.xml
    ```
 
-3. Review `firebase.json`. It rewrites `/spaces/**`, `/space-cards/**`, and `/sitemap.xml` to the three `europe-west1` Functions and leaves other paths on the Vite shell.
-4. During the explicitly approved external preview window, deploy only the three new delivery Functions. This does not change DNS or the currently served site:
-
-   ```bash
-   npx --yes firebase-tools@15.28.2 deploy \
-     --only functions:spaceDocument,functions:spaceCard,functions:spaceSitemap \
-     --project virtualartplattform
-   ```
-
-5. Create a Firebase Hosting preview channel that can now resolve those rewrites. Do not change DNS:
-
-   ```bash
-   npx --yes firebase-tools@15.28.2 hosting:channel:deploy wp5-review \
-     --project virtualartplattform
-   ```
-
-6. Before DNS changes, test the printed preview-channel host with one public, one unlisted and one private fixture. Inspect raw responses with `curl`, not only the rendered browser:
-
-   ```bash
-   curl -i https://PREVIEW_HOST/spaces/PUBLIC_ID
-   curl -i https://PREVIEW_HOST/spaces/UNLISTED_ID
-   curl -i https://PREVIEW_HOST/spaces/PRIVATE_ID
-   curl -i https://PREVIEW_HOST/spaces/does-not-exist
-   curl -i https://PREVIEW_HOST/sitemap.xml
-   ```
-
-   Public HTML must contain the Space title and self-canonical LIEUVA URL. Unlisted/private HTML must be generic and `noindex`. Missing Spaces must return 404. The sitemap must contain only active, unexpired public canonical URLs.
-7. After preview acceptance, deploy production Hosting while the custom domain still points at its current host, then repeat the checks on the Firebase `web.app` host:
-
-   ```bash
-   npx --yes firebase-tools@15.28.2 deploy --only hosting \
-     --project virtualartplattform
-   ```
-
-8. Add `lieuva.com` and `www.lieuva.com` to Firebase Hosting, complete its ownership/DNS instructions, and keep both in Firebase Auth authorized domains. Do not remove the GitHub hostname during the rollback window.
-9. After the certificate and DNS are healthy, repeat the raw checks on `https://lieuva.com`, verify `#/g/{id}` redirects to the same clean Space, and test Auth verification, Google OAuth, invitations, private access, PWA launch, refresh, back and forward.
-10. Only after that, submit `https://lieuva.com/sitemap.xml` in Search Console.
+   Approved public HTML must contain current metadata and a self-canonical
+   LIEUVA URL. Pending, unlisted, and private HTML must remain generic and
+   `noindex`; missing Spaces return 404. The sitemap contains only currently
+   approved, active, unexpired public URLs. Also verify the legacy `#/g/{id}`
+   redirect, Auth actions, invitations, private access, PWA launch, refresh,
+   back, and forward.
 
 ### Cache and privacy behavior
 
@@ -374,19 +429,39 @@ No Firestore ID, collection, Storage path, callable name, ACL or revision migrat
 
 ### Rollback
 
-Repoint the custom domain to the previous GitHub Pages delivery, run the retained Pages workflow if required, and remove/disable only the new Hosting rewrites after traffic is back. Do not delete Functions, Firestore documents, Storage objects, IDs, revisions or ACL. Existing `#/g/{id}` links retain the durable publication ID and remain compatible with the legacy build.
+Manually dispatch the deploy workflow with the full SHA of a still-retained
+previous successful-main artifact. The same validation, approval, combined
+Functions/Hosting promotion, and credential-free smoke apply. Artifacts are
+retained for 30 days. If the required artifact expired, revert the change on
+`main` and let `Verify` produce a new reviewed artifact; do not rebuild old
+bytes inside the deploy job.
+
+If Firebase Hosting or the custom domain itself must be abandoned, the retained
+GitHub Pages delivery remains the infrastructure fallback after traffic is
+repointed. Do not delete Functions, Firestore documents, Storage objects, IDs,
+revisions, or ACLs as a rollback mechanism. Existing `#/g/{id}` links retain
+the durable publication ID and remain compatible with the legacy build.
 
 ## 11. Optional: migrate still-active legacy rooms
 
-New rooms need no migration. To move old schema-v1 artwork Data URLs out of Firestore, first export/backup Firestore, then run the guarded script manually:
+New rooms need no migration. To move old schema-v1 artwork Data URLs out of
+Firestore, first export/backup Firestore, authenticate a named operator with
+`gcloud`, and pass only a short-lived OAuth token to the guarded script:
 
 ```bash
-FIREBASE_SERVICE_ACCOUNT='{"...":"complete service account JSON"}' \
-FIREBASE_STORAGE_BUCKET='virtualartplattform.firebasestorage.app' \
+gcloud auth login
+gcloud config set project virtualartplattform
+export FIREBASE_PROJECT_ID='virtualartplattform'
+export FIREBASE_STORAGE_BUCKET='virtualartplattform.firebasestorage.app'
+export GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)"
 node scripts/migrate-gallery-assets-to-storage.mjs --execute
+unset GOOGLE_OAUTH_ACCESS_TOKEN
 ```
 
-Without `--execute`, the script exits before any network request. Review credentials, project and backup first. The script keeps legacy artwork documents until their normal scheduled expiry cleanup, providing a rollback window. Do not place the service-account JSON in a shell-history file or commit it.
+Without `--execute`, the script exits before any network request. Review the
+operator identity, exact project and backup first. The script keeps legacy
+artwork documents until their normal scheduled expiry cleanup, providing a
+rollback window. Never print, persist or commit the access token.
 
 ## 12. Troubleshooting
 
@@ -396,14 +471,21 @@ Without `--execute`, the script exits before any network request. Review credent
 - `firestore/permission-denied`: publish current `firestore.rules` to the same project.
 - `auth/unauthorized-domain`: add the hostname under Authorized domains.
 - Callable returns `failed-precondition` before deployment: register App Check,
-  deploy the trusted room Functions, publish both rule files, then deploy the
-  site with the GitHub site-key variable.
+  publish both rule files, configure the production variables, then promote the
+  verified combined Functions and Hosting artifact.
 - Callable returns `internal`, or its `europe-west1` endpoint returns HTTP 404:
-  the core room Functions are not deployed. Run the section 6 core-only deploy;
-  SMTP is not required for it.
-- Cleanup `400 invalid_grant`: create a new service-account key with the same
-  minimal roles, replace the GitHub `FIREBASE_SERVICE_ACCOUNT` secret, revoke
-  the old key, and rerun the cleanup workflow.
+  the Functions are not deployed. Complete sections 6, 8, and 10 and promote a
+  verified main artifact; the email extension's SMTP setup remains independent
+  of the room callable runtime.
+- Cleanup/deploy reports a missing or invalid identity variable: confirm the
+  full `GCP_WORKLOAD_IDENTITY_PROVIDER` resource name and the applicable
+  `FIREBASE_CLEANUP_SERVICE_ACCOUNT_EMAIL` or
+  `FIREBASE_DEPLOY_SERVICE_ACCOUNT_EMAIL` GitHub variable.
+- WIF authentication returns `permission_denied`: verify the provider's exact
+  repository/ref/workflow attribute condition and the service account's
+  `roles/iam.workloadIdentityUser` binding. If authentication succeeds but an
+  operation returns 403, inspect that identity's least-privilege Firebase,
+  Firestore or Storage IAM grants; do not fall back to a JSON key or Owner.
 - Share link has metadata but missing images: verify Storage rules, CORS, object expiry metadata, and object paths.
 
 Official references: [Storage web setup](https://firebase.google.com/docs/storage/web/start), [Storage rules](https://firebase.google.com/docs/storage/security), [billing requirement](https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024), [Anonymous Auth](https://firebase.google.com/docs/auth/web/anonymous-auth).

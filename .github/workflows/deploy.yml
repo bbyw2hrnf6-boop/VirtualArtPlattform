@@ -1,57 +1,547 @@
-name: Deploy to Firebase Hosting
+name: Deploy verified production artifact
 
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: [Verify]
+    types: [completed]
   workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full 40-character commit SHA from a successful main Verify run
+        required: true
+        type: string
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
+  # A production promotion must never be cancelled between Functions and Hosting.
   group: firebase-production
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  resolve-release:
+    name: Resolve and validate immutable release
+    if: >-
+      ${{
+        (github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main') ||
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact_digest: ${{ steps.resolve.outputs.artifact_digest }}
+      artifact_id: ${{ steps.resolve.outputs.artifact_id }}
+      artifact_name: ${{ steps.resolve.outputs.artifact_name }}
+      deploy_sha: ${{ steps.resolve.outputs.deploy_sha }}
+      manifest_sha256: ${{ steps.verify.outputs.manifest_sha256 }}
+      verify_run_id: ${{ steps.resolve.outputs.verify_run_id }}
+    env:
+      NODE_VERSION: 22.23.2
+      NPM_VERSION: 10.9.8
+      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_PROJECT_ID: virtualartplattform
+      LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
+      VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
+      VITE_TELEMETRY_MODE: functions
+      VITE_TELEMETRY_ENVIRONMENT: production
+      AURA_PUBLIC_APP_URL: ${{ vars.AURA_PUBLIC_APP_URL }}
+      AURA_REPLY_TO: ${{ vars.AURA_REPLY_TO }}
+      AURA_LEGAL_FOOTER: ${{ vars.AURA_LEGAL_FOOTER }}
+    steps:
+      - name: Resolve exact successful Verify run and artifact
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          REQUESTED_RUN_ID: ${{ github.event.workflow_run.id }}
+          REQUESTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.commit_sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFile } from "node:fs/promises";
+
+          const {
+            EVENT_NAME: eventName,
+            GH_TOKEN: token,
+            GITHUB_OUTPUT: output,
+            REPOSITORY: repository,
+            REQUESTED_RUN_ID: requestedRunId,
+            REQUESTED_SHA: sha,
+          } = process.env;
+          if (!/^[0-9a-f]{40}$/.test(sha ?? ""))
+            throw new Error("Deployment requires a full lowercase 40-character commit SHA.");
+
+          const headers = {
+            Accept: "application/vnd.github+json",
+            Authorization: `Bearer ${token}`,
+            "X-GitHub-Api-Version": "2022-11-28",
+          };
+          const getJson = async (path) => {
+            const response = await fetch(`https://api.github.com/repos/${repository}${path}`, { headers });
+            if (!response.ok) throw new Error(`GitHub provenance request failed (${response.status}) for ${path}.`);
+            return response.json();
+          };
+          const isVerifiedRun = (run) =>
+            run?.path === ".github/workflows/ci.yml"
+            && run?.event === "push"
+            && run?.head_branch === "main"
+            && run?.head_sha === sha
+            && run?.conclusion === "success"
+            && run?.repository?.full_name === repository
+            && run?.head_repository?.full_name === repository;
+
+          let candidateIds;
+          if (eventName === "workflow_run") {
+            if (!/^[1-9][0-9]*$/.test(requestedRunId ?? ""))
+              throw new Error("Triggering Verify run ID is invalid.");
+            candidateIds = [requestedRunId];
+          } else {
+            const query = new URLSearchParams({
+              event: "push",
+              head_sha: sha,
+              per_page: "100",
+              status: "success",
+            });
+            const listing = await getJson(`/actions/workflows/ci.yml/runs?${query}`);
+            candidateIds = (listing.workflow_runs ?? [])
+              .filter(isVerifiedRun)
+              .sort((left, right) => Number(right.id) - Number(left.id))
+              .map((run) => String(run.id));
+          }
+          if (!candidateIds.length) throw new Error("No successful push/main Verify run exists for this SHA.");
+
+          let selected;
+          for (const runId of candidateIds) {
+            const run = await getJson(`/actions/runs/${runId}`);
+            if (!isVerifiedRun(run)) {
+              if (eventName === "workflow_run")
+                throw new Error("Trigger run is not a successful push/main execution of .github/workflows/ci.yml.");
+              continue;
+            }
+            const artifactName = `lieuva-production-${sha}-${runId}`;
+            const listing = await getJson(`/actions/runs/${runId}/artifacts?per_page=100`);
+            const artifacts = (listing.artifacts ?? []).filter((artifact) => artifact.name === artifactName);
+            if (
+              artifacts.length !== 1
+              || artifacts[0].expired
+              || !/^sha256:[0-9a-f]{64}$/.test(artifacts[0].digest ?? "")
+              || String(artifacts[0].workflow_run?.id ?? runId) !== runId
+            ) {
+              if (eventName === "workflow_run")
+                throw new Error("Trigger run has no unique, live, digest-bound production artifact.");
+              continue;
+            }
+            selected = { artifact: artifacts[0], artifactName, runId };
+            break;
+          }
+          if (!selected) throw new Error("No verified run has a valid immutable production artifact.");
+
+          if (eventName === "workflow_run") {
+            const main = await getJson("/git/ref/heads/main");
+            if (main.object?.sha !== sha)
+              throw new Error("Main advanced after Verify; refusing an automatic stale deployment.");
+          }
+
+          await appendFile(output, [
+            `artifact_digest=${selected.artifact.digest}`,
+            `artifact_id=${selected.artifact.id}`,
+            `artifact_name=${selected.artifactName}`,
+            `deploy_sha=${sha}`,
+            `verify_run_id=${selected.runId}`,
+            "",
+          ].join("\n"));
+          NODE
+
+      - name: Check out the verified revision for unprivileged validation
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ steps.resolve.outputs.deploy_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Use the pinned Node.js toolchain
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download only the resolved Verify artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ steps.resolve.outputs.artifact_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.resolve.outputs.verify_run_id }}
+          path: artifacts/wp2-release
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Verify release allowlist, manifest, and configuration
+        id: verify
+        env:
+          DEPLOY_SHA: ${{ steps.resolve.outputs.deploy_sha }}
+        run: |
+          test "$(node --version)" = "v${NODE_VERSION}"
+          test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+          node scripts/wp2-release-artifact.mjs verify \
+            --commit-sha "$DEPLOY_SHA" \
+            --node-version "$NODE_VERSION" \
+            --firebase-cli-version "$FIREBASE_CLI_VERSION" \
+            --project-id "$FIREBASE_PROJECT_ID" \
+            --origin "$LIEUVA_PRODUCTION_ORIGIN"
+          manifest_sha256="$(sha256sum artifacts/wp2-release/lieuva-release-manifest.json | awk '{print $1}')"
+          test "$manifest_sha256" != ""
+          echo "manifest_sha256=$manifest_sha256" >> "$GITHUB_OUTPUT"
+          git diff --exit-code
+
   deploy:
-    runs-on: ubuntu-latest
+    name: Promote Functions and Hosting
+    needs: resolve-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
     environment:
       name: firebase-production
-      url: https://virtualartplattform.web.app
+      url: https://lieuva.com
+    env:
+      NODE_VERSION: 22.23.2
+      NPM_VERSION: 10.9.8
+      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_PROJECT_ID: virtualartplattform
+      LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
+      DEPLOY_SHA: ${{ needs.resolve-release.outputs.deploy_sha }}
+      VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
+      VITE_TELEMETRY_MODE: functions
+      VITE_TELEMETRY_ENVIRONMENT: production
+      AURA_PUBLIC_APP_URL: ${{ vars.AURA_PUBLIC_APP_URL }}
+      AURA_REPLY_TO: ${{ vars.AURA_REPLY_TO }}
+      AURA_LEGAL_FOOTER: ${{ vars.AURA_LEGAL_FOOTER }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      FIREBASE_DEPLOY_SERVICE_ACCOUNT_EMAIL: ${{ vars.FIREBASE_DEPLOY_SERVICE_ACCOUNT_EMAIL }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Use the pinned Node.js toolchain
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm ci --prefix functions
-      - run: npm run check
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Redownload the exact immutable release
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.resolve-release.outputs.artifact_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.resolve-release.outputs.verify_run_id }}
+          path: artifacts/privileged-release
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Recheck immutable bytes and deployment contract
         env:
-          VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
-      - run: npm run check:functions
-      - name: Prepare Firebase Functions parameters
-        env:
-          AURA_PUBLIC_APP_URL: ${{ vars.AURA_PUBLIC_APP_URL }}
-          AURA_REPLY_TO: ${{ vars.AURA_REPLY_TO }}
-          AURA_LEGAL_FOOTER: ${{ vars.AURA_LEGAL_FOOTER }}
+          EXPECTED_MANIFEST_SHA256: ${{ needs.resolve-release.outputs.manifest_sha256 }}
         run: |
-          node -e 'const fs = require("node:fs"); const values = { AURA_PUBLIC_APP_URL: process.env.AURA_PUBLIC_APP_URL, AURA_REPLY_TO: process.env.AURA_REPLY_TO, AURA_LEGAL_FOOTER: process.env.AURA_LEGAL_FOOTER }; fs.writeFileSync("functions/.env.virtualartplattform", Object.entries(values).map(([key, value]) => key + "=" + JSON.stringify(value || "")).join("\n") + "\n");'
-      - name: Authenticate Firebase deployer
-        uses: google-github-actions/auth@v3
-        with:
-          credentials_json: ${{ secrets.FIREBASE_DEPLOY_SERVICE_ACCOUNT }}
-          project_id: virtualartplattform
-      - name: Deploy Hosting and Functions
+          node --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { chmod, lstat, readFile, readdir } from "node:fs/promises";
+          import { relative, resolve, sep } from "node:path";
+
+          const root = resolve("artifacts/privileged-release");
+          const digest = (value) => createHash("sha256").update(value).digest("hex");
+          const manifestBytes = await readFile(resolve(root, "lieuva-release-manifest.json"));
+          if (digest(manifestBytes) !== process.env.EXPECTED_MANIFEST_SHA256)
+            throw new Error("Release manifest digest changed between validation and deploy.");
+          const manifest = JSON.parse(manifestBytes);
+          const expected = {
+            commitSha: process.env.DEPLOY_SHA,
+            nodeVersion: process.env.NODE_VERSION,
+            firebaseCliVersion: process.env.FIREBASE_CLI_VERSION,
+            firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
+            productionOrigin: process.env.LIEUVA_PRODUCTION_ORIGIN,
+          };
+          for (const [key, value] of Object.entries(expected)) {
+            if (manifest[key] !== value) throw new Error(`Release manifest ${key} mismatch.`);
+          }
+          const configKeys = [
+            "AURA_LEGAL_FOOTER",
+            "AURA_PUBLIC_APP_URL",
+            "AURA_REPLY_TO",
+            "VITE_FIREBASE_APPCHECK_SITE_KEY",
+            "VITE_TELEMETRY_ENVIRONMENT",
+            "VITE_TELEMETRY_MODE",
+          ];
+          for (const key of configKeys) {
+            if (manifest.configurationFingerprints?.[key] !== `sha256:${digest(process.env[key] ?? "")}`)
+              throw new Error(`Production configuration ${key} changed after Verify.`);
+          }
+
+          const actual = [];
+          const exactReleaseFiles = new Set([
+            ".firebaserc",
+            "firebase-cli/package-lock.json",
+            "firebase-cli/package.json",
+            "firebase.json",
+            "functions/.env.virtualartplattform",
+            "functions/functions.yaml",
+            "functions/generated/app-shell.html",
+            "functions/package-lock.json",
+            "functions/package.json",
+            "package-lock.json",
+            "package.json",
+            "scripts/wp2-production-smoke.mjs",
+            "scripts/wp2-release-lib.mjs",
+          ]);
+          const allowedReleasePath = (name) =>
+            exactReleaseFiles.has(name)
+            || name.startsWith("dist/")
+            || (
+              name.startsWith("functions/lib/")
+              && name.endsWith(".js")
+              && !/[.](?:test|spec)[.]js$/i.test(name)
+            );
+          const walk = async (directory) => {
+            for (const entry of await readdir(directory, { withFileTypes: true })) {
+              const path = resolve(directory, entry.name);
+              const stat = await lstat(path);
+              if (stat.isSymbolicLink() || (!stat.isDirectory() && !stat.isFile()))
+                throw new Error("Release contains a link or special file.");
+              if (stat.isDirectory()) await walk(path);
+              else {
+                const name = relative(root, path).split(sep).join("/");
+                if (name !== "lieuva-release-manifest.json") {
+                  if (!/^[-A-Za-z0-9._@/+]+$/.test(name) || !allowedReleasePath(name))
+                    throw new Error(`Release contains forbidden path ${name}.`);
+                  actual.push({ path: name, type: "file", size: stat.size, sha256: digest(await readFile(path)) });
+                }
+              }
+            }
+          };
+          await walk(root);
+          actual.sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0);
+          const actualBytes = actual.reduce((total, entry) => total + entry.size, 0);
+          if (
+            actual.length > 5_000
+            || actualBytes > 250 * 1024 * 1024
+            || JSON.stringify(actual) !== JSON.stringify(manifest.files)
+          )
+            throw new Error("Release file set or digest does not match its manifest.");
+          const actualPaths = new Set(actual.map((entry) => entry.path));
+          for (const required of [...exactReleaseFiles, "dist/index.html", "functions/lib/index.js"])
+            if (!actualPaths.has(required)) throw new Error(`Release is missing ${required}.`);
+
+          const firebase = JSON.parse(await readFile(resolve(root, "firebase.json"), "utf8"));
+          if (
+            JSON.stringify(Object.keys(firebase).sort()) !== JSON.stringify(["functions", "hosting"])
+            || Object.hasOwn(firebase.functions ?? {}, "predeploy")
+            || Object.hasOwn(firebase.hosting ?? {}, "predeploy")
+            || firebase.functions?.source !== "functions"
+            || firebase.functions?.runtime !== "nodejs22"
+            || firebase.hosting?.public !== "dist"
+          ) throw new Error("Release Firebase config can deploy unverified targets or hooks.");
+          const cliPackage = JSON.parse(await readFile(resolve(root, "firebase-cli/package.json"), "utf8"));
+          const cliLock = JSON.parse(await readFile(resolve(root, "firebase-cli/package-lock.json"), "utf8"));
+          const packageKeys = ["dependencies", "description", "engines", "name", "packageManager", "private", "version"];
+          const lockKeys = ["lockfileVersion", "name", "packages", "requires", "version"];
+          const rootLockKeys = ["dependencies", "engines", "name", "version"];
+          if (
+            JSON.stringify(Object.keys(cliPackage).sort()) !== JSON.stringify(packageKeys)
+            || cliPackage.name !== "@lieuva/firebase-cli-toolchain"
+            || cliPackage.version !== "1.0.0"
+            || cliPackage.private !== true
+            || JSON.stringify(cliPackage.engines) !== JSON.stringify({ node: process.env.NODE_VERSION })
+            || cliPackage.packageManager !== `npm@${process.env.NPM_VERSION}`
+            || cliPackage.dependencies?.["firebase-tools"] !== process.env.FIREBASE_CLI_VERSION
+            || Object.keys(cliPackage.dependencies ?? {}).length !== 1
+            || Object.hasOwn(cliPackage, "scripts")
+            || JSON.stringify(Object.keys(cliLock).sort()) !== JSON.stringify(lockKeys)
+            || cliLock.lockfileVersion !== 3
+            || cliLock.requires !== true
+            || cliLock.name !== cliPackage.name
+            || cliLock.version !== cliPackage.version
+            || JSON.stringify(Object.keys(cliLock.packages?.[""] ?? {}).sort()) !== JSON.stringify(rootLockKeys)
+            || cliLock.packages?.[""]?.name !== cliPackage.name
+            || cliLock.packages?.[""]?.version !== cliPackage.version
+            || JSON.stringify(cliLock.packages?.[""]?.engines) !== JSON.stringify(cliPackage.engines)
+            || JSON.stringify(cliLock.packages?.[""]?.dependencies) !== JSON.stringify(cliPackage.dependencies)
+            || cliLock.packages?.["node_modules/firebase-tools"]?.version !== process.env.FIREBASE_CLI_VERSION
+          ) throw new Error("Firebase CLI lock inputs do not match the declared version.");
+          const forbiddenReference = /^(?:file:|link:|git(?:\+|:)|github:|https?:|ssh:)/i;
+          const dependencyClasses = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
+          const lockPackages = Object.entries(cliLock.packages ?? {});
+          if (lockPackages.length < 2 || lockPackages.length > 2_000)
+            throw new Error("Firebase CLI lock package count is invalid.");
+          for (const [path, dependency] of lockPackages) {
+            if (!path) continue;
+            if (
+              !path.startsWith("node_modules/")
+              || path.includes("\\")
+              || path.split("/").some((part) => !part || part === "." || part === "..")
+              || !dependency
+              || typeof dependency !== "object"
+              || Array.isArray(dependency)
+              || dependency.link === true
+              || dependency.inBundle === true
+              || typeof dependency.version !== "string"
+              || forbiddenReference.test(dependency.version)
+            ) throw new Error(`Firebase CLI lock contains unsafe package ${path}.`);
+            let registry;
+            try { registry = new URL(dependency.resolved); } catch { registry = undefined; }
+            if (
+              registry?.protocol !== "https:"
+              || registry.hostname !== "registry.npmjs.org"
+              || registry.port
+              || registry.username
+              || registry.password
+              || registry.search
+              || registry.hash
+              || !registry.pathname.endsWith(".tgz")
+            ) throw new Error(`Firebase CLI lock has unsafe registry URL for ${path}.`);
+            const integrity = dependency.integrity;
+            const encoded = typeof integrity === "string" && integrity.startsWith("sha512-")
+              ? integrity.slice("sha512-".length)
+              : "";
+            const integrityBytes = Buffer.from(encoded, "base64");
+            if (
+              !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)
+              || integrityBytes.length !== 64
+              || integrityBytes.toString("base64") !== encoded
+            ) throw new Error(`Firebase CLI lock has weak integrity for ${path}.`);
+            for (const dependencyClass of dependencyClasses) {
+              const references = dependency[dependencyClass];
+              if (references === undefined) continue;
+              if (!references || typeof references !== "object" || Array.isArray(references))
+                throw new Error(`Firebase CLI lock ${path} has malformed ${dependencyClass}.`);
+              for (const reference of Object.values(references)) {
+                if (typeof reference !== "string" || forbiddenReference.test(reference))
+                  throw new Error(`Firebase CLI lock ${path} has unsafe ${dependencyClass} reference.`);
+              }
+            }
+          }
+          const discovery = JSON.parse(await readFile(resolve(root, "functions/functions.yaml"), "utf8"));
+          if (discovery.specVersion !== "v1alpha1" || !Object.keys(discovery.endpoints ?? {}).length)
+            throw new Error("Functions discovery manifest is invalid.");
+          if (!/^projects\/[0-9]+\/locations\/global\/workloadIdentityPools\/[^/]+\/providers\/[^/]+$/.test(process.env.GCP_WORKLOAD_IDENTITY_PROVIDER ?? ""))
+            throw new Error("Workload Identity provider is missing or invalid.");
+          if (!/^[^@\s]+@[^@\s]+[.]iam[.]gserviceaccount[.]com$/.test(process.env.FIREBASE_DEPLOY_SERVICE_ACCOUNT_EMAIL ?? ""))
+            throw new Error("Deploy service account is missing or invalid.");
+          await chmod(resolve(root, "functions/.env.virtualartplattform"), 0o600);
+          NODE
+
+      - name: Install the digest-bound Firebase CLI without lifecycle scripts
         env:
-          VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
-          VITE_TELEMETRY_MODE: functions
-          VITE_TELEMETRY_ENVIRONMENT: production
-          AURA_PUBLIC_APP_URL: ${{ vars.AURA_PUBLIC_APP_URL }}
-          AURA_REPLY_TO: ${{ vars.AURA_REPLY_TO }}
-          AURA_LEGAL_FOOTER: ${{ vars.AURA_LEGAL_FOOTER }}
-        run: >-
-          npx --yes firebase-tools@latest deploy
-          --only "hosting,functions"
-          --project virtualartplattform
-          --non-interactive
+          NPM_CONFIG_IGNORE_SCRIPTS: "true"
+        run: |
+          test "$(node --version)" = "v${NODE_VERSION}"
+          test "$(npm --version)" = "$NPM_VERSION"
+          npm ci --prefix artifacts/privileged-release/firebase-cli --ignore-scripts --no-audit --no-fund
+          node -e 'const f=require("node:fs"); const p=JSON.parse(f.readFileSync("artifacts/privileged-release/firebase-cli/node_modules/firebase-tools/package.json", "utf8")); if(p.version!==process.env.FIREBASE_CLI_VERSION) process.exit(1)'
+
+      - name: Authenticate with short-lived Google credentials
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.FIREBASE_DEPLOY_SERVICE_ACCOUNT_EMAIL }}
+          project_id: ${{ env.FIREBASE_PROJECT_ID }}
+
+      - name: Reconfirm automatic revision is still main
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node --input-type=module <<'NODE'
+          const response = await fetch(`https://api.github.com/repos/${process.env.REPOSITORY}/git/ref/heads/main`, {
+            headers: {
+              Accept: "application/vnd.github+json",
+              Authorization: `Bearer ${process.env.GH_TOKEN}`,
+              "X-GitHub-Api-Version": "2022-11-28",
+            },
+          });
+          if (!response.ok) throw new Error(`GitHub main-head request failed (${response.status}).`);
+          const main = await response.json();
+          if (main.object?.sha !== process.env.DEPLOY_SHA)
+            throw new Error("Main advanced; refusing to begin an automatic stale deployment.");
+          NODE
+
+      # Firestore rules, indexes, and Storage rules are absent from the sanitized
+      # release config. Functions and pinTag Hosting rewrites promote together.
+      - name: Promote verified Functions and Hosting once
+        working-directory: artifacts/privileged-release
+        run: |
+          test "$(node --version)" = "v${NODE_VERSION}"
+          node firebase-cli/node_modules/firebase-tools/lib/bin/firebase.js deploy \
+            --only "functions,hosting" \
+            --project "$FIREBASE_PROJECT_ID" \
+            --message "GitHub ${DEPLOY_SHA}" \
+            --non-interactive
+
+      - name: Record promoted revision
+        run: |
+          {
+            echo "### Production promotion"
+            echo "- Revision: \`${DEPLOY_SHA}\`"
+            echo "- Verify run: \`${VERIFY_RUN_ID}\`"
+            echo "- Artifact: \`${ARTIFACT_NAME}\`"
+            echo "- Artifact archive digest: \`${ARTIFACT_DIGEST}\`"
+            echo "- Firebase CLI: \`${FIREBASE_CLI_VERSION}\`"
+            echo "- Targets: Functions + Hosting; rules/indexes/storage unchanged"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          VERIFY_RUN_ID: ${{ needs.resolve-release.outputs.verify_run_id }}
+          ARTIFACT_NAME: ${{ needs.resolve-release.outputs.artifact_name }}
+          ARTIFACT_DIGEST: ${{ needs.resolve-release.outputs.artifact_digest }}
+
+  smoke-production:
+    name: Smoke production without cloud credentials
+    needs: [resolve-release, deploy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+    env:
+      NODE_VERSION: 22.23.2
+      FIREBASE_PROJECT_ID: virtualartplattform
+      LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
+      WP2_NOINDEX_PATH: ${{ vars.WP2_NOINDEX_PATH }}
+    steps:
+      - name: Use the pinned Node.js toolchain
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download the promoted immutable release
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.resolve-release.outputs.artifact_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.resolve-release.outputs.verify_run_id }}
+          path: artifacts/smoke-release
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Smoke production delivery
+        env:
+          EXPECTED_MANIFEST_SHA256: ${{ needs.resolve-release.outputs.manifest_sha256 }}
+        working-directory: artifacts/smoke-release
+        run: |
+          test "$(node --version)" = "v${NODE_VERSION}"
+          test "$(sha256sum lieuva-release-manifest.json | awk '{print $1}')" = "$EXPECTED_MANIFEST_SHA256"
+          noindex_path="${WP2_NOINDEX_PATH:-}"
+          unset WP2_NOINDEX_PATH
+          smoke_args=(--base-url "$LIEUVA_PRODUCTION_ORIGIN" --project-id "$FIREBASE_PROJECT_ID" --timeout-ms 10000)
+          if [[ -n "$noindex_path" ]]; then smoke_args+=(--noindex-path "$noindex_path"); fi
+          for attempt in 1 2 3 4 5 6; do
+            if node scripts/wp2-production-smoke.mjs "${smoke_args[@]}"; then exit 0; fi
+            if [[ "$attempt" == 6 ]]; then
+              echo "Production smoke failed after six bounded attempts." >&2
+              exit 1
+            fi
+            sleep 5
+          done

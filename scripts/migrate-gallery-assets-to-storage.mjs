@@ -1,30 +1,19 @@
-import { createSign } from 'node:crypto';
-
 if (!process.argv.includes('--execute')) {
   console.error('Dry-run guard: no live data changed. Re-run with --execute only after backup and review.');
   process.exit(2);
 }
 
-const credentials = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
-if (!credentials.client_email || !credentials.private_key || !credentials.project_id)
-  throw new Error('FIREBASE_SERVICE_ACCOUNT must contain the complete service-account JSON.');
-const bucket = process.env.FIREBASE_STORAGE_BUCKET || `${credentials.project_id}.firebasestorage.app`;
-const encode = (value) => Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url');
-const issuedAt = Math.floor(Date.now() / 1000);
-const unsigned = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({
-  iss: credentials.client_email,
-  scope: 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/devstorage.read_write',
-  aud: 'https://oauth2.googleapis.com/token', iat: issuedAt, exp: issuedAt + 3600
-})}`;
-const signer = createSign('RSA-SHA256'); signer.update(unsigned); signer.end();
-const token = await fetch('https://oauth2.googleapis.com/token', {
-  method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
-  body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth2:grant-type:jwt-bearer', assertion: `${unsigned}.${signer.sign(credentials.private_key, 'base64url')}` })
-});
-if (!token.ok) throw new Error(`Token request failed: ${token.status}`);
-const { access_token: accessToken } = await token.json();
+const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+if (projectId !== 'virtualartplattform')
+  throw new Error('FIREBASE_PROJECT_ID must explicitly equal virtualartplattform.');
+const accessToken = process.env.GOOGLE_OAUTH_ACCESS_TOKEN?.trim();
+if (!accessToken)
+  throw new Error('GOOGLE_OAUTH_ACCESS_TOKEN is required. Use short-lived Workload Identity credentials.');
+const bucket = process.env.FIREBASE_STORAGE_BUCKET?.trim();
+if (bucket !== 'virtualartplattform.firebasestorage.app')
+  throw new Error('FIREBASE_STORAGE_BUCKET must explicitly equal the production bucket.');
 const auth = { authorization: `Bearer ${accessToken}` };
-const root = `https://firestore.googleapis.com/v1/projects/${credentials.project_id}/databases/(default)/documents`;
+const root = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
 const query = await fetch(`${root}:runQuery`, {
   method: 'POST', headers: { ...auth, 'content-type': 'application/json' },
   body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'galleries' }], where: { fieldFilter: { field: { fieldPath: 'schemaVersion' }, op: 'EQUAL', value: { integerValue: '1' } } } } })

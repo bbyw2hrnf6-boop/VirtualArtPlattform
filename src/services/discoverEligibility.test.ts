@@ -6,7 +6,8 @@ import {
   isPublicSpaceIndexEligible,
 } from "./discoverEligibility";
 
-const future = "2030-01-01T00:00:00.000Z";
+const now = Date.parse("2026-08-24T00:00:00.000Z");
+const future = new Date(now + 365 * 86_400_000).toISOString();
 const base = {
   visibility: "public",
   lifecycleStatus: "active",
@@ -29,7 +30,7 @@ describe("Discover eligibility", () => {
   });
 
   it("rejects expired, archived, invalid and empty records deterministically", () => {
-    expect(discoverEligibility({ ...base, expiresAt: "2020-01-01T00:00:00.000Z" }, Date.now()).reason).toBe("expired");
+    expect(discoverEligibility({ ...base, expiresAt: new Date(now - 1).toISOString() }, now).reason).toBe("expired");
     expect(discoverEligibility({ ...base, lifecycleStatus: "archived" }, 0).reason).toBe("not-active");
     expect(discoverEligibility({ ...base, title: "  " }, 0).reason).toBe("invalid-identity");
     expect(discoverEligibility({ ...base, artist: "A" }, 0).reason).toBe("invalid-identity");
