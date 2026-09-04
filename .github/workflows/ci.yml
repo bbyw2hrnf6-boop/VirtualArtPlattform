@@ -22,7 +22,8 @@ jobs:
       CI: "true"
       NODE_VERSION: 22.23.2
       NPM_VERSION: 10.9.8
-      JAVA_VERSION: 21.0.12.1+1
+      # setup-java matches Adoptium's catalog SemVer, not java.runtime.version.
+      JAVA_VERSION: 21.0.12+101.0.LTS
       FIREBASE_CLI_VERSION: 15.28.2
       FIREBASE_PROJECT_ID: virtualartplattform
       LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
