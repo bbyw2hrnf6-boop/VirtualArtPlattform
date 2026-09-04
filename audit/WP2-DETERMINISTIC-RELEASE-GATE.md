@@ -48,7 +48,8 @@ their values:
 npm run preflight:production -- \
   --project-id virtualartplattform \
   --origin https://lieuva.com \
-  --functions all
+  --functions all \
+  --mail-mode disabled
 ```
 
 The deployed read-only check is:
@@ -204,9 +205,13 @@ No long-lived Firebase service-account JSON is used. Cleanup runs from current
 `main` in the separate `firebase-cleanup` environment and mints a short-lived
 token scoped to Datastore and Storage read/write APIs.
 
-Production preflight rejects empty, malformed, or placeholder mail URL,
-reply-to, and legal-footer values. The mail Functions repeat that validation at
-runtime and fail closed before queuing delivery, so CI is not the only guard.
+Production preflight has two explicit modes. `required` rejects empty,
+malformed, or placeholder mail URL, reply-to, and legal-footer values.
+`disabled` requires bounded placeholder sender values, records the mode in the
+immutable schema-v2 release manifest, and still permits Functions and Hosting
+promotion. The mail Functions repeat validation at runtime and fail closed
+before queuing delivery. Activating mail requires replacing the placeholders
+and changing every committed workflow `WP2_MAIL_MODE` constant to `required`.
 
 ## Performance targets and release ceilings
 

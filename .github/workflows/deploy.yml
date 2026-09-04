@@ -47,6 +47,7 @@ jobs:
       FIREBASE_CLI_VERSION: 15.28.2
       FIREBASE_PROJECT_ID: virtualartplattform
       LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
+      WP2_MAIL_MODE: disabled
       VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
       VITE_TELEMETRY_MODE: functions
       VITE_TELEMETRY_ENVIRONMENT: production
@@ -192,6 +193,7 @@ jobs:
             --commit-sha "$DEPLOY_SHA" \
             --node-version "$NODE_VERSION" \
             --firebase-cli-version "$FIREBASE_CLI_VERSION" \
+            --mail-mode "$WP2_MAIL_MODE" \
             --project-id "$FIREBASE_PROJECT_ID" \
             --origin "$LIEUVA_PRODUCTION_ORIGIN"
           manifest_sha256="$(sha256sum artifacts/wp2-release/lieuva-release-manifest.json | awk '{print $1}')"
@@ -217,6 +219,7 @@ jobs:
       FIREBASE_CLI_VERSION: 15.28.2
       FIREBASE_PROJECT_ID: virtualartplattform
       LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
+      WP2_MAIL_MODE: disabled
       DEPLOY_SHA: ${{ needs.resolve-release.outputs.deploy_sha }}
       VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
       VITE_TELEMETRY_MODE: functions
@@ -263,6 +266,7 @@ jobs:
             nodeVersion: process.env.NODE_VERSION,
             firebaseCliVersion: process.env.FIREBASE_CLI_VERSION,
             firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
+            mailMode: process.env.WP2_MAIL_MODE,
             productionOrigin: process.env.LIEUVA_PRODUCTION_ORIGIN,
           };
           for (const [key, value] of Object.entries(expected)) {

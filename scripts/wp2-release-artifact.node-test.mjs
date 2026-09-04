@@ -130,6 +130,7 @@ test("assembles a production-only bundle and verifies every digest", async () =>
   const manifest = await assembleReleaseBundle(root, releaseRoot, options);
   assert.equal(manifest.commitSha, options.commitSha);
   assert.equal(manifest.firebaseCliVersion, "15.28.2");
+  assert.equal(manifest.mailMode, "required");
   assert.ok(
     manifest.files.some((entry) => entry.path === "functions/lib/index.js"),
   );
@@ -140,6 +141,23 @@ test("assembles a production-only bundle and verifies every digest", async () =>
   assert.equal(Object.hasOwn(firebase.functions, "predeploy"), false);
   assert.equal(Object.hasOwn(firebase.hosting, "predeploy"), false);
   await verifyReleaseBundle(releaseRoot, options);
+});
+
+test("assembles a fail-closed mail-disabled production bundle", async () => {
+  const root = await fixture();
+  const releaseRoot = join(root, RELEASE_DIRECTORY);
+  const disabledOptions = {
+    ...options,
+    mailMode: "disabled",
+    environment: {
+      ...environment,
+      AURA_REPLY_TO: "not-configured@invalid.example",
+      AURA_LEGAL_FOOTER: "LIEUVA preview — legal sender details not configured",
+    },
+  };
+  const manifest = await assembleReleaseBundle(root, releaseRoot, disabledOptions);
+  assert.equal(manifest.mailMode, "disabled");
+  await verifyReleaseBundle(releaseRoot, disabledOptions);
 });
 
 test("rejects changed bytes, config drift, extras, and symbolic links", async () => {

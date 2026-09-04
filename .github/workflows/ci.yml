@@ -204,6 +204,7 @@ jobs:
       FIREBASE_CLI_VERSION: 15.28.2
       FIREBASE_PROJECT_ID: virtualartplattform
       LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
+      WP2_MAIL_MODE: disabled
       VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
       VITE_TELEMETRY_MODE: functions
       VITE_TELEMETRY_ENVIRONMENT: production
@@ -234,6 +235,7 @@ jobs:
           --project-id "${FIREBASE_PROJECT_ID}"
           --origin "${LIEUVA_PRODUCTION_ORIGIN}"
           --functions all
+          --mail-mode "${WP2_MAIL_MODE}"
 
       - name: Install locked dependencies
         run: |
@@ -271,12 +273,14 @@ jobs:
             --commit-sha "$GITHUB_SHA" \
             --node-version "$NODE_VERSION" \
             --firebase-cli-version "$FIREBASE_CLI_VERSION" \
+            --mail-mode "$WP2_MAIL_MODE" \
             --project-id "$FIREBASE_PROJECT_ID" \
             --origin "$LIEUVA_PRODUCTION_ORIGIN"
           node scripts/wp2-release-artifact.mjs verify \
             --commit-sha "$GITHUB_SHA" \
             --node-version "$NODE_VERSION" \
             --firebase-cli-version "$FIREBASE_CLI_VERSION" \
+            --mail-mode "$WP2_MAIL_MODE" \
             --project-id "$FIREBASE_PROJECT_ID" \
             --origin "$LIEUVA_PRODUCTION_ORIGIN"
           rm functions/functions.yaml

@@ -23,6 +23,7 @@ function flags(argv) {
   const allowed = new Set([
     "commit-sha",
     "firebase-cli-version",
+    "mail-mode",
     "node-version",
     "origin",
     "project-id",
@@ -69,6 +70,7 @@ const expectations = {
     options.origin ??
     process.env.LIEUVA_PRODUCTION_ORIGIN ??
     "https://lieuva.com",
+  mailMode: options["mail-mode"] ?? process.env.WP2_MAIL_MODE ?? "required",
   environment: process.env,
 };
 if (expectations.nodeVersion !== process.versions.node)
@@ -87,6 +89,7 @@ process.stdout.write(
       commitSha: manifest.commitSha,
       nodeVersion: manifest.nodeVersion,
       firebaseCliVersion: manifest.firebaseCliVersion,
+      mailMode: manifest.mailMode,
       fileCount: manifest.files.length,
     },
     null,

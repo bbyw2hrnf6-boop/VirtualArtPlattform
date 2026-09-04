@@ -67,6 +67,24 @@ test('rejects parameter/default drift and configured sensitive values', () => {
     }),
     /configured value from DEPLOY_TOKEN/,
   );
+
+  assert.doesNotThrow(() => validateReleaseManifest(
+    validManifest(),
+    EXPECTED_RELEASE_ENDPOINTS,
+    {
+      AURA_REPLY_TO: 'not-configured@invalid.example',
+      AURA_LEGAL_FOOTER: 'LIEUVA preview — legal sender details not configured',
+    },
+  ));
+
+  const leakedMail = validManifest();
+  leakedMail.endpoints.spaceDocument.note = 'support@lieuva.com';
+  assert.throws(
+    () => validateReleaseManifest(leakedMail, EXPECTED_RELEASE_ENDPOINTS, {
+      AURA_REPLY_TO: 'support@lieuva.com',
+    }),
+    /configured value from AURA_REPLY_TO/,
+  );
 });
 
 test('requires the reviewed Cloud Scheduler API contract', () => {

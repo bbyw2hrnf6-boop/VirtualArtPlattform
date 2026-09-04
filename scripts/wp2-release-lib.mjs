@@ -45,6 +45,11 @@ export function parseFunctionSelection(value) {
   return { mode: "selected", names };
 }
 
+export function parseMailMode(value) {
+  if (value === "required" || value === "disabled") return value;
+  throw new Error("Declare mail mode explicitly as required or disabled.");
+}
+
 export function selectionRequiresMail(selection) {
   return selection.mode === "all" || [...selection.names].some((name) => MAIL_FUNCTIONS.has(name));
 }
@@ -109,12 +114,14 @@ export function inspectProductionEnvironment(environment, {
   functionSelection,
   expectedProjectId,
   expectedOrigin,
+  mailMode = "required",
   nodeVersion = process.versions.node,
 } = {}) {
   const selection = typeof functionSelection === "string"
     ? parseFunctionSelection(functionSelection)
     : functionSelection;
   if (!selection) throw new Error("Function selection is required for production validation.");
+  const normalizedMailMode = parseMailMode(mailMode);
   const projectId = validatedProjectId(expectedProjectId);
   const origin = validatedProductionOrigin(expectedOrigin);
   const issues = [];
@@ -146,8 +153,9 @@ export function inspectProductionEnvironment(environment, {
   if (environment.VITE_TELEMETRY_ENVIRONMENT !== "production")
     issues.push(issue("VITE_TELEMETRY_ENVIRONMENT", "must-equal-production"));
 
-  const mailRequired = selectionRequiresMail(selection);
-  if (mailRequired) {
+  const mailSelected = selectionRequiresMail(selection);
+  const mailRequired = mailSelected && normalizedMailMode === "required";
+  if (mailSelected) {
     const rawPublicUrl = environment.AURA_PUBLIC_APP_URL;
     const publicUrl = rawPublicUrl?.trim();
     if (missingOrPlaceholder(publicUrl)) issues.push(issue("AURA_PUBLIC_APP_URL", "missing-or-placeholder"));
@@ -162,22 +170,34 @@ export function inspectProductionEnvironment(environment, {
     }
     const rawReplyTo = environment.AURA_REPLY_TO;
     const replyTo = rawReplyTo?.trim();
-    if (
-      missingOrPlaceholder(replyTo)
-      || rawReplyTo !== replyTo
-      || !/^[^\s@]+@[^\s@]+[.][^\s@]+$/.test(replyTo ?? "")
-      || replyTo?.toLowerCase().endsWith("@invalid.example")
-    ) issues.push(issue("AURA_REPLY_TO", "missing-invalid-or-placeholder"));
+    const validReplyShape = rawReplyTo === replyTo
+      && /^[^\s@]+@[^\s@]+[.][^\s@]+$/.test(replyTo ?? "");
     const rawFooter = environment.AURA_LEGAL_FOOTER;
     const footer = rawFooter?.trim();
-    if (missingOrPlaceholder(footer) || rawFooter !== footer || (footer?.length ?? 0) < 20 || (footer?.length ?? 0) > 500)
-      issues.push(issue("AURA_LEGAL_FOOTER", "missing-invalid-or-placeholder"));
+    const validFooterShape = rawFooter === footer
+      && (footer?.length ?? 0) >= 20
+      && (footer?.length ?? 0) <= 500;
+    if (mailRequired) {
+      if (
+        missingOrPlaceholder(replyTo)
+        || !validReplyShape
+        || replyTo?.toLowerCase().endsWith("@invalid.example")
+      ) issues.push(issue("AURA_REPLY_TO", "missing-invalid-or-placeholder"));
+      if (missingOrPlaceholder(footer) || !validFooterShape)
+        issues.push(issue("AURA_LEGAL_FOOTER", "missing-invalid-or-placeholder"));
+    } else {
+      if (!validReplyShape || !PLACEHOLDER.test(replyTo ?? ""))
+        issues.push(issue("AURA_REPLY_TO", "disabled-mode-requires-placeholder"));
+      if (!validFooterShape || !PLACEHOLDER.test(footer ?? ""))
+        issues.push(issue("AURA_LEGAL_FOOTER", "disabled-mode-requires-placeholder"));
+    }
   }
 
   return {
     ok: issues.length === 0,
     issues,
     mailRequired,
+    mailMode: normalizedMailMode,
     functionMode: selection.mode,
     functionCount: selection.mode === "selected" ? selection.names.size : undefined,
     checkedFields: [
@@ -187,7 +207,7 @@ export function inspectProductionEnvironment(environment, {
       "VITE_FIREBASE_APPCHECK_DEBUG_TOKEN",
       "VITE_TELEMETRY_MODE",
       "VITE_TELEMETRY_ENVIRONMENT",
-      ...(mailRequired ? ["AURA_PUBLIC_APP_URL", "AURA_REPLY_TO", "AURA_LEGAL_FOOTER"] : []),
+      ...(mailSelected ? ["AURA_PUBLIC_APP_URL", "AURA_REPLY_TO", "AURA_LEGAL_FOOTER"] : []),
     ],
   };
 }

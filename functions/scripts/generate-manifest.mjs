@@ -103,6 +103,9 @@ const RELEASE_VALUES_FORBIDDEN_IN_MANIFEST = new Set([
   'AURA_REPLY_TO',
   'VITE_FIREBASE_APPCHECK_SITE_KEY',
 ]);
+const SAFE_RELEASE_PARAMETER_DEFAULTS = new Set(
+  EXPECTED_RELEASE_PARAMS.map((parameter) => parameter.default),
+);
 
 function fail(message) {
   throw new Error(`Invalid Functions release manifest: ${message}`);
@@ -149,6 +152,10 @@ export function canonicalManifestText(value) {
 function sensitiveEnvironmentEntries(environment) {
   return Object.entries(environment ?? {}).filter(([name, value]) => {
     if (typeof value !== 'string' || value.length < 8) return false;
+    if (
+      RELEASE_VALUES_FORBIDDEN_IN_MANIFEST.has(name)
+      && SAFE_RELEASE_PARAMETER_DEFAULTS.has(value)
+    ) return false;
     return RELEASE_VALUES_FORBIDDEN_IN_MANIFEST.has(name) || SENSITIVE_ENVIRONMENT_NAME.test(name);
   });
 }

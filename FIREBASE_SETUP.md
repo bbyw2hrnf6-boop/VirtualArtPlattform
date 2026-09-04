@@ -59,10 +59,13 @@ verify the sending domain, and create a real sender address such as
    - Default reply-to: the public support address
    - Users/templates collection: leave blank unless the extension explicitly requires a value
 3. Add these GitHub repository or organization variables with real public
-   information:
+   information before enabling mail delivery:
    - `AURA_PUBLIC_APP_URL`: `https://lieuva.com`
    - `AURA_REPLY_TO`: the monitored support email
    - `AURA_LEGAL_FOOTER`: legal sender name and full postal address
+   Until those facts are approved, keep explicit placeholder values and leave
+   every workflow `WP2_MAIL_MODE` constant set to `disabled`. The release still
+   promotes Functions and Hosting, while mail-producing paths fail closed.
 4. Use the immutable production release in sections 8 and 10. It verifies these
    values, packages the legacy-named Function parameters, and promotes Functions
    and Hosting together. Do not bypass the gate with a direct Functions deploy.
@@ -79,9 +82,11 @@ verify the sending domain, and create a real sender address such as
 
 The branded functions use the Admin SDK to create Firebase action links. Do
 not call the Firestore `mail` collection from the browser. Marketing consent
-must remain optional. Release preflight and the Functions runtime both reject
-empty, malformed, or placeholder URL, reply-to, and legal-footer values before
-mail is queued. Before sending recurring campaigns, replace the preview data
+must remain optional. In `disabled` mail mode, release preflight requires
+explicit placeholder sender values and the Functions runtime rejects them
+before mail is queued. To activate mail, replace both placeholders with approved
+facts and change every workflow `WP2_MAIL_MODE` constant to `required` in the
+same reviewed commit. Before sending recurring campaigns, replace the preview data
 notice with final operator details, privacy policy, imprint/terms where
 required, and obtain legal review for each target country.
 
@@ -443,6 +448,10 @@ Configure the external trust once:
 7. Do not define environment-level overrides for the four production build
    variables. The artifact records their fingerprints, and a changed value at
    deploy time fails closed.
+   While sender facts are pending, `WP2_MAIL_MODE: disabled` is committed in the
+   workflows and schema-v2 release manifests record that state. Disabled mode
+   accepts only explicit fail-closed placeholders. After the facts are supplied,
+   change every workflow occurrence to `required` in the same reviewed commit.
 8. Protect `main` with the pull-request quality gate. Then retain one successful
    main artifact/run record, approve one production promotion, and manually run
    cleanup once before relying on either operational path.

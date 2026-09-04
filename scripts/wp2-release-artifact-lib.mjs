@@ -14,12 +14,13 @@ import { validateFirebaseCliLock } from "../firebase-cli/validate-lock.mjs";
 import { validateReleaseManifest } from "../functions/scripts/generate-manifest.mjs";
 import {
   inspectProductionEnvironment,
+  parseMailMode,
   parseFunctionSelection,
 } from "./wp2-release-lib.mjs";
 
 export const RELEASE_DIRECTORY = "artifacts/wp2-release";
 export const RELEASE_MANIFEST = "lieuva-release-manifest.json";
-export const RELEASE_SCHEMA_VERSION = 1;
+export const RELEASE_SCHEMA_VERSION = 2;
 export const RELEASE_CONFIG_KEYS = Object.freeze([
   "AURA_LEGAL_FOOTER",
   "AURA_PUBLIC_APP_URL",
@@ -165,14 +166,23 @@ function checkedProductionOrigin(value) {
   return url.origin;
 }
 
+function checkedMailMode(value) {
+  try {
+    return parseMailMode(value);
+  } catch {
+    fail("mail mode must be required or disabled");
+  }
+}
+
 function assertProductionContract(
   environment,
-  { firebaseProjectId, productionOrigin, nodeVersion },
+  { firebaseProjectId, mailMode, productionOrigin, nodeVersion },
 ) {
   const result = inspectProductionEnvironment(environment, {
     functionSelection: parseFunctionSelection("all"),
     expectedProjectId: firebaseProjectId,
     expectedOrigin: productionOrigin,
+    mailMode,
     nodeVersion,
   });
   if (!result.ok) {
@@ -405,6 +415,7 @@ export async function verifyReleaseBundle(releaseRootValue, expectations = {}) {
       "files",
       "firebaseCliVersion",
       "firebaseProjectId",
+      "mailMode",
       "nodeVersion",
       "productionOrigin",
       "schemaVersion",
@@ -417,6 +428,7 @@ export async function verifyReleaseBundle(releaseRootValue, expectations = {}) {
   checkedVersion(manifest.nodeVersion, "Node.js version");
   checkedVersion(manifest.firebaseCliVersion, "Firebase CLI version");
   checkedProjectId(manifest.firebaseProjectId);
+  checkedMailMode(manifest.mailMode);
   checkedProductionOrigin(manifest.productionOrigin);
   assertExactKeys(
     manifest.configurationFingerprints,
@@ -458,6 +470,11 @@ export async function verifyReleaseBundle(releaseRootValue, expectations = {}) {
   )
     fail("manifest Firebase project does not match");
   if (
+    expectations.mailMode !== undefined &&
+    manifest.mailMode !== checkedMailMode(expectations.mailMode)
+  )
+    fail("manifest mail mode does not match");
+  if (
     expectations.productionOrigin !== undefined &&
     manifest.productionOrigin !==
       checkedProductionOrigin(expectations.productionOrigin)
@@ -466,6 +483,7 @@ export async function verifyReleaseBundle(releaseRootValue, expectations = {}) {
   if (expectations.environment) {
     assertProductionContract(expectations.environment, {
       firebaseProjectId: manifest.firebaseProjectId,
+      mailMode: manifest.mailMode,
       productionOrigin: manifest.productionOrigin,
       nodeVersion: manifest.nodeVersion,
     });
@@ -545,8 +563,10 @@ export async function assembleReleaseBundle(
   );
   const firebaseProjectId = checkedProjectId(options.firebaseProjectId);
   const productionOrigin = checkedProductionOrigin(options.productionOrigin);
+  const mailMode = checkedMailMode(options.mailMode ?? "required");
   assertProductionContract(options.environment, {
     firebaseProjectId,
+    mailMode,
     productionOrigin,
     nodeVersion,
   });
@@ -627,6 +647,7 @@ export async function assembleReleaseBundle(
     nodeVersion,
     firebaseCliVersion,
     firebaseProjectId,
+    mailMode,
     productionOrigin,
     configurationFingerprints,
     files: await releaseFileEntries(outputRoot),
@@ -641,6 +662,7 @@ export async function assembleReleaseBundle(
     nodeVersion,
     firebaseCliVersion,
     firebaseProjectId,
+    mailMode,
     productionOrigin,
     environment: options.environment,
   });

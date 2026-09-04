@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   inspectProductionEnvironment,
+  parseMailMode,
   parseFunctionSelection,
   parseWp2Flags,
   selectionRequiresMail,
@@ -22,10 +23,51 @@ test("strict flag and deploy-scope parsing rejects ambiguity", () => {
   assert.deepEqual(parseWp2Flags(["--functions", "none"], { functions: "value" }), { functions: "none" });
   assert.throws(() => parseWp2Flags(["--functions", "none", "--functions", "all"], { functions: "value" }), /Duplicate/);
   assert.throws(() => parseFunctionSelection(""), /Declare/);
+  assert.equal(parseMailMode("disabled"), "disabled");
+  assert.throws(() => parseMailMode("optional"), /required or disabled/);
   const selected = parseFunctionSelection("functions:creatorDocument,sendAuraVerificationEmail");
   assert.equal(selected.names.has("creatorDocument"), true);
   assert.equal(selectionRequiresMail(selected), true);
   assert.equal(selectionRequiresMail(parseFunctionSelection("hosting")), false);
+});
+
+test("disabled mail mode accepts only explicit fail-closed placeholders", () => {
+  const disabledEnvironment = {
+    ...baseEnvironment,
+    AURA_PUBLIC_APP_URL: "https://lieuva.com",
+    AURA_REPLY_TO: "not-configured@invalid.example",
+    AURA_LEGAL_FOOTER: "LIEUVA preview — legal sender details not configured",
+  };
+  const result = inspectProductionEnvironment(disabledEnvironment, {
+    functionSelection: parseFunctionSelection("all"),
+    expectedProjectId: "virtualartplattform",
+    expectedOrigin: "https://lieuva.com",
+    mailMode: "disabled",
+    nodeVersion: "22.13.1",
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.mailRequired, false);
+  assert.equal(result.mailMode, "disabled");
+  assert.deepEqual(result.checkedFields.slice(-3), [
+    "AURA_PUBLIC_APP_URL",
+    "AURA_REPLY_TO",
+    "AURA_LEGAL_FOOTER",
+  ]);
+
+  const accidentalLiveMail = inspectProductionEnvironment({
+    ...disabledEnvironment,
+    AURA_REPLY_TO: "support@lieuva.com",
+  }, {
+    functionSelection: parseFunctionSelection("all"),
+    expectedProjectId: "virtualartplattform",
+    expectedOrigin: "https://lieuva.com",
+    mailMode: "disabled",
+    nodeVersion: "22.13.1",
+  });
+  assert.equal(accidentalLiveMail.ok, false);
+  assert.equal(accidentalLiveMail.issues.some(
+    (item) => item.code === "disabled-mode-requires-placeholder",
+  ), true);
 });
 
 test("production preflight accepts bounded non-mail environment", () => {
