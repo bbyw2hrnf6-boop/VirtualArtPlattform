@@ -11,14 +11,20 @@
     "clean": "node scripts/clean-build.mjs",
     "build": "npm run clean && tsc -p tsconfig.json && node scripts/verify-build.mjs",
     "manifest:release": "node scripts/generate-manifest.mjs --project-id virtualartplattform",
+    "maintenance:storage-policy": "node scripts/migrate-storage-policy.mjs",
     "test": "vitest run",
     "test:scripts": "node --test scripts/*.node-test.mjs",
     "typecheck:test": "tsc -p tsconfig.test.json",
     "check": "npm run test && npm run test:scripts && npm run typecheck:test && npm run build"
   },
   "dependencies": {
-    "firebase-admin": "^14.2.0",
-    "firebase-functions": "^7.3.2"
+    "firebase-admin": "14.3.0",
+    "firebase-functions": "^7.3.2",
+    "sharp": "0.35.4"
+  },
+  "overrides": {
+    "qs": "6.16.0",
+    "uuid": "11.1.1"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",

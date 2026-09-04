@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   EXPECTED_RELEASE_ENDPOINTS,
   EXPECTED_RELEASE_PARAMS,
+  EXPECTED_RELEASE_REQUIRED_APIS,
   canonicalManifestText,
   validateReleaseManifest,
 } from './generate-manifest.mjs';
@@ -11,7 +12,7 @@ function validManifest(endpointNames = EXPECTED_RELEASE_ENDPOINTS) {
   return {
     endpoints: Object.fromEntries(endpointNames.map((name) => [name, { entryPoint: name }])),
     specVersion: 'v1alpha1',
-    requiredAPIs: [],
+    requiredAPIs: EXPECTED_RELEASE_REQUIRED_APIS.map((requirement) => ({ ...requirement })),
     extensions: {},
     params: EXPECTED_RELEASE_PARAMS.map((parameter) => ({ ...parameter })),
   };
@@ -65,5 +66,24 @@ test('rejects parameter/default drift and configured sensitive values', () => {
       DEPLOY_TOKEN: 'sentinel-secret-value',
     }),
     /configured value from DEPLOY_TOKEN/,
+  );
+});
+
+test('requires the reviewed Cloud Scheduler API contract', () => {
+  const missingSchedulerApi = validManifest();
+  missingSchedulerApi.requiredAPIs = [];
+  assert.throws(
+    () => validateReleaseManifest(missingSchedulerApi, EXPECTED_RELEASE_ENDPOINTS),
+    /requiredAPIs do not match/,
+  );
+
+  const unexpectedApi = validManifest();
+  unexpectedApi.requiredAPIs.push({
+    api: 'run.googleapis.com',
+    reason: 'Unexpected.',
+  });
+  assert.throws(
+    () => validateReleaseManifest(unexpectedApi, EXPECTED_RELEASE_ENDPOINTS),
+    /requiredAPIs do not match/,
   );
 });

@@ -30,11 +30,19 @@ const mock = vi.hoisted(() => {
     currentUser: null as MockUser | null,
     uploadCount: 0,
     failUploadAt: 0,
+    directUploadCount: 0,
+    assetUploadResponseLosses: 0,
+    assetUploadRequestIds: [] as string[],
     failSetDoc: false,
     failTransaction: false,
+    initialFinalizeResponseLosses: 0,
+    revisionFinalizeResponseLosses: 0,
     callableFailure: null as Error | null,
     deletedObjects: [] as string[],
     abortedGalleryIds: [] as string[],
+    abortedRevisions: [] as Array<{ galleryId: string; revisionId: string }>,
+    publicationPermits: new Map<string, { ownerId: string; visibility: string; expiresAt: string }>(),
+    revisionPermits: new Map<string, { ownerId: string; uploaderId: string; expiresAt: string }>(),
     clock: new Date("2026-08-23T10:00:00.000Z"),
   };
 
@@ -133,7 +141,6 @@ vi.mock("firebase/firestore", () => ({
   }),
   getDocs: vi.fn(async (input: MockQuery) => ({ docs: queryDocuments(input) })),
   setDoc: vi.fn(async (reference: MockReference, data: Record<string, unknown>) => {
-    if (mock.state.failSetDoc) throw firebaseError("firestore/unavailable", "write failed");
     mock.state.documents.set(reference.path, data);
   }),
   deleteDoc: vi.fn(async (reference: MockReference) => { mock.state.documents.delete(reference.path); }),
@@ -141,7 +148,6 @@ vi.mock("firebase/firestore", () => ({
     get: (reference: MockReference) => Promise<ReturnType<typeof snapshot>>;
     set: (reference: MockReference, data: Record<string, unknown>) => void;
   }) => Promise<void>) => {
-    if (mock.state.failTransaction) throw firebaseError("firestore/unavailable", "transaction failed");
     const staged = new Map<string, Record<string, unknown>>();
     await operation({
       get: async (reference) => snapshot(reference.path, mock.state.documents.get(reference.path)),
@@ -154,8 +160,9 @@ vi.mock("firebase/firestore", () => ({
 vi.mock("firebase/storage", () => ({
   ref: (_storage: unknown, path: string) => ({ path }),
   uploadBytes: vi.fn(async (reference: MockReference, blob: Blob) => {
+    mock.state.directUploadCount += 1;
     mock.state.uploadCount += 1;
-    if (mock.state.failUploadAt === mock.state.uploadCount)
+    if (mock.state.failUploadAt > 0 && mock.state.uploadCount >= mock.state.failUploadAt)
       throw firebaseError("storage/retry-limit-exceeded", "upload failed");
     mock.state.objects.set(reference.path, blob);
     return { ref: reference };
@@ -176,25 +183,224 @@ vi.mock("firebase/storage", () => ({
 }));
 
 vi.mock("firebase/functions", () => ({
-  httpsCallable: (_functions: unknown, name: string) => async ({
-    galleryId,
-    visibility,
-    email,
-    role,
-    inviteId,
-    action,
-    exploreListed,
-    creatorProfileListed,
-  }: Record<string, unknown>) => {
+  httpsCallable: (_functions: unknown, name: string) => async (payload: Record<string, unknown>) => {
+    const {
+      galleryId,
+      visibility,
+      email,
+      role,
+      inviteId,
+      action,
+      exploreListed,
+      creatorProfileListed,
+      revisionId,
+      expectedRevision,
+    } = payload;
     if (mock.state.callableFailure) throw mock.state.callableFailure;
     const user = mock.state.currentUser;
     if (name === "beginAuraGalleryPublication") {
       if (!user || user.isAnonymous || !user.emailVerified)
         throw firebaseError("functions/unauthenticated", "Verified account required");
-      return { data: { expiresAt: "2027-08-23T10:00:00.000Z", retention: "account-preview" } };
+      const expiresAt = "2027-08-23T10:00:00.000Z";
+      mock.state.publicationPermits.set(String(galleryId), {
+        ownerId: user.uid,
+        visibility: String(visibility),
+        expiresAt,
+      });
+      return { data: { expiresAt, retention: "account-preview" } };
+    }
+    if (name === "uploadAuraGalleryAsset") {
+      mock.state.assetUploadRequestIds.push(String(payload.requestId));
+      mock.state.uploadCount += 1;
+      if (mock.state.failUploadAt > 0 && mock.state.uploadCount >= mock.state.failUploadAt)
+        throw firebaseError("functions/unavailable", "upload failed");
+      const id = String(galleryId);
+      const revision = revisionId === undefined ? undefined : String(revisionId);
+      const initialPermit = mock.state.publicationPermits.get(id);
+      const revisionPermit = revision === undefined
+        ? undefined
+        : mock.state.revisionPermits.get(`${id}:${revision}`);
+      const ownerId = initialPermit?.ownerId ?? revisionPermit?.ownerId;
+      if (!user || !ownerId)
+        throw firebaseError("functions/failed-precondition", "Upload permit unavailable");
+      const kind = payload.kind;
+      const index = Number(payload.index);
+      const root = `published/${ownerId}/${id}${revision ? `/revisions/${revision}` : ""}`;
+      const path = kind === "cover"
+        ? `${root}/cover.webp`
+        : `${root}/artworks/${index + 1}.webp`;
+      const binary = atob(String(payload.bytesBase64));
+      const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+      const existing = mock.state.objects.get(path);
+      if (existing) {
+        const existingBytes = new Uint8Array(await existing.arrayBuffer());
+        if (
+          existingBytes.length !== bytes.length
+          || existingBytes.some((value, position) => value !== bytes[position])
+        ) throw firebaseError("functions/already-exists", "Different immutable bytes");
+      } else {
+        mock.state.objects.set(path, new Blob([bytes], { type: String(payload.contentType) }));
+      }
+      if (mock.state.assetUploadResponseLosses > 0) {
+        mock.state.assetUploadResponseLosses -= 1;
+        throw firebaseError("functions/unavailable", "response lost after create");
+      }
+      return { data: { path, bytes: bytes.length, idempotent: Boolean(existing) } };
+    }
+    if (name === "finalizeAuraGalleryPublication") {
+      if (mock.state.failSetDoc) throw firebaseError("firestore/unavailable", "write failed");
+      const id = String(galleryId);
+      const permit = mock.state.publicationPermits.get(id);
+      const existing = mock.state.documents.get(`galleries/${id}`);
+      if (existing && existing.ownerId === user?.uid && existing.revision === 1) {
+        const publishedAt = existing.publishedAt as InstanceType<typeof mock.Timestamp>;
+        const expiresAt = existing.expiresAt as InstanceType<typeof mock.Timestamp>;
+        const updatedAt = existing.updatedAt as InstanceType<typeof mock.Timestamp>;
+        const result = { data: {
+          publishedAt: publishedAt.toDate().toISOString(),
+          expiresAt: expiresAt.toDate().toISOString(),
+          updatedAt: updatedAt.toDate().toISOString(),
+          revision: 1,
+        } };
+        if (mock.state.initialFinalizeResponseLosses > 0) {
+          mock.state.initialFinalizeResponseLosses -= 1;
+          throw firebaseError("functions/unavailable", "response lost after commit");
+        }
+        return result;
+      }
+      if (!user || !permit || permit.ownerId !== user.uid)
+        throw firebaseError("functions/permission-denied", "Publication permit unavailable");
+      const publishedAt = mock.Timestamp.fromDate(mock.state.clock);
+      const expiresAt = mock.Timestamp.fromDate(new Date(permit.expiresAt));
+      const draft = payload.draft as GalleryDraft;
+      const distribution = payload.distribution as { exploreListed: boolean; creatorProfileListed: boolean };
+      mock.state.documents.set(`galleries/${id}`, {
+        ...draft,
+        coverPath: `published/${permit.ownerId}/${id}/cover.webp`,
+        ownerId: permit.ownerId,
+        publishedAt,
+        expiresAt,
+        schemaVersion: 3,
+        visibility: permit.visibility,
+        retention: "account-preview",
+        accessVersion: 1,
+        ...distribution,
+        discoverEligible: false,
+        revision: 1,
+        updatedAt: publishedAt,
+        lifecycleStatus: "active",
+      });
+      mock.state.publicationPermits.delete(id);
+      if (mock.state.initialFinalizeResponseLosses > 0) {
+        mock.state.initialFinalizeResponseLosses -= 1;
+        throw firebaseError("functions/unavailable", "response lost after commit");
+      }
+      return { data: {
+        publishedAt: publishedAt.toDate().toISOString(),
+        expiresAt: expiresAt.toDate().toISOString(),
+        updatedAt: publishedAt.toDate().toISOString(),
+        revision: 1,
+      } };
     }
     if (name === "abortAuraGalleryPublication") {
-      mock.state.abortedGalleryIds.push(String(galleryId));
+      const id = String(galleryId);
+      const permit = mock.state.publicationPermits.get(id);
+      const prefix = `published/${permit?.ownerId ?? user?.uid}/${id}/`;
+      for (const path of [...mock.state.objects.keys()]) {
+        if (!path.startsWith(prefix)) continue;
+        mock.state.deletedObjects.push(path);
+        mock.state.objects.delete(path);
+      }
+      mock.state.publicationPermits.delete(id);
+      mock.state.abortedGalleryIds.push(id);
+      return { data: { status: "clean" } };
+    }
+    if (name === "beginAuraGalleryRevision") {
+      const id = String(galleryId);
+      const revision = String(revisionId);
+      const current = mock.state.documents.get(`galleries/${id}`);
+      if (!user || !current || current.revision !== expectedRevision)
+        throw firebaseError("functions/failed-precondition", "Revision changed");
+      const ownerId = String(current.ownerId);
+      const expiresAt = (current.expiresAt as InstanceType<typeof mock.Timestamp>).toDate().toISOString();
+      mock.state.revisionPermits.set(`${id}:${revision}`, {
+        ownerId,
+        uploaderId: user.uid,
+        expiresAt,
+      });
+      return { data: { ownerId, expiresAt, retention: "account-preview" } };
+    }
+    if (name === "finalizeAuraGalleryRevision") {
+      if (mock.state.failTransaction)
+        throw firebaseError("firestore/unavailable", "transaction failed");
+      const id = String(galleryId);
+      const revision = String(revisionId);
+      const current = mock.state.documents.get(`galleries/${id}`);
+      const permit = mock.state.revisionPermits.get(`${id}:${revision}`);
+      const expectedCoverPath = `published/${String(current?.ownerId)}/${id}/revisions/${revision}/cover.webp`;
+      if (
+        user
+        && current
+        && current.revision === Number(expectedRevision) + 1
+        && current.coverPath === expectedCoverPath
+      ) {
+        const result = { data: {
+          publishedAt: (current.publishedAt as InstanceType<typeof mock.Timestamp>).toDate().toISOString(),
+          expiresAt: (current.expiresAt as InstanceType<typeof mock.Timestamp>).toDate().toISOString(),
+          updatedAt: (current.updatedAt as InstanceType<typeof mock.Timestamp>).toDate().toISOString(),
+          revision: Number(expectedRevision) + 1,
+        } };
+        if (mock.state.revisionFinalizeResponseLosses > 0) {
+          mock.state.revisionFinalizeResponseLosses -= 1;
+          throw firebaseError("functions/unavailable", "response lost after commit");
+        }
+        return result;
+      }
+      if (!user || !current || !permit || permit.uploaderId !== user.uid || current.revision !== expectedRevision)
+        throw firebaseError("functions/failed-precondition", "Revision permit unavailable");
+      const updatedAt = mock.Timestamp.fromDate(mock.state.clock);
+      const draft = payload.draft as GalleryDraft;
+      mock.state.documents.set(`galleries/${id}`, {
+        ...draft,
+        coverPath: `published/${permit.ownerId}/${id}/revisions/${revision}/cover.webp`,
+        ownerId: permit.ownerId,
+        publishedAt: current.publishedAt,
+        expiresAt: current.expiresAt,
+        schemaVersion: 3,
+        visibility: current.visibility,
+        retention: current.retention,
+        accessVersion: current.accessVersion,
+        exploreListed: current.exploreListed,
+        creatorProfileListed: current.creatorProfileListed,
+        discoverEligible: false,
+        revision: Number(expectedRevision) + 1,
+        updatedAt,
+        lifecycleStatus: "active",
+      });
+      mock.state.revisionPermits.delete(`${id}:${revision}`);
+      if (mock.state.revisionFinalizeResponseLosses > 0) {
+        mock.state.revisionFinalizeResponseLosses -= 1;
+        throw firebaseError("functions/unavailable", "response lost after commit");
+      }
+      return { data: {
+        publishedAt: (current.publishedAt as InstanceType<typeof mock.Timestamp>).toDate().toISOString(),
+        expiresAt: (current.expiresAt as InstanceType<typeof mock.Timestamp>).toDate().toISOString(),
+        updatedAt: updatedAt.toDate().toISOString(),
+        revision: Number(expectedRevision) + 1,
+      } };
+    }
+    if (name === "abortAuraGalleryRevision") {
+      const id = String(galleryId);
+      const revision = String(revisionId);
+      const permit = mock.state.revisionPermits.get(`${id}:${revision}`);
+      const prefix = `published/${permit?.ownerId}/${id}/revisions/${revision}/`;
+      for (const path of [...mock.state.objects.keys()]) {
+        if (!path.startsWith(prefix)) continue;
+        mock.state.deletedObjects.push(path);
+        mock.state.objects.delete(path);
+      }
+      mock.state.revisionPermits.delete(`${id}:${revision}`);
+      mock.state.abortedRevisions.push({ galleryId: id, revisionId: revision });
       return { data: { status: "clean" } };
     }
     if (name === "createAuraGalleryInvite") {
@@ -337,11 +543,19 @@ beforeEach(() => {
   mock.state.currentUser = makeUser("wp1-owner", "owner@example.test");
   mock.state.uploadCount = 0;
   mock.state.failUploadAt = 0;
+  mock.state.directUploadCount = 0;
+  mock.state.assetUploadResponseLosses = 0;
+  mock.state.assetUploadRequestIds = [];
   mock.state.failSetDoc = false;
   mock.state.failTransaction = false;
+  mock.state.initialFinalizeResponseLosses = 0;
+  mock.state.revisionFinalizeResponseLosses = 0;
   mock.state.callableFailure = null;
   mock.state.deletedObjects = [];
   mock.state.abortedGalleryIds = [];
+  mock.state.abortedRevisions = [];
+  mock.state.publicationPermits.clear();
+  mock.state.revisionPermits.clear();
   mock.state.clock = new Date("2026-08-23T10:00:01.000Z");
   vi.stubGlobal("Image", MockImage);
   vi.stubGlobal("FileReader", MockFileReader);
@@ -374,6 +588,7 @@ describe("publish → visit → edit → update release gate", () => {
       accessVersion: 1,
     });
     expect(mock.state.objects.size).toBe(4);
+    expect(mock.state.directUploadCount).toBe(0);
 
     mock.state.currentUser = null;
     const visited = await repository.find(published.id);
@@ -547,6 +762,32 @@ describe("publish → visit → edit → update release gate", () => {
     expect(mock.state.deletedObjects.length).toBe(4);
   });
 
+  it("replays an initial finalizer when its committed response is lost", async () => {
+    const repository = new FirebaseGalleryRepository();
+    mock.state.initialFinalizeResponseLosses = 2;
+
+    const published = await repository.publish(draft(), media.webp, { visibility: "public" });
+
+    expect(published.revision).toBe(1);
+    expect(mock.state.documents.get(`galleries/${published.id}`)?.revision).toBe(1);
+    expect(mock.state.objects.size).toBe(4);
+    expect(mock.state.abortedGalleryIds).toEqual([]);
+  });
+
+  it("replays an exact server-owned asset upload when its response is lost", async () => {
+    const repository = new FirebaseGalleryRepository();
+    mock.state.assetUploadResponseLosses = 1;
+
+    const published = await repository.publish(draft(), media.webp, { visibility: "public" });
+
+    expect(published.revision).toBe(1);
+    expect(mock.state.objects.size).toBe(4);
+    expect(mock.state.directUploadCount).toBe(0);
+    expect(mock.state.assetUploadRequestIds[0]).toBe(mock.state.assetUploadRequestIds[1]);
+    expect(new Set(mock.state.assetUploadRequestIds).size).toBe(4);
+    expect(mock.state.abortedGalleryIds).toEqual([]);
+  });
+
   it("keeps the previous live revision after transaction failure and allows retry", async () => {
     const repository = new FirebaseGalleryRepository();
     const published = await repository.publish(draft(), media.webp, { visibility: "public" });
@@ -557,10 +798,28 @@ describe("publish → visit → edit → update release gate", () => {
       .rejects.toMatchObject({ code: "unavailable" });
     expect(await repository.findManifest(published.id)).toMatchObject({ revision: 1, title: published.title });
     expect([...originalPaths].every((path) => mock.state.objects.has(path))).toBe(true);
+    expect(mock.state.objects.size).toBe(originalPaths.size);
+    expect(mock.state.abortedRevisions).toHaveLength(1);
 
     mock.state.failTransaction = false;
     const retried = await repository.updatePublished(editTarget, draft("Retry update"), media.webp);
     expect(retried).toMatchObject({ id: published.id, revision: 2, title: "Retry update" });
+  });
+
+  it("replays a revision finalizer when its committed response is lost", async () => {
+    const repository = new FirebaseGalleryRepository();
+    const published = await repository.publish(draft(), media.webp, { visibility: "public" });
+    mock.state.revisionFinalizeResponseLosses = 2;
+
+    const updated = await repository.updatePublished(
+      target(published),
+      draft("Recovered update"),
+      media.webp,
+    );
+
+    expect(updated).toMatchObject({ id: published.id, revision: 2, title: "Recovered update" });
+    expect(mock.state.documents.get(`galleries/${published.id}`)?.revision).toBe(2);
+    expect(mock.state.abortedRevisions).toEqual([]);
   });
 
   it("returns actionable App Check/callable errors without leaving published state", async () => {

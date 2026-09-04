@@ -26,43 +26,10 @@ export type AccountExportInput = {
   creatorIdentity?: Record<string, unknown>;
 };
 
-export type AccountDeletionPlan = {
-  uid: string;
-  ownedGalleryIds: string[];
-  membershipPaths: string[];
-  invitePaths: string[];
-  documentPaths: string[];
-};
-
-export type AccountDeletionSummary = {
-  ownedSpacesDeleted: number;
-  sharedMembershipsRemoved: number;
-  invitationsRemoved: number;
-  linkedDocumentsRemoved: number;
-  authenticationDeleted: boolean;
-};
-
-export type AccountDeletionExecutor = {
-  phase: (name: string) => Promise<void>;
-  markOwnedSpaces: (galleryIds: string[]) => Promise<void>;
-  deleteOwnedSpaceAssets: (uid: string, galleryId: string) => Promise<void>;
-  deleteOwnedSpace: (galleryId: string) => Promise<void>;
-  removeMembership: (path: string) => Promise<void>;
-  removeInvitation: (path: string) => Promise<void>;
-  deleteAvatar: (uid: string) => Promise<void>;
-  removeLinkedDocument: (path: string) => Promise<void>;
-  deleteAuthentication: (uid: string) => Promise<void>;
-  finish: (summary: AccountDeletionSummary) => Promise<void>;
-};
-
-const sensitiveKeys = new Set([
-  "token",
-  "tokenHash",
-  "password",
-  "secret",
-  "accessToken",
-  "refreshToken",
-]);
+function sensitiveKey(key: string) {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return /(?:password|passphrase|secret|credentials?|privatekey|apikey|authorization|cookies?|setcookie|(?:access|auth|refresh|id|bearer|session|csrf|unsubscribe|confirmation|download)?tokens?|tokenhash|passwordhash|passwordsalt|signingkey|encryptionkey)$/.test(normalized);
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -84,11 +51,54 @@ export function portableValue(value: unknown, depth = 0): PortableValue {
     }
     return Object.fromEntries(
       Object.entries(value)
-        .filter(([key]) => !sensitiveKeys.has(key))
+        .filter(([key]) => !sensitiveKey(key))
         .map(([key, item]) => [key, portableValue(item, depth + 1)]),
     );
   }
   return String(value);
+}
+
+export async function collectBoundedPages<Item, Cursor>({
+  fetchPage,
+  maximumItems,
+}: {
+  fetchPage: (cursor: Cursor | undefined, limit: number) => Promise<{ items: Item[]; nextCursor?: Cursor }>;
+  maximumItems: number;
+}): Promise<Item[]> {
+  if (!Number.isSafeInteger(maximumItems) || maximumItems < 1)
+    throw new Error("page-limit-invalid");
+  const result: Item[] = [];
+  let cursor: Cursor | undefined;
+  let pageCount = 0;
+  const stringCursors = new Set<string>();
+  while (true) {
+    pageCount += 1;
+    if (pageCount > maximumItems + 1) throw new Error("page-invalid");
+    const page = await fetchPage(cursor, Math.min(200, maximumItems - result.length + 1));
+    if (!Array.isArray(page.items) || page.items.length > Math.min(200, maximumItems - result.length + 1))
+      throw new Error("page-invalid");
+    result.push(...page.items);
+    if (result.length > maximumItems) throw new Error("page-limit-exceeded");
+    if (page.nextCursor === undefined) return result;
+    if (page.items.length === 0) throw new Error("page-invalid");
+    if (typeof page.nextCursor === "string") {
+      if (stringCursors.has(page.nextCursor)) throw new Error("page-invalid");
+      stringCursors.add(page.nextCursor);
+    }
+    cursor = page.nextCursor;
+  }
+}
+
+export async function mapInChunks<Input, Output>(
+  values: Input[],
+  chunkSize: number,
+  task: (value: Input) => Promise<Output>,
+): Promise<Output[]> {
+  if (!Number.isSafeInteger(chunkSize) || chunkSize < 1) throw new Error("chunk-size-invalid");
+  const output: Output[] = [];
+  for (let index = 0; index < values.length; index += chunkSize)
+    output.push(...await Promise.all(values.slice(index, index + chunkSize).map(task)));
+  return output;
 }
 
 function role(value: unknown) {
@@ -106,6 +116,19 @@ function invitationExport(value: Record<string, unknown>, direction: "received" 
     updatedAt: value.updatedAt,
     expiresAt: value.expiresAt,
     acceptedAt: value.acceptedAt,
+  });
+}
+
+function moderationReportExport(value: Record<string, unknown>) {
+  return portableValue({
+    recordRef: value.recordRef,
+    targetKind: value.targetKind,
+    relatedCreatorRef: value.relatedCreatorRef,
+    relatedPostRef: value.relatedPostRef,
+    reason: value.reason,
+    submissionCount: value.submissionCount,
+    submittedAt: value.submittedAt,
+    lastSubmittedAt: value.lastSubmittedAt,
   });
 }
 
@@ -145,7 +168,7 @@ export function buildAccountExport(input: AccountExportInput): PortableValue {
       sent: input.sentInvitations.map((invite) => invitationExport(invite, "sent")),
     },
     moderation: {
-      reportsSubmitted: input.submittedModerationReports ?? [],
+      reportsSubmitted: (input.submittedModerationReports ?? []).map(moderationReportExport),
     },
     operationalState: input.operationalState,
     creatorIdentity: input.creatorIdentity ?? null,
@@ -154,6 +177,19 @@ export function buildAccountExport(input: AccountExportInput): PortableValue {
       note: "Account-linked drafts from this browser are appended when the file is downloaded.",
     },
   });
+}
+
+export const MAX_IMMEDIATE_ACCOUNT_EXPORT_BYTES = 8 * 1024 * 1024;
+
+export function assertImmediateAccountExportSize(
+  value: PortableValue,
+  maximumBytes = MAX_IMMEDIATE_ACCOUNT_EXPORT_BYTES,
+): PortableValue {
+  if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1)
+    throw new Error("export-size-limit-invalid");
+  if (new TextEncoder().encode(JSON.stringify(value)).byteLength > maximumBytes)
+    throw new Error("export-size-limit-exceeded");
+  return value;
 }
 
 export function assertRecentAuthentication(
@@ -175,51 +211,4 @@ export function assertAccountAccess(uid: unknown, signInProvider: unknown) {
   if (typeof uid !== "string" || !uid || signInProvider === "anonymous")
     throw new Error("account-required");
   return uid;
-}
-
-/**
- * Cross-service deletion cannot be atomic. This ordered, idempotent plan keeps
- * Auth until every user-data phase has completed and marks owned Spaces before
- * media removal so partially deleted publications cannot remain publicly live.
- */
-export async function executeAccountDeletion(
-  plan: AccountDeletionPlan,
-  executor: AccountDeletionExecutor,
-): Promise<AccountDeletionSummary> {
-  const summary: AccountDeletionSummary = {
-    ownedSpacesDeleted: 0,
-    sharedMembershipsRemoved: 0,
-    invitationsRemoved: 0,
-    linkedDocumentsRemoved: 0,
-    authenticationDeleted: false,
-  };
-  await executor.phase("mark-owned-spaces");
-  await executor.markOwnedSpaces(plan.ownedGalleryIds);
-  await executor.phase("delete-owned-spaces");
-  for (const galleryId of plan.ownedGalleryIds) {
-    await executor.deleteOwnedSpaceAssets(plan.uid, galleryId);
-    await executor.deleteOwnedSpace(galleryId);
-    summary.ownedSpacesDeleted += 1;
-  }
-  await executor.phase("remove-shared-access");
-  for (const path of plan.membershipPaths) {
-    await executor.removeMembership(path);
-    summary.sharedMembershipsRemoved += 1;
-  }
-  await executor.phase("remove-invitations");
-  for (const path of plan.invitePaths) {
-    await executor.removeInvitation(path);
-    summary.invitationsRemoved += 1;
-  }
-  await executor.phase("remove-account-data");
-  await executor.deleteAvatar(plan.uid);
-  for (const path of plan.documentPaths) {
-    await executor.removeLinkedDocument(path);
-    summary.linkedDocumentsRemoved += 1;
-  }
-  await executor.phase("delete-authentication");
-  await executor.deleteAuthentication(plan.uid);
-  summary.authenticationDeleted = true;
-  await executor.finish(summary);
-  return summary;
 }

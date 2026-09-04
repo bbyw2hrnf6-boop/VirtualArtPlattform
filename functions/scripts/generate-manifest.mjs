@@ -18,8 +18,10 @@ export const RELEASE_PROJECT_ID = 'virtualartplattform';
 export const RELEASE_MANIFEST_PATH = 'functions.yaml';
 export const EXPECTED_RELEASE_ENDPOINTS = Object.freeze([
   'abortAuraGalleryPublication',
+  'abortAuraGalleryRevision',
   'acceptAuraGalleryInvite',
   'beginAuraGalleryPublication',
+  'beginAuraGalleryRevision',
   'checkLieuvaCreatorHandle',
   'createAuraGalleryInvite',
   'createLieuvaCreatorPost',
@@ -31,8 +33,12 @@ export const EXPECTED_RELEASE_ENDPOINTS = Object.freeze([
   'creatorProfileData',
   'deleteAuraAccount',
   'exportAuraAccountData',
+  'finalizeAuraGalleryPublication',
+  'finalizeAuraGalleryRevision',
   'getMyLieuvaCreatorHome',
   'getMyLieuvaCreatorProfile',
+  'lieuvaCspReport',
+  'manageAuraAccountExport',
   'manageAuraGalleryLifecycle',
   'manageLieuvaCreatorBlock',
   'manageLieuvaCreatorFollow',
@@ -40,9 +46,11 @@ export const EXPECTED_RELEASE_ENDPOINTS = Object.freeze([
   'markMyLieuvaCreatorNotificationsRead',
   'purgeAuraGallery',
   'recordLieuvaTelemetry',
+  'resumeAuraAccountDeletions',
   'revokeAuraGalleryAccess',
   'saveLieuvaCreatorProfile',
   'sendAuraVerificationEmail',
+  'setAuraAccountAvatar',
   'setAuraNewsletterPreference',
   'setLieuvaCreatorProfileCover',
   'setLieuvaCreatorProfileImage',
@@ -50,6 +58,7 @@ export const EXPECTED_RELEASE_ENDPOINTS = Object.freeze([
   'spaceDocument',
   'spaceSitemap',
   'unsubscribeAuraNewsletter',
+  'uploadAuraGalleryAsset',
 ]);
 
 export const EXPECTED_RELEASE_PARAMS = Object.freeze([
@@ -70,6 +79,13 @@ export const EXPECTED_RELEASE_PARAMS = Object.freeze([
     description: 'Legal sender name and postal address shown in marketing emails.',
     type: 'string',
     default: 'LIEUVA preview — legal sender details not configured',
+  }),
+]);
+
+export const EXPECTED_RELEASE_REQUIRED_APIS = Object.freeze([
+  Object.freeze({
+    api: 'cloudscheduler.googleapis.com',
+    reason: 'Needed for scheduled functions.',
   }),
 ]);
 
@@ -148,8 +164,9 @@ function assertNoConfiguredValues(manifestText, environment) {
 export function validateReleaseManifest(manifest, moduleExports, environment = {}) {
   assertExactKeys(manifest, EXPECTED_TOP_LEVEL_KEYS, 'top level');
   if (manifest.specVersion !== 'v1alpha1') fail('specVersion must be v1alpha1');
-  if (!Array.isArray(manifest.requiredAPIs) || manifest.requiredAPIs.length !== 0)
-    fail('requiredAPIs must be the reviewed empty list');
+  if (!Array.isArray(manifest.requiredAPIs) ||
+    !exactJson(manifest.requiredAPIs, EXPECTED_RELEASE_REQUIRED_APIS))
+    fail('requiredAPIs do not match the reviewed release contract');
   assertExactKeys(manifest.extensions, [], 'extensions');
 
   assertExactKeys(manifest.endpoints, EXPECTED_RELEASE_ENDPOINTS, 'endpoints');

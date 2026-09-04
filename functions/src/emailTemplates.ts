@@ -144,7 +144,7 @@ export function welcomeMail(
       body,
       actionLabel: "Create a Space",
       actionUrl: createUrl,
-      footerAction: `You opted in while using a ${escapeHtml(brand.name)} account. <a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#4f514a">Unsubscribe in one click</a> · <a href="${escapeHtml(brand.appUrl)}/#/data" style="color:#4f514a">Data & rights</a>.`,
+      footerAction: `You opted in while using a ${escapeHtml(brand.name)} account. <a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#4f514a">Manage subscription</a> · <a href="${escapeHtml(brand.appUrl)}/#/data" style="color:#4f514a">Data & rights</a>.`,
     }),
   };
 }

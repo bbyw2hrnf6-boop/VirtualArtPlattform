@@ -13,27 +13,8 @@ service firebase.storage {
         && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
-    function validUpload(ownerId, galleryId, kind) {
-      let permit = firestore.get(/databases/(default)/documents/galleryPublishPermits/$(galleryId)).data;
-      return verifiedAccount()
-        && request.auth.uid == ownerId
-        && permit.ownerId == ownerId
-        && permit.galleryId == galleryId
-        && permit.permitExpiresAt > request.time
-        && request.resource != null
-        && request.resource.metadata.ownerId == ownerId
-        && request.resource.metadata.galleryId == galleryId
-        && request.resource.metadata.kind == kind
-        && request.resource.metadata.schemaVersion == '3'
-        && request.resource.metadata.visibility in ['public', 'unlisted', 'private']
-        && request.resource.metadata.visibility == permit.visibility
-        && request.resource.metadata.retention == 'account-preview'
-        && request.resource.metadata.retention == permit.retention
-        && request.resource.metadata.expiresAtMs.matches('[0-9]{13}')
-        && timestamp.value(int(request.resource.metadata.expiresAtMs)) == permit.expiresAt
-        && timestamp.value(int(request.resource.metadata.expiresAtMs)) > request.time
-        && timestamp.value(int(request.resource.metadata.expiresAtMs)) < request.time + duration.value(366, 'd')
-        && request.resource.contentType.matches('image/(avif|jpeg|png|webp)');
+    function accountDeletionStarted(userId) {
+      return firestore.exists(/databases/(default)/documents/accountDeletionJobs/$(userId));
     }
 
     function gallery(galleryId) {
@@ -57,50 +38,6 @@ service firebase.storage {
           || firestore.get(/databases/(default)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.status == 'active');
     }
 
-    function galleryEditor(galleryId) {
-      return verifiedAccount()
-        && firestore.exists(/databases/(default)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower()))
-        && (!firestore.get(/databases/(default)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.keys().hasAny(['status'])
-          || firestore.get(/databases/(default)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.status == 'active')
-        && firestore.get(/databases/(default)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.role == 'editor';
-    }
-
-    function galleryVisibility(galleryId) {
-      return gallery(galleryId).data.keys().hasAny(['visibility'])
-        ? gallery(galleryId).data.visibility
-        : 'public';
-    }
-
-    function galleryRetention(galleryId) {
-      return gallery(galleryId).data.keys().hasAny(['retention'])
-        ? gallery(galleryId).data.retention
-        : 'guest-10-days';
-    }
-
-    function canEditGallery(galleryId) {
-      return activeGallery(galleryId)
-        && (galleryOwner(galleryId) || galleryEditor(galleryId));
-    }
-
-    function validRevisionUpload(ownerId, galleryId, revisionId, kind) {
-      return verifiedAccount()
-        && canEditGallery(galleryId)
-        && gallery(galleryId).data.ownerId == ownerId
-        && request.resource != null
-        && request.resource.metadata.ownerId == ownerId
-        && request.resource.metadata.galleryId == galleryId
-        && request.resource.metadata.uploaderId == request.auth.uid
-        && request.resource.metadata.revisionId == revisionId
-        && request.resource.metadata.kind == kind
-        && request.resource.metadata.schemaVersion == '3'
-        && request.resource.metadata.visibility == galleryVisibility(galleryId)
-        && request.resource.metadata.retention == galleryRetention(galleryId)
-        && request.resource.metadata.expiresAtMs.matches('[0-9]{13}')
-        && timestamp.value(int(request.resource.metadata.expiresAtMs)) > request.time
-        && timestamp.value(int(request.resource.metadata.expiresAtMs)) < request.time + duration.value(366, 'd')
-        && request.resource.contentType.matches('image/(avif|jpeg|png|webp)');
-    }
-
     function canReadGallery(galleryId) {
       return galleryOwner(galleryId) || (activeGallery(galleryId) && (
         gallery(galleryId).data.schemaVersion in [1, 2]
@@ -109,48 +46,66 @@ service firebase.storage {
       ));
     }
 
+    function isCurrentCover(galleryId, path) {
+      return gallery(galleryId).data.coverPath == path;
+    }
+
+    function isCurrentArtworkAt(galleryId, position, path) {
+      return gallery(galleryId).data.artworks is list
+        && gallery(galleryId).data.artworks.size() > position
+        && gallery(galleryId).data.artworks[position].storagePath == path;
+    }
+
+    function isCurrentArtwork(galleryId, fileName, path) {
+      return (fileName == '1.webp' && isCurrentArtworkAt(galleryId, 0, path))
+        || (fileName == '2.webp' && isCurrentArtworkAt(galleryId, 1, path))
+        || (fileName == '3.webp' && isCurrentArtworkAt(galleryId, 2, path))
+        || (fileName == '4.webp' && isCurrentArtworkAt(galleryId, 3, path))
+        || (fileName == '5.webp' && isCurrentArtworkAt(galleryId, 4, path))
+        || (fileName == '6.webp' && isCurrentArtworkAt(galleryId, 5, path))
+        || (fileName == '7.webp' && isCurrentArtworkAt(galleryId, 6, path))
+        || (fileName == '8.webp' && isCurrentArtworkAt(galleryId, 7, path))
+        || (fileName == '9.webp' && isCurrentArtworkAt(galleryId, 8, path))
+        || (fileName == '10.webp' && isCurrentArtworkAt(galleryId, 9, path))
+        || (fileName == '11.webp' && isCurrentArtworkAt(galleryId, 10, path))
+        || (fileName == '12.webp' && isCurrentArtworkAt(galleryId, 11, path))
+        || (fileName == '13.webp' && isCurrentArtworkAt(galleryId, 12, path))
+        || (fileName == '14.webp' && isCurrentArtworkAt(galleryId, 13, path));
+    }
+
     match /published/{ownerId}/{galleryId}/cover.webp {
-      allow read: if canReadGallery(galleryId);
-      allow create: if validUpload(ownerId, galleryId, 'cover')
-        && resource == null
-        && request.resource.size > 0
-        && request.resource.size < 1024 * 1024;
-      allow delete: if false;
-      allow update: if false;
+      allow read: if canReadGallery(galleryId)
+        && isCurrentCover(galleryId, 'published/' + ownerId + '/' + galleryId + '/cover.webp');
+      allow create, update, delete: if false;
     }
 
     match /published/{ownerId}/{galleryId}/artworks/{fileName} {
-      allow read: if canReadGallery(galleryId);
-      allow create: if fileName.matches('([1-9]|1[0-4])[.]webp')
-        && validUpload(ownerId, galleryId, 'artwork')
-        && request.resource.metadata.index.matches('([0-9]|1[0-3])')
-        && resource == null
-        && request.resource.size > 0
-        && request.resource.size < 2 * 1024 * 1024;
-      allow delete: if false;
-      allow update: if false;
+      allow read: if canReadGallery(galleryId)
+        && isCurrentArtwork(
+          galleryId,
+          fileName,
+          'published/' + ownerId + '/' + galleryId + '/artworks/' + fileName
+        );
+      allow create, update, delete: if false;
     }
 
     match /published/{ownerId}/{galleryId}/revisions/{revisionId}/cover.webp {
-      allow read: if canReadGallery(galleryId);
-      allow create: if resource == null
-        && validRevisionUpload(ownerId, galleryId, revisionId, 'cover')
-        && request.resource.size > 0
-        && request.resource.size < 1024 * 1024;
-      allow delete: if false;
-      allow update: if false;
+      allow read: if canReadGallery(galleryId)
+        && isCurrentCover(
+          galleryId,
+          'published/' + ownerId + '/' + galleryId + '/revisions/' + revisionId + '/cover.webp'
+        );
+      allow create, update, delete: if false;
     }
 
     match /published/{ownerId}/{galleryId}/revisions/{revisionId}/artworks/{fileName} {
-      allow read: if canReadGallery(galleryId);
-      allow create: if resource == null
-        && fileName.matches('([1-9]|1[0-4])[.]webp')
-        && validRevisionUpload(ownerId, galleryId, revisionId, 'artwork')
-        && request.resource.metadata.index.matches('([0-9]|1[0-3])')
-        && request.resource.size > 0
-        && request.resource.size < 2 * 1024 * 1024;
-      allow delete: if false;
-      allow update: if false;
+      allow read: if canReadGallery(galleryId)
+        && isCurrentArtwork(
+          galleryId,
+          fileName,
+          'published/' + ownerId + '/' + galleryId + '/revisions/' + revisionId + '/artworks/' + fileName
+        );
+      allow create, update, delete: if false;
     }
 
     match /published/{ownerId}/{galleryId}/{allPaths=**} {
@@ -161,16 +116,9 @@ service firebase.storage {
 
     match /profiles/{ownerId}/avatar.webp {
       allow read: if signedIn() && request.auth.uid == ownerId;
-      allow create, update: if verifiedAccount()
-        && request.auth.uid == ownerId
-        && request.resource != null
-        && request.resource.size > 0
-        && request.resource.size < 512 * 1024
-        && request.resource.contentType.matches('image/(avif|jpeg|png|webp)')
-        && request.resource.metadata.ownerId == ownerId
-        && request.resource.metadata.kind == 'avatar'
-        && request.resource.metadata.schemaVersion == '1';
-      allow delete: if signedIn() && request.auth.uid == ownerId;
+      // Writes are callable-only so a durable server lease can serialize them
+      // with the final account-deletion Storage drain.
+      allow create, update, delete: if false;
     }
   }
 }

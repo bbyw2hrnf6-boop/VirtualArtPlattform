@@ -95,8 +95,9 @@ Live email acceptance test:
    verification email and one LIEUVA Preview Letter.
 4. Sign out and in again with the same account. Confirm no second welcome
    edition is sent.
-5. Use the one-click unsubscribe link and confirm the Profile & settings toggle
-   is off after reloading the account.
+5. Open the unsubscribe link, confirm the explicit POST action, and confirm the
+   Profile & settings toggle is off after reloading the account. A passive GET
+   from a mail scanner must not change the preference.
 6. Repeat opt-in once through Google sign-in and check mobile rendering, spam
    placement, sender alignment (SPF/DKIM/DMARC), and reply handling.
 
@@ -111,48 +112,54 @@ Live email acceptance test:
 7. Choose the same or nearest compatible location as Firestore. This location is difficult to change later.
 8. Start with production rules. Never use public test-mode rules.
 
-## 4. Publish rules manually
+## 4. Promote reviewed rules and indexes
 
-Firestore:
+Do not paste policy into Firebase Console and do not run an ad-hoc `npx`
+deployment. `firestore.rules`, `storage.rules`, and
+`firestore.indexes.json` are one reviewed policy release:
 
-1. Open **Firestore Database → Rules**.
-2. Replace everything with the repository's `firestore.rules`.
-3. Select **Publish**.
-
-Storage:
-
-1. Open **Storage → Rules**.
-2. Replace everything with the repository's `storage.rules`.
-3. Select **Publish**.
-
-Indexes:
-
-1. Open **Firestore Database → Indexes → Composite**.
-2. Create `galleries`: `visibility` ascending, `expiresAt` descending.
-3. Create `galleries`: `schemaVersion` ascending, `expiresAt` descending.
-4. Create `galleries`: `visibility` ascending, `discoverEligible` ascending, `expiresAt` descending.
-5. Create `galleries`: `schemaVersion` ascending, `discoverEligible` ascending, `expiresAt` descending.
-6. Create `creatorProfiles`: `profilePublic` ascending, `discoverEligible` ascending.
-7. Create `galleries`: `ownerId` ascending, `expiresAt` descending.
-8. Deploy the collection-group `members.email` index from `firestore.indexes.json`; it lets invited Editors and Viewers find shared rooms in Account.
-9. Wait until all indexes show **Enabled**. The exact repository set can be deployed without rules or data changes:
+1. Install the exact repository and Firebase CLI locks under Node `22.23.2`,
+   provide Java `21.0.12.1+1`, and run the credential-free emulator matrix:
 
    ```bash
-   npx firebase-tools@15.28.2 deploy --only firestore:indexes --project virtualartplattform
+   npm ci
+   npm ci --prefix firebase-cli --ignore-scripts --no-audit --no-fund
+   npm run test:firebase-rules
    ```
 
-Storage rules read the matching Firestore gallery and ACL before returning an
-image. The first Firebase Console publish may ask to enable cross-service
-permissions; accept that prompt for this project.
+2. Merge the reviewed policy revision to `main`. A successful push-to-main
+   `Verify` run uploads `lieuva-policy-{sha}-{run_id}`. The six-file policy
+   bundle has a manifest with exact file hashes and contains a sanitized
+   Firebase config that can target only Firestore rules/indexes and Storage
+   rules.
+3. Manually dispatch **Promote Firebase policy** from `main`. Supply the full
+   successful-main SHA, type `virtualartplattform`, and provide the reviewed
+   change/incident/rollback reference.
+4. Inspect the unprivileged artifact/provenance result, then approve the
+   protected `firebase-policy-production` environment.
+5. The protected job installs only Firebase CLI `15.28.2` from its verified
+   lock, authenticates through WIF, adds required indexes without `--force`,
+   and waits for every repository index/override to report `READY` before it
+   promotes Firestore and Storage rules.
+6. The same job fetches the active Firestore and Storage rulesets and current
+   index resources. It fails unless rule-source hashes match the artifact,
+   every required index/override is present and ready, and no undeclared field
+   override or TTL policy exists. Extra composite indexes are counted and
+   retained; deleting them is a separate reviewed migration.
 
-The immutable production artifact contains only Functions and Hosting, which
-the workflow promotes together. It cannot deploy Firestore rules/indexes or
-Storage rules. For a separate manual rules/index promotion:
+The authoritative index inventory is `firestore.indexes.json`, including the
+Discover lifecycle indexes, collection-group fields used by account deletion
+and moderation, and the `accountExportJobs`/`accountExportChunks` `expiresAt`
+TTL overrides, the `accountDeletionJobs(status, updatedAt)` recovery index, and
+the deletion tombstone's `expiresAt` TTL override. The emulator does not enforce compound-index or TTL readiness,
+so the live post-promotion check requires every declared TTL state to be
+`ACTIVE`. Storage rules read Firestore gallery,
+membership, and trusted permit documents; enable the Storage service agent's
+cross-service Rules access before the first protected promotion.
 
-```bash
-npx firebase-tools@15.28.2 login
-npx firebase-tools@15.28.2 deploy --only firestore:rules,firestore:indexes,storage --project virtualartplattform
-```
+The immutable application release remains Functions and Hosting only. The
+policy workflow is deliberately separate, manually approved, and can roll back
+to a still-retained successful-main policy artifact by dispatching its SHA.
 
 ### WP1 production record — 2026-09-02
 
@@ -228,12 +235,14 @@ lifecycle Functions require a valid App Check token.
    section 8. The production gate validates all deployed Functions together; it
    intentionally does not offer a partial core-Functions bypass.
 5. On the first deployment, enable Cloud Functions, Cloud Run, Cloud Build,
-   Artifact Registry, and Eventarc APIs for this project if Google Cloud asks.
+   Artifact Registry, Eventarc, and Cloud Scheduler APIs for this project if
+   Google Cloud asks. The immutable Functions manifest requires
+   `cloudscheduler.googleapis.com` for `resumeAuraAccountDeletions`.
    Until the verified combined release succeeds, publishing, visibility
    changes, Trash/restore, renewal, and ACL invitations intentionally fail
    closed instead of changing room data directly from the browser.
-6. Publish the current Firestore and Storage rules manually through the separate
-   reviewed rules process.
+6. Promote the exact immutable policy artifact through the protected process in
+   section 4. Do not paste rules in the Console or run an ad-hoc policy deploy.
 7. Promote the verified Functions and Hosting artifact as described in section
    10, verify publishing and lifecycle actions, then enable
    App Check enforcement for **Cloud Functions, Firestore and Storage** in the
@@ -249,9 +258,78 @@ publications per UTC day. Storage paths are immutable and bounded to one cover
 plus the template artwork limit. Repeated revisions still require a current
 Owner/Editor ACL and App Check.
 
+### WP3 trusted media rollout and legacy metadata scrub
+
+New schema-v3 media is uploaded one bounded image at a time through the trusted
+`uploadAuraGalleryAsset` callable. The browser cannot create, update, or delete
+anything below `published/**`; the Function checks the current permit and
+Owner/Editor state, decodes the bytes, derives the legacy-compatible final path
+and metadata itself, and creates the object with an immutable generation
+precondition. A manifest is committed only after all expected objects pass a
+second trusted inspection. Do not re-enable direct client writes as a rollback.
+
+Account avatars use `setAuraAccountAvatar`; Creator avatars and covers use their
+existing trusted callables. Direct browser writes to those Storage paths are
+denied. Each callable holds `accountMediaUploadLeases/{uid}` for at most 60
+seconds, longer than its 30-second ceiling. Account deletion waits out a current
+lease, claims the lease for the deletion ID, then performs the final media drain.
+The lease collection is server-only and its `expiresAt` TTL removes stale rows.
+
+Old objects may still carry Firebase download-token metadata or a revision
+editor's raw `uploaderId` from deployments before this boundary. Remove both
+with the guarded, bucket-authoritative migration.
+The scan includes live, deleted, and orphaned objects under `published/`; it is
+not driven by current gallery documents. Run it only after the server-owned
+upload Function and compatible Hosting client are active:
+
+```bash
+export FIREBASE_PROJECT_ID='virtualartplattform'
+export FIREBASE_STORAGE_BUCKET='virtualartplattform.firebasestorage.app'
+export STORAGE_POLICY_MIGRATION_MODE='plan'
+export STORAGE_POLICY_MIGRATION_MAX_OBJECTS='1000'
+npm --prefix functions run maintenance:storage-policy
+```
+
+Plan mode is read-only. Repeat it with the reported
+`STORAGE_POLICY_MIGRATION_START_AFTER` until `complete` is true, recording the
+inspected and changed counts. Then remove that plan-only variable, change the
+mode to `apply`, and invoke the same command until its persisted two-pass
+checkpoint reports `complete: true`. Apply mode uses metageneration guards, a
+single-writer lease, and `securityMaintenanceState/gallery-storage-metadata-v3`;
+a crash is resumed rather than restarted. It also refuses to start unless
+`STORAGE_POLICY_MIGRATION_CONFIRM` exactly equals
+`virtualartplattform:gallery-storage-metadata-v3`. Set that confirmation only
+after reviewing the complete plan. Finally run the complete plan scan again and
+require `changedObjects: 0` on every page. Never delete the checkpoint or raise
+the 10,000-object per-invocation cap to force completion.
+
+```bash
+unset STORAGE_POLICY_MIGRATION_START_AFTER
+export STORAGE_POLICY_MIGRATION_MODE='apply'
+export STORAGE_POLICY_MIGRATION_CONFIRM='virtualartplattform:gallery-storage-metadata-v3'
+npm --prefix functions run maintenance:storage-policy
+# After the apply and zero-change verification records are complete:
+unset STORAGE_POLICY_MIGRATION_CONFIRM
+```
+
+Safe promotion order:
+
+1. Pause publishing and updating from the controlled pilot.
+2. Promote the Functions/Hosting artifact containing the server-owned upload
+   callable and client, while the previous rules remain compatible.
+3. Smoke one initial publication and one revision through the callable.
+4. Promote the policy artifact that denies all browser writes below
+   `published/**`.
+5. Prove a direct authenticated Storage create is denied and the callable path
+   still succeeds.
+6. Run and record the complete plan, guarded two-pass apply, and zero-change
+   verification plan above.
+7. Resume pilot publishing only after exact Functions/rules/index/TTL parity is
+   recorded.
+
 ## 7. Security contract
 
-- Upload requires Firebase Authentication and an owner-scoped path. New-room uploads require the owner; revision uploads also allow a current Editor.
+- Upload requires Firebase Authentication, App Check, and a current trusted permit. The callable—not the browser—derives the owner-scoped immutable path; new-room uploads require the Owner and revision uploads also allow a current Editor.
 - Storage objects remain immutable. Live edits create a new asset revision and atomically move the existing gallery manifest to it.
 - Covers are below 1 MiB; artworks below 2 MiB.
 - Only supported image MIME types are accepted.
@@ -264,6 +342,29 @@ Owner/Editor ACL and App Check.
 - Trash hides the room immediately and keeps a seven-day recovery window. Physical Firestore/Storage deletion is performed by the trusted cleanup worker, never by the browser.
 - White Cube and Nocturne accept up to eight works; Grand Forum accepts fourteen.
 - Local drafts remain in IndexedDB and never require Firebase.
+- Account and Creator avatar/cover writes are callable-only and serialized with
+  account deletion by a server-owned media lease.
+
+### Report-only Content Security Policy
+
+Hosting and server-rendered Space/Creator documents emit the same report-only
+policy and `Reporting-Endpoints` value. `lieuvaCspReport` accepts only bounded
+CSP media types, strips URL paths, queries, fragments, cookies and arbitrary
+fields, suppresses duplicates, and rate-limits logs. Treat its telemetry as
+security data: keep log access narrow and set an approved retention period.
+The exact report-only candidate is also injected as an enforcing policy during
+the local Chromium smoke; the Create/sample/WebGL path must complete without a
+`securitypolicyviolation` before a release artifact is accepted.
+
+Before changing `Content-Security-Policy-Report-Only` to an enforcing
+`Content-Security-Policy`, observe a representative staging and production-pilot
+window. Exercise Email/Password and Google Auth, App Check, Firestore, private
+and public Storage reads, every callable, all three Space templates, WebGL
+fallback, blob-backed media, PWA/service-worker update, and mobile Safari.
+Resolve unexplained violations; do not add broad wildcard, `unsafe-eval`, data
+connect, or arbitrary frame allowances merely to silence reports. Enforcement
+is an approved follow-up release, not an automatic side effect of this WP3
+change.
 
 ## 8. Lifecycle, cleanup and keyless GitHub authentication
 
@@ -271,6 +372,13 @@ At each room's `expiresAt`, Firestore and Storage rules stop public reads. A roo
 in Trash is hidden immediately and receives `purgeAt` seven days later.
 `.github/workflows/cleanup.yml` deletes Storage objects first, then ACL records,
 the gallery manifest, and any legacy artwork documents after either deadline.
+Destructive expiry starts only after a five-minute settlement interval, longer
+than the trusted upload/finalization leases, and Firestore deletes use the
+queried update-time precondition so a renewed record is not removed from a
+stale cleanup page.
+Precondition conflicts do not count as successful deletion. A malformed asset
+retirement is quarantined as `invalid` and left for operator reconciliation so
+it cannot poison all later valid cleanup work.
 
 Production promotion and cleanup use GitHub OIDC through Google Cloud Workload
 Identity Federation (WIF). They do not use a long-lived JSON key. Do not create
@@ -287,17 +395,28 @@ Configure the external trust once:
      `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-production`;
    - `bbyw2hrnf6-boop/VirtualArtPlattform/.github/workflows/cleanup.yml@refs/heads/main`
      with subject
-     `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-cleanup`.
+     `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-cleanup`;
+   - `bbyw2hrnf6-boop/VirtualArtPlattform/.github/workflows/policy-deploy.yml@refs/heads/main`
+     with subject
+     `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-policy-production`.
    Map `google.subject=assertion.sub` and the numeric owner/repository ID,
    `ref`, and `workflow_ref` claims before using them in conditions. Do not
    trust a mutable repository name alone, an organization, or all GitHub
    repositories broadly.
-2. Create separate deploy and cleanup service accounts. Grant the exact GitHub
+2. Create separate deploy, cleanup, and policy service accounts. Grant the exact GitHub
    WIF principals `roles/iam.workloadIdentityUser` only on their service
    accounts. The deploy identity needs only the Firebase Hosting/Functions and
-   supporting Google Cloud permissions required by `deploy.yml`. The cleanup
+   supporting Google Cloud permissions required by `deploy.yml`, including
+   Cloud Scheduler job create/get/list/update/delete access for the declared
+   recovery schedule (a reviewed `roles/cloudscheduler.admin` grant or an
+   equivalent custom role). Keep `roles/cloudscheduler.serviceAgent` on the
+   Google-managed Cloud Scheduler service agent only; never grant that
+   service-agent role to the deploy identity. The cleanup
    identity needs Firestore read/delete plus Storage list/delete only for
-   `virtualartplattform.firebasestorage.app`. Never grant Owner.
+   `virtualartplattform.firebasestorage.app`. The policy identity needs only
+   Firebase Rules release/test/read permissions, Firestore index
+   list/create/update readiness access, default-bucket discovery, and service
+   usage. The workflow never passes `--force`; do not grant Owner.
 3. Add these **repository or organization variables**. They must be available
    before any protected environment is entered because main `Verify` builds the
    immutable production artifact and the unprivileged deploy resolver validates
@@ -316,15 +435,22 @@ Configure the external trust once:
    `GCP_WORKLOAD_IDENTITY_PROVIDER`. A common provider may instead be a shared
    repository/organization variable. Choose review rules compatible with
    whether scheduled cleanup should wait for a human.
-6. Do not define environment-level overrides for the four production build
+6. Create and protect `firebase-policy-production`, restrict it to `main`,
+   require an independent reviewer, and add
+   `FIREBASE_POLICY_SERVICE_ACCOUNT_EMAIL` plus
+   `GCP_WORKLOAD_IDENTITY_PROVIDER`. Keep this identity separate from the
+   application deploy and cleanup identities.
+7. Do not define environment-level overrides for the four production build
    variables. The artifact records their fingerprints, and a changed value at
    deploy time fails closed.
-7. Protect `main` with the pull-request quality gate. Then retain one successful
+8. Protect `main` with the pull-request quality gate. Then retain one successful
    main artifact/run record, approve one production promotion, and manually run
    cleanup once before relying on either operational path.
 
 Main `Verify` compiles and browser-smokes the exact release, generates and
-validates `functions/functions.yaml`, and uploads a digest-bound artifact.
+validates `functions/functions.yaml`, runs the Firestore/Storage emulator
+authorization matrix, and uploads separate digest-bound application and policy
+artifacts.
 Within the production release, only the protected deploy job receives
 `id-token: write`; it deploys Functions and Hosting together without checkout,
 application dependency installation, predeploy hooks, or a rebuild. It installs
@@ -336,19 +462,26 @@ credential. Cleanup independently receives OIDC permission and mints a
 short-lived scoped access token in its own environment. The complete release
 sequence is recorded in
 [WP2 — Deterministic Release Gate](audit/WP2-DETERMINISTIC-RELEASE-GATE.md).
+The policy test and promotion contract is recorded in
+[WP3 — Firebase Policy Gate](audit/WP3-FIREBASE-POLICY-GATE.md).
 
-Do not enable Firestore TTL as a replacement without redesigning cleanup: Firestore TTL cannot remove related Storage objects.
+Firestore TTL is used only for Firestore-only managed-export checkpoints and
+parts, short-lived completed account-deletion tombstones, and stale account-media
+leases. Do not use it as a replacement for gallery cleanup: Firestore TTL cannot
+remove related Storage objects or recursively delete subcollections.
 
 ## 9. Live verification
 
-1. Promote the verified combined Functions and Hosting artifact after
-   publishing both rule files.
+1. Promote the verified combined Functions and Hosting artifact, then promote
+   its compatible policy artifact through the separately protected workflow.
 2. Create a room with one small image and publish it.
 3. Confirm an anonymous user under **Authentication → Users**.
 4. Confirm one schema-v3 document under `galleries`.
 5. Confirm `cover.webp` and `artworks/1.webp` under `published/{uid}/{galleryId}` in Storage.
 6. Copy the share URL and open it in Chrome incognito and Safari private mode.
-7. Confirm the room appears in Discover and all images load.
+7. Confirm the pending room does not appear in Discover. Review its exact
+   revision through the WP1 operator workflow, approve it, then confirm it
+   appears and all images load.
 8. Move the room to Trash, confirm the link closes, restore it, and confirm the same link reopens.
 9. Create and verify an Email/Password account; then repeat with Google.
 10. Publish one unlisted and one private room. Confirm unlisted is absent from Discover.
@@ -356,6 +489,11 @@ Do not enable Firestore TTL as a replacement without redesigning cleanup: Firest
 12. Run **GitHub Actions → Clean up expired galleries → Run workflow** and confirm zero or more successful deletions.
 13. Open one owned room from Account, edit and update it, and confirm the original share URL now shows the revision.
 14. Invite a second account as Editor and confirm it can update that same room but cannot manage access or delete it. Confirm a Viewer cannot edit.
+15. Change and remove the account avatar through Account settings, then prove a
+    direct authenticated Storage write to `profiles/{uid}/avatar.webp` is denied.
+16. Exercise the managed account JSONL export and one isolated irreversible
+    account deletion with forced interruption/scheduled resume; confirm Auth is
+    removed last and only the documented pseudonymous evidence remains.
 
 ## 10. Clean Space URL delivery (WP5)
 
@@ -375,8 +513,10 @@ migration is involved. Main `Verify` prepares
    ```bash
    npm ci
    npm ci --prefix functions
+   npm ci --prefix firebase-cli --ignore-scripts --no-audit --no-fund
    npm run check
    npm run check:functions
+   npm run test:firebase-rules
    npm run test:browser-smoke:install
    npm run test:browser-smoke
    ```
@@ -465,7 +605,9 @@ rollback window. Never print, persist or commit the access token.
 
 ## 12. Troubleshooting
 
-- `storage/unauthorized`: publish current `storage.rules`; confirm the authenticated UID matches the object path.
+- `storage/unauthorized`: direct gallery/avatar writes are intentionally denied;
+  publish current `storage.rules` and use the matching trusted callable through
+  the compatible client.
 - `storage/bucket-not-found`: confirm Blaze and the exact default bucket name.
 - CORS error: apply `storage.cors.json` and include the current origin.
 - `firestore/permission-denied`: publish current `firestore.rules` to the same project.

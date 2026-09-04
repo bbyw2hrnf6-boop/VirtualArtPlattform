@@ -4,10 +4,10 @@ import creatorServiceSource from "../../services/creatorProfile.ts?raw";
 import hubSource from "./CreatorHubPage.tsx?raw";
 
 describe("Creator Hub alerts lifecycle", () => {
-  it("creates follow, comment and reaction alerts atomically with their actions", () => {
-    expect(functionsSource).toContain("transaction.create(followNotificationReference");
-    expect(functionsSource).toContain("transaction.create(commentNotificationReference");
-    expect(functionsSource).toContain("transaction.create(reactionNotificationReference");
+  it("aggregates follow, comment and reaction alerts atomically with their actions", () => {
+    expect(functionsSource).toContain("transaction.set(followNotificationReference, notificationAggregatePatch");
+    expect(functionsSource).toContain("transaction.set(commentNotificationReference, notificationAggregatePatch");
+    expect(functionsSource).toContain("transaction.set(reactionNotificationReference, notificationAggregatePatch");
     expect(functionsSource).toContain("postId,\n          bodyPreview: body.slice(0, 100)");
     expect(functionsSource).toContain("creatorNotificationProjection(data");
   });

@@ -27,10 +27,8 @@ import {
   setDoc,
 } from "firebase/firestore";
 import {
-  deleteObject,
   getBlob,
   ref,
-  uploadBytes,
 } from "firebase/storage";
 import {
   firebaseAuth,
@@ -44,6 +42,13 @@ import {
   clearAccountLinkedDrafts,
 } from "./draftStorage";
 import { prepareProfileImage } from "./profileImage";
+import {
+  createBoundedAccountExportBuffer,
+  writeManagedAccountExport,
+  type AccountExportTextWriter,
+  type ManagedAccountExportRequest,
+} from "./accountExportDownload";
+import { continueAccountDeletion, type AccountDeletionResponse } from "./accountDeletionClient";
 
 let persistenceReady: Promise<void> | undefined;
 const avatarObjectUrls = new Map<string, string>();
@@ -144,6 +149,14 @@ export function normalizeAccountProfile(input: Pick<AccountProfileInput, "displa
   return { displayName, nickname };
 }
 
+async function accountBlobBase64(blob: Blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 0x8000)
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  return btoa(binary);
+}
+
 export async function saveAccountProfile(input: AccountProfileInput) {
   await ensurePersistence();
   await firebaseAuth.authStateReady();
@@ -157,23 +170,16 @@ export async function saveAccountProfile(input: AccountProfileInput) {
   let keepAvatar = Boolean(existingAvatar);
   if (input.avatar) {
     const avatar = await prepareProfileImage(input.avatar);
-    await uploadBytes(ref(firebaseStorage, avatarPath), avatar, {
-      contentType: "image/webp",
-      customMetadata: { ownerId: user.uid, kind: "avatar", schemaVersion: "1" },
-    });
+    await httpsCallable<{ base64: string }, { imagePresent: boolean }>(
+      firebaseFunctions,
+      "setAuraAccountAvatar",
+    )({ base64: await accountBlobBase64(avatar) });
     keepAvatar = true;
   } else if (input.removeAvatar && existingAvatar) {
-    await deleteObject(ref(firebaseStorage, existingAvatar)).catch((error) => {
-      if (
-        !(
-          typeof error === "object" &&
-          error &&
-          "code" in error &&
-          String(error.code).includes("object-not-found")
-        )
-      )
-        throw error;
-    });
+    await httpsCallable<{ remove: true }, { imagePresent: boolean }>(
+      firebaseFunctions,
+      "setAuraAccountAvatar",
+    )({ remove: true });
     keepAvatar = false;
   }
   const cached = avatarObjectUrls.get(avatarPath);
@@ -326,29 +332,84 @@ async function verifiedCurrentAccount() {
   return user;
 }
 
+type NativeAccountExportWritable = {
+  write(value: string): Promise<void>;
+  close(): Promise<void>;
+  abort(reason?: unknown): Promise<void>;
+};
+
+type NativeAccountExportHandle = {
+  createWritable(): Promise<NativeAccountExportWritable>;
+};
+
+function requestNativeAccountExportWriter(filename: string) {
+  const picker = (window as Window & {
+    showSaveFilePicker?: (options: Record<string, unknown>) => Promise<NativeAccountExportHandle>;
+  }).showSaveFilePicker;
+  if (typeof picker !== "function") return undefined;
+  return picker.call(window, {
+    suggestedName: filename,
+    types: [{
+      description: "LIEUVA account data",
+      accept: { "application/x-ndjson": [".jsonl"] },
+    }],
+  }).then(async (handle): Promise<AccountExportTextWriter> => {
+    const writable = await handle.createWritable();
+    return {
+      write: (value) => writable.write(value),
+      close: () => writable.close(),
+      abort: (reason) => writable.abort(reason),
+    };
+  });
+}
+
 export async function downloadAccountExport() {
-  const user = await verifiedCurrentAccount();
-  const result = await httpsCallable<Record<string, never>, Record<string, unknown>>(
-    firebaseFunctions,
-    "exportAuraAccountData",
-  )({});
-  const localDrafts = await accountLinkedDraftExport(user.uid);
-  const payload = {
-    ...result.data,
-    localBrowserData: {
-      deviceScoped: true,
-      accountLinkedDrafts: localDrafts,
-      note: "Anonymous and other-account drafts on this browser are intentionally excluded.",
-    },
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `lieuva-account-data-${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  return { localDrafts: localDrafts.length };
+  const initiatingUser = firebaseAuth.currentUser;
+  if (!initiatingUser || initiatingUser.isAnonymous)
+    throw new Error("Use an email or Google account.");
+  const filename = `lieuva-account-data-${new Date().toISOString().slice(0, 10)}.jsonl`;
+  // The picker must be invoked before the first await while the click still
+  // carries transient user activation.
+  const nativeWriterPromise = requestNativeAccountExportWriter(filename);
+  let writer: AccountExportTextWriter | undefined;
+  let writerOwnedByWorkflow = false;
+  try {
+    const user = await verifiedCurrentAccount();
+    if (user.uid !== initiatingUser.uid)
+      throw new Error("The signed-in account changed before export started.");
+    const localDrafts = await accountLinkedDraftExport(user.uid);
+    const buffer = nativeWriterPromise ? undefined : createBoundedAccountExportBuffer();
+    writer = nativeWriterPromise ? await nativeWriterPromise : buffer!.writer;
+    const manage = httpsCallable<ManagedAccountExportRequest, unknown>(
+      firebaseFunctions,
+      "manageAuraAccountExport",
+    );
+    writerOwnedByWorkflow = true;
+    await writeManagedAccountExport({
+      call: async (request) => {
+        if (firebaseAuth.currentUser?.uid !== user.uid)
+          throw new Error("The signed-in account changed during export.");
+        return (await manage(request)).data;
+      },
+      writer,
+      localDrafts,
+    });
+    if (buffer) {
+      const url = URL.createObjectURL(buffer.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+    return { localDrafts: localDrafts.length };
+  } catch (error) {
+    if (!writerOwnedByWorkflow) {
+      if (writer) await writer.abort(error).catch(() => undefined);
+      else await nativeWriterPromise?.then((pending) => pending.abort(error)).catch(() => undefined);
+    }
+    throw error;
+  }
 }
 
 async function reauthenticateForDeletion(user: User, password?: string) {
@@ -373,12 +434,14 @@ export async function deleteCurrentAccount(password?: string) {
   const user = await verifiedCurrentAccount();
   const uid = user.uid;
   await reauthenticateForDeletion(user, password);
-  const result = await httpsCallable<
+  const erase = httpsCallable<
     { confirmation: "DELETE" },
-    { status: "deleted"; summary: Record<string, unknown> }
-  >(firebaseFunctions, "deleteAuraAccount")({ confirmation: "DELETE" });
-  if (result.data.status !== "deleted")
-    throw new Error("Account deletion did not complete.");
+    AccountDeletionResponse
+  >(firebaseFunctions, "deleteAuraAccount");
+  const summary = await continueAccountDeletion(async () => {
+    const result = await erase({ confirmation: "DELETE" });
+    return result.data;
+  });
   const localDraftsRemoved = await clearAccountLinkedDrafts(uid);
   for (const [path, source] of avatarObjectUrls) {
     if (!path.startsWith(`profiles/${uid}/`)) continue;
@@ -386,7 +449,7 @@ export async function deleteCurrentAccount(password?: string) {
     avatarObjectUrls.delete(path);
   }
   await signOut(firebaseAuth).catch(() => undefined);
-  return { ...result.data.summary, localDraftsRemoved };
+  return { ...summary, localDraftsRemoved };
 }
 
 export function accountErrorMessage(error: unknown) {

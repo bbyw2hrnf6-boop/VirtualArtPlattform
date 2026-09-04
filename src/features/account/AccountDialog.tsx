@@ -627,8 +627,8 @@ function AccountDataRights({
           <strong>Download account data</strong>
           <p>Exports your profile, newsletter preference, owned Space manifests, revision/media references, roles, invitations, and account-linked drafts stored in this browser.</p>
         </div>
-        <button type="button" disabled={busy} onClick={onExport}>{busy ? "Preparing…" : "Download JSON"}</button>
-        <small>This is separate from the existing single-Space .aura.json export. Media files remain in Storage and are represented by paths and metadata.</small>
+        <button type="button" disabled={busy} onClick={onExport}>{busy ? "Preparing…" : "Download JSONL"}</button>
+        <small>This is a resumable traversal, not one instant snapshot: activity during the export may appear in a later section, and the file records its start time. Media stays in Storage and is represented by paths and metadata. Large exports require a browser that supports streaming a file to disk; the fallback is capped at 64 MiB.</small>
       </article>
       <article className="account-data-card account-data-card--danger">
         <div>

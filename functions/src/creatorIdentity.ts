@@ -1,6 +1,13 @@
+import sharp from "sharp";
+
 export const CREATOR_HANDLE_MIN = 3;
 export const CREATOR_HANDLE_MAX = 30;
 export const CREATOR_HANDLE_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
+const CREATOR_IMAGE_MAXIMUM_BYTES = 512 * 1024;
+const CREATOR_IMAGE_MAXIMUM_EDGE = 4_096;
+const CREATOR_IMAGE_MAXIMUM_PIXELS = 12_000_000;
+const CREATOR_IMAGE_MINIMUM_BYTES = 32;
 
 const RESERVED_HANDLES = new Set([
   "account", "admin", "api", "app", "auth", "create", "creator", "creator-hub", "creators",
@@ -94,10 +101,44 @@ export function isReservedCreatorHandle(value: unknown): boolean {
   return typeof value === "string" && RESERVED_HANDLES.has(value.trim().toLowerCase());
 }
 
-export function isValidCreatorWebp(bytes: Buffer): boolean {
-  return bytes.length >= 12 && bytes.length <= 512 * 1024 &&
-    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
-    bytes.subarray(8, 12).toString("ascii") === "WEBP";
+export async function isValidCreatorWebp(bytesValue: Uint8Array): Promise<boolean> {
+  const bytes = Buffer.from(bytesValue);
+  if (
+    bytes.length < CREATOR_IMAGE_MINIMUM_BYTES
+    || bytes.length > CREATOR_IMAGE_MAXIMUM_BYTES
+  ) return false;
+
+  try {
+    const image = sharp(bytes, {
+      failOn: "warning",
+      limitInputPixels: CREATOR_IMAGE_MAXIMUM_PIXELS,
+      sequentialRead: true,
+    });
+    const metadata = await image.metadata();
+    const width = metadata.width;
+    const height = metadata.height;
+    if (
+      metadata.format !== "webp"
+      || !Number.isSafeInteger(width)
+      || !Number.isSafeInteger(height)
+      || Number(width) < 1
+      || Number(height) < 1
+      || Number(width) > CREATOR_IMAGE_MAXIMUM_EDGE
+      || Number(height) > CREATOR_IMAGE_MAXIMUM_EDGE
+      || Number(width) * Number(height) > CREATOR_IMAGE_MAXIMUM_PIXELS
+      || (metadata.pages ?? 1) !== 1
+    ) return false;
+
+    // Header parsing alone does not prove that every compressed pixel is
+    // decodable. Force a bounded full decode before any owner bytes are saved.
+    const decoded = await image.clone().ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    return decoded.info.width === width
+      && decoded.info.height === height
+      && decoded.info.channels === 4
+      && decoded.data.length === Number(width) * Number(height) * decoded.info.channels;
+  } catch {
+    return false;
+  }
 }
 
 const CREATOR_BIO_FONTS = new Set<CreatorBioFont>(["sans", "serif", "editorial"]);

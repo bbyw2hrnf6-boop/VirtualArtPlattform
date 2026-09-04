@@ -2,26 +2,18 @@ import { signInAnonymously, signOut, type User } from "firebase/auth";
 import {
   collection,
   collectionGroup,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
   limit,
   orderBy,
   query,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
   Timestamp,
   where,
-  type DocumentReference,
 } from "firebase/firestore";
 import {
-  deleteObject,
   getBlob,
   ref,
-  uploadBytes,
-  type StorageReference,
 } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import {
@@ -120,12 +112,77 @@ const RECOVERABLE_ANONYMOUS_SESSION_ERRORS = new Set([
   "auth/user-token-expired",
 ]);
 
-async function bestEffortDeleteDocuments(references: DocumentReference[]) {
-  return Promise.allSettled(references.map((reference) => deleteDoc(reference)));
+type TrustedGalleryFinalization = {
+  publishedAt: string;
+  expiresAt: string;
+  updatedAt: string;
+  revision: number;
+};
+
+const AMBIGUOUS_FINALIZATION_ERRORS = new Set([
+  "deadline-exceeded",
+  "functions/deadline-exceeded",
+  "functions/internal",
+  "functions/unknown",
+  "functions/unavailable",
+  "internal",
+  "unknown",
+  "unavailable",
+]);
+
+/**
+ * A callable can commit successfully while its response is lost. Replaying the
+ * exact same finalizer is safe because both server finalizers recognize their
+ * immutable upload namespace and return the already-committed manifest.
+ */
+async function finalizeWithReplay<T>(
+  operation: () => Promise<T>,
+  reconcile: () => Promise<T | undefined>,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!AMBIGUOUS_FINALIZATION_ERRORS.has(firebaseErrorCode(error))) throw error;
+    try {
+      return await operation();
+    } catch (replayError) {
+      const committed = await reconcile().catch(() => undefined);
+      if (committed !== undefined) return committed;
+      throw replayError;
+    }
+  }
 }
 
-async function bestEffortDeleteObjects(references: StorageReference[]) {
-  return Promise.allSettled(references.map((reference) => deleteObject(reference)));
+async function callWithAmbiguousReplay<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!AMBIGUOUS_FINALIZATION_ERRORS.has(firebaseErrorCode(error))) throw error;
+    return operation();
+  }
+}
+
+function trustedFinalization(
+  value: TrustedGalleryFinalization,
+  expectedRevision: number,
+) {
+  const publishedAt = new Date(value.publishedAt);
+  const expiresAt = new Date(value.expiresAt);
+  const updatedAt = new Date(value.updatedAt);
+  if (
+    value.revision !== expectedRevision
+    || !Number.isFinite(publishedAt.getTime())
+    || !Number.isFinite(expiresAt.getTime())
+    || !Number.isFinite(updatedAt.getTime())
+    || expiresAt <= updatedAt
+    || updatedAt < publishedAt
+  ) throw new Error("The trusted publication response was invalid. Reload the Space before continuing.");
+  return {
+    publishedAt: publishedAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    updatedAt: updatedAt.toISOString(),
+    revision: value.revision,
+  };
 }
 
 async function createThumbnail(source?: string) {
@@ -166,6 +223,57 @@ function blobAsDataUrl(blob: Blob): Promise<string> {
     );
     reader.readAsDataURL(blob);
   });
+}
+
+async function blobAsBase64(blob: Blob) {
+  const dataUrl = await blobAsDataUrl(blob);
+  const comma = dataUrl.indexOf(",");
+  if (comma < 1 || dataUrl.slice(0, comma).toLowerCase() !== `data:${blob.type};base64`)
+    throw new Error("The prepared image could not be encoded for trusted upload.");
+  return dataUrl.slice(comma + 1);
+}
+
+async function uploadTrustedGalleryAsset(options: {
+  galleryId: string;
+  kind: "cover" | "artwork";
+  blob: Blob;
+  expectedPath: string;
+  index?: number;
+  revisionId?: string;
+  expectedRevision?: number;
+}) {
+  const upload = httpsCallable<
+    {
+      requestId: string;
+      galleryId: string;
+      kind: "cover" | "artwork";
+      contentType: string;
+      bytesBase64: string;
+      index?: number;
+      revisionId?: string;
+      expectedRevision?: number;
+    },
+    { path: string; bytes: number; idempotent: boolean }
+  >(firebaseFunctions, "uploadAuraGalleryAsset");
+  const payload = {
+    requestId: crypto.randomUUID().replaceAll("-", ""),
+    galleryId: options.galleryId,
+    kind: options.kind,
+    contentType: options.blob.type,
+    bytesBase64: await blobAsBase64(options.blob),
+    ...(options.kind === "artwork" ? { index: options.index } : {}),
+    ...(options.revisionId ? {
+      revisionId: options.revisionId,
+      expectedRevision: options.expectedRevision,
+    } : {}),
+  };
+  const result = await callWithAmbiguousReplay(async () => (await upload(payload)).data);
+  if (
+    result.path !== options.expectedPath
+    || result.bytes !== options.blob.size
+    || typeof result.idempotent !== "boolean"
+  ) throw new Error("The trusted Space image upload response was invalid.");
+  return result.path;
 }
 
 async function dataUrlAsBlob(source: string) {
@@ -348,8 +456,6 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       visibility: "public",
     },
   ): Promise<GalleryRecord> {
-    const uploaded: StorageReference[] = [];
-    let galleryRef: DocumentReference | undefined;
     let permittedGalleryId: string | undefined;
     try {
       const validatedDraft = prepareGalleryDraftForPublication(
@@ -376,95 +482,86 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         galleryId: id,
         visibility,
       });
-      const now = new Date();
       const expires = new Date(permit.data.expiresAt);
       if (!Number.isFinite(expires.getTime()))
         throw new Error("The publication permit returned an invalid expiry.");
-      const publishedAt = Timestamp.fromDate(now);
-      const expiresAt = Timestamp.fromDate(expires);
-      const expiresAtMs = String(expires.getTime());
       const coverSource = validateGalleryCoverSource(
         await createThumbnail(roomCoverSource || validatedDraft.artworks[0]?.src),
       );
-      const coverPath = galleryCoverPath(ownerId, id);
-      const coverReference = ref(firebaseStorage, coverPath);
+      const expectedCoverPath = galleryCoverPath(ownerId, id);
       const coverUpload = await dataUrlAsBlob(coverSource);
-      uploaded.push(coverReference);
-      await uploadBytes(coverReference, coverUpload.blob, {
-        contentType: coverUpload.contentType,
-        cacheControl: "public,max-age=3600",
-        customMetadata: {
-          ownerId,
-          galleryId: id,
-          kind: "cover",
-          expiresAtMs,
-          schemaVersion: "3",
-          visibility,
-          retention,
-        },
+      const coverPath = await uploadTrustedGalleryAsset({
+        galleryId: id,
+        kind: "cover",
+        blob: coverUpload.blob,
+        expectedPath: expectedCoverPath,
       });
 
       const artworks = await mapWithConcurrency(
         validatedDraft.artworks,
-        3,
+        1,
         async (artwork, index) => {
-          const storagePath = galleryArtworkPath(ownerId, id, index);
-          const reference = ref(firebaseStorage, storagePath);
+          const expectedPath = galleryArtworkPath(ownerId, id, index);
           const artworkUpload = await dataUrlAsBlob(artwork.src);
-          uploaded.push(reference);
-          await uploadBytes(reference, artworkUpload.blob, {
-            contentType: artworkUpload.contentType,
-            cacheControl: "public,max-age=3600",
-            customMetadata: {
-              ownerId,
-              galleryId: id,
-              kind: "artwork",
-              index: String(index),
-              expiresAtMs,
-              schemaVersion: "3",
-              visibility,
-              retention,
-            },
+          const storagePath = await uploadTrustedGalleryAsset({
+            galleryId: id,
+            kind: "artwork",
+            index,
+            blob: artworkUpload.blob,
+            expectedPath,
           });
           return { ...artwork, storagePath, src: "" };
         },
       );
-
-      galleryRef = doc(firebaseDb, "galleries", id);
-      await setDoc(galleryRef, {
-        ...validatedDraft,
-        artworks,
-        coverPath,
-        ownerId,
-        publishedAt,
-        expiresAt,
-        schemaVersion: 3,
-        visibility,
-        retention,
-        accessVersion: 1,
-        exploreListed,
-        creatorProfileListed,
-        discoverEligible: false,
-        revision: 1,
-        updatedAt: publishedAt,
-        lifecycleStatus: "active",
-      });
+      const finalize = httpsCallable<
+        {
+          galleryId: string;
+          draft: GalleryDraft;
+          distribution: GalleryDistribution;
+        },
+        TrustedGalleryFinalization
+      >(firebaseFunctions, "finalizeAuraGalleryPublication");
+      const finalizePayload = {
+        galleryId: id,
+        draft: { ...validatedDraft, artworks },
+        distribution: { exploreListed, creatorProfileListed },
+      };
+      const finalized = await finalizeWithReplay(
+        async () => (await finalize(finalizePayload)).data,
+        async () => {
+          const snapshot = await getDoc(doc(firebaseDb, "galleries", id));
+          if (!snapshot.exists()) return undefined;
+          const committed = fromFirestore(snapshot.id, snapshot.data());
+          if (
+            committed.ownerId !== ownerId
+            || committed.revision !== 1
+            || committed.coverPath !== coverPath
+          ) return undefined;
+          return {
+            publishedAt: committed.publishedAt,
+            expiresAt: committed.expiresAt,
+            updatedAt: committed.updatedAt,
+            revision: committed.revision,
+          };
+        },
+      );
+      const publication = trustedFinalization(finalized, 1);
       return {
         ...validatedDraft,
         coverSrc: coverSource,
         coverPath,
         id,
         ownerId,
-        publishedAt: now.toISOString(),
-        expiresAt: expires.toISOString(),
+        publishedAt: publication.publishedAt,
+        expiresAt: publication.expiresAt,
         visibility,
         retention,
         accessVersion: 1,
         exploreListed,
         creatorProfileListed,
         discoverEligible: false,
-        revision: 1,
-        updatedAt: now.toISOString(),
+        revision: publication.revision,
+        updatedAt: publication.updatedAt,
         lifecycleStatus: "active",
       };
     } catch (error) {
@@ -473,8 +570,6 @@ export class FirebaseGalleryRepository implements GalleryRepository {
           galleryId: permittedGalleryId,
         }).catch((abortError) => console.warn("Publication cleanup deferred to the scheduled worker.", abortError));
       }
-      if (galleryRef) await bestEffortDeleteDocuments([galleryRef]);
-      if (uploaded.length) await bestEffortDeleteObjects(uploaded);
       throw normalizeGalleryPublishingError(error, FIREBASE_PROJECT_ID);
     }
   }
@@ -484,7 +579,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
     draft: Parameters<GalleryRepository["updatePublished"]>[1],
     roomCoverSource?: string,
   ): Promise<GalleryRecord> {
-    const uploaded: StorageReference[] = [];
+    let permittedRevision: { galleryId: string; revisionId: string } | undefined;
     try {
       const user = await this.authenticatedUser();
       const galleryReference = doc(firebaseDb, "galleries", target.id);
@@ -525,114 +620,123 @@ export class FirebaseGalleryRepository implements GalleryRepository {
 
       const nextRevision = current.revision + 1;
       const revisionId = `r${nextRevision}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
-      const expiresAtMs = String(new Date(current.expiresAt).getTime());
+      permittedRevision = { galleryId: current.id, revisionId };
+      const permit = await httpsCallable<
+        { galleryId: string; revisionId: string; expectedRevision: number },
+        { ownerId: string; expiresAt: string; retention: "account-preview" }
+      >(firebaseFunctions, "beginAuraGalleryRevision")({
+        galleryId: current.id,
+        revisionId,
+        expectedRevision: target.revision,
+      });
+      const permittedExpiry = new Date(permit.data.expiresAt);
+      if (
+        permit.data.ownerId !== current.ownerId
+        || permit.data.retention !== current.retention
+        || !Number.isFinite(permittedExpiry.getTime())
+        || permittedExpiry.toISOString() !== new Date(current.expiresAt).toISOString()
+      ) throw new Error("The update permit did not match this Space. Reload it and retry.");
       const coverSource = validateGalleryCoverSource(
         await createThumbnail(roomCoverSource || validatedDraft.artworks[0]?.src),
       );
-      const coverPath = galleryRevisionCoverPath(
+      const expectedCoverPath = galleryRevisionCoverPath(
         current.ownerId,
         current.id,
         revisionId,
       );
-      const coverReference = ref(firebaseStorage, coverPath);
       const coverUpload = await dataUrlAsBlob(coverSource);
-      uploaded.push(coverReference);
-      await uploadBytes(coverReference, coverUpload.blob, {
-        contentType: coverUpload.contentType,
-        cacheControl: "public,max-age=3600",
-        customMetadata: {
-          ownerId: current.ownerId,
-          galleryId: current.id,
-          uploaderId: user.uid,
-          revisionId,
-          kind: "cover",
-          expiresAtMs,
-          schemaVersion: "3",
-          visibility: current.visibility,
-          retention: current.retention,
-        },
+      const coverPath = await uploadTrustedGalleryAsset({
+        galleryId: current.id,
+        revisionId,
+        expectedRevision: target.revision,
+        kind: "cover",
+        blob: coverUpload.blob,
+        expectedPath: expectedCoverPath,
       });
       const artworks = await mapWithConcurrency(
         validatedDraft.artworks,
-        3,
+        1,
         async (artwork, index) => {
-          const storagePath = galleryRevisionArtworkPath(
+          const expectedPath = galleryRevisionArtworkPath(
             current.ownerId!,
             current.id,
             revisionId,
             index,
           );
-          const reference = ref(firebaseStorage, storagePath);
           const artworkUpload = await dataUrlAsBlob(artwork.src);
-          uploaded.push(reference);
-          await uploadBytes(reference, artworkUpload.blob, {
-            contentType: artworkUpload.contentType,
-            cacheControl: "public,max-age=3600",
-            customMetadata: {
-              ownerId: current.ownerId!,
-              galleryId: current.id,
-              uploaderId: user.uid,
-              revisionId,
-              kind: "artwork",
-              index: String(index),
-              expiresAtMs,
-              schemaVersion: "3",
-              visibility: current.visibility,
-              retention: current.retention,
-            },
+          const storagePath = await uploadTrustedGalleryAsset({
+            galleryId: current.id,
+            revisionId,
+            expectedRevision: target.revision,
+            kind: "artwork",
+            index,
+            blob: artworkUpload.blob,
+            expectedPath,
           });
           return { ...artwork, storagePath, src: "" };
         },
       );
-      const updatedAt = new Date();
-      await runTransaction(firebaseDb, async (transaction) => {
-        const latestSnapshot = await transaction.get(galleryReference);
-        if (!latestSnapshot.exists()) throw new Error("This Space no longer exists.");
-        const latest = fromFirestore(latestSnapshot.id, latestSnapshot.data());
-        if (latest.revision !== target.revision)
-          throw new Error(
-            "This Space was changed in another session. Reopen it from Account to load the latest version; your local Project stays saved.",
-          );
-        transaction.set(galleryReference, {
-          ...validatedDraft,
-          artworks,
-          coverPath,
-          ownerId: current.ownerId,
-          publishedAt: Timestamp.fromDate(new Date(current.publishedAt)),
-          expiresAt: Timestamp.fromDate(new Date(current.expiresAt)),
-          schemaVersion: 3,
-          visibility: current.visibility,
-          retention: current.retention,
-          accessVersion: current.accessVersion,
-          exploreListed: current.exploreListed,
-          creatorProfileListed: current.creatorProfileListed,
-          discoverEligible: false,
-          revision: nextRevision,
-          updatedAt: serverTimestamp(),
-          lifecycleStatus: current.lifecycleStatus,
-        });
-      });
+      const finalize = httpsCallable<
+        {
+          galleryId: string;
+          revisionId: string;
+          expectedRevision: number;
+          draft: GalleryDraft;
+        },
+        TrustedGalleryFinalization
+      >(firebaseFunctions, "finalizeAuraGalleryRevision");
+      const finalizePayload = {
+        galleryId: current.id,
+        revisionId,
+        expectedRevision: target.revision,
+        draft: { ...validatedDraft, artworks },
+      };
+      const finalized = await finalizeWithReplay(
+        async () => (await finalize(finalizePayload)).data,
+        async () => {
+          const snapshot = await getDoc(galleryReference);
+          if (!snapshot.exists()) return undefined;
+          const committed = fromFirestore(snapshot.id, snapshot.data());
+          if (
+            committed.ownerId !== current.ownerId
+            || committed.revision !== nextRevision
+            || committed.coverPath !== coverPath
+          ) return undefined;
+          return {
+            publishedAt: committed.publishedAt,
+            expiresAt: committed.expiresAt,
+            updatedAt: committed.updatedAt,
+            revision: committed.revision,
+          };
+        },
+      );
+      const publication = trustedFinalization(finalized, nextRevision);
       return {
         ...validatedDraft,
         coverSrc: coverSource,
         coverPath,
         id: current.id,
         ownerId: current.ownerId,
-        publishedAt: current.publishedAt,
-        expiresAt: current.expiresAt,
+        publishedAt: publication.publishedAt,
+        expiresAt: publication.expiresAt,
         visibility: current.visibility,
         retention: current.retention,
         accessVersion: current.accessVersion,
         exploreListed: current.exploreListed,
         creatorProfileListed: current.creatorProfileListed,
         discoverEligible: false,
-        revision: nextRevision,
-        updatedAt: updatedAt.toISOString(),
+        revision: publication.revision,
+        updatedAt: publication.updatedAt,
         effectiveRole: role,
         lifecycleStatus: current.lifecycleStatus,
       };
     } catch (error) {
-      if (uploaded.length) await bestEffortDeleteObjects(uploaded);
+      if (permittedRevision) {
+        await httpsCallable(firebaseFunctions, "abortAuraGalleryRevision")({
+          galleryId: permittedRevision.galleryId,
+          revisionId: permittedRevision.revisionId,
+        }).catch((abortError) => console.warn("Update cleanup deferred to the scheduled worker.", abortError));
+      }
       throw normalizeGalleryPublishingError(error, FIREBASE_PROJECT_ID);
     }
   }
@@ -650,6 +754,8 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       const permissionProbe = query(
         collection(firebaseDb, "galleries"),
         where("visibility", "==", "public"),
+        where("discoverEligible", "==", true),
+        where("lifecycleStatus", "==", "active"),
         where("expiresAt", ">", safelyActiveAt),
         orderBy("expiresAt", "desc"),
         limit(1),
@@ -662,7 +768,9 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       throw new GalleryAccessDeniedError(id);
     }
     if (!snapshot.exists()) return null;
-    const record = fromFirestore(snapshot.id, snapshot.data());
+    const data = snapshot.data();
+    if (data.lifecycleStatus === "purging") return null;
+    const record = fromFirestore(snapshot.id, data);
     if (
       record.lifecycleStatus !== "active" ||
       new Date(record.expiresAt).getTime() <= Date.now()
@@ -714,6 +822,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       collection(firebaseDb, "galleries"),
       where("visibility", "==", "public"),
       where("discoverEligible", "==", true),
+      where("lifecycleStatus", "==", "active"),
       where("expiresAt", ">", safelyActiveAt),
       orderBy("expiresAt", "desc"),
       limit(30),
@@ -722,6 +831,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       collection(firebaseDb, "galleries"),
       where("schemaVersion", "in", [1, 2]),
       where("discoverEligible", "==", true),
+      where("lifecycleStatus", "==", "active"),
       where("expiresAt", ">", safelyActiveAt),
       orderBy("expiresAt", "desc"),
       limit(30),
@@ -832,7 +942,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       });
     }
     const records = await mapWithConcurrency(
-      [...entries.values()],
+      [...entries.values()].filter(({ snapshot }) => snapshot.data().lifecycleStatus !== "purging"),
       DISCOVER_COVER_CONCURRENCY,
       async ({ snapshot, role }) => {
         const record = fromFirestore(snapshot.id, snapshot.data());

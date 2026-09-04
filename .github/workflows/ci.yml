@@ -22,6 +22,7 @@ jobs:
       CI: "true"
       NODE_VERSION: 22.23.2
       NPM_VERSION: 10.9.8
+      JAVA_VERSION: 21.0.12.1+1
       FIREBASE_CLI_VERSION: 15.28.2
       FIREBASE_PROJECT_ID: virtualartplattform
       LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
@@ -39,6 +40,14 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             functions/package-lock.json
+            firebase-cli/package-lock.json
+
+      - name: Use the pinned Java emulator runtime
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          check-latest: false
 
       - name: Install locked dependencies
         run: |
@@ -46,13 +55,18 @@ jobs:
           test "$(npm --version)" = "$NPM_VERSION"
           npm ci
           npm ci --prefix functions
+          node firebase-cli/validate-lock.mjs
+          npm ci --prefix firebase-cli --ignore-scripts --no-audit --no-fund
+          test "$(node firebase-cli/node_modules/firebase-tools/lib/bin/firebase.js --version)" = "$FIREBASE_CLI_VERSION"
 
       - name: Verify locked inputs remain unchanged
         run: |
           test "$(node --version)" = "v${NODE_VERSION}"
           test -f package-lock.json
           test -f functions/package-lock.json
-          git diff --exit-code -- package-lock.json functions/package-lock.json
+          test -f firebase-cli/package-lock.json
+          java -XshowSettings:properties -version 2>&1 | grep -F "java.runtime.version = 21.0.12.1+1-LTS"
+          git diff --exit-code -- package-lock.json functions/package-lock.json firebase-cli/package-lock.json
 
       - name: Lint repository sources
         run: npm run lint
@@ -62,6 +76,9 @@ jobs:
 
       - name: Run repository script tests
         run: npm run test:scripts
+
+      - name: Run Firestore and Storage authorization matrices
+        run: npm run test:firebase-rules
 
       - name: Verify Firebase Functions
         run: npm run check:functions
@@ -86,6 +103,89 @@ jobs:
             echo "- Revision: \`${GITHUB_SHA}\`"
             echo "- Node.js: \`$(node --version)\`"
             echo "- Event: \`${GITHUB_EVENT_NAME}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  policy-artifact:
+    name: Firebase policy artifact
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality-gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      NODE_VERSION: 22.23.2
+      NPM_VERSION: 10.9.8
+      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_PROJECT_ID: virtualartplattform
+      FIREBASE_STORAGE_BUCKET: virtualartplattform.firebasestorage.app
+    steps:
+      - name: Check out the verified policy revision
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Use the pinned Node.js toolchain
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Assemble and verify immutable Firebase policy
+        id: policy
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = "v${NODE_VERSION}"
+          test "$(npm --version)" = "$NPM_VERSION"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node firebase-cli/validate-lock.mjs
+          node scripts/wp3-policy-artifact.mjs create \
+            --commit-sha "$GITHUB_SHA" \
+            --verify-run-id "$GITHUB_RUN_ID" \
+            --node-version "$NODE_VERSION" \
+            --npm-version "$NPM_VERSION" \
+            --firebase-cli-version "$FIREBASE_CLI_VERSION" \
+            --project-id "$FIREBASE_PROJECT_ID" \
+            --storage-bucket "$FIREBASE_STORAGE_BUCKET"
+          node scripts/wp3-policy-artifact.mjs verify \
+            --commit-sha "$GITHUB_SHA" \
+            --verify-run-id "$GITHUB_RUN_ID" \
+            --node-version "$NODE_VERSION" \
+            --npm-version "$NPM_VERSION" \
+            --firebase-cli-version "$FIREBASE_CLI_VERSION" \
+            --project-id "$FIREBASE_PROJECT_ID" \
+            --storage-bucket "$FIREBASE_STORAGE_BUCKET"
+          manifest_sha256="$(sha256sum artifacts/wp3-policy/lieuva-policy-manifest.json | awk '{print $1}')"
+          test -n "$manifest_sha256"
+          echo "manifest_sha256=$manifest_sha256" >> "$GITHUB_OUTPUT"
+          git diff --exit-code
+
+      - name: Upload immutable Firebase policy
+        id: upload-policy
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lieuva-policy-${{ github.sha }}-${{ github.run_id }}
+          path: artifacts/wp3-policy/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 6
+          overwrite: false
+          include-hidden-files: false
+
+      - name: Record immutable policy identity
+        env:
+          ARTIFACT_DIGEST: ${{ steps.upload-policy.outputs.artifact-digest }}
+          ARTIFACT_ID: ${{ steps.upload-policy.outputs.artifact-id }}
+          MANIFEST_SHA256: ${{ steps.policy.outputs.manifest_sha256 }}
+        run: |
+          {
+            echo "### Firebase policy artifact"
+            echo "- Revision: \`${GITHUB_SHA}\`"
+            echo "- Verify run: \`${GITHUB_RUN_ID}\`"
+            echo "- Artifact ID: \`${ARTIFACT_ID}\`"
+            echo "- Archive digest: \`${ARTIFACT_DIGEST}\`"
+            echo "- Manifest SHA-256: \`${MANIFEST_SHA256}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   production-artifact:

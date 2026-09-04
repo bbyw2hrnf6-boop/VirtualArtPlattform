@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:operator-tools": "node --test scripts/operator-tools.node-test.mjs",
     "test:scripts": "node --test scripts/*.node-test.mjs firebase-cli/*.node-test.mjs && node firebase-cli/validate-lock.mjs",
+    "test:firebase-rules": "node firebase-cli/node_modules/firebase-tools/lib/bin/firebase.js emulators:exec --only firestore,storage --project demo-lieuva-rules \"vitest run --config tests/firebase-rules/vitest.config.ts\"",
     "test:browser-smoke": "playwright test",
     "test:browser-smoke:install": "playwright install chromium",
     "test:release-gate": "vitest run src/services/firebaseGalleryRepository.releaseGate.test.ts src/services/draftStorage.test.ts src/services/galleryPublishingError.test.ts src/services/galleryStoragePaths.test.ts src/services/galleryValidation.test.ts src/services/imageBlob.test.ts src/features/gallery/editor/publishReview.test.ts src/features/gallery/editor/publishState.test.ts",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "5.0.2",
     "@playwright/test": "1.62.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

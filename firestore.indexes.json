@@ -35,6 +35,26 @@
       ]
     },
     {
+      "collectionGroup": "galleries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "discoverEligible", "order": "ASCENDING" },
+        { "fieldPath": "lifecycleStatus", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "galleries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "schemaVersion", "order": "ASCENDING" },
+        { "fieldPath": "discoverEligible", "order": "ASCENDING" },
+        { "fieldPath": "lifecycleStatus", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "creatorProfiles",
       "queryScope": "COLLECTION",
       "fields": [
@@ -50,6 +70,14 @@
         { "fieldPath": "lifecycleStatus", "order": "ASCENDING" },
         { "fieldPath": "expiresAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "accountDeletionJobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
@@ -60,9 +88,68 @@
         { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
       ]
     },
+    {
+      "collectionGroup": "members",
+      "fieldPath": "acceptedBy",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "collectionGroup": "comments",
+      "fieldPath": "authorCreatorId",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "collectionGroup": "reactions",
+      "fieldPath": "creatorId",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "collectionGroup": "items",
+      "fieldPath": "actorCreatorId",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "collectionGroup": "posts",
+      "fieldPath": "moderationStatus",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
     { "collectionGroup": "galleries", "fieldPath": "coverSrc", "indexes": [] },
     { "collectionGroup": "galleries", "fieldPath": "artworks", "indexes": [] },
     { "collectionGroup": "galleries", "fieldPath": "decor", "indexes": [] },
-    { "collectionGroup": "galleryArtworks", "fieldPath": "src", "indexes": [] }
+    { "collectionGroup": "galleryArtworks", "fieldPath": "src", "indexes": [] },
+    {
+      "collectionGroup": "accountExportJobs",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "accountExportChunks",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "accountDeletionJobs",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "accountMediaUploadLeases",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    }
   ]
 }

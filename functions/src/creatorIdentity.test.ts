@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import sharp from "sharp";
 import {
   classifyCreatorDocumentRoute,
   creatorNotificationProjection,
@@ -54,14 +55,29 @@ describe("Creator identity contract", () => {
     expect(normalizeCreatorHandle("mira-vale")).toBeNull();
   });
 
-  it("accepts only bounded WebP payloads", () => {
-    const webp = Buffer.from("RIFF0000WEBPpayload", "ascii");
-    expect(isValidCreatorWebp(webp)).toBe(true);
-    expect(isValidCreatorWebp(Buffer.from("not-an-image"))).toBe(false);
+  it("fully decodes only bounded, single-frame WebP payloads", async () => {
+    const webp = await sharp({
+      create: { width: 3, height: 2, channels: 4, background: "#ff00ffff" },
+    }).webp().toBuffer();
+    await expect(isValidCreatorWebp(webp)).resolves.toBe(true);
+    await expect(isValidCreatorWebp(Buffer.from("RIFF0000WEBPpayload", "ascii"))).resolves.toBe(false);
+    await expect(isValidCreatorWebp(Buffer.from("not-an-image"))).resolves.toBe(false);
+
     const oversized = Buffer.alloc(512 * 1024 + 1);
     oversized.write("RIFF", 0, "ascii");
     oversized.write("WEBP", 8, "ascii");
-    expect(isValidCreatorWebp(oversized)).toBe(false);
+    await expect(isValidCreatorWebp(oversized)).resolves.toBe(false);
+
+    const overwide = await sharp({
+      create: { width: 4_097, height: 1, channels: 3, background: "#000000" },
+    }).webp().toBuffer();
+    await expect(isValidCreatorWebp(overwide)).resolves.toBe(false);
+
+    const animated = Buffer.from(
+      "UklGRpQAAABXRUJQVlA4WAoAAAACAAAAAAAAAAAAQU5JTQYAAAD/////AABBTk1GMAAAAAAAAAAAAAAAAAAAAGQAAAJWUDggGAAAADABAJ0BKgEAAQABQCYlpAADcAD+/TZoAEFOTUYwAAAAAAAAAAAAAAAAAAAAZAAAAFZQOCAYAAAANAEAnQEqAQABAAAAJiWkAANwAP789AAA",
+      "base64",
+    );
+    await expect(isValidCreatorWebp(animated)).resolves.toBe(false);
   });
 
   it("validates the narrow public projection", () => {

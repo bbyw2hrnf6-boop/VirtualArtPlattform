@@ -13,6 +13,10 @@ service cloud.firestore {
         && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
+    function accountDeletionStarted(userId) {
+      return exists(/databases/$(database)/documents/accountDeletionJobs/$(userId));
+    }
+
     function ownsGalleryData(data) {
       return signedIn() && data.ownerId == request.auth.uid;
     }
@@ -55,11 +59,9 @@ service cloud.firestore {
     }
 
     function canListGallery(data) {
-      // Lifecycle is filtered in Discover for schema-v3 compatibility because
-      // older active records do not yet carry the optional lifecycle field.
-      // Archived public manifests remain metadata-readable, but their direct
-      // document and Storage reads are denied by canGetGallery/canReadGallery.
       return data.expiresAt > request.time
+        && data.lifecycleStatus == 'active'
+        && data.discoverEligible == true
         && (isLegacyGallery(data) || data.visibility == 'public');
     }
 
@@ -86,7 +88,8 @@ service cloud.firestore {
           'publishedAt', 'expiresAt', 'schemaVersion', 'visibility',
           'retention', 'accessVersion', 'revision', 'updatedAt',
           'exploreListed', 'creatorProfileListed', 'discoverEligible',
-          'lifecycleStatus', 'trashedAt', 'purgeAt'
+          'lifecycleStatus', 'trashedAt', 'purgeAt', 'preTrashExpiresAt',
+          'cleanupReason', 'cleanupClaimedAt'
         ])
         && data.title is string
         && data.title.size() > 0
@@ -131,7 +134,7 @@ service cloud.firestore {
         && data.revision > 0
         && data.revision <= 1000000
         && (!data.keys().hasAny(['lifecycleStatus'])
-          || data.lifecycleStatus in ['active', 'archived', 'trashed'])
+          || data.lifecycleStatus in ['active', 'archived', 'trashed', 'purging'])
         && data.updatedAt is timestamp;
     }
 
@@ -218,6 +221,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return verifiedAccount()
         && request.auth.uid == userId
+        && !accountDeletionStarted(userId)
         && data.keys().hasAll([
           'uid', 'displayName', 'nickname', 'schemaVersion', 'updatedAt'
         ])
@@ -243,9 +247,10 @@ service cloud.firestore {
       allow list: if request.query.limit != null
         && request.query.limit <= 30
         && (canListGallery(resource.data) || ownsGalleryData(resource.data));
-      allow create: if isValidGalleryCreate(galleryId);
-      allow update: if isValidGalleryUpdate(galleryId);
-      allow delete: if false;
+      // Trusted callable finalizers own manifest publication and revisions.
+      // A trusted callable also owns every immutable Storage object; clients
+      // have no direct write path to published media or manifests.
+      allow create, update, delete: if false;
 
       match /members/{memberEmail} {
         allow get: if ownsGallery(galleryId)
@@ -275,6 +280,18 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /galleryRevisionPermits/{permitId} {
+      allow read, write: if false;
+    }
+
+    match /galleryAssetRetirements/{retirementId} {
+      allow read, write: if false;
+    }
+
+    match /securityMaintenanceState/{stateId} {
+      allow read, write: if false;
+    }
+
     match /galleryPublicationQuotas/{userId} {
       allow read, write: if false;
     }
@@ -283,7 +300,9 @@ service cloud.firestore {
       allow get: if signedIn() && request.auth.uid == userId;
       allow list: if false;
       allow create, update: if validProfile(userId);
-      allow delete: if signedIn() && request.auth.uid == userId;
+      allow delete: if signedIn()
+        && request.auth.uid == userId
+        && !accountDeletionStarted(userId);
     }
 
     // Creator identity is projected only by trusted Functions. Keeping the
@@ -353,6 +372,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /creatorActionRateLimits/{rateLimitId} {
+      allow read, write: if false;
+    }
+
     match /newsletterUnsubscribeTokens/{tokenHash} {
       allow read, write: if false;
     }
@@ -363,10 +386,27 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /accountMediaUploadLeases/{userId} {
+      allow read, write: if false;
+    }
+
+    // Export cursors and chunks are server-owned because they contain private
+    // account data and resume positions. Authenticated download is callable-only.
+    match /accountExportJobs/{document=**} {
+      allow read, write: if false;
+    }
+
     // Read-only compatibility for schema-v1 publications that embedded art in
     // Firestore. All new schema-v3 images live in Storage.
     match /galleryArtworks/{assetId} {
-      allow read: if resource.data.expiresAt > request.time;
+      allow read: if resource.data.galleryId is string
+        && resource.data.expiresAt > request.time
+        && exists(/databases/$(database)/documents/galleries/$(resource.data.galleryId))
+        && isActive(get(/databases/$(database)/documents/galleries/$(resource.data.galleryId)).data)
+        && canGetGallery(
+          resource.data.galleryId,
+          get(/databases/$(database)/documents/galleries/$(resource.data.galleryId)).data
+        );
       allow create, update: if false;
       allow delete: if false;
     }

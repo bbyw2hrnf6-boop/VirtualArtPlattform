@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import {
   EXPECTED_RELEASE_ENDPOINTS,
   EXPECTED_RELEASE_PARAMS,
+  EXPECTED_RELEASE_REQUIRED_APIS,
 } from "../functions/scripts/generate-manifest.mjs";
 import {
   RELEASE_DIRECTORY,
@@ -76,7 +77,7 @@ async function fixture() {
         EXPECTED_RELEASE_ENDPOINTS.map((name) => [name, { entryPoint: name }]),
       ),
       specVersion: "v1alpha1",
-      requiredAPIs: [],
+      requiredAPIs: EXPECTED_RELEASE_REQUIRED_APIS.map((requirement) => ({ ...requirement })),
       extensions: {},
       params: EXPECTED_RELEASE_PARAMS,
     }),
