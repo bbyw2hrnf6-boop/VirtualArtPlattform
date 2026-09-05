@@ -394,7 +394,8 @@ Configure the external trust once:
 1. Create a WIF pool and OIDC provider in project `virtualartplattform` for
    `https://token.actions.githubusercontent.com/`. Restrict its attribute
    condition to immutable owner ID `278525962`, repository ID `1315998556`,
-   `refs/heads/main`, and one of these exact workflow/environment pairs:
+   and one of these exact workflow/environment pairs (each `workflow_ref` is
+   pinned to `refs/heads/main`):
    - `bbyw2hrnf6-boop/VirtualArtPlattform/.github/workflows/deploy.yml@refs/heads/main`
      with subject
      `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-production`;
@@ -404,8 +405,11 @@ Configure the external trust once:
    - `bbyw2hrnf6-boop/VirtualArtPlattform/.github/workflows/policy-deploy.yml@refs/heads/main`
      with subject
      `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-policy-production`.
-   Map `google.subject=assertion.sub` and the numeric owner/repository ID,
-   `ref`, and `workflow_ref` claims before using them in conditions. Do not
+   Map `google.subject=assertion.sub` and the numeric owner/repository ID and
+   `workflow_ref` claims before using them in conditions. Do not add a separate
+   `assertion.ref` condition: GitHub `workflow_run` OIDC tokens do not reliably
+   expose the triggering branch there; the trusted branch is already pinned in
+   each exact `workflow_ref`. Do not
    trust a mutable repository name alone, an organization, or all GitHub
    repositories broadly.
 2. Create separate deploy, cleanup, and policy service accounts. Grant the exact GitHub
@@ -633,7 +637,7 @@ rollback window. Never print, persist or commit the access token.
   `FIREBASE_CLEANUP_SERVICE_ACCOUNT_EMAIL` or
   `FIREBASE_DEPLOY_SERVICE_ACCOUNT_EMAIL` GitHub variable.
 - WIF authentication returns `permission_denied`: verify the provider's exact
-  repository/ref/workflow attribute condition and the service account's
+  repository/workflow/environment attribute condition and the service account's
   `roles/iam.workloadIdentityUser` binding. If authentication succeeds but an
   operation returns 403, inspect that identity's least-privilege Firebase,
   Firestore or Storage IAM grants; do not fall back to a JSON key or Owner.
