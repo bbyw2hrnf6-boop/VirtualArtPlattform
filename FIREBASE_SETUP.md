@@ -392,10 +392,11 @@ or restore a Firebase service-account-key secret.
 Configure the external trust once:
 
 1. Create a WIF pool and OIDC provider in project `virtualartplattform` for
-   `https://token.actions.githubusercontent.com/`. Restrict its attribute
-   condition to immutable owner ID `278525962`, repository ID `1315998556`,
-   and one of these exact workflow/environment pairs (each `workflow_ref` is
-   pinned to `refs/heads/main`):
+   `https://token.actions.githubusercontent.com/`. Restrict its provider-level
+   attribute condition to immutable owner ID `278525962` and repository ID
+   `1315998556`. Enforce the environment boundary on each service account with
+   an exact `principal://.../subject/...` `roles/iam.workloadIdentityUser`
+   binding for the applicable subject below:
    - `bbyw2hrnf6-boop/VirtualArtPlattform/.github/workflows/deploy.yml@refs/heads/main`
      with subject
      `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-production`;
@@ -405,13 +406,13 @@ Configure the external trust once:
    - `bbyw2hrnf6-boop/VirtualArtPlattform/.github/workflows/policy-deploy.yml@refs/heads/main`
      with subject
      `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-policy-production`.
-   Map `google.subject=assertion.sub` and the numeric owner/repository ID and
-   `workflow_ref` claims before using them in conditions. Do not add a separate
-   `assertion.ref` condition: GitHub `workflow_run` OIDC tokens do not reliably
-   expose the triggering branch there; the trusted branch is already pinned in
-   each exact `workflow_ref`. Do not
-   trust a mutable repository name alone, an organization, or all GitHub
-   repositories broadly.
+   Map `google.subject=assertion.sub` and the numeric owner/repository ID claims.
+   Do not add provider-level `assertion.ref`, `assertion.workflow_ref`, or
+   environment-subject comparisons: GitHub `workflow_run` OIDC tokens can make
+   these checks reject otherwise valid promotion reruns. The exact environment
+   subject remains enforced by the service-account binding, while the workflow
+   files themselves stay pinned to `main`. Do not trust a mutable repository
+   name alone, an organization, or all GitHub repositories broadly.
 2. Create separate deploy, cleanup, and policy service accounts. Grant the exact GitHub
    WIF principals `roles/iam.workloadIdentityUser` only on their service
    accounts. The deploy identity needs only the Firebase Hosting/Functions and
