@@ -4167,7 +4167,9 @@ export const finalizeAuraGalleryPublication = onCall(
           retention: permit.retention,
           accessVersion: 1,
           ...distribution,
-          discoverEligible: false,
+          // Successful trusted inspection makes a public Space immediately
+          // discoverable. Placement switches still decide its surfaces.
+          discoverEligible: permit.visibility === "public",
           revision: 1,
           updatedAt: FieldValue.serverTimestamp(),
           lifecycleStatus: "active",
@@ -4513,7 +4515,8 @@ export const finalizeAuraGalleryRevision = onCall(
           accessVersion: latestAuthorization.accessVersion,
           exploreListed: latestAuthorization.exploreListed,
           creatorProfileListed: latestAuthorization.creatorProfileListed,
-          discoverEligible: false,
+          // Editing a live public Space must not silently remove it from Explore.
+          discoverEligible: latestAuthorization.visibility === "public",
           revision: baseRevision + 1,
           updatedAt: FieldValue.serverTimestamp(),
           lifecycleStatus: "active",
@@ -4655,6 +4658,10 @@ export const manageAuraGalleryLifecycle = onCall(
         transaction.update(galleryReference, {
           exploreListed,
           creatorProfileListed,
+          // Also repairs publications created under the former manual-review
+          // gate as soon as their owner saves placement settings.
+          ...(data.visibility === "public" ? { discoverEligible: true } : {}),
+          updatedAt: FieldValue.serverTimestamp(),
         });
         return;
       }
@@ -4675,11 +4682,7 @@ export const manageAuraGalleryLifecycle = onCall(
           throw new HttpsError("invalid-argument", "Invalid Space visibility.");
         transaction.update(galleryReference, {
           visibility,
-          // Returning protected content to Public requires a fresh operator
-          // review. Repeating Public on an already-public Space is a no-op.
-          ...(visibility === "public" && data.visibility !== "public"
-            ? { discoverEligible: false }
-            : {}),
+          discoverEligible: visibility === "public",
           updatedAt: FieldValue.serverTimestamp(),
         });
       }

@@ -28,7 +28,7 @@ export interface GalleryRecord extends GalleryDraft {
   lifecycleStatus: GalleryLifecycleStatus;
   trashedAt?: string;
   purgeAt?: string;
-  /** Trusted public-review gate. Only `true` is approved; false/missing stays direct-link only. */
+  /** Server-authored public-discovery gate. Public publications are enabled automatically; safety actions can disable it. */
   discoverEligible?: boolean;
   /** User-controlled homepage placement. Missing legacy values resolve to true. */
   exploreListed: boolean;

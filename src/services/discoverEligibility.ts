@@ -5,7 +5,7 @@ export type DiscoverEligibilityReason =
   | "not-public"
   | "not-active"
   | "expired"
-  | "review-pending"
+  | "safety-restricted"
   | "not-listed"
   | "invalid-identity"
   | "no-visible-content";
@@ -33,12 +33,10 @@ function hasVisibleMedia(record: Pick<GalleryRecord, "artworks">) {
 }
 
 /**
- * Public access and Discover eligibility are deliberately separate concepts.
- * A public Space remains reachable by URL even when it is held out of the
- * curated Discover surface. `discoverEligible: true` is a trusted operator
- * approval. False or missing values remain shareable by direct URL, but stay
- * out of public discovery and indexing until review. Defensive placeholder and
- * visible-media checks mirror the server response policy.
+ * Public access and Discover placement are deliberately separate concepts.
+ * The server enables eligible public publications automatically, while safety
+ * actions can still remove a Space from discovery without breaking its direct
+ * URL. Defensive placeholder and visible-media checks mirror the server policy.
  */
 export function discoverEligibility(
   record: Pick<
@@ -61,7 +59,7 @@ export function discoverEligibility(
   if (!Number.isFinite(expiry) || expiry <= now)
     return { eligible: false, reason: "expired" };
   if (record.discoverEligible !== true)
-    return { eligible: false, reason: "review-pending" };
+    return { eligible: false, reason: "safety-restricted" };
   if (record.exploreListed === false)
     return { eligible: false, reason: "not-listed" };
   if (!hasPublicIdentity(record))

@@ -359,7 +359,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
               {available ? <a href={galleryShareUrl(room.id, window.location.href)}>
                 <span className="account-room-cover">{room.coverSrc && <img src={room.coverSrc} alt="" />}</span>
                 <span className="account-room-copy">
-                  <span className="account-room-badges"><i>{visibilityLabel[room.visibility]}</i><i>{role}</i>{room.visibility === "public" && room.discoverEligible !== true && <i>Review pending</i>}<i data-state={workspace.state}>{workspace.label}</i></span>
+                  <span className="account-room-badges"><i>{visibilityLabel[room.visibility]}</i><i>{role}</i>{room.visibility === "public" && room.discoverEligible !== true && <i>Public listing unavailable</i>}<i data-state={workspace.state}>{workspace.label}</i></span>
                   <strong>{room.title}</strong>
                   <small>{workspace.detail} · Live until {new Date(room.expiresAt).toLocaleDateString()}</small>
                 </span>
@@ -372,7 +372,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
                 type="button"
                 disabled={editingId === room.id}
                 aria-label={`Edit ${room.title}`}
-                title="Updates this Space under the same live link after review."
+                title="Updates this Space under the same live link."
                 onClick={() => void editRoom(room)}
               >{editingId === room.id ? "…" : "Edit"}</button>}
               {role === "owner" && <button
@@ -426,9 +426,9 @@ function AccountRooms({ session }: { session: AccountSession }) {
                   </fieldset>
                   <small className="account-room-placement__note">
                     {room.visibility === "public" && room.discoverEligible !== true
-                      ? "Placement preferences are saved now, but this Space stays out of Explore, Creator profiles and search until LIEUVA approves it."
+                      ? "Save either placement choice once to restore this older Space to public listings."
                       : room.visibility === "public"
-                        ? "Choose whether this Space appears in Explore Spaces on the main homepage and/or in your Creator Hub profile."
+                        ? "Choose whether this Space appears in Explore Spaces on the main homepage and/or in your Creator Hub profile. Changes apply automatically."
                       : "Set visibility to Public before choosing public placement."}
                   </small>
                   {available && <button type="button" onClick={() => {

@@ -19,12 +19,12 @@ const base = {
 } as unknown as GalleryRecord;
 
 describe("Discover eligibility", () => {
-  it("keeps public access separate from curated discovery", () => {
+  it("keeps public access separate from safety-restricted discovery", () => {
     expect(discoverEligibility({ ...base, discoverEligible: false }, 0)).toEqual({
       eligible: false,
-      reason: "review-pending",
+      reason: "safety-restricted",
     });
-    expect(discoverEligibility({ ...base, discoverEligible: undefined }, 0).reason).toBe("review-pending");
+    expect(discoverEligibility({ ...base, discoverEligible: undefined }, 0).reason).toBe("safety-restricted");
     expect(discoverEligibility({ ...base, visibility: "unlisted" }, 0).reason).toBe("not-public");
     expect(discoverEligibility({ ...base, visibility: "private" }, 0).reason).toBe("not-public");
   });
@@ -42,7 +42,7 @@ describe("Discover eligibility", () => {
     expect(discoverEligibility({ ...base, title: "Material Futures", artist: "Your nameefefef" }, 0).reason).toBe("invalid-identity");
   });
 
-  it("requires explicit review approval even when quality checks pass", () => {
+  it("honors the server safety gate even when quality checks pass", () => {
     expect(isDiscoverEligible({ ...base, discoverEligible: undefined }, 0)).toBe(false);
     expect(isDiscoverEligible({
       ...base,

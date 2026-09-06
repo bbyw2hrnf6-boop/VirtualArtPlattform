@@ -285,7 +285,7 @@ vi.mock("firebase/functions", () => ({
         retention: "account-preview",
         accessVersion: 1,
         ...distribution,
-        discoverEligible: false,
+        discoverEligible: permit.visibility === "public",
         revision: 1,
         updatedAt: publishedAt,
         lifecycleStatus: "active",
@@ -372,7 +372,7 @@ vi.mock("firebase/functions", () => ({
         accessVersion: current.accessVersion,
         exploreListed: current.exploreListed,
         creatorProfileListed: current.creatorProfileListed,
-        discoverEligible: false,
+        discoverEligible: current.visibility === "public",
         revision: Number(expectedRevision) + 1,
         updatedAt,
         lifecycleStatus: "active",
@@ -436,9 +436,14 @@ vi.mock("firebase/functions", () => ({
       const current = mock.state.documents.get(path)!;
       mock.state.documents.set(path,
         action === "visibility"
-          ? { ...current, visibility }
+          ? { ...current, visibility, discoverEligible: visibility === "public" }
           : action === "distribution"
-            ? { ...current, exploreListed, creatorProfileListed }
+            ? {
+                ...current,
+                exploreListed,
+                creatorProfileListed,
+                ...(current.visibility === "public" ? { discoverEligible: true } : {}),
+              }
             : current,
       );
       return { data: { status: "ok" } };
@@ -584,6 +589,7 @@ describe("publish → visit → edit → update release gate", () => {
       visibility: "public",
       exploreListed: true,
       creatorProfileListed: false,
+      discoverEligible: true,
       revision: 1,
       accessVersion: 1,
     });
@@ -593,11 +599,6 @@ describe("publish → visit → edit → update release gate", () => {
     mock.state.currentUser = null;
     const visited = await repository.find(published.id);
     expect(visited?.artworks.every((artwork) => artwork.src.startsWith("blob:"))).toBe(true);
-    expect((await repository.discover()).map((record) => record.id)).not.toContain(published.id);
-    mock.state.documents.set(`galleries/${published.id}`, {
-      ...mock.state.documents.get(`galleries/${published.id}`),
-      discoverEligible: true,
-    });
     expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
   });
 
@@ -608,10 +609,14 @@ describe("publish → visit → edit → update release gate", () => {
       exploreListed: false,
       creatorProfileListed: true,
     });
-    expect(published).toMatchObject({ exploreListed: false, creatorProfileListed: true });
+    expect(published).toMatchObject({
+      exploreListed: false,
+      creatorProfileListed: true,
+      discoverEligible: true,
+    });
     mock.state.documents.set(`galleries/${published.id}`, {
       ...mock.state.documents.get(`galleries/${published.id}`),
-      discoverEligible: true,
+      discoverEligible: false,
     });
     expect((await repository.discover()).map((record) => record.id)).not.toContain(published.id);
 
@@ -620,7 +625,11 @@ describe("publish → visit → edit → update release gate", () => {
       creatorProfileListed: false,
     });
     const replaced = await repository.findManifest(published.id);
-    expect(replaced).toMatchObject({ exploreListed: true, creatorProfileListed: false });
+    expect(replaced).toMatchObject({
+      exploreListed: true,
+      creatorProfileListed: false,
+      discoverEligible: true,
+    });
     expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
   });
 
@@ -705,6 +714,7 @@ describe("publish → visit → edit → update release gate", () => {
     expect(live).toMatchObject({ id: published.id, revision: 2, title: "Current live" });
     expect([...pathsAfterSuccess].every((path) => mock.state.objects.has(path))).toBe(true);
     expect(updated.id).toBe(published.id);
+    expect(updated.discoverEligible).toBe(true);
   });
 
   it("supports invite, editor update, revoke, and denied access after revoke", async () => {

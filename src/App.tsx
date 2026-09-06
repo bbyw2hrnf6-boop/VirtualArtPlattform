@@ -1969,9 +1969,7 @@ function Studio({
               <em>{wasUpdate ? "now live." : "ready to share."}</em>
             </h1>
             <p>
-              {published.visibility === "public" && published.discoverEligible !== true
-                ? `Your Space is available by direct link and queued for public review until ${expiry}. It is not in Explore or search yet.`
-                : published.visibility === "public" && published.exploreListed
+              {published.visibility === "public" && published.exploreListed
                 ? `Your Space is shown in Explore Spaces and live until ${expiry}.`
                 : published.visibility === "public"
                   ? `Your Space is public by direct link and live until ${expiry}.`
@@ -2000,7 +1998,7 @@ function Studio({
               <a className="button button--light" href={url}>
                 Enter the Space <span aria-hidden="true">↗</span>
               </a>
-              {published.visibility === "public" && published.discoverEligible === true && published.exploreListed && (
+              {published.visibility === "public" && published.exploreListed && (
                 <a
                   className="text-link"
                   href={exploreSpacesUrl(published.id, window.location.href)}
@@ -3158,7 +3156,7 @@ function PublishReviewDialog({
           )}
           <p>
             <strong>Space preview image</strong>Captured from this Studio view.
-            Requested for Explore Spaces and your Creator Hub profile after review; used immediately in direct-link previews.
+            Used for Explore Spaces, your Creator Hub profile and direct-link previews according to your placement choices.
           </p>
         </div>
         {issues.length > 0 && (
@@ -3188,7 +3186,7 @@ function PublishReviewDialog({
         ) : editing ? (
           <div className="publish-edit-target">
             <strong>Same Space. Same share URL.</strong>
-            <span>{visibilityLabel[editing.visibility]} · Revision {editing.revision + 1} · Visibility and expiry stay unchanged; public discovery returns to review.</span>
+            <span>{visibilityLabel[editing.visibility]} · Revision {editing.revision + 1} · Visibility, placement and expiry stay unchanged.</span>
           </div>
         ) : <fieldset className="publish-visibility">
           <legend>Visibility and duration</legend>
@@ -3227,7 +3225,7 @@ function PublishReviewDialog({
               />
               <span>
                 <strong>Show in Explore Spaces (Main homepage)</strong>
-                Requests homepage placement after LIEUVA review.
+                Shows this public Space in the homepage Explore menu.
               </span>
             </label>
             <label>
@@ -3238,14 +3236,14 @@ function PublishReviewDialog({
               />
               <span>
                 <strong>Show in Creator Hub</strong>
-                Requests Hub profile and follower placement after LIEUVA review.
+                Shows this public Space on your Creator Hub profile and in follower surfaces.
               </span>
             </label>
             {visibility !== "public" && (
               <small>Placement becomes available when visibility is Public.</small>
             )}
             {visibility === "public" && (
-              <small>New and revised public Spaces stay out of discovery until operator approval.</small>
+              <small>Your placement choices take effect automatically when publishing succeeds.</small>
             )}
           </fieldset>
         )}
