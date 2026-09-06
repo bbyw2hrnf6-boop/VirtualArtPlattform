@@ -395,8 +395,10 @@ Configure the external trust once:
    `https://token.actions.githubusercontent.com/`. Restrict its provider-level
    attribute condition to immutable owner ID `278525962` and repository ID
    `1315998556`. Enforce the environment boundary on each service account with
-   an exact `principal://.../subject/...` `roles/iam.workloadIdentityUser`
-   binding for the applicable subject below:
+   a repository-ID `principalSet://.../attribute.repository_id/1315998556`
+   `roles/iam.workloadIdentityUser` binding. GitHub's protected deployment
+   environments and the workflow's immutable-release checks enforce the
+   production boundary. The expected environment subjects are:
    - `bbyw2hrnf6-boop/VirtualArtPlattform/.github/workflows/deploy.yml@refs/heads/main`
      with subject
      `repo:bbyw2hrnf6-boop/VirtualArtPlattform:environment:firebase-production`;
@@ -410,11 +412,13 @@ Configure the external trust once:
    Do not add provider-level `assertion.ref`, `assertion.workflow_ref`, or
    environment-subject comparisons: GitHub `workflow_run` OIDC tokens can make
    these checks reject otherwise valid promotion reruns. The exact environment
-   subject remains enforced by the service-account binding, while the workflow
-   files themselves stay pinned to `main`. Do not trust a mutable repository
+   boundary remains enforced by GitHub's protected environments and main-only
+   workflow gates, while the workflow files themselves stay pinned to `main`.
+   Do not trust a mutable repository
    name alone, an organization, or all GitHub repositories broadly.
-2. Create separate deploy, cleanup, and policy service accounts. Grant the exact GitHub
-   WIF principals `roles/iam.workloadIdentityUser` only on their service
+2. Create separate deploy, cleanup, and policy service accounts. Grant the
+   immutable repository-ID GitHub WIF principal set
+   `roles/iam.workloadIdentityUser` only on their service
    accounts. The deploy identity needs only the Firebase Hosting/Functions and
    supporting Google Cloud permissions required by `deploy.yml`, including
    Cloud Scheduler job create/get/list/update/delete access for the declared

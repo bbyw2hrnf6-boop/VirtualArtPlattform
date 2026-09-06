@@ -447,11 +447,24 @@ jobs:
           node -e 'const f=require("node:fs"); const p=JSON.parse(f.readFileSync("artifacts/privileged-release/firebase-cli/node_modules/firebase-tools/package.json", "utf8")); if(p.version!==process.env.FIREBASE_CLI_VERSION) process.exit(1)'
 
       - name: Authenticate with short-lived Google credentials
+        id: google-auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.FIREBASE_DEPLOY_SERVICE_ACCOUNT_EMAIL }}
           project_id: ${{ env.FIREBASE_PROJECT_ID }}
+          create_credentials_file: true
+          export_environment_variables: true
+          token_format: access_token
+          access_token_lifetime: 1800s
+
+      - name: Verify deploy credentials are usable
+        env:
+          GOOGLE_AUTH_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+        run: |
+          test -n "${GOOGLE_APPLICATION_CREDENTIALS:-}"
+          test -s "$GOOGLE_APPLICATION_CREDENTIALS"
+          test -n "$GOOGLE_AUTH_ACCESS_TOKEN"
 
       - name: Reconfirm automatic revision is still main
         if: github.event_name == 'workflow_run'
