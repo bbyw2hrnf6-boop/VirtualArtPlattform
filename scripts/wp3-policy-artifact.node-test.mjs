@@ -96,6 +96,8 @@ test("accepts explicit Firestore TTL field overrides and rejects ambiguous TTL v
 test("requires the privileged promotion proof to fetch and verify TTL state", async () => {
   const workflow = await readFile(resolve(".github/workflows/policy-deploy.yml"), "utf8");
   assert.match(workflow, /indexConfig\.usesAncestorConfig=false OR ttlConfig:\*/);
+  assert.match(workflow, /fetchPages\(fieldUrl, "fields", 0\)/);
+  assert.match(workflow, /overrideName\(field\) !== "__default__\\n\*"/);
   assert.match(workflow, /field\.ttl === true/);
   assert.match(workflow, /current\?\.ttlConfig\?\.state/);
   assert.match(workflow, /currentTtlState !== "ACTIVE"/);

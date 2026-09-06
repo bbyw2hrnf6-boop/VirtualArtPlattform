@@ -476,12 +476,12 @@ jobs:
             if (!response.ok) throw new Error(`Policy parity request failed (${response.status}).`);
             return response.json();
           };
-          const fetchPages = async (initialUrl, property) => {
+          const fetchPages = async (initialUrl, property, pageSize = 100) => {
             const entries = [];
             let pageToken = "";
             do {
               const url = new URL(initialUrl);
-              url.searchParams.set("pageSize", "100");
+              url.searchParams.set("pageSize", String(pageSize));
               if (pageToken) url.searchParams.set("pageToken", pageToken);
               const page = await fetchJson(url);
               entries.push(...(page[property] ?? []));
@@ -544,6 +544,7 @@ jobs:
             const indexes = await fetchPages(
               `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/collectionGroups/-/indexes`,
               "indexes",
+              0,
             );
             const fieldUrl = new URL(
               `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/collectionGroups/-/fields`,
@@ -552,7 +553,9 @@ jobs:
               "filter",
               "indexConfig.usesAncestorConfig=false OR ttlConfig:*",
             );
-            const fields = await fetchPages(fieldUrl, "fields");
+            const fields = (await fetchPages(fieldUrl, "fields", 0)).filter(
+              (field) => overrideName(field) !== "__default__\n*",
+            );
             return { fields, indexes };
           };
           const policyIndexStatus = async () => {
