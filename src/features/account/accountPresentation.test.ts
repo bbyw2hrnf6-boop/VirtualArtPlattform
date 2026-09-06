@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { GalleryRecord } from "../../services/galleryRepository";
 import accountSource from "./AccountDialog.tsx?raw";
 import creatorSettingsSource from "./CreatorProfileSettings.tsx?raw";
+import accountServiceSource from "../../services/accountService.ts?raw";
 import {
   accountSectionFromUrl,
   accountSectionTitle,
@@ -47,6 +48,15 @@ describe("account presentation", () => {
     expect(creatorSettingsSource).toContain('aria-label="Bio typography"');
     expect(creatorSettingsSource).toContain('aria-label="Profile header color mood"');
     expect(creatorSettingsSource).toContain("creator-settings__preview-bio--");
+    expect(creatorSettingsSource).toContain("loadMyCreatorProfileBundle");
+    expect(creatorSettingsSource).toContain("storedImageSource");
+    expect(creatorSettingsSource).toContain("storedCoverSource");
+    expect(creatorSettingsSource).not.toContain("creator-public/");
+  });
+
+  it("keeps the private account avatar visible when a direct Storage read fails", () => {
+    expect(accountServiceSource).toContain('"getMyAuraAccountAvatar"');
+    expect(accountServiceSource).toContain("accountAvatarFallback");
   });
 
   it("keeps public visibility separate from homepage and Hub placement", () => {

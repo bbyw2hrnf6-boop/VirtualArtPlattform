@@ -44,6 +44,11 @@ export type CreatorProfile = {
   updatedAt?: string;
   demo?: boolean;
 };
+export type MyCreatorProfilePayload = {
+  profile: CreatorProfile | null;
+  imageDataUrl: string | null;
+  coverDataUrl: string | null;
+};
 export type CreatorSpaceCard = {
   id: string;
   title: string;
@@ -173,14 +178,22 @@ export async function loadCreatorAttribution(spaceId: string, signal?: AbortSign
   return await response.json() as CreatorAttribution;
 }
 
-export async function loadMyCreatorProfile() {
+async function requestMyCreatorProfile(includeMedia: boolean): Promise<MyCreatorProfilePayload> {
   const result = await creatorCallableWithRetry(() =>
-    httpsCallable<Record<string, never>, { profile: CreatorProfile | null }>(
+    httpsCallable<{ includeMedia?: boolean }, MyCreatorProfilePayload>(
       firebaseFunctions,
       "getMyLieuvaCreatorProfile",
-    )({}),
+    )({ ...(includeMedia ? { includeMedia: true } : {}) }),
   );
-  return result.data.profile;
+  return result.data;
+}
+
+export async function loadMyCreatorProfileBundle() {
+  return requestMyCreatorProfile(true);
+}
+
+export async function loadMyCreatorProfile() {
+  return (await requestMyCreatorProfile(false)).profile;
 }
 
 export async function checkCreatorHandle(handle: string) {

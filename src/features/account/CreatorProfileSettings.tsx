@@ -7,7 +7,7 @@ import {
   creatorHandleBase,
   creatorImageUrl,
   creatorProfileUrl,
-  loadMyCreatorProfile,
+  loadMyCreatorProfileBundle,
   saveCreatorProfile,
   saveCreatorProfileCover,
   saveCreatorProfileImage,
@@ -75,6 +75,8 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
   const [removeImage, setRemoveImage] = useState(false);
   const [cover, setCover] = useState<File>();
   const [removeCover, setRemoveCover] = useState(false);
+  const [storedImageSource, setStoredImageSource] = useState("");
+  const [storedCoverSource, setStoredCoverSource] = useState("");
   const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
   const handleValid = isValidCreatorHandle(profile.handle);
   const publicUrl = handleValid ? creatorProfileUrl(profile.handle) : "";
@@ -111,9 +113,11 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
 
   useEffect(() => {
     let active = true;
-    void loadMyCreatorProfile()
-      .then((existing) => {
+    void loadMyCreatorProfileBundle()
+      .then(({ profile: existing, imageDataUrl, coverDataUrl }) => {
         if (!active) return;
+        setStoredImageSource(imageDataUrl ?? "");
+        setStoredCoverSource(coverDataUrl ?? "");
         if (existing) {
           setProfile(existing);
           setPublished(existing.profilePublic);
@@ -220,13 +224,16 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           return;
         }
       }
+      const refreshed = await loadMyCreatorProfileBundle();
       const savedProfile = {
-        ...result.profile,
+        ...(refreshed.profile ?? result.profile),
         imagePresent,
         coverPresent,
         updatedAt: new Date().toISOString(),
         ...((image || removeImage || cover || removeCover) ? { discoverEligible: false } : {}),
       };
+      setStoredImageSource(refreshed.imageDataUrl ?? "");
+      setStoredCoverSource(refreshed.coverDataUrl ?? "");
       setProfile(savedProfile);
       announceCreatorProfileUpdated(savedProfile);
       setImage(undefined);
@@ -253,11 +260,12 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
 
   const profileApproved = profile.profilePublic && profile.discoverEligible === true;
   const portraitSource = imagePreview
+    || (!removeImage && storedImageSource)
     || (!removeImage && profileApproved && profile.imagePresent && handleValid ? creatorImageUrl(profile.handle) : "");
-  const storedCoverSource = !removeCover && profileApproved && profile.coverPresent && handleValid
+  const publicCoverSource = !removeCover && profileApproved && profile.coverPresent && handleValid
     ? creatorCoverUrl(profile.handle, profile.updatedAt)
     : "";
-  const coverSource = coverPreview || storedCoverSource;
+  const coverSource = coverPreview || (!removeCover && storedCoverSource) || publicCoverSource;
   const previewLinks = completeLinks.filter((link) => link.label.trim() && /^https:\/\//i.test(link.url.trim()));
   return (
     <form className="creator-settings" onSubmit={(event) => void submit(event)}>

@@ -1010,15 +1010,75 @@ export const checkLieuvaCreatorHandle = onCall(
 );
 
 export const getMyLieuvaCreatorProfile = onCall(
-  { region: REGION, timeoutSeconds: 30, memory: "256MiB", enforceAppCheck: true },
+  { region: REGION, timeoutSeconds: 30, memory: "512MiB", enforceAppCheck: true },
   async (request) => {
     const uid = requireAccount(request.auth);
     const owner = await db.collection("creatorAccountOwners").doc(uid).get();
     const creatorId = owner.data()?.creatorId;
-    if (typeof creatorId !== "string") return { profile: null };
+    if (typeof creatorId !== "string") return { profile: null, imageDataUrl: null, coverDataUrl: null };
     const profile = await db.collection("creatorProfiles").doc(creatorId).get();
     const parsed = parseCreatorProfileInput(profile.data());
-    return { profile: parsed };
+    if (!parsed) return { profile: null, imageDataUrl: null, coverDataUrl: null };
+    if (request.data?.includeMedia !== true)
+      return { profile: parsed, imageDataUrl: null, coverDataUrl: null };
+
+    // Public media routes deliberately return 404 until a profile is both
+    // public and approved. The authenticated owner still needs to see their
+    // persisted media while editing a private draft or a pending profile.
+    const readOwnerMedia = async (kind: "avatar" | "cover", present: boolean) => {
+      if (!present) return null;
+      try {
+        const [bytes] = await getStorage().bucket()
+          .file(`creator-public/${creatorId}/${kind}.webp`)
+          .download();
+        if (bytes.length > 512 * 1024 || !await isValidCreatorWebp(bytes)) {
+          logger.warn("creator_owner_media_invalid", { creatorId: safeResourceRef(creatorId), kind });
+          return null;
+        }
+        return `data:image/webp;base64,${bytes.toString("base64")}`;
+      } catch (error) {
+        logger.warn("creator_owner_media_unavailable", {
+          creatorId: safeResourceRef(creatorId),
+          kind,
+          errorClass: classifyServerError(error),
+        });
+        return null;
+      }
+    };
+    const [imageDataUrl, coverDataUrl] = await Promise.all([
+      readOwnerMedia("avatar", parsed.imagePresent),
+      readOwnerMedia("cover", parsed.coverPresent),
+    ]);
+    return { profile: parsed, imageDataUrl, coverDataUrl };
+  },
+);
+
+/** Authenticated fallback for the private account avatar. The browser normally
+ * reads its own Storage object directly; this keeps account chrome resilient
+ * when a client-side Storage read is unavailable without exposing the object
+ * path or relaxing Storage rules. */
+export const getMyAuraAccountAvatar = onCall(
+  { region: REGION, timeoutSeconds: 30, memory: "512MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    await assertAccountMutationAllowed(uid);
+    const profile = await db.collection("profiles").doc(uid).get();
+    if (profile.data()?.avatarPath !== `profiles/${uid}/avatar.webp`)
+      return { imageDataUrl: null };
+    try {
+      const [bytes] = await getStorage().bucket().file(`profiles/${uid}/avatar.webp`).download();
+      if (bytes.length > 512 * 1024 || !await isValidCreatorWebp(bytes)) {
+        logger.warn("account_avatar_invalid", { accountRef: safeResourceRef(uid) });
+        return { imageDataUrl: null };
+      }
+      return { imageDataUrl: `data:image/webp;base64,${bytes.toString("base64")}` };
+    } catch (error) {
+      logger.warn("account_avatar_unavailable", {
+        accountRef: safeResourceRef(uid),
+        errorClass: classifyServerError(error),
+      });
+      return { imageDataUrl: null };
+    }
   },
 );
 
@@ -4977,7 +5037,7 @@ export const unsubscribeAuraNewsletter = onRequest(
   {
     region: REGION,
     timeoutSeconds: 30,
-    memory: "128MiB",
+    memory: "256MiB",
     concurrency: 10,
     maxInstances: 2,
   },
@@ -5049,7 +5109,7 @@ export const lieuvaCspReport = onRequest(
   {
     region: REGION,
     timeoutSeconds: 10,
-    memory: "128MiB",
+    memory: "256MiB",
     maxInstances: 2,
     invoker: "public",
   },

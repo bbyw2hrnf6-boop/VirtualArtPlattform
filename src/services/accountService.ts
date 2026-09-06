@@ -98,6 +98,14 @@ async function avatarSource(path: string) {
   return source;
 }
 
+async function accountAvatarFallback() {
+  const result = await httpsCallable<Record<string, never>, { imageDataUrl: string | null }>(
+    firebaseFunctions,
+    "getMyAuraAccountAvatar",
+  )({});
+  return result.data.imageDataUrl ?? undefined;
+}
+
 export async function hydrateAccountSession(
   session: AccountSession | null,
 ): Promise<AccountSession | null> {
@@ -122,6 +130,11 @@ export async function hydrateAccountSession(
       avatarSrc = await avatarSource(avatarPath);
     } catch (error) {
       console.warn("Account avatar unavailable.", error);
+      try {
+        avatarSrc = await accountAvatarFallback();
+      } catch (fallbackError) {
+        console.warn("Account avatar fallback unavailable.", fallbackError);
+      }
     }
   }
   return {

@@ -35,6 +35,7 @@ export const EXPECTED_RELEASE_ENDPOINTS = Object.freeze([
   'exportAuraAccountData',
   'finalizeAuraGalleryPublication',
   'finalizeAuraGalleryRevision',
+  'getMyAuraAccountAvatar',
   'getMyLieuvaCreatorHome',
   'getMyLieuvaCreatorProfile',
   'lieuvaCspReport',
