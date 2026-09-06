@@ -55,8 +55,12 @@ test('candidate CSP enforces on the bundled home and Create shells without viola
   });
 
   for (const path of ['/', '/#/create']) {
-    await page.goto(path, { waitUntil: 'networkidle' });
+    // Firebase keeps background transports alive. Waiting for networkidle makes
+    // this security smoke depend on runner/network timing and can consume the
+    // entire 30-second test budget even though the shell is already ready.
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#main-content')).toBeVisible();
+    await page.waitForTimeout(250);
     expect(await page.evaluate(() => (
       (window as typeof window & { __lieuvaCspViolations?: string[] }).__lieuvaCspViolations ?? []
     ))).toEqual([]);
