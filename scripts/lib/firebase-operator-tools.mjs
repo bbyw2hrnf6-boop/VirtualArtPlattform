@@ -360,39 +360,10 @@ export function formatPublicContent(kind, rawDocument, { includeContent = false,
       ? { ...record, title: data.title, artist: data.artist, artworks: artworkText }
       : record;
   }
-  if (kind === "creators") {
-    if (data.profilePublic !== true) return null;
-    const record = {
-      kind: "creator",
-      id: document.id,
-      documentName: document.name,
-      handle: data.handle,
-      discoverEligible: data.discoverEligible === true,
-      url: typeof data.handle === "string" ? `https://lieuva.com/creators/${data.handle}` : undefined,
-      followerCount: data.followerCount ?? 0,
-      imagePresent: data.imagePresent === true,
-      coverPresent: data.coverPresent === true,
-      linkCount: Array.isArray(data.links) ? data.links.length : 0,
-      contentFingerprint: contentFingerprint(JSON.stringify({
-        displayName: data.displayName,
-        bio: data.bio,
-        links: data.links,
-        imagePresent: data.imagePresent === true,
-        coverPresent: data.coverPresent === true,
-        bioFont: data.bioFont,
-        profileTone: data.profileTone,
-      })),
-      documentUpdateTime: document.updateTime,
-    };
-    return includeContent
-      ? { ...record, displayName: data.displayName, bio: data.bio, links: data.links }
-      : record;
-  }
   if (kind === "posts") {
     if (
       data.moderationStatus === "removed"
       || creatorProfile?.profilePublic !== true
-      || creatorProfile.discoverEligible !== true
     ) return null;
     const creatorId = publicCreatorId(rawDocument);
     const handle = creatorProfile?.handle;
@@ -540,17 +511,6 @@ function assertReviewableSpace(data, occurredAt) {
   ) throw new Error("Space is not an active, non-placeholder public revision with visible media.");
 }
 
-function assertReviewableCreator(data) {
-  if (
-    data.profilePublic !== true
-    || typeof data.handle !== "string"
-    || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.handle)
-    || typeof data.displayName !== "string"
-    || data.displayName.trim().length < 1
-    || data.displayName.trim().length > 60
-  ) throw new Error("Creator is not a valid submitted public profile.");
-}
-
 export function buildPublicContentDecisionPlan({
   projectId,
   databaseId = "(default)",
@@ -583,13 +543,13 @@ export function buildPublicContentDecisionPlan({
   const timestamp = new Date(occurredAt);
   if (!Number.isFinite(timestamp.getTime())) throw new Error("Public-review action time is invalid.");
 
-  const collection = kind === "space" ? "galleries" : kind === "creator" ? "creatorProfiles" : null;
-  if (!collection) throw new Error("Public-content kind must be space or creator.");
+  const collection = kind === "space" ? "galleries" : null;
+  if (!collection) throw new Error("Public-content decisions apply only to Spaces.");
   const targetName = documentName(projectId, `${collection}/${targetId}`, databaseId);
   const target = exactTarget(rawTarget, targetName, "Public-review target");
   if (target.updateTime !== expectedUpdateTime)
     throw new Error(`Target update-time mismatch: expected ${expectedUpdateTime}, found ${target.updateTime}.`);
-  const formatted = formatPublicContent(kind === "space" ? "spaces" : "creators", rawTarget);
+  const formatted = formatPublicContent("spaces", rawTarget);
   if (!formatted) throw new Error("Target is not a submitted public-content record.");
   if (formatted.contentFingerprint !== expectedFingerprint)
     throw new Error("Target content fingerprint changed after review.");
@@ -599,18 +559,11 @@ export function buildPublicContentDecisionPlan({
   if (decision === "approve" && expectedGate !== "pending")
     throw new Error("Approval requires an explicitly pending target.");
 
-  let contentVersion;
-  if (kind === "space") {
-    assertReviewableSpace(target.data, timestamp);
-    const revision = validatedNonNegativeInteger(expectedRevision, "Expected Space revision");
-    if (revision < 1 || target.data.revision !== revision)
-      throw new Error(`Space revision mismatch: expected ${revision}, found ${target.data.revision ?? "missing"}.`);
-    contentVersion = String(revision);
-  } else {
-    if (expectedRevision !== undefined) throw new Error("Creator decisions do not accept --expected-revision.");
-    assertReviewableCreator(target.data);
-    contentVersion = target.updateTime;
-  }
+  assertReviewableSpace(target.data, timestamp);
+  const revision = validatedNonNegativeInteger(expectedRevision, "Expected Space revision");
+  if (revision < 1 || target.data.revision !== revision)
+    throw new Error(`Space revision mismatch: expected ${revision}, found ${target.data.revision ?? "missing"}.`);
+  const contentVersion = String(revision);
 
   const reviewId = publicContentReviewId(kind, targetId);
   const reviewName = documentName(projectId, `publicContentReviews/${reviewId}`, databaseId);

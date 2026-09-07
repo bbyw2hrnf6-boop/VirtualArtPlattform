@@ -11,6 +11,10 @@ Live product: [lieuva.com](https://lieuva.com/)
 ## What the production-pilot product includes
 
 - A premium landing page, featured Danny Hirsch exhibition, and Discover carousel.
+- A Creator Hub with self-service public/private profiles, profile and cover images,
+  controlled profile typography, Creator search, follows, studio notes, comments,
+  appreciations, alerts, and per-Space Hub placement. Creator profiles become
+  public immediately when their owner enables visibility; no profile review is required.
 - Exactly three selectable gallery spaces:
 
   | Space | Character | Artwork capacity |
@@ -77,9 +81,22 @@ npm run preview
 | `npm run preview` | Serve `dist/` locally for production verification. |
 | `npm run check` | Run lint, all tests, type-checking, and the complete production build; this is the deployment quality gate. |
 | `npm run check:functions` | Test and type-check the trusted branded-email/newsletter Functions. |
+| `npm run review:public-content -- --kind spaces\|posts` | Read a bounded, read-only page for Space review or post moderation. Creator profiles are not reviewed. |
+| `npm run review:public-content:decision -- --kind space …` | Dry-run or execute one exact Space discovery decision with the documented guards. |
 | `npm run validate:glb -- path/to/template.glb` | Validate a future template export against the documented legacy `aura_*` GLB contract. |
 
-The WP5 production target is Firebase Hosting plus the repository's three public delivery Functions. The existing GitHub Pages workflow remains available as a reviewed rollback/legacy-host path and is not the clean-URL production architecture.
+## Documentation maintenance
+
+`README.md` describes the current product and developer workflow;
+`FIREBASE_SETUP.md` is the operational source of truth for Firebase and
+deployment; `audit/` retains dated decisions and historical evidence. Product,
+schema, security, deployment, routing, or operator-workflow changes must update
+the relevant Markdown source in the same change. Historical audit records stay
+dated and receive a superseding note instead of being silently rewritten.
+
+The production target is Firebase Hosting plus the scoped Functions exported by
+`functions/src/index.ts`. The existing GitHub Pages workflow remains available
+as a reviewed rollback/legacy-host path and is not the clean-URL production architecture.
 
 ## Editor workflow
 
@@ -158,6 +175,7 @@ src/
 
 functions/
 ├── src/index.ts                    Trusted product APIs plus Space HTML/card/sitemap delivery
+├── src/creatorIdentity.ts          Creator visibility, profile, social and SEO contracts
 ├── src/spaceSeo.ts                 Privacy-aware metadata, cache and sitemap policy
 └── src/emailTemplates.ts           Responsive LIEUVA transactional and welcome emails
 
@@ -197,7 +215,7 @@ To use another Firebase project, replace that web configuration and the default 
 
 ## Deploy the clean-URL architecture
 
-Do not cut production DNS before the preview checks in [`FIREBASE_SETUP.md`](./FIREBASE_SETUP.md) pass. The reviewed deployment unit is the built site plus `spaceDocument`, `spaceCard`, and `spaceSitemap` in the same Firebase project:
+Do not cut production DNS before the preview checks in [`FIREBASE_SETUP.md`](./FIREBASE_SETUP.md) pass. The reviewed deployment unit is the built site plus the exact scoped Functions manifest in the same Firebase project:
 
 ```bash
 npm run check

@@ -19,14 +19,13 @@ Environment:
 
 Usage:
   npm run review:public-content -- --kind spaces [--limit 25] [--cursor TOKEN]
-  npm run review:public-content -- --kind creators --include-content
   npm run review:public-content -- --kind posts --include-content
 
 Options:
-  --kind spaces|creators|posts
+  --kind spaces|posts
   --limit 1..100
   --cursor opaque cursor returned by the previous page
-  --include-content deliberately include public Space/artwork, bio/link, or post text
+  --include-content deliberately include public Space/artwork or post text
   --help
 `;
 
@@ -44,16 +43,14 @@ if (flags.help) {
 }
 
 const kind = flags.kind;
-if (!new Set(["spaces", "creators", "posts"]).has(kind))
-  throw new Error("--kind must be spaces, creators, or posts.");
+if (!new Set(["spaces", "posts"]).has(kind))
+  throw new Error("--kind must be spaces or posts.");
 const limit = boundedLimit(flags.limit);
 const client = runtimeOperatorClient();
 
 const query = kind === "spaces"
   ? { collectionId: "galleries", where: equalityFilter("visibility", "public") }
-  : kind === "creators"
-    ? { collectionId: "creatorProfiles", where: equalityFilter("profilePublic", true) }
-    : {
+  : {
         collectionId: "posts",
         allDescendants: true,
         where: equalityFilter("moderationStatus", "published"),

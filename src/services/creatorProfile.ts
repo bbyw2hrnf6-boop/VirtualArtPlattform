@@ -38,8 +38,6 @@ export type CreatorProfile = {
   coverPresent: boolean;
   bioFont: CreatorBioFont;
   profileTone: CreatorProfileTone;
-  /** Trusted directory approval. Public intent alone never makes a profile discoverable. */
-  discoverEligible?: boolean;
   followerCount?: number;
   updatedAt?: string;
   demo?: boolean;
@@ -91,8 +89,8 @@ export function announceCreatorProfileUpdated(profile: CreatorProfile) {
 
 export function creatorProfileSaveLabel(published: boolean, nextPublic: boolean, saving = false) {
   if (saving) return "Saving…";
-  if (published && nextPublic) return "Save changes for review";
-  if (nextPublic) return "Save and submit profile";
+  if (published && nextPublic) return "Save changes";
+  if (nextPublic) return "Save and make public";
   return published ? "Save and make private" : "Save private draft";
 }
 

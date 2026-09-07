@@ -27,8 +27,6 @@ export type PublicCreatorProfile = {
   bio: string;
   links: CreatorLink[];
   profilePublic: boolean;
-  /** Trusted review gate. Missing persisted values parse as false. */
-  discoverEligible: boolean;
   imagePresent: boolean;
   coverPresent: boolean;
   bioFont: CreatorBioFont;
@@ -212,7 +210,6 @@ export function parseCreatorProfileInput(value: unknown): PublicCreatorProfile |
     bio,
     links,
     profilePublic: record.profilePublic,
-    discoverEligible: record.discoverEligible === true,
     imagePresent: record.imagePresent === true,
     coverPresent: record.coverPresent === true,
     bioFont,
@@ -221,32 +218,17 @@ export function parseCreatorProfileInput(value: unknown): PublicCreatorProfile |
   };
 }
 
-/** Public profile preference is necessary but never sufficient for discovery. */
-export function isReviewedPublicCreatorProfile(
+/** Creator visibility is controlled solely by the owner's public/private choice. */
+export function isPublicCreatorProfile(
   profile: PublicCreatorProfile | null | undefined,
 ): profile is PublicCreatorProfile {
-  return profile?.profilePublic === true && profile.discoverEligible === true;
-}
-
-/** Fields whose owner-controlled changes require a fresh public review. */
-export function creatorPublicContentMatches(
-  current: PublicCreatorProfile | null | undefined,
-  next: PublicCreatorProfile,
-): boolean {
-  if (!current) return false;
-  return current.handle === next.handle
-    && current.displayName === next.displayName
-    && current.bio === next.bio
-    && JSON.stringify(current.links) === JSON.stringify(next.links)
-    && current.profilePublic === next.profilePublic
-    && current.bioFont === next.bioFont
-    && current.profileTone === next.profileTone;
+  return profile?.profilePublic === true;
 }
 
 /** Minimal allow-listed projection used by public Creator search. */
 export function publicCreatorDirectoryEntry(value: unknown): PublicCreatorDirectoryEntry | null {
   const profile = parseCreatorProfileInput(value);
-  if (!isReviewedPublicCreatorProfile(profile)) return null;
+  if (!isPublicCreatorProfile(profile)) return null;
   return {
     handle: profile.handle,
     displayName: profile.displayName,

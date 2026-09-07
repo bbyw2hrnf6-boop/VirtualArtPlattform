@@ -1,5 +1,14 @@
 # LIEUVA Creator Identity & Account — WP10
 
+> **Current-state addendum — 2026-09-06:** Creator profiles now include Hub
+> social features, profile cover media and controlled visual styles. Visibility
+> is entirely owner-controlled: `profilePublic: true` publishes immediately and
+> `profilePublic: false` makes the profile private. There is no Creator-profile
+> review/approval step and the legacy Creator `discoverEligible` field is ignored.
+> Space discovery review and reported-post moderation are separate systems. Test
+> totals and bundle measurements below are the dated WP10 baseline, not current
+> release totals.
+
 Status labels used below: **IMPLEMENTED**, **VERIFIED LOCALLY**, **REQUIRES DEPLOYMENT**, **REQUIRES REAL DEVICE**.
 
 ## 1. Pre-WP10 architecture
@@ -56,11 +65,14 @@ Status labels used below: **IMPLEMENTED**, **VERIFIED LOCALLY**, **REQUIRES DEPL
 
 ## 12. Creator profile
 
-**IMPLEMENTED.** Premium restrained profile page: identity, bio, links, dominant profile/Space imagery, portfolio and clear LIEUVA navigation. It intentionally avoids follows, feeds, counts, comments or other social-network mechanics.
+**SUPERSEDED.** The original restrained profile remains, while the Creator Hub
+now adds follows, studio notes, comments, appreciations, counts and alerts.
 
 ## 13. Profile visibility
 
-**IMPLEMENTED.** Profiles are private by default and become public only through explicit owner opt-in. Private/missing states return generic copy and no profile metadata, portfolio, image or internal identifiers.
+**IMPLEMENTED.** Profiles are private by default and become public immediately
+through explicit owner opt-in, without operator review. Private/missing states
+return generic copy and no profile metadata, portfolio, image or internal identifiers.
 
 ## 14. Profile image decision
 
@@ -104,7 +116,9 @@ Status labels used below: **IMPLEMENTED**, **VERIFIED LOCALLY**, **REQUIRES DEPL
 
 ## 24. Sitemap
 
-**IMPLEMENTED.** Sitemap extends WP9 generation with eligible public Creator profiles only. Private/missing profiles never enter it. **REQUIRES DEPLOYMENT:** production crawler validation.
+**IMPLEMENTED.** Sitemap extends WP9 generation with owner-enabled public
+Creator profiles only. Private/missing profiles never enter it. **REQUIRES
+DEPLOYMENT:** production crawler validation.
 
 ## 25. Structured data
 

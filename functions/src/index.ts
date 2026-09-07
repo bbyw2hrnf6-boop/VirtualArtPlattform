@@ -118,12 +118,11 @@ import {
 import {
   CREATOR_HANDLE_CHANGE_COOLDOWN_MS,
   classifyCreatorDocumentRoute,
-  creatorPublicContentMatches,
   creatorNotificationProjection,
   creatorFollowTransition,
   creatorCanonicalUrl,
   isCreatorProfileSpaceListed,
-  isReviewedPublicCreatorProfile,
+  isPublicCreatorProfile,
   isValidCreatorWebp,
   normalizeCreatorHandle,
   parseCreatorCommentInput,
@@ -871,13 +870,13 @@ async function creatorDeliveryForHandle(handleValue: unknown): Promise<CreatorDe
   const profileData = profileSnapshot.data();
   const accountData = accountSnapshot.data();
   if (
-    !profileData || profileData.profilePublic !== true || profileData.discoverEligible !== true ||
+    !profileData || profileData.profilePublic !== true ||
     typeof profileData.handle !== "string" ||
     typeof profileData.displayName !== "string" ||
     typeof accountData?.ownerId !== "string"
   ) return { kind: "not-found", handle: requestedHandle };
   const profile = parseCreatorProfileInput(profileData);
-  if (!isReviewedPublicCreatorProfile(profile)) return { kind: "not-found", handle: requestedHandle };
+  if (!isPublicCreatorProfile(profile)) return { kind: "not-found", handle: requestedHandle };
   const [spacesSnapshot, postsSnapshot] = await Promise.all([
     db.collection("galleries")
       .where("ownerId", "==", accountData.ownerId)
@@ -1109,7 +1108,6 @@ export const saveLieuvaCreatorProfile = onCall(
         transaction.get(profileReference),
       ]);
       const account = accountSnapshot.data();
-      const currentProfile = parseCreatorProfileInput(profileSnapshot.data());
       const currentHandle = typeof account?.currentHandle === "string" ? account.currentHandle : undefined;
       if (handleSnapshot.exists && handleSnapshot.data()?.creatorId !== creatorId)
         throw new HttpsError("already-exists", "That public handle is already in use.");
@@ -1137,11 +1135,6 @@ export const saveLieuvaCreatorProfile = onCall(
         bio: input.bio,
         links: input.links,
         profilePublic: input.profilePublic,
-        // Approval is preserved only for a byte-for-byte equivalent normalized
-        // public projection. Any owner-controlled public change returns to the
-        // review queue; request input can never self-approve it.
-        discoverEligible: creatorPublicContentMatches(currentProfile, input)
-          && currentProfile?.discoverEligible === true,
         imagePresent: profileSnapshot.data()?.imagePresent === true,
         coverPresent: profileSnapshot.data()?.coverPresent === true,
         bioFont: input.bioFont,
@@ -1171,7 +1164,7 @@ export const saveLieuvaCreatorProfile = onCall(
     });
     const savedProfile = parseCreatorProfileInput((await db.collection("creatorProfiles")
       .where("handle", "==", input.handle).limit(1).get()).docs[0]?.data())
-      ?? { ...input, discoverEligible: false };
+      ?? input;
     return { profile: savedProfile, publicUrl: creatorCanonicalUrl(input.handle) };
   },
 );
@@ -1243,7 +1236,6 @@ export const setLieuvaCreatorProfileImage = onCall(
     if (request.data?.remove === true) return withAccountMediaUploadLease(uid, async () => {
       await mergeForActiveAccount(uid, profileReference, {
         imagePresent: false,
-        discoverEligible: false,
         updatedAt: FieldValue.serverTimestamp(),
       });
       await object.delete({ ignoreNotFound: true });
@@ -1256,10 +1248,9 @@ export const setLieuvaCreatorProfileImage = onCall(
     if (!await isValidCreatorWebp(bytes))
       throw new HttpsError("invalid-argument", "Choose a supported profile image under 512 KB.");
     return withAccountMediaUploadLease(uid, async () => {
-      // Fail closed before touching the object. If Storage fails, the previous
-      // image is no longer publicly mediated as reviewed content.
+      // Mark the profile as updated before touching Storage. Public delivery
+      // still depends only on the owner's current profile visibility choice.
       await mergeForActiveAccount(uid, profileReference, {
-        discoverEligible: false,
         updatedAt: FieldValue.serverTimestamp(),
       });
       await object.save(bytes, {
@@ -1270,7 +1261,6 @@ export const setLieuvaCreatorProfileImage = onCall(
         await assertAccountMutationAllowed(uid);
         await mergeForActiveAccount(uid, profileReference, {
           imagePresent: true,
-          discoverEligible: false,
           updatedAt: FieldValue.serverTimestamp(),
         });
       } catch (error) {
@@ -1305,7 +1295,6 @@ export const setLieuvaCreatorProfileCover = onCall(
     if (request.data?.remove === true) return withAccountMediaUploadLease(uid, async () => {
       await mergeForActiveAccount(uid, profileReference, {
         coverPresent: false,
-        discoverEligible: false,
         updatedAt: FieldValue.serverTimestamp(),
       });
       await object.delete({ ignoreNotFound: true });
@@ -1319,7 +1308,6 @@ export const setLieuvaCreatorProfileCover = onCall(
       throw new HttpsError("invalid-argument", "Choose a supported cover image under 512 KB.");
     return withAccountMediaUploadLease(uid, async () => {
       await mergeForActiveAccount(uid, profileReference, {
-        discoverEligible: false,
         updatedAt: FieldValue.serverTimestamp(),
       });
       await object.save(bytes, {
@@ -1330,7 +1318,6 @@ export const setLieuvaCreatorProfileCover = onCall(
         await assertAccountMutationAllowed(uid);
         await mergeForActiveAccount(uid, profileReference, {
           coverPresent: true,
-          discoverEligible: false,
           updatedAt: FieldValue.serverTimestamp(),
         });
       } catch (error) {
@@ -1362,7 +1349,7 @@ export const manageLieuvaCreatorFollow = onCall(
     const targetReference = db.collection("creatorProfiles").doc(followedCreatorId);
     const targetSnapshot = await targetReference.get();
     const target = parseCreatorProfileInput(targetSnapshot.data());
-    if (!isReviewedPublicCreatorProfile(target))
+    if (!isPublicCreatorProfile(target))
       throw new HttpsError("not-found", "Creator profile not found.");
     if (typeof followerCreatorId !== "string")
       return { following: false, followerCount: target.followerCount, canFollow: false, isSelf: false };
@@ -1394,7 +1381,7 @@ export const manageLieuvaCreatorFollow = onCall(
       return {
         following: blocked ? false : follow?.exists === true,
         followerCount: target.followerCount,
-        canFollow: !isSelf && !blocked && isReviewedPublicCreatorProfile(actorProfile),
+        canFollow: !isSelf && !blocked && isPublicCreatorProfile(actorProfile),
         isSelf,
         blocked,
       };
@@ -1422,10 +1409,10 @@ export const manageLieuvaCreatorFollow = onCall(
         ? creatorActionRateState("follow", followerCreatorId, actionNow, rateSnapshot.data())
         : undefined;
       if (action === "follow" && transition.changed) {
-        if (!isReviewedPublicCreatorProfile(currentTargetProfile))
+        if (!isPublicCreatorProfile(currentTargetProfile))
           throw new HttpsError("not-found", "Creator profile not found.");
-        if (!isReviewedPublicCreatorProfile(actorProfile))
-          throw new HttpsError("failed-precondition", "Your public Creator profile must be reviewed before following.");
+        if (!isPublicCreatorProfile(actorProfile))
+          throw new HttpsError("failed-precondition", "Make your Creator profile public before following.");
         transaction.create(followReference, {
           followerCreatorId,
           followedCreatorId,
@@ -1445,9 +1432,9 @@ export const manageLieuvaCreatorFollow = onCall(
       if (action === "unfollow" && transition.changed) {
         transaction.delete(followReference);
         transaction.set(targetReference, { followerCount: transition.followerCount }, { merge: true });
-        return { following: false, changed: true, actorProfilePublic: isReviewedPublicCreatorProfile(actorProfile) };
+        return { following: false, changed: true, actorProfilePublic: isPublicCreatorProfile(actorProfile) };
       }
-      return { following: exists, changed: false, actorProfilePublic: isReviewedPublicCreatorProfile(actorProfile) };
+      return { following: exists, changed: false, actorProfilePublic: isPublicCreatorProfile(actorProfile) };
     });
     const updated = parseCreatorProfileInput((await targetReference.get()).data());
     return { following: transitionResult.following, followerCount: updated?.followerCount ?? 0, canFollow: transitionResult.actorProfilePublic, isSelf: false, blocked: false };
@@ -1468,8 +1455,8 @@ export const createLieuvaCreatorPost = onCall(
       throw new HttpsError("failed-precondition", "Create your Creator profile before posting.");
     const profileReference = db.collection("creatorProfiles").doc(creatorId);
     const profile = parseCreatorProfileInput((await profileReference.get()).data());
-    if (!isReviewedPublicCreatorProfile(profile))
-      throw new HttpsError("failed-precondition", "Your public Creator profile must be reviewed before posting.");
+    if (!isPublicCreatorProfile(profile))
+      throw new HttpsError("failed-precondition", "Make your Creator profile public before posting.");
     const accountReference = db.collection("creatorAccounts").doc(creatorId);
     const postReference = accountReference.collection("posts").doc();
     const createdAt = new Date();
@@ -1531,7 +1518,7 @@ export const manageLieuvaCreatorPostInteraction = onCall(
       db.collection("creatorAccounts").doc(targetCreatorId).collection("posts").doc(postId).get(),
     ]);
     const targetProfile = parseCreatorProfileInput(targetProfileSnapshot.data());
-    if (!isReviewedPublicCreatorProfile(targetProfile))
+    if (!isPublicCreatorProfile(targetProfile))
       throw new HttpsError("not-found", "Creator post not found.");
     const postReference = db.collection("creatorAccounts").doc(targetCreatorId).collection("posts").doc(postId);
     if (!post.exists || post.data()?.moderationStatus === "removed")
@@ -1636,8 +1623,8 @@ export const manageLieuvaCreatorPostInteraction = onCall(
     const actorProfile = parseCreatorProfileInput(
       (await db.collection("creatorProfiles").doc(actorCreatorId).get()).data(),
     );
-    if (!isReviewedPublicCreatorProfile(actorProfile))
-      throw new HttpsError("failed-precondition", "Your public Creator profile must be reviewed before joining the conversation.");
+    if (!isPublicCreatorProfile(actorProfile))
+      throw new HttpsError("failed-precondition", "Make your Creator profile public before joining the conversation.");
     const [outgoingBlock, incomingBlock] = await Promise.all([
       db.collection("creatorBlocks").doc(`${actorCreatorId}_${targetCreatorId}`).get(),
       db.collection("creatorBlocks").doc(`${targetCreatorId}_${actorCreatorId}`).get(),
@@ -1847,10 +1834,10 @@ export const getMyLieuvaCreatorHome = onCall(
     }));
     const publicProfiles = parsedFollowedProfiles
       .map(({ profile }) => profile)
-      .filter(isReviewedPublicCreatorProfile);
+      .filter(isPublicCreatorProfile);
     const ownProfile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
     const feedProfiles = [
-      ...(isReviewedPublicCreatorProfile(ownProfile) ? [ownProfile] : []),
+      ...(isPublicCreatorProfile(ownProfile) ? [ownProfile] : []),
       ...publicProfiles,
     ].filter((profile, index, profilesValue) => profilesValue.findIndex((candidate) => candidate.handle === profile.handle) === index);
     const feedDeliveries = await Promise.all(feedProfiles.map((profile) => creatorDeliveryForHandle(profile.handle)));
@@ -1878,9 +1865,9 @@ export const getMyLieuvaCreatorHome = onCall(
     let postsWithViewerState = posts;
     if (request.data?.includeViewerState === true) {
       const creatorIdsByHandle = new Map<string, string>();
-      if (isReviewedPublicCreatorProfile(ownProfile)) creatorIdsByHandle.set(ownProfile.handle, creatorId);
+      if (isPublicCreatorProfile(ownProfile)) creatorIdsByHandle.set(ownProfile.handle, creatorId);
       for (const { creatorId: followedCreatorId, profile } of parsedFollowedProfiles)
-        if (isReviewedPublicCreatorProfile(profile)) creatorIdsByHandle.set(profile.handle, followedCreatorId);
+        if (isPublicCreatorProfile(profile)) creatorIdsByHandle.set(profile.handle, followedCreatorId);
       const reactionLookups = posts.flatMap((post, index) => {
         const postCreatorId = creatorIdsByHandle.get(post.handle);
         return postCreatorId ? [{
@@ -5293,8 +5280,7 @@ export const creatorDirectoryData = onRequest(
     try {
       const snapshot = await db.collection("creatorProfiles")
         .where("profilePublic", "==", true)
-        .where("discoverEligible", "==", true)
-        .select("handle", "displayName", "bio", "links", "profilePublic", "discoverEligible", "imagePresent", "coverPresent", "bioFont", "profileTone", "followerCount")
+        .select("handle", "displayName", "bio", "links", "profilePublic", "imagePresent", "coverPresent", "bioFont", "profileTone", "followerCount")
         .limit(500)
         .get();
       const creators = snapshot.docs
@@ -5331,7 +5317,7 @@ export const creatorImage = onRequest(
       const creatorId = handleSnapshot.data()?.creatorId;
       if (typeof creatorId !== "string") throw new Error("not-found");
       const profile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
-      if (!isReviewedPublicCreatorProfile(profile) || !profile.imagePresent) throw new Error("not-found");
+      if (!isPublicCreatorProfile(profile) || !profile.imagePresent) throw new Error("not-found");
       const [bytes] = await getStorage().bucket().file(`creator-public/${creatorId}/avatar.webp`).download();
       response.set("Content-Type", "image/webp");
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
@@ -5361,7 +5347,7 @@ export const creatorCover = onRequest(
       const creatorId = handleSnapshot.data()?.creatorId;
       if (typeof creatorId !== "string") throw new Error("not-found");
       const profile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
-      if (!isReviewedPublicCreatorProfile(profile) || !profile.coverPresent) throw new Error("not-found");
+      if (!isPublicCreatorProfile(profile) || !profile.coverPresent) throw new Error("not-found");
       const [bytes] = await getStorage().bucket().file(`creator-public/${creatorId}/cover.webp`).download();
       response.set("Content-Type", "image/webp");
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
@@ -5396,7 +5382,7 @@ export const creatorAttribution = onRequest(
       if (typeof creatorId !== "string") throw new Error("no-creator");
       const profileSnapshot = await db.collection("creatorProfiles").doc(creatorId).get();
       const profile = parseCreatorProfileInput(profileSnapshot.data());
-      if (!isReviewedPublicCreatorProfile(profile)) throw new Error("private-creator");
+      if (!isPublicCreatorProfile(profile)) throw new Error("private-creator");
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
       response.status(200).json({
         schemaVersion: 1,
@@ -5500,12 +5486,11 @@ export const spaceSitemap = onRequest(
         .filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public");
       const creatorProfiles = await db.collection("creatorProfiles")
         .where("profilePublic", "==", true)
-        .where("discoverEligible", "==", true)
         .limit(500)
         .get();
       const creators = creatorProfiles.docs.flatMap((document) => {
         const profile = parseCreatorProfileInput(document.data());
-        if (!isReviewedPublicCreatorProfile(profile)) return [];
+        if (!isPublicCreatorProfile(profile)) return [];
         const updated = timestampMilliseconds(document.data().updatedAt);
         return [{
           handle: profile.handle,

@@ -36,7 +36,9 @@ describe("account presentation", () => {
 
   it("keeps one profile state instead of repeating activation headings", () => {
     expect(creatorSettingsSource).toContain('<strong>Profile visibility</strong>');
-    expect(creatorSettingsSource).toContain('<b>Submit public profile</b>');
+    expect(creatorSettingsSource).toContain('<b>Make profile public</b>');
+    expect(creatorSettingsSource).not.toContain("review pending");
+    expect(creatorSettingsSource).not.toContain("queued for review");
     expect(creatorSettingsSource).not.toContain('Public profile is live');
     expect(creatorSettingsSource).not.toContain('Publish public profile');
     expect(creatorSettingsSource).not.toContain('<dd>Profile status</dd>');

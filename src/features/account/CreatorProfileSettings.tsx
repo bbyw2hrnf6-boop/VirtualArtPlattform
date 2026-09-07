@@ -48,8 +48,8 @@ const emptyLink = (): CreatorLink => ({ label: "", url: "" });
 
 function profileSaveLabel(published: boolean, nextPublic: boolean, saving: boolean): string {
   if (saving) return "Saving…";
-  if (published && nextPublic) return "Save changes for review";
-  if (nextPublic) return "Save and submit profile";
+  if (published && nextPublic) return "Save changes";
+  if (nextPublic) return "Save and make public";
   return published ? "Save and make private" : "Save private draft";
 }
 
@@ -132,10 +132,8 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
         }
         setState("idle");
         setMessage(existing
-          ? existing.profilePublic && existing.discoverEligible !== true
-            ? "Profile loaded. Public review is pending."
-            : "Public profile settings loaded."
-          : "Review your suggested identity, then submit your public profile when ready.");
+          ? "Public profile settings loaded."
+          : "Complete your identity, then choose whether the profile is private or public.");
       })
       .catch((error) => {
         if (!active) return;
@@ -196,13 +194,13 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
         try {
           imagePresent = await saveCreatorProfileImage(image, removeImage);
         } catch {
-          const heldProfile = { ...result.profile, discoverEligible: false };
+          const heldProfile = result.profile;
           setProfile(heldProfile);
           announceCreatorProfileUpdated(heldProfile);
           setLinks(result.profile.links.length ? result.profile.links : [emptyLink()]);
           setOriginalHandle(result.profile.handle);
           setState("error");
-          setMessage("Profile saved, but the image update failed. Public review is paused until you retry and resubmit.");
+          setMessage("Profile saved, but the image update failed. Retry the image upload; your visibility choice is unchanged.");
           trackTelemetry("creator_profile_saved", {
             mode: result.profile.profilePublic ? "public" : "private",
             outcome: "image_failed",
@@ -214,13 +212,13 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
         try {
           coverPresent = await saveCreatorProfileCover(cover, removeCover);
         } catch {
-          const savedProfile = { ...result.profile, imagePresent, discoverEligible: false };
+          const savedProfile = { ...result.profile, imagePresent };
           setProfile(savedProfile);
           announceCreatorProfileUpdated(savedProfile);
           setImage(undefined);
           setRemoveImage(false);
           setState("error");
-          setMessage("Profile saved, but the title-image update failed. Public review is paused until you retry and resubmit.");
+          setMessage("Profile saved, but the title-image update failed. Retry the cover upload; your visibility choice is unchanged.");
           return;
         }
       }
@@ -230,7 +228,6 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
         imagePresent,
         coverPresent,
         updatedAt: new Date().toISOString(),
-        ...((image || removeImage || cover || removeCover) ? { discoverEligible: false } : {}),
       };
       setStoredImageSource(refreshed.imageDataUrl ?? "");
       setStoredCoverSource(refreshed.coverDataUrl ?? "");
@@ -244,9 +241,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
       setOriginalHandle(result.profile.handle);
       setState("saved");
       setMessage(savedProfile.profilePublic
-        ? savedProfile.discoverEligible === true
-          ? "Profile saved and remains live."
-          : "Profile saved and queued for review. It will appear publicly only after approval."
+        ? "Profile saved and public."
         : "Profile saved privately.");
       trackTelemetry("creator_profile_saved", {
         mode: result.profile.profilePublic ? "public" : "private",
@@ -258,11 +253,11 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
     }
   };
 
-  const profileApproved = profile.profilePublic && profile.discoverEligible === true;
+  const profilePublic = profile.profilePublic;
   const portraitSource = imagePreview
     || (!removeImage && storedImageSource)
-    || (!removeImage && profileApproved && profile.imagePresent && handleValid ? creatorImageUrl(profile.handle) : "");
-  const publicCoverSource = !removeCover && profileApproved && profile.coverPresent && handleValid
+    || (!removeImage && profilePublic && profile.imagePresent && handleValid ? creatorImageUrl(profile.handle) : "");
+  const publicCoverSource = !removeCover && profilePublic && profile.coverPresent && handleValid
     ? creatorCoverUrl(profile.handle, profile.updatedAt)
     : "";
   const coverSource = coverPreview || (!removeCover && storedCoverSource) || publicCoverSource;
@@ -271,17 +266,17 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
     <form className="creator-settings" onSubmit={(event) => void submit(event)}>
       <div className="creator-settings__intro">
         <p>This is how others see you on LIEUVA. Your public profile keeps your identity, Spaces and studio notes together.</p>
-        <span className={profileApproved ? "is-live" : ""}>{profileApproved ? "✓ Public profile live" : profile.profilePublic ? "Review pending" : "Private draft"}</span>
+        <span className={profilePublic ? "is-live" : ""}>{profilePublic ? "✓ Public profile live" : "Private profile"}</span>
       </div>
       <div className="creator-settings__layout">
         <div className="creator-settings__editor">
           <section className="creator-settings__visibility">
             <div>
               <strong>Profile visibility</strong>
-              <p>Public profiles are reviewed before they enter search, follows and studio notes. Space placement stays with each Space in Your Spaces.</p>
+              <p>You control whether this profile is private or immediately visible in search, follows and studio notes. Space placement stays with each Space in Your Spaces.</p>
             </div>
             <label className="creator-settings__switch">
-              <b>Submit public profile</b>
+              <b>Make profile public</b>
               <input type="checkbox" checked={profile.profilePublic} onChange={(event) => setProfile((current) => ({ ...current, profilePublic: event.target.checked }))} />
               <span aria-hidden="true" />
             </label>
@@ -368,12 +363,12 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           <div className="creator-settings__actions">
             <button className="account-primary" disabled={state === "loading" || state === "saving"}>{profileSaveLabel(published, profile.profilePublic, state === "saving")}</button>
             {published && <a href="/creator-hub#creator-profile">Open profile in Creator Hub →</a>}
-            {profileApproved && publicUrl && <a href={publicUrl}>View public profile ↗</a>}
+            {profilePublic && publicUrl && <a href={publicUrl}>View public profile ↗</a>}
           </div>
           <p className={`creator-settings__status ${state === "error" ? "is-error" : ""}`} role={state === "error" ? "alert" : "status"}>{message}</p>
         </div>
         <aside className={`creator-settings__preview creator-settings__preview--${profile.profileTone}`} aria-label="Public profile preview">
-          <div className="creator-settings__preview-label"><span>{profileApproved ? "Preview of changes" : "Preview before review"}</span></div>
+          <div className="creator-settings__preview-label"><span>{profilePublic ? "Public profile preview" : "Private profile preview"}</span></div>
           <div className="creator-settings__preview-cover" aria-label="Public profile title image">
             {coverSource
               ? <img src={coverSource} alt="Public profile title image preview" />

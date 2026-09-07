@@ -18,8 +18,8 @@ describe("Creator profile URLs", () => {
 describe("Creator profile lifecycle labels", () => {
   it.each([
     [false, false, "Save private draft"],
-    [false, true, "Save and submit profile"],
-    [true, true, "Save changes for review"],
+    [false, true, "Save and make public"],
+    [true, true, "Save changes"],
     [true, false, "Save and make private"],
   ])("distinguishes persisted and edited visibility", (published, nextPublic, label) => {
     expect(creatorProfileSaveLabel(published, nextPublic)).toBe(label);

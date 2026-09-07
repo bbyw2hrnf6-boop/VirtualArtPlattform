@@ -8,6 +8,13 @@ This is not legal advice or a production-readiness claim.
 
 **Scope:** current legal/data-rights copy, Creator reporting, Space/image uploads, operator workflow
 
+**Superseding product decision (2026-09-06):** Creator-profile publication is
+self-service. `profilePublic` alone controls whether a Creator profile is
+public. Creator profiles no longer enter an approval queue and the legacy
+Creator `discoverEligible` value is ignored. Space discovery review and
+reported-post moderation remain in force. Historical production notes below
+describe the 2026-09-02 rollout and are retained as an execution record.
+
 **Production execution record:**
 
 - Before mutation, the complete live gallery, Creator-profile, report, and
@@ -314,7 +321,6 @@ The repository now provides the narrow first version:
 
 ```bash
 npm run review:public-content -- --kind spaces --limit 25
-npm run review:public-content -- --kind creators --limit 25
 npm run review:public-content -- --kind posts --limit 25
 npm run review:public-content:decision -- --help
 npm run moderation:queue -- --status new --limit 25
@@ -333,9 +339,9 @@ the default queue therefore surfaces repeat reports without erasing or reopening
 the recorded decision. A completed operator action clears that flag atomically.
 
 `review:public-content:decision` is the only operator tool that can set the
-trusted approval bit to true. It binds one Space/Creator decision to the exact
+trusted Space approval bit to true. It binds one Space decision to the exact
 document update time and SHA-256 content fingerprint emitted by the read-only
-review command; Spaces also require the exact revision. It writes the gate,
+review command and requires the exact revision. It writes the gate,
 `publicContentReviews` ledger, and immutable event atomically. It is dry-run by
 default and requires exact project confirmation to execute.
 

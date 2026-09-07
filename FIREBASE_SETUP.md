@@ -188,28 +188,41 @@ froze old-client publication until Hosting completed; the deployed client now
 writes the required fail-closed state. Already-open pre-WP1 Studio tabs should
 be reloaded before publishing.
 
-### WP1 reviewed-content rollout order
+### WP1 Space reviewed-content rollout order
 
-`discoverEligible: true` is trusted approval state. Do not deploy Functions that
+For Spaces, `discoverEligible: true` is trusted approval state. Do not deploy Functions that
 trust it while production still has older Firestore rules that let clients
 preserve or introduce that field.
 
-1. Back up and set all unreviewed live records to `discoverEligible: false`.
+1. Back up and set all unreviewed live Space records to `discoverEligible: false`.
 2. Deploy `firestore:indexes` and wait until every new index is **Enabled**.
 3. Deploy Hosting only, so new and reloaded Studio clients always write `false`
    for creates and revisions.
 4. Deploy the strict `firestore:rules`. Older already-open Studio tabs may then
    fail a publish once; reloading moves them to the compatible client.
 5. Deploy Functions only after the strict rules are active.
-6. Inspect exact revisions with `npm run review:public-content -- ...`, then use
+6. Inspect exact Space revisions with `npm run review:public-content -- --kind spaces ...`, then use
    `npm run review:public-content:decision -- ...` first as a dry-run and only
    then with its exact execution guard. Never edit the gate directly in Firebase
    Console.
-7. Verify the directory, sitemap, one approved target, and one pending target.
+7. Verify Explore Spaces, the sitemap, one approved Space, and one pending Space.
 
 The current production GitHub workflow deploys only Hosting and Functions. It
 must not be used for the first WP1 rollout or as proof that repository rules and
 indexes are in parity.
+
+### Creator profile visibility — current contract (2026-09-06)
+
+Creator profiles do **not** use the reviewed-content approval gate. The owner is
+the only visibility authority: `profilePublic: true` makes the normalized
+profile, profile media, Creator directory entry, Hub identity, follows and
+studio-note actions public immediately; `profilePublic: false` removes those
+public projections immediately. The legacy Creator-profile
+`discoverEligible` field is ignored and is no longer written or queried.
+
+The `discoverEligible` workflow documented above remains a **Space discovery
+and moderation** control only. Post reports and operator moderation also remain
+active; neither is a prerequisite for publishing a Creator profile.
 
 ## 5. Apply CORS once
 

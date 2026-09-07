@@ -25,7 +25,6 @@ Environment:
 
 Review first:
   npm run review:public-content -- --kind spaces --include-content
-  npm run review:public-content -- --kind creators --include-content
 
 Dry-run example:
   npm run review:public-content:decision -- --kind space --id SPACE_ID \\
@@ -37,7 +36,7 @@ Execute only after comparing dry-run output:
   append --execute --confirm-project "$FIREBASE_PROJECT_ID"
 
 Options:
-  --kind space|creator
+  --kind space
   --id exact target document ID
   --decision ${[...PUBLIC_CONTENT_DECISIONS].join("|")}
   --reason ${[...PUBLIC_REVIEW_REASON_CODES].join("|")}
@@ -69,8 +68,8 @@ if (flags.help) {
   process.exit(0);
 }
 
-if (!new Set(["space", "creator"]).has(flags.kind))
-  throw new Error("--kind must be space or creator.");
+if (flags.kind !== "space")
+  throw new Error("--kind must be space. Creator profiles are owner-controlled and require no review.");
 if (!PUBLIC_CONTENT_DECISIONS.has(flags.decision))
   throw new Error(`--decision must be one of: ${[...PUBLIC_CONTENT_DECISIONS].join(", ")}.`);
 if (!PUBLIC_REVIEW_REASON_CODES.has(flags.reason))
@@ -85,7 +84,7 @@ assertExecutionGuard({
   projectId: client.projectId,
 });
 
-const collection = flags.kind === "space" ? "galleries" : "creatorProfiles";
+const collection = "galleries";
 const reviewId = publicContentReviewId(flags.kind, targetId);
 const [rawTarget, rawReview] = await Promise.all([
   client.getDocument(`${collection}/${targetId}`),

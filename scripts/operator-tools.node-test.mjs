@@ -69,23 +69,6 @@ test("public review hides content unless explicitly requested", () => {
   assert.equal(explicit.artworks[0].description, "Wall text");
 });
 
-test("public Creator review lists pending profiles without granting approval", () => {
-  const pending = raw("creatorProfiles/creator456", {
-    handle: "creator",
-    displayName: "Creator",
-    profilePublic: true,
-    discoverEligible: false,
-  });
-  assert.equal(formatPublicContent("creators", pending).discoverEligible, false);
-  const approved = raw("creatorProfiles/creator456", {
-    handle: "creator",
-    displayName: "Creator",
-    profilePublic: true,
-    discoverEligible: true,
-  });
-  assert.equal(formatPublicContent("creators", approved).handle, "creator");
-});
-
 test("public-content approval binds exact Space revision, fingerprint, and update time", () => {
   const gallery = raw("galleries/example-space", {
     title: "Material Futures",
@@ -155,37 +138,6 @@ test("public-content approval refuses a stale review or placeholder Space", () =
     expectedUpdateTime: "2026-09-02T08:59:59.000Z",
   }), /update-time mismatch/);
   assert.throws(() => buildPublicContentDecisionPlan(input), /non-placeholder/);
-});
-
-test("public-content approval handles a pending Creator without a fake revision", () => {
-  const creator = raw("creatorProfiles/creator456", {
-    handle: "studio-north",
-    displayName: "Studio North",
-    bio: "Spatial work.",
-    links: [],
-    profilePublic: true,
-    discoverEligible: false,
-    imagePresent: false,
-    coverPresent: false,
-  });
-  const reviewed = formatPublicContent("creators", creator);
-  const plan = buildPublicContentDecisionPlan({
-    projectId,
-    kind: "creator",
-    targetId: "creator456",
-    decision: "approve",
-    reasonCode: "reviewed-production",
-    operatorId: "operator.one",
-    occurredAt: timestamp,
-    eventId: "event123",
-    rawTarget: creator,
-    rawReview: null,
-    expectedGate: "pending",
-    expectedUpdateTime: creator.updateTime,
-    expectedFingerprint: reviewed.contentFingerprint,
-  });
-  assert.equal(plan.summary.contentVersion, creator.updateTime);
-  assert.equal(plan.writes[0].update.fields.discoverEligible.booleanValue, true);
 });
 
 test("moderation queue projection exposes case metadata but no reporter identity", () => {
