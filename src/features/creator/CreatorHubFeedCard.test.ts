@@ -9,12 +9,14 @@ describe("Creator Hub feed card actions", () => {
     expect(hubSource).not.toContain("Visit Profile");
   });
 
-  it("uses reduced Appreciate and Discuss actions with accessible state", () => {
+  it("uses an icon-only appreciation and a reduced Discuss action with accessible state", () => {
     expect(hubSource).toContain('className={`creator-post__action');
     expect(hubSource).toContain('<HubIcon name="heart" />');
     expect(hubSource).toContain('<HubIcon name="comment" />');
+    expect(hubSource).toContain('aria-label={post.viewerReacted ? "Remove appreciation" : "Appreciate this post"}');
     expect(hubSource).toContain('aria-pressed={Boolean(post.viewerReacted)}');
     expect(hubSource).toContain('aria-expanded={activePost === post.id}');
+    expect(hubSource).not.toContain('<span>Appreciate</span>');
     expect(hubSource).not.toContain("Safety ···");
   });
 

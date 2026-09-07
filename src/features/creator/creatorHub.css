@@ -236,13 +236,11 @@
 .creator-post__actions > .creator-post__action,
 .creator-post__actions summary,
 .creator-post__actions details div button { display: inline-flex; min-height: 40px; align-items: center; padding: 0 3px; border: 0; background: transparent; color: inherit; font-size: 9px; cursor: pointer; }
-.creator-post__action{gap:7px;letter-spacing:0!important;text-transform:none!important}
+.creator-post__action{gap:7px;color:var(--hub-ink)!important;letter-spacing:0!important;text-transform:none!important}
 .creator-post__action svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
-.creator-post__action b{color:#68752d;font-size:9px;font-weight:650}.creator-post__action span{color:#66685f}
-.creator-post__actions > .creator-post__action.is-active{color:#b4232f}
-.creator-post__actions > .creator-post__action.is-active b,
-.creator-post__actions > .creator-post__action.is-active span{color:#b4232f}
-.creator-post__actions > .creator-post__action.is-active svg{fill:currentColor;stroke:currentColor;transform:scale(1.06)}
+.creator-post__action b{color:var(--hub-ink);font-size:9px;font-weight:650}.creator-post__action span{color:#66685f}
+.creator-post__action--appreciate svg{fill:transparent;stroke:#151613;stroke-width:1.8}
+.creator-post__actions > .creator-post__action--appreciate.is-active svg{fill:#c51f32;stroke:#c51f32;transform:scale(1.06)}
 .creator-post__overflow { position: relative; margin-left:auto; }
 .creator-post__overflow summary { display:grid!important;width:40px;min-height:40px!important;place-items:center;padding:0!important;list-style: none;font-size:15px!important;letter-spacing:2px!important;line-height:1; }
 .creator-post__overflow summary::-webkit-details-marker{display:none}

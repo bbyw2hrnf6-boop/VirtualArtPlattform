@@ -674,7 +674,13 @@ export default function CreatorHubPage({
                     </header>
                     <p>{post.body}</p>
                     <footer className="creator-post__actions">
-                      <button type="button" className={`creator-post__action${post.viewerReacted ? " is-active" : ""}`} aria-pressed={Boolean(post.viewerReacted)} onClick={() => void engage(post, "reaction")}><HubIcon name="heart" /><b>{post.reactionCount ?? 0}</b><span>Appreciate</span></button>
+                      <button
+                        type="button"
+                        className={`creator-post__action creator-post__action--appreciate${post.viewerReacted ? " is-active" : ""}`}
+                        aria-label={post.viewerReacted ? "Remove appreciation" : "Appreciate this post"}
+                        aria-pressed={Boolean(post.viewerReacted)}
+                        onClick={() => void engage(post, "reaction")}
+                      ><HubIcon name="heart" /><b>{post.reactionCount ?? 0}</b></button>
                       <button type="button" className="creator-post__action" aria-expanded={activePost === post.id} onClick={() => setActivePost(activePost === post.id ? undefined : post.id)}><HubIcon name="comment" /><b>{post.commentCount ?? 0}</b><span>Discuss</span></button>
                       <details className="creator-post__overflow"><summary aria-label="More post actions">•••</summary><div><small>Safety and reporting</small><button type="button" onClick={() => openReport(post)}>Report post</button><button type="button" onClick={() => void engage(post, "block")}>Block Creator</button></div></details>
                     </footer>
