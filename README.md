@@ -1,6 +1,6 @@
 # LIEUVA — Immersive 3D presentation platform
 
-LIEUVA is a browser-based platform for creating, publishing, sharing and discovering immersive 3D presentations. This repository contains the current production-pilot product: LIEUVA Studio, three Space templates, a visitor experience, Discover, Creator identity and community, account access, and a Firebase publishing lifecycle.
+LIEUVA lets people create, publish and explore immersive 3D spaces for art, design and ideas — directly in the browser. This repository contains the current production-pilot product: LIEUVA Studio, three Space templates, a visitor experience, Discover, Creator identity and community, account access, and a Firebase publishing lifecycle.
 
 > **Compatibility firewall:** LIEUVA is the visible brand. Existing AURA/gallery identifiers in Firebase, Storage, callable Functions, local persistence, `.aura.json`, routes and GLB metadata are intentional compatibility contracts and must not be casually renamed.
 
@@ -138,6 +138,8 @@ Published Spaces use one durable customer URL backed by their existing publicati
 - `/spaces/{gallery-id}` — canonical published Space URL
 
 All new share and Discover links use the canonical `https://lieuva.com/spaces/{gallery-id}` form. Title, Creator and revision changes keep the same URL. Firebase Hosting rewrites direct requests to a privacy-aware HTTP Function, which returns route-specific initial metadata and then boots the normal React visitor application.
+
+The homepage, protected routes, Creator directory, and any public Creator or Space without its own cover use `public/assets/social/lieuva-social-preview-v2.jpg` as the 1200 × 630 Open Graph fallback. Public Spaces and Creator profiles keep their own cover-first share previews. The versioned filename is intentional so social clients can refresh cached preview media safely.
 
 Existing product areas keep their compatibility hash routes:
 

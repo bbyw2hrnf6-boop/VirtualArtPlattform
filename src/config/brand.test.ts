@@ -56,6 +56,15 @@ describe("LIEUVA visible-brand and compatibility contract", () => {
     expect(productTitle()).toBe("LIEUVA — Immersive 3D presentation platform");
   });
 
+  it("ships the production social-card contract in the static document", () => {
+    expect(htmlSource).toContain('property="og:image" content="https://lieuva.com/assets/social/lieuva-social-preview-v2.jpg"');
+    expect(htmlSource).toContain('property="og:image:type" content="image/jpeg"');
+    expect(htmlSource).toContain('property="og:image:width" content="1200"');
+    expect(htmlSource).toContain('property="og:image:height" content="630"');
+    expect(htmlSource).toContain('name="twitter:card" content="summary_large_image"');
+    expect(htmlSource).toContain(PRODUCT_BRAND.description);
+  });
+
   it("contains no unintended customer-visible legacy branding", () => {
     const forbidden = [
       /\bAURA\b/,

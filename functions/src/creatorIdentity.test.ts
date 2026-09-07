@@ -190,6 +190,9 @@ describe("Creator identity contract", () => {
   it("keeps non-public profiles generic and noindex", () => {
     const html = renderCreatorDocument(SHELL, { kind: "not-found", handle: "hidden-name" });
     expect(html).toContain("noindex,nofollow,noarchive");
+    expect(html).toContain("https://lieuva.com/assets/social/lieuva-social-preview-v2.jpg");
+    expect(html).toContain('property="og:image:width" content="1200"');
+    expect(html).toContain('property="og:image:height" content="630"');
     expect(html).not.toContain("hidden-name");
   });
 
@@ -199,6 +202,7 @@ describe("Creator identity contract", () => {
     expect(html).toContain("https://lieuva.com/creators");
     expect(html).toContain("index,follow,max-image-preview:large");
     expect(html).toContain('name="lieuva:creator-route" content="directory"');
+    expect(html).toContain("https://lieuva.com/assets/social/lieuva-social-preview-v2.jpg");
     expect(html).toContain("CollectionPage");
     expect(html.match(/rel="canonical"/g)).toHaveLength(1);
     expect(html).not.toContain("Creator unavailable");

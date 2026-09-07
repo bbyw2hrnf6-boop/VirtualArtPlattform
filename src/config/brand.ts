@@ -3,7 +3,7 @@ export const PRODUCT_BRAND = {
   category: "Immersive 3D presentation platform",
   claim: "Give your work a place.",
   description:
-    "LIEUVA is a browser-based platform for creating, publishing, sharing and discovering immersive 3D presentations.",
+    "Create, publish and explore immersive 3D spaces for art, design and ideas — directly in your browser.",
   supportingStatement:
     "Create and publish immersive 3D spaces for art, design and ideas—directly in the browser, with no 3D expertise required.",
   heroCopy:

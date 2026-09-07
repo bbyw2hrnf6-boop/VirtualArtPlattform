@@ -288,6 +288,8 @@ export function creatorCanonicalUrl(handle: string): string {
   return `https://lieuva.com/creators/${normalized}`;
 }
 
+const SOCIAL_SHARE_IMAGE = "https://lieuva.com/assets/social/lieuva-social-preview-v2.jpg";
+
 export function classifyCreatorDocumentRoute(path: string): CreatorDocumentRoute {
   const normalizedPath = path.replace(/\/+$/, "") || "/";
   if (normalizedPath === "/creators") return { kind: "directory" };
@@ -310,7 +312,7 @@ function stripMetadata(html: string): string {
   return html
     .replace(/<title>[\s\S]*?<\/title>/i, "")
     .replace(/<link\s+[^>]*rel=["']canonical["'][^>]*>/gi, "")
-    .replace(/<meta\s+[^>]*(?:name|property)=["'](?:description|robots|lieuva:creator-state|lieuva:creator-route|og:type|og:site_name|og:url|og:title|og:description|og:image|og:image:alt|og:image:width|og:image:height|og:locale|twitter:card|twitter:title|twitter:description|twitter:image|twitter:image:alt)["'][^>]*>/gi, "")
+    .replace(/<meta\s+[^>]*(?:name|property)=["'](?:description|robots|lieuva:creator-state|lieuva:creator-route|og:type|og:site_name|og:url|og:title|og:description|og:image|og:image:secure_url|og:image:type|og:image:alt|og:image:width|og:image:height|og:locale|twitter:card|twitter:title|twitter:description|twitter:image|twitter:image:alt)["'][^>]*>/gi, "")
     .replace(/<script\s+[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, "");
 }
 
@@ -328,7 +330,8 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
     : profile?.imagePresent
     ? `https://lieuva.com/creator-images/${profile.handle}.webp`
     : profile && spaces[0] ? spaces[0].coverUrl
-    : "https://lieuva.com/assets/demo/aura-hero-gallery.webp";
+    : SOCIAL_SHARE_IMAGE;
+  const imageType = image === SOCIAL_SHARE_IMAGE ? "image/jpeg" : "image/webp";
   const tags = [
     `<title>${escapeHtml(title)}</title>`,
     `<meta name="description" content="${escapeHtml(description)}">`,
@@ -341,6 +344,11 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
     `<meta property="og:title" content="${escapeHtml(title)}">`,
     `<meta property="og:description" content="${escapeHtml(description)}">`,
     `<meta property="og:image" content="${escapeHtml(image)}">`,
+    `<meta property="og:image:secure_url" content="${escapeHtml(image)}">`,
+    `<meta property="og:image:type" content="${imageType}">`,
+    ...(image === SOCIAL_SHARE_IMAGE
+      ? [`<meta property="og:image:width" content="1200">`, `<meta property="og:image:height" content="630">`]
+      : []),
     `<meta property="og:image:alt" content="Public Creator profile for ${escapeHtml(profile?.displayName ?? "LIEUVA")}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${escapeHtml(title)}">`,
@@ -371,7 +379,7 @@ export function renderCreatorDirectoryDocument(shell: string): string {
   const canonical = "https://lieuva.com/creators";
   const title = "Creators | LIEUVA";
   const description = "Explore public Creators and their immersive Spaces in the LIEUVA Creator Hub.";
-  const image = "https://lieuva.com/assets/demo/aura-hero-gallery.webp";
+  const image = SOCIAL_SHARE_IMAGE;
   const tags = [
     `<title>${title}</title>`,
     `<meta name="description" content="${description}">`,
@@ -384,6 +392,10 @@ export function renderCreatorDirectoryDocument(shell: string): string {
     `<meta property="og:title" content="${title}">`,
     `<meta property="og:description" content="${description}">`,
     `<meta property="og:image" content="${image}">`,
+    `<meta property="og:image:secure_url" content="${image}">`,
+    `<meta property="og:image:type" content="image/jpeg">`,
+    `<meta property="og:image:width" content="1200">`,
+    `<meta property="og:image:height" content="630">`,
     `<meta property="og:image:alt" content="Public Creators and Spaces in the LIEUVA Creator Hub">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${title}">`,
@@ -406,7 +418,7 @@ export function renderCreatorHubDocument(shell: string): string {
   const canonical = "https://lieuva.com/creator-hub";
   const title = "Creator Hub | LIEUVA";
   const description = "Manage your Creator profile, follow practices, and share updates in the LIEUVA Creator Hub.";
-  const image = "https://lieuva.com/assets/demo/aura-hero-gallery.webp";
+  const image = SOCIAL_SHARE_IMAGE;
   const tags = [
     `<title>${title}</title>`,
     `<meta name="description" content="${description}">`,
@@ -419,6 +431,10 @@ export function renderCreatorHubDocument(shell: string): string {
     `<meta property="og:title" content="${title}">`,
     `<meta property="og:description" content="${description}">`,
     `<meta property="og:image" content="${image}">`,
+    `<meta property="og:image:secure_url" content="${image}">`,
+    `<meta property="og:image:type" content="image/jpeg">`,
+    `<meta property="og:image:width" content="1200">`,
+    `<meta property="og:image:height" content="630">`,
     `<meta property="og:image:alt" content="The personalized LIEUVA Creator Hub">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${title}">`,

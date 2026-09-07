@@ -1,5 +1,5 @@
 export const PUBLIC_SITE_ORIGIN = "https://lieuva.com";
-export const SPACE_CARD_FALLBACK = `${PUBLIC_SITE_ORIGIN}/assets/demo/aura-hero-gallery.webp`;
+export const SPACE_CARD_FALLBACK = `${PUBLIC_SITE_ORIGIN}/assets/social/lieuva-social-preview-v2.jpg`;
 
 type SpaceVisibility = "public" | "unlisted" | "private";
 
@@ -232,7 +232,7 @@ function stripRouteMetadata(html: string): string {
     .replace(/<link\s+[^>]*rel=["']canonical["'][^>]*>/gi, "")
     .replace(/<meta\s+[^>]*name=["']lieuva:space-state["'][^>]*>/gi, "")
     .replace(
-      /<meta\s+[^>]*(?:name|property)=["'](?:description|robots|og:type|og:site_name|og:url|og:title|og:description|og:image|og:image:width|og:image:height|og:image:alt|og:locale|twitter:card|twitter:title|twitter:description|twitter:image|twitter:image:alt)["'][^>]*>/gi,
+      /<meta\s+[^>]*(?:name|property)=["'](?:description|robots|og:type|og:site_name|og:url|og:title|og:description|og:image|og:image:secure_url|og:image:type|og:image:width|og:image:height|og:image:alt|og:locale|twitter:card|twitter:title|twitter:description|twitter:image|twitter:image:alt)["'][^>]*>/gi,
       "",
     )
     .replace(/<script\s+[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, "");
@@ -257,6 +257,11 @@ export function renderSpaceDocument(shell: string, delivery: SpaceDelivery): str
     `<meta property="og:title" content="${escapeHtml(metadata.ogTitle)}">`,
     `<meta property="og:description" content="${escapeHtml(metadata.ogDescription)}">`,
     `<meta property="og:image" content="${escapeHtml(metadata.ogImage)}">`,
+    `<meta property="og:image:secure_url" content="${escapeHtml(metadata.ogImage)}">`,
+    `<meta property="og:image:type" content="${metadata.ogImage === SPACE_CARD_FALLBACK ? "image/jpeg" : "image/webp"}">`,
+    ...(metadata.ogImage === SPACE_CARD_FALLBACK
+      ? [`<meta property="og:image:width" content="1200">`, `<meta property="og:image:height" content="630">`]
+      : []),
     `<meta property="og:image:alt" content="${escapeHtml(metadata.ogImageAlt)}">`,
     `<meta name="twitter:card" content="${metadata.twitterCard}">`,
     `<meta name="twitter:title" content="${escapeHtml(metadata.ogTitle)}">`,

@@ -173,7 +173,7 @@ Rules:
 
 **One-sentence product definition for press, metadata and documentation:**
 
-> **LIEUVA is a browser-based platform for creating, publishing, sharing and discovering immersive 3D presentations.**
+> **Create, publish and explore immersive 3D spaces for art, design and ideas — directly in your browser.**
 
 ## 11. Beachhead audience
 

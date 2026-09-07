@@ -79,6 +79,9 @@ describe("Space SEO delivery policy", () => {
     expect(html).toContain("LIEUVA — Shared Space");
     expect(html).toContain("noindex,nofollow,noarchive");
     expect(html).toContain('<meta name="lieuva:space-state" content="protected">');
+    expect(html).toContain("https://lieuva.com/assets/social/lieuva-social-preview-v2.jpg");
+    expect(html).toContain('property="og:image:type" content="image/jpeg"');
+    expect(html).toContain('property="og:image:width" content="1200"');
     expect(html).not.toContain("Secret Launch");
     expect(html).not.toContain("Hidden Studio");
     expect(cacheControlForSpace(delivery)).toContain("no-store");

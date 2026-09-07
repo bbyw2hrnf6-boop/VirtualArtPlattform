@@ -5,7 +5,7 @@ import { creatorCanonicalUrl, spaceCanonicalUrl } from "./spaceRoutes";
 const HOME_CANONICAL = "https://lieuva.com/";
 const CREATOR_DIRECTORY_CANONICAL = `${HOME_CANONICAL}creators`;
 const CREATOR_HUB_CANONICAL = `${HOME_CANONICAL}creator-hub`;
-const HOME_IMAGE = `${HOME_CANONICAL}assets/demo/aura-hero-gallery.webp`;
+const HOME_IMAGE = `${HOME_CANONICAL}assets/social/lieuva-social-preview-v2.jpg`;
 const SPACE_CARD_ENDPOINT = `${HOME_CANONICAL}space-cards/`;
 
 export type PageMetadataPolicy = {

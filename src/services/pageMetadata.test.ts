@@ -6,6 +6,8 @@ describe("page metadata policy", () => {
     expect(pageMetadataPolicy("home")).toMatchObject({
       canonical: "https://lieuva.com/",
       robots: "index,follow,max-image-preview:large",
+      description: "Create, publish and explore immersive 3D spaces for art, design and ideas — directly in your browser.",
+      image: "https://lieuva.com/assets/social/lieuva-social-preview-v2.jpg",
     });
     for (const page of ["create", "demo", "data", "account", "auth-action", "space-not-found", "other"] as const)
       expect(pageMetadataPolicy(page).robots).toBe("noindex,nofollow");
@@ -16,6 +18,7 @@ describe("page metadata policy", () => {
       title: "Creators | LIEUVA",
       canonical: "https://lieuva.com/creators",
       robots: "index,follow,max-image-preview:large",
+      image: "https://lieuva.com/assets/social/lieuva-social-preview-v2.jpg",
     });
   });
 
