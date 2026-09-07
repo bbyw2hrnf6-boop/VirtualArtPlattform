@@ -173,6 +173,12 @@ Automated locally on 2026-09-04:
 | root and Functions `npm ls --all --json` | PASS — both dependency trees resolve without invalid/extraneous packages |
 | `git diff --check` | PASS |
 
+Incremental validation on 2026-09-07 after adding Creator comment replies:
+root `npm run check` passed with 53 Vitest files / 304 tests; Functions
+`npm run check` passed with 24 Vitest files / 159 tests plus 7 script tests,
+test typecheck, and 22 production-only JavaScript files; release discovery
+verified the updated exact 44-endpoint manifest.
+
 Focused coverage includes a 5,201-record page-one drain and interrupted retry,
 phase persistence, stale/expired lease behavior, Auth-not-found completion,
 cross-owner committed-revision protection, persisted-ID ownership rechecks,

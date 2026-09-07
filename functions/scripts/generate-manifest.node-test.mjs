@@ -19,6 +19,7 @@ function validManifest(endpointNames = EXPECTED_RELEASE_ENDPOINTS) {
 }
 
 test('validates the exact release contract and canonicalizes object key order', () => {
+  assert.ok(EXPECTED_RELEASE_ENDPOINTS.includes('getLieuvaCreatorPostComments'));
   const manifest = validManifest([...EXPECTED_RELEASE_ENDPOINTS].reverse());
   const text = validateReleaseManifest(manifest, [...EXPECTED_RELEASE_ENDPOINTS].reverse());
   assert.equal(text, canonicalManifestText(validManifest()));
@@ -36,6 +37,12 @@ test('rejects top-level, endpoint, and compiled export drift', () => {
   assert.throws(
     () => validateReleaseManifest(missingEndpoint, EXPECTED_RELEASE_ENDPOINTS),
     /endpoints has unexpected fields/,
+  );
+
+  const unexpectedEndpoint = validManifest([...EXPECTED_RELEASE_ENDPOINTS, 'unreviewedEndpoint']);
+  assert.throws(
+    () => validateReleaseManifest(unexpectedEndpoint, [...EXPECTED_RELEASE_ENDPOINTS, 'unreviewedEndpoint']),
+    /unexpected: unreviewedEndpoint/,
   );
 
   assert.throws(

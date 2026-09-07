@@ -35,6 +35,7 @@ export const EXPECTED_RELEASE_ENDPOINTS = Object.freeze([
   'exportAuraAccountData',
   'finalizeAuraGalleryPublication',
   'finalizeAuraGalleryRevision',
+  'getLieuvaCreatorPostComments',
   'getMyAuraAccountAvatar',
   'getMyLieuvaCreatorHome',
   'getMyLieuvaCreatorProfile',
@@ -122,8 +123,17 @@ function assertExactKeys(value, expected, label) {
   if (!isPlainObject(value)) fail(`${label} must be an object`);
   const actual = Object.keys(value).sort();
   const sortedExpected = [...expected].sort();
-  if (JSON.stringify(actual) !== JSON.stringify(sortedExpected))
-    fail(`${label} has unexpected fields`);
+  if (JSON.stringify(actual) !== JSON.stringify(sortedExpected)) {
+    const expectedSet = new Set(sortedExpected);
+    const actualSet = new Set(actual);
+    const unexpected = actual.filter((key) => !expectedSet.has(key));
+    const missing = sortedExpected.filter((key) => !actualSet.has(key));
+    const details = [
+      unexpected.length ? `unexpected: ${unexpected.join(', ')}` : undefined,
+      missing.length ? `missing: ${missing.join(', ')}` : undefined,
+    ].filter(Boolean).join('; ');
+    fail(`${label} has unexpected fields${details ? ` (${details})` : ''}`);
+  }
 }
 
 function sortedStrings(values, label) {

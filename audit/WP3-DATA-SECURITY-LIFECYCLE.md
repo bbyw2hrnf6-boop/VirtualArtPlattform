@@ -179,6 +179,12 @@ Executed locally on 2026-09-04 with Node `22.23.2` and Temurin OpenJDK
 | `npm --prefix functions run manifest:release` | PASS — 42 exact release endpoints |
 | `git diff --check` | PASS |
 
+Incremental validation on 2026-09-07 after adding Creator comment replies:
+root `npm run check` passed with 53 Vitest files / 304 tests; Functions
+`npm run check` passed with 24 Vitest files / 159 tests plus 7 script tests,
+test typecheck, and 22 production-only JavaScript files; release discovery
+verified the updated exact 44-endpoint manifest.
+
 This is repository evidence only; it is not production parity. The bounded tests
 exercise export/deletion retries and limits, but no real GCS/emulator race replay
 or literal 4,096-part, 24-hour export was run.
