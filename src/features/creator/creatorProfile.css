@@ -131,6 +131,12 @@
 .creator-profile__bio--editorial { font: italic clamp(20px, 1.8vw, 29px)/1.42 Instrument, Georgia, serif; }
 .creator-profile--warm .creator-profile__identity { background:#e3d6c2; }
 .creator-profile--warm .creator-profile__facts { border-color:#b6a58e; }
+.creator-profile--sage .creator-profile__identity { background:#d9e0d5; }
+.creator-profile--sage .creator-profile__facts { border-color:#aebaa9; }
+.creator-profile--clay .creator-profile__identity { background:#e5cabc; }
+.creator-profile--clay .creator-profile__facts { border-color:#bd9e8d; }
+.creator-profile--blue .creator-profile__identity { background:#d0dae5; }
+.creator-profile--blue .creator-profile__facts { border-color:#a6b5c5; }
 .creator-profile--ink .creator-profile__identity { background:#171814; color:#f1efe7; }
 .creator-profile--ink .creator-profile__handle,.creator-profile--ink .creator-profile__bio,.creator-profile--ink .creator-profile__social small { color:#aeb0a7; }
 .creator-profile--ink .creator-profile__links a { border-color:#777a70; color:#f1efe7; }

@@ -69,7 +69,7 @@
   .creator-hub__hero-visual nav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 16px; }
   .creator-hub__hero-visual nav a { min-width: 0; min-height: 44px; padding: 0 8px; font-size: 9px; white-space: nowrap; }
   .creator-hub__composer { min-height: 0; padding: 18px; }
-  .creator-hub__composer textarea { min-height: 76px; max-height: 118px; flex: 0 0 auto; margin-top: 4px; padding: 9px 0; font-size: 21px; line-height: 1.22; }
+  .creator-hub__composer textarea { min-height: 76px; max-height: 118px; flex: 0 0 auto; margin-top: 4px; padding: 9px 58px 9px 0; font-size: 21px; line-height: 1.22; }
   .creator-hub__composer-actions { position: static; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid #ffffff14; background: transparent; }
   .creator-hub__composer-actions small { max-width: none; font-size: 9px; }
   .creator-hub__composer button,
@@ -115,6 +115,7 @@
   .creator-post__action span{font-size:10px}
   .creator-post__discussion form { grid-template-columns: 1fr; }
   .creator-post__discussion form button { min-height: 44px; }
+  .creator-post__comments li.is-reply { margin-left: 16px; }
   .creator-hub__rail { padding: 22px; }
   .creator-hub__search { grid-template-columns: 24px minmax(0, 1fr) 44px; }
   .creator-hub__search input { font-size: 27px; }

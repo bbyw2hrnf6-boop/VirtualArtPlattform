@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import {
   classifyCreatorDocumentRoute,
+  creatorCommentProjection,
   creatorNotificationProjection,
   creatorFollowTransition,
   creatorCanonicalUrl,
@@ -106,6 +107,14 @@ describe("Creator identity contract", () => {
       links: [],
     })).toMatchObject({ coverPresent: true, bioFont: "editorial", profileTone: "ink" });
     expect(parseCreatorProfileInput({
+      handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", profilePublic: true,
+      profileTone: "sage", links: [],
+    })).toMatchObject({ profileTone: "sage" });
+    expect(parseCreatorProfileInput({
+      handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", profilePublic: true,
+      profileTone: "rainbow", links: [],
+    })).toBeNull();
+    expect(parseCreatorProfileInput({
       handle: "studio-north", displayName: "Studio North", bio: "", profilePublic: true,
       bioFont: "comic-sans", links: [],
     })).toBeNull();
@@ -165,6 +174,31 @@ describe("Creator identity contract", () => {
     expect(parseCreatorCommentInput("x".repeat(281))).toBeNull();
     expect(parseCreatorReportReason("rights")).toBe("rights");
     expect(parseCreatorReportReason("delete-everything")).toBeNull();
+  });
+
+  it("projects safe public comments and their reply context", () => {
+    expect(creatorCommentProjection("comment_1", {
+      authorHandle: "studio-north",
+      authorDisplayName: "Studio North",
+      body: "Love this direction ✨",
+      parentCommentId: "comment_0",
+      replyToHandle: "atelier-west",
+      replyToDisplayName: "Atelier West",
+      moderationStatus: "published",
+      authorCreatorId: "private-id",
+    }, "2026-09-07T12:00:00.000Z")).toEqual({
+      id: "comment_1",
+      handle: "studio-north",
+      displayName: "Studio North",
+      body: "Love this direction ✨",
+      createdAt: "2026-09-07T12:00:00.000Z",
+      parentCommentId: "comment_0",
+      replyToHandle: "atelier-west",
+      replyToDisplayName: "Atelier West",
+    });
+    expect(creatorCommentProjection("comment_2", {
+      authorHandle: "studio-north", authorDisplayName: "Studio North", body: "Hidden", moderationStatus: "removed",
+    }, "2026-09-07T12:00:00.000Z")).toBeNull();
   });
 
   it("renders public metadata without an internal identifier", () => {
@@ -232,6 +266,7 @@ describe("Creator identity contract", () => {
       actorDisplayName: "Studio North",
       postId: "post_123",
       bodyPreview: `  ${"x".repeat(120)}  `,
+      replyToCommentId: "comment_1",
       read: false,
       privateOwnerId: "never-return-this",
     }, "2026-08-31T12:00:00.000Z")).toEqual({
@@ -240,6 +275,7 @@ describe("Creator identity contract", () => {
       actorDisplayName: "Studio North",
       postId: "post_123",
       bodyPreview: "x".repeat(100),
+      reply: true,
       createdAt: "2026-08-31T12:00:00.000Z",
       read: false,
     });

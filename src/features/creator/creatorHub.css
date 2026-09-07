@@ -147,10 +147,12 @@
 .creator-hub__composer > div:first-child,
 .creator-hub__composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .creator-hub__composer > div:first-child > span { color: #8f9089; font-size: 10px; }
-.creator-hub__composer textarea { box-sizing: border-box; width: 100%; min-height: 156px; flex: 1; resize: vertical; margin-top: 12px; padding: 18px 0; border: 0; border-bottom: 1px solid #55564f; outline: 0; background: transparent; color: inherit; font: clamp(22px, 2.1vw, 34px)/1.35 Instrument; }
+.creator-hub__composer textarea { box-sizing: border-box; width: 100%; min-height: 156px; flex: 1; resize: vertical; margin-top: 12px; padding: 18px 58px 18px 0; border: 0; border-bottom: 1px solid #55564f; outline: 0; background: transparent; color: inherit; font: clamp(22px, 2.1vw, 34px)/1.35 Instrument; }
 .creator-hub__composer textarea::placeholder { color: #aaa9a2; opacity: 1; }
 .creator-hub__composer textarea:focus { border-color: var(--hub-acid); }
 .creator-hub__composer textarea:disabled { opacity: .5; }
+.creator-hub__composer-field{position:relative;flex:1;display:flex}
+.creator-hub__composer-field textarea{flex:1}
 .creator-hub__composer-actions { margin-top: 20px; }
 .creator-hub__composer-actions small { max-width: 55%; color: #999a92; font-size: 9px; line-height: 1.45; }
 .creator-hub__composer button,
@@ -257,11 +259,21 @@
 .creator-report-dialog__actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}.creator-report-dialog__actions button{min-height:44px;border:1px solid #85877f;background:transparent;padding:0 18px;color:inherit;cursor:pointer}.creator-report-dialog__actions button[type=submit]{border-color:#1b1c18;background:#1b1c18;color:#fff}.creator-report-dialog__actions button:disabled{cursor:not-allowed;opacity:.55}
 .creator-report-dialog__error{margin:12px 0 0;color:#8f2e24;font-size:12px;line-height:1.5}
 @media(max-width:620px){.creator-report-backdrop{align-items:end;padding:0}.creator-report-dialog{width:100%;max-height:92dvh;padding:28px 18px 24px;border-radius:16px 16px 0 0}.creator-report-dialog__actions{display:grid;grid-template-columns:1fr 1fr}.creator-report-dialog__actions button{width:100%}}
-.creator-post__discussion { display: grid; gap: 10px; margin-top: 16px; padding: 12px; background: #e8e4dc; }
+.creator-post__discussion { display: grid; gap: 12px; margin-top: 16px; padding: 12px; background: #e8e4dc; }
 .creator-post__discussion form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-.creator-post__discussion input { width: 100%; height: 44px; border: 1px solid #aaa89f; background: #fffdf8; padding: 0 10px; }
+.creator-post__discussion textarea { box-sizing:border-box;width:100%;min-height:54px;resize:vertical;border:1px solid #aaa89f;background:#fffdf8;padding:10px 56px 10px 10px;color:#171814;font:11px/1.45 Manrope,sans-serif; }
 .creator-post__discussion form button { min-width: 64px; border: 0; background: var(--hub-ink); color: #fff; font-size: 8px; text-transform: uppercase; }
 .creator-post__discussion > p { margin: 0; font-size: 10px; line-height: 1.45; }
+.creator-post__reply-context{display:flex;align-items:center;justify-content:space-between;color:#64665e;font-size:9px}
+.creator-post__reply-context button{border:0;background:transparent;text-decoration:underline;cursor:pointer}
+.creator-post__comments{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.creator-post__comments li{display:grid;gap:6px;padding:11px;border-left:2px solid #747a43;background:#f7f4ed}
+.creator-post__comments li.is-reply{margin-left:28px;border-left-color:#aaa89f}
+.creator-post__comments li>div{display:flex;justify-content:space-between}
+.creator-post__comments li a{display:grid;color:inherit;text-decoration:none}
+.creator-post__comments li small,.creator-post__comments li time{color:#6a6c64;font-size:8px}
+.creator-post__comments li p{margin:0;white-space:pre-wrap;font-size:10px;line-height:1.55}
+.creator-post__comments li>button{justify-self:start;border:0;background:transparent;padding:0;text-decoration:underline;cursor:pointer}
 .creator-post__notice { display: block; margin-top: 10px; color: var(--hub-muted); font-size: 9px; }
 .creator-hub__rail { position: sticky; top: 96px; padding: 25px; background: var(--hub-ink); color: #efede5; }
 .creator-hub__rail h3 { margin: 10px 0 16px; font: 34px Instrument; font-weight: 400; }

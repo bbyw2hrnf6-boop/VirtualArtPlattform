@@ -12,8 +12,11 @@ Live product: [lieuva.com](https://lieuva.com/)
 
 - A premium landing page, featured Danny Hirsch exhibition, and Discover carousel.
 - A Creator Hub with self-service public/private profiles, profile and cover images,
-  controlled profile typography, Creator search, follows, studio notes, comments,
-  appreciations, alerts, and per-Space Hub placement. Creator profiles become
+  three controlled profile type styles, six accessible profile color moods, Creator
+  search, follows, studio notes, persistent comment discussions and replies,
+  appreciations, alerts, and per-Space Hub placement. Curated emoji pickers are
+  available in freeform bio, studio-note, and comment fields; identifiers and URLs
+  remain plain text so routing and validation stay stable. Creator profiles become
   public immediately when their owner enables visibility; no profile review is required.
 - Exactly three selectable gallery spaces:
 

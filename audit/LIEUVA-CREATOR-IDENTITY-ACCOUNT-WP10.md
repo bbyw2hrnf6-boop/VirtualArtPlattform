@@ -8,6 +8,14 @@
 > Space discovery review and reported-post moderation are separate systems. Test
 > totals and bundle measurements below are the dated WP10 baseline, not current
 > release totals.
+>
+> **Current-state addendum — 2026-09-07:** Public profiles offer three bounded
+> bio type styles and six accessible color moods. Freeform bio, studio-note and
+> comment fields include a curated emoji picker while handles and URLs remain
+> plain text. Hub discussions are loaded through the allow-listed
+> `getLieuvaCreatorPostComments` callable; comments and reply references persist
+> below their post, and replies notify the referenced Creator without exposing
+> internal Creator or account identifiers.
 
 Status labels used below: **IMPLEMENTED**, **VERIFIED LOCALLY**, **REQUIRES DEPLOYMENT**, **REQUIRES REAL DEVICE**.
 

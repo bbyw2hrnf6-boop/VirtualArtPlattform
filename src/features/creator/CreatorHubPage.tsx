@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { EmojiPicker } from "../../components/EmojiPicker";
+import { insertEmojiAtSelection } from "../../components/emojiInsertion";
 import { Logo } from "../../components/Logo";
 import { AccountButton } from "../account/AccountDialog";
 import { accountSectionUrl } from "../account/accountPresentation";
@@ -13,6 +15,7 @@ import {
   creatorHandleBase,
   creatorImageUrl,
   creatorNotificationPostAnchor,
+  loadCreatorPostComments,
   loadCreatorHome,
   mergeCreatorHomeViewerState,
   loadMyCreatorProfile,
@@ -122,8 +125,12 @@ export default function CreatorHubPage({
   const [reportPost, setReportPost] = useState<CreatorPost>();
   const [reportBusy, setReportBusy] = useState(false);
   const [reportError, setReportError] = useState("");
-  const [newComments, setNewComments] = useState<Record<string, CreatorComment[]>>({});
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, CreatorComment[]>>({});
+  const [commentStatus, setCommentStatus] = useState<Record<string, "loading" | "ready" | "error">>({});
+  const [replyTargets, setReplyTargets] = useState<Record<string, CreatorComment | undefined>>({});
   const [notificationNotice, setNotificationNotice] = useState("");
+  const postInput = useRef<HTMLTextAreaElement>(null);
+  const commentInputs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [activeSection, setActiveSection] = useState<CreatorHubSection>(() => creatorHubSectionFromHash(window.location.hash));
   const dashboardView = view.kind === "home";
   const settingsView = view.kind === "settings";
@@ -438,6 +445,60 @@ export default function CreatorHubPage({
     posts: current.posts.map((post) => post.id === postId ? { ...post, ...update } : post),
   }) : current);
 
+  const insertPostEmoji = (emoji: string) => {
+    const input = postInput.current;
+    const insertion = insertEmojiAtSelection(postBody, emoji, input?.selectionStart, input?.selectionEnd, 600);
+    if (!insertion.inserted) return;
+    setPostBody(insertion.value);
+    window.requestAnimationFrame(() => {
+      postInput.current?.focus();
+      postInput.current?.setSelectionRange(insertion.cursor, insertion.cursor);
+    });
+  };
+
+  const insertCommentEmoji = (postId: string, emoji: string) => {
+    const input = commentInputs.current[postId];
+    const draft = commentDrafts[postId] ?? "";
+    const insertion = insertEmojiAtSelection(draft, emoji, input?.selectionStart, input?.selectionEnd, 280);
+    if (!insertion.inserted) return;
+    setCommentDrafts((current) => ({ ...current, [postId]: insertion.value }));
+    window.requestAnimationFrame(() => {
+      commentInputs.current[postId]?.focus();
+      commentInputs.current[postId]?.setSelectionRange(insertion.cursor, insertion.cursor);
+    });
+  };
+
+  const openDiscussion = async (post: CreatorPost) => {
+    setActivePost(post.id);
+    if (commentStatus[post.id] === "loading" || commentStatus[post.id] === "ready") return;
+    if (post.demo) {
+      setCommentsByPost((current) => ({ ...current, [post.id]: [] }));
+      setCommentStatus((current) => ({ ...current, [post.id]: "ready" }));
+      return;
+    }
+    setCommentStatus((current) => ({ ...current, [post.id]: "loading" }));
+    try {
+      const comments = await loadCreatorPostComments(post.handle, post.id);
+      setCommentsByPost((current) => ({ ...current, [post.id]: comments }));
+      setCommentStatus((current) => ({ ...current, [post.id]: "ready" }));
+    } catch {
+      setCommentStatus((current) => ({ ...current, [post.id]: "error" }));
+    }
+  };
+
+  const toggleDiscussion = (post: CreatorPost) => {
+    if (activePost === post.id) {
+      setActivePost(undefined);
+      return;
+    }
+    void openDiscussion(post);
+  };
+
+  const beginReply = (postId: string, comment: CreatorComment) => {
+    setReplyTargets((current) => ({ ...current, [postId]: comment }));
+    window.requestAnimationFrame(() => commentInputs.current[postId]?.focus());
+  };
+
   const markNotificationsRead = async (selection: readonly string[] | "all") => {
     const ids = selection === "all"
       ? notifications.filter((notification) => !notification.read).map((notification) => notification.id)
@@ -462,7 +523,10 @@ export default function CreatorHubPage({
     void markNotificationsRead([notification.id]);
     const anchor = creatorNotificationPostAnchor(notification);
     if (!anchor) return;
-    if (notification.kind === "comment") setActivePost(notification.postId);
+    if (notification.kind === "comment") {
+      const affectedPost = posts.find((post) => post.id === notification.postId);
+      if (affectedPost) void openDiscussion(affectedPost);
+    }
     window.requestAnimationFrame(() => {
       const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
       const post = document.getElementById(anchor);
@@ -499,10 +563,12 @@ export default function CreatorHubPage({
       } else if (action === "comment") {
         const body = (commentDrafts[post.id] ?? "").trim();
         if (!body) return;
-        const result = await interactCreatorPost(post.handle, post.id, { action: "comment", body });
-        if (result.comment) setNewComments((value) => ({ ...value, [post.id]: [...(value[post.id] ?? []), result.comment!] }));
+        const parentCommentId = replyTargets[post.id]?.id;
+        const result = await interactCreatorPost(post.handle, post.id, { action: "comment", body, ...(parentCommentId ? { parentCommentId } : {}) });
+        if (result.comment) setCommentsByPost((value) => ({ ...value, [post.id]: [...(value[post.id] ?? []), result.comment!] }));
         updatePost(post.id, { commentCount: post.commentCount + 1 });
         setCommentDrafts((value) => ({ ...value, [post.id]: "" }));
+        setReplyTargets((value) => ({ ...value, [post.id]: undefined }));
         setPostActions((value) => ({ ...value, [post.id]: "Comment posted." }));
         if (post.handle === myProfile?.handle) {
           void loadCreatorHome(false).then((nextHome) => setHome((current) => mergeCreatorHomeViewerState(current, nextHome))).catch(() => undefined);
@@ -631,14 +697,18 @@ export default function CreatorHubPage({
             </div>
             <form className="creator-hub__composer" onSubmit={(event) => { event.preventDefault(); publishPost(); }}>
               <div><p className="eyebrow">Share a studio note</p><span>{postBody.length}/600</span></div>
-              <textarea
-                aria-label="Studio note"
-                value={postBody}
-                onChange={(event) => setPostBody(event.target.value.slice(0, 600))}
-                placeholder={signedIn ? profilePublic ? "What are you working on?" : "Make your profile public to publish." : "Sign in to write a studio note."}
-                disabled={!signedIn || postBusy}
-                rows={5}
-              />
+              <div className="creator-hub__composer-field">
+                <textarea
+                  ref={postInput}
+                  aria-label="Studio note"
+                  value={postBody}
+                  onChange={(event) => setPostBody(event.target.value.slice(0, 600))}
+                  placeholder={signedIn ? profilePublic ? "What are you working on?" : "Make your profile public to publish." : "Sign in to write a studio note."}
+                  disabled={!signedIn || postBusy}
+                  rows={5}
+                />
+                <EmojiPicker label="Add emoji to studio note" disabled={!signedIn || postBusy} onSelect={insertPostEmoji} />
+              </div>
               <div className="creator-hub__composer-actions">
                 <small aria-live="polite">{postNotice || (profilePublic ? "Public to the Creator community" : signedIn ? "Make your profile public to publish" : "Sign in to write")}</small>
                 {profilePublic
@@ -681,10 +751,45 @@ export default function CreatorHubPage({
                         aria-pressed={Boolean(post.viewerReacted)}
                         onClick={() => void engage(post, "reaction")}
                       ><HubIcon name="heart" /><b>{post.reactionCount ?? 0}</b></button>
-                      <button type="button" className="creator-post__action" aria-expanded={activePost === post.id} onClick={() => setActivePost(activePost === post.id ? undefined : post.id)}><HubIcon name="comment" /><b>{post.commentCount ?? 0}</b><span>Discuss</span></button>
+                      <button type="button" className="creator-post__action" aria-expanded={activePost === post.id} onClick={() => toggleDiscussion(post)}><HubIcon name="comment" /><b>{post.commentCount ?? 0}</b><span>Discuss</span></button>
                       <details className="creator-post__overflow"><summary aria-label="More post actions">•••</summary><div><small>Safety and reporting</small><button type="button" onClick={() => openReport(post)}>Report post</button><button type="button" onClick={() => void engage(post, "block")}>Block Creator</button></div></details>
                     </footer>
-                    {activePost === post.id && <div className="creator-post__discussion"><form onSubmit={(event) => { event.preventDefault(); void engage(post, "comment"); }}><label><span className="visually-hidden">Comment on this post</span><input value={commentDrafts[post.id] ?? ""} onChange={(event) => setCommentDrafts((value) => ({ ...value, [post.id]: event.target.value.slice(0, 280) }))} placeholder="Add a considered comment…" disabled={!signedIn || Boolean(post.demo)} /></label><button type="submit" disabled={!(commentDrafts[post.id] ?? "").trim() || !signedIn || Boolean(post.demo)}>Post</button></form>{(newComments[post.id] ?? []).map((comment) => <p key={comment.id}><strong>{comment.displayName}</strong> {comment.body}</p>)}</div>}
+                    {activePost === post.id && <div className="creator-post__discussion">
+                      {replyTargets[post.id] ? <div className="creator-post__reply-context">
+                        <span>Replying to <strong>@{replyTargets[post.id]!.handle}</strong></span>
+                        <button type="button" onClick={() => setReplyTargets((current) => ({ ...current, [post.id]: undefined }))}>Cancel</button>
+                      </div> : null}
+                      <form onSubmit={(event) => { event.preventDefault(); void engage(post, "comment"); }}>
+                        <label style={{ position: "relative" }}>
+                          <span className="visually-hidden">Comment on this post</span>
+                          <textarea
+                            ref={(element) => { commentInputs.current[post.id] = element; }}
+                            rows={2}
+                            maxLength={280}
+                            value={commentDrafts[post.id] ?? ""}
+                            onChange={(event) => setCommentDrafts((value) => ({ ...value, [post.id]: event.target.value.slice(0, 280) }))}
+                            placeholder={replyTargets[post.id] ? `Reply to @${replyTargets[post.id]!.handle}…` : "Add a considered comment…"}
+                            disabled={!signedIn || Boolean(post.demo)}
+                          />
+                          <EmojiPicker label="Add emoji to comment" disabled={!signedIn || Boolean(post.demo)} onSelect={(emoji) => insertCommentEmoji(post.id, emoji)} />
+                        </label>
+                        <button type="submit" disabled={!(commentDrafts[post.id] ?? "").trim() || !signedIn || Boolean(post.demo)}>Post</button>
+                      </form>
+                      {commentStatus[post.id] === "loading" ? <p role="status">Loading discussion…</p> : null}
+                      {commentStatus[post.id] === "error" ? <p role="alert">Discussion could not load. Close it and retry.</p> : null}
+                      {commentStatus[post.id] === "ready" && !(commentsByPost[post.id]?.length) ? <p>Start the conversation.</p> : null}
+                      {(commentsByPost[post.id]?.length ?? 0) > 0 ? <ol className="creator-post__comments">
+                        {commentsByPost[post.id]!.map((comment) => <li className={comment.parentCommentId ? "is-reply" : ""} key={comment.id}>
+                          <div>
+                            <a href={creatorHref(comment.handle)}><strong>{comment.displayName}</strong><small>@{comment.handle}</small></a>
+                            <time dateTime={comment.createdAt}>{relativeDate(comment.createdAt)}</time>
+                          </div>
+                          {comment.replyToHandle ? <small>Replying to @{comment.replyToHandle}</small> : null}
+                          <p>{comment.body}</p>
+                          <button type="button" disabled={!signedIn || Boolean(post.demo)} onClick={() => beginReply(post.id, comment)}>Reply</button>
+                        </li>)}
+                      </ol> : null}
+                    </div>}
                     {postActions[post.id] && <small className="creator-post__notice" aria-live="polite">{postActions[post.id]}</small>}
                   </article>
                   );
@@ -713,7 +818,7 @@ export default function CreatorHubPage({
                   : homeStatus === "error" ? <p>Alerts could not sync. Retry from the Feed.</p>
                     : !signedIn ? <p>Sign in to see follows, comments and appreciations.</p>
                       : notifications.length ? notifications.map((notification) => {
-                        const action = notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? " commented on your studio note" : " appreciated your studio note";
+                        const action = notification.kind === "follow" ? " followed you" : notification.kind === "comment" ? notification.reply ? " replied to your comment" : " commented on your studio note" : " appreciated your studio note";
                         const actorLabel = notification.actorHandle === myProfile?.handle ? "You" : notification.actorDisplayName;
                         const content = <><strong>{actorLabel}</strong><span>{action}</span>{notification.bodyPreview ? <small>“{notification.bodyPreview}”</small> : null}<time dateTime={notification.createdAt}>{relativeDate(notification.createdAt)}</time></>;
                         return creatorNotificationPostAnchor(notification)

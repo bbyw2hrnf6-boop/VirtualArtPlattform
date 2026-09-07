@@ -19,7 +19,7 @@ const RESERVED_HANDLES = new Set([
 
 export type CreatorLink = { label: string; url: string };
 export type CreatorBioFont = "sans" | "serif" | "editorial";
-export type CreatorProfileTone = "paper" | "warm" | "ink";
+export type CreatorProfileTone = "paper" | "warm" | "sage" | "clay" | "blue" | "ink";
 
 export type PublicCreatorProfile = {
   handle: string;
@@ -53,6 +53,17 @@ export type PublicCreatorPost = {
   commentCount: number;
 };
 
+export type PublicCreatorComment = {
+  id: string;
+  handle: string;
+  displayName: string;
+  body: string;
+  createdAt: string;
+  parentCommentId?: string;
+  replyToHandle?: string;
+  replyToDisplayName?: string;
+};
+
 export type PublicCreatorDirectoryEntry = {
   handle: string;
   displayName: string;
@@ -69,6 +80,7 @@ export type CreatorNotificationProjection = {
   read: boolean;
   postId?: string;
   bodyPreview?: string;
+  reply?: boolean;
 };
 
 export type CreatorDelivery =
@@ -140,7 +152,7 @@ export async function isValidCreatorWebp(bytesValue: Uint8Array): Promise<boolea
 }
 
 const CREATOR_BIO_FONTS = new Set<CreatorBioFont>(["sans", "serif", "editorial"]);
-const CREATOR_PROFILE_TONES = new Set<CreatorProfileTone>(["paper", "warm", "ink"]);
+const CREATOR_PROFILE_TONES = new Set<CreatorProfileTone>(["paper", "warm", "sage", "clay", "blue", "ink"]);
 
 function boundedText(value: unknown, maximum: number, required = false): string | null {
   if (typeof value !== "string") return required ? null : "";
@@ -159,6 +171,37 @@ export function parseCreatorCommentInput(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const body = value.trim().replace(/\r\n?/g, "\n").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n");
   return body && body.length <= 280 ? body : null;
+}
+
+/** Allow-listed comment projection for an authenticated Hub discussion. */
+export function creatorCommentProjection(
+  id: string,
+  value: unknown,
+  createdAt: string,
+): PublicCreatorComment | null {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || !Number.isFinite(Date.parse(createdAt))) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (record.moderationStatus === "removed") return null;
+  const handle = normalizeCreatorHandle(record.authorHandle);
+  const displayName = boundedText(record.authorDisplayName, 60, true);
+  const body = parseCreatorCommentInput(record.body);
+  if (!handle || !displayName || !body) return null;
+  const parentCommentId = typeof record.parentCommentId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(record.parentCommentId)
+    ? record.parentCommentId
+    : undefined;
+  const replyToHandle = parentCommentId ? normalizeCreatorHandle(record.replyToHandle) ?? undefined : undefined;
+  const replyToDisplayName = parentCommentId ? boundedText(record.replyToDisplayName, 60, true) ?? undefined : undefined;
+  return {
+    id,
+    handle,
+    displayName,
+    body,
+    createdAt,
+    ...(parentCommentId ? { parentCommentId } : {}),
+    ...(replyToHandle ? { replyToHandle } : {}),
+    ...(replyToDisplayName ? { replyToDisplayName } : {}),
+  };
 }
 
 const CREATOR_REPORT_REASONS = new Set(["spam", "harassment", "rights", "unsafe", "other"]);
@@ -274,6 +317,7 @@ export function creatorNotificationProjection(
     read: record.read === true,
     ...(postId ? { postId } : {}),
     ...(bodyPreview ? { bodyPreview } : {}),
+    ...(record.replyToCommentId ? { reply: true } : {}),
   };
 }
 

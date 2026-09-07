@@ -166,6 +166,9 @@ export function creatorComment(
     authorHandle: data.authorHandle,
     authorDisplayName: data.authorDisplayName,
     body: data.body,
+    parentCommentId: data.parentCommentId,
+    replyToHandle: data.replyToHandle,
+    replyToDisplayName: data.replyToDisplayName,
     moderationStatus: data.moderationStatus,
     createdAt: data.createdAt,
   };

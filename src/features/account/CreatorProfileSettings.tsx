@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { EmojiPicker } from "../../components/EmojiPicker";
+import { insertEmojiAtSelection } from "../../components/emojiInsertion";
 import {
   announceCreatorProfileUpdated,
   checkCreatorHandle,
@@ -78,6 +80,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
   const [storedImageSource, setStoredImageSource] = useState("");
   const [storedCoverSource, setStoredCoverSource] = useState("");
   const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
+  const bioInput = useRef<HTMLTextAreaElement>(null);
   const handleValid = isValidCreatorHandle(profile.handle);
   const publicUrl = handleValid ? creatorProfileUrl(profile.handle) : "";
   const completeLinks = useMemo(() => links.filter((link) => link.label.trim() || link.url.trim()), [links]);
@@ -262,6 +265,16 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
     : "";
   const coverSource = coverPreview || (!removeCover && storedCoverSource) || publicCoverSource;
   const previewLinks = completeLinks.filter((link) => link.label.trim() && /^https:\/\//i.test(link.url.trim()));
+  const insertBioEmoji = (emoji: string) => {
+    const input = bioInput.current;
+    const insertion = insertEmojiAtSelection(profile.bio, emoji, input?.selectionStart, input?.selectionEnd, 320);
+    if (!insertion.inserted) return;
+    setProfile((current) => ({ ...current, bio: insertion.value }));
+    window.requestAnimationFrame(() => {
+      bioInput.current?.focus();
+      bioInput.current?.setSelectionRange(insertion.cursor, insertion.cursor);
+    });
+  };
   return (
     <form className="creator-settings" onSubmit={(event) => void submit(event)}>
       <div className="creator-settings__intro">
@@ -312,7 +325,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
             <label>Display name<input required maxLength={60} value={profile.displayName} onChange={(event) => setProfile((current) => ({ ...current, displayName: event.target.value }))} /></label>
             <label>Handle<div className="creator-settings__handle"><span>lieuva.com/creators/</span><input required minLength={3} maxLength={30} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={profile.handle} onChange={(event) => setProfile((current) => ({ ...current, handle: event.target.value }))} /></div><small>Lowercase letters, numbers and single hyphens. Handle changes are limited to once every seven days.</small></label>
             <button type="button" className="account-reset" disabled={!handleValid || state === "checking"} onClick={() => void checkHandle()}>{state === "checking" ? "Checking…" : "Check availability"}</button>
-            <label>Short bio<textarea maxLength={320} rows={5} value={profile.bio} onChange={(event) => setProfile((current) => ({ ...current, bio: event.target.value }))} /><small>{profile.bio.length}/320 characters</small></label>
+            <label>Short bio<div style={{ position: "relative" }}><textarea ref={bioInput} style={{ paddingRight: 58 }} maxLength={320} rows={5} value={profile.bio} onChange={(event) => setProfile((current) => ({ ...current, bio: event.target.value }))} /><EmojiPicker label="Add emoji to bio" onSelect={insertBioEmoji} /></div><small>{profile.bio.length}/320 characters</small></label>
           </fieldset>
           <fieldset className="creator-settings__appearance" disabled={state === "loading" || state === "saving"}>
             <legend>Profile style</legend>
@@ -328,10 +341,10 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
             </div>
             <div className="creator-settings__choice-group" role="radiogroup" aria-label="Profile header color mood">
               <strong>Profile header color mood</strong>
-              {(["paper", "warm", "ink"] as CreatorProfileTone[]).map((tone) => (
+              {(["paper", "warm", "sage", "clay", "blue", "ink"] as CreatorProfileTone[]).map((tone) => (
                 <label className={`creator-settings__tone-card creator-settings__tone-card--${tone}`} key={tone}>
                   <input type="radio" name="profile-tone" value={tone} checked={profile.profileTone === tone} onChange={() => setProfile((current) => ({ ...current, profileTone: tone }))} />
-                  <span aria-hidden="true" /><b>{tone === "paper" ? "Paper" : tone === "warm" ? "Warm studio" : "Ink"}</b>
+                  <span aria-hidden="true" /><b>{{ paper: "Paper", warm: "Warm studio", sage: "Sage", clay: "Clay", blue: "Blue hour", ink: "Ink" }[tone]}</b>
                 </label>
               ))}
             </div>

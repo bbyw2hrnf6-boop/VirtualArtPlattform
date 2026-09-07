@@ -27,7 +27,7 @@ export function creatorHandleBase(session: Pick<AccountSession, "nickname" | "di
 
 export type CreatorLink = { label: string; url: string };
 export type CreatorBioFont = "sans" | "serif" | "editorial";
-export type CreatorProfileTone = "paper" | "warm" | "ink";
+export type CreatorProfileTone = "paper" | "warm" | "sage" | "clay" | "blue" | "ink";
 export type CreatorProfile = {
   handle: string;
   displayName: string;
@@ -276,6 +276,7 @@ export type CreatorNotification = {
   read: boolean;
   postId?: string;
   bodyPreview?: string;
+  reply?: boolean;
 };
 
 export function unreadCreatorNotificationCount(notifications: readonly CreatorNotification[]) {
@@ -324,7 +325,18 @@ export type CreatorComment = {
   displayName: string;
   body: string;
   createdAt: string;
+  parentCommentId?: string;
+  replyToHandle?: string;
+  replyToDisplayName?: string;
 };
+
+export async function loadCreatorPostComments(handle: string, postId: string) {
+  const result = await creatorCallableWithRetry(() => httpsCallable<
+    { handle: string; postId: string },
+    { comments: CreatorComment[] }
+  >(firebaseFunctions, "getLieuvaCreatorPostComments")({ handle, postId }));
+  return result.data.comments;
+}
 
 export async function loadCreatorHome(includeViewerState = true) {
   const result = await httpsCallable<{ includeViewerState: boolean }, CreatorHomePayload>(
@@ -356,7 +368,7 @@ export async function createCreatorPost(body: string) {
 export async function interactCreatorPost(
   handle: string,
   postId: string,
-  input: { action: "react" | "unreact" } | { action: "comment"; body: string } | { action: "report"; reason: "spam" | "harassment" | "rights" | "unsafe" | "other" },
+  input: { action: "react" | "unreact" } | { action: "comment"; body: string; parentCommentId?: string } | { action: "report"; reason: "spam" | "harassment" | "rights" | "unsafe" | "other" },
 ) {
   const result = await httpsCallable<
     { handle: string; postId: string } & typeof input,

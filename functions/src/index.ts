@@ -118,6 +118,7 @@ import {
 import {
   CREATOR_HANDLE_CHANGE_COOLDOWN_MS,
   classifyCreatorDocumentRoute,
+  creatorCommentProjection,
   creatorNotificationProjection,
   creatorFollowTransition,
   creatorCanonicalUrl,
@@ -1635,7 +1636,17 @@ export const manageLieuvaCreatorPostInteraction = onCall(
     if (action === "comment") {
       const body = parseCreatorCommentInput(request.data?.body);
       if (!body) throw new HttpsError("invalid-argument", "Write between 1 and 280 characters.");
+      const parentCommentId = request.data?.parentCommentId === undefined
+        ? undefined
+        : typeof request.data.parentCommentId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(request.data.parentCommentId)
+          ? request.data.parentCommentId
+          : null;
+      if (parentCommentId === null)
+        throw new HttpsError("invalid-argument", "Choose a valid comment to reply to.");
       const commentReference = postReference.collection("comments").doc();
+      const parentCommentReference = parentCommentId
+        ? postReference.collection("comments").doc(parentCommentId)
+        : undefined;
       const actionNow = Date.now();
       const rateReference = db.collection("creatorActionRateLimits")
         .doc(creatorActionRateId(actorCreatorId, "comment"));
@@ -1649,20 +1660,33 @@ export const manageLieuvaCreatorPostInteraction = onCall(
           resourceId: postId,
           now: actionNow,
         }));
-      await db.runTransaction(async (transaction) => {
+      const commentResult = await db.runTransaction(async (transaction) => {
         const targetAccount = await transaction.get(db.collection("creatorAccounts").doc(targetCreatorId));
         await assertAccountMutationAllowedInTransaction(
           transaction,
           uid,
           typeof targetAccount.data()?.ownerId === "string" ? targetAccount.data()!.ownerId : uid,
         );
-        const [currentPost, actorAccount, rateSnapshot] = await Promise.all([
+        const [currentPost, actorAccount, rateSnapshot, parentCommentSnapshot] = await Promise.all([
           transaction.get(postReference),
           transaction.get(db.collection("creatorAccounts").doc(actorCreatorId)),
           transaction.get(rateReference),
+          parentCommentReference ? transaction.get(parentCommentReference) : Promise.resolve(undefined),
         ]);
         if (!currentPost.exists || currentPost.data()?.moderationStatus === "removed")
           throw new HttpsError("not-found", "Creator post not found.");
+        if (parentCommentReference && (!parentCommentSnapshot?.exists || parentCommentSnapshot.data()?.moderationStatus === "removed"))
+          throw new HttpsError("not-found", "The comment you are replying to is no longer available.");
+        const parentComment = parentCommentSnapshot?.data();
+        const replyTargetCreatorId = typeof parentComment?.authorCreatorId === "string"
+          ? parentComment.authorCreatorId
+          : undefined;
+        const replyToHandle = parentCommentId && typeof parentComment?.authorHandle === "string"
+          ? parentComment.authorHandle
+          : undefined;
+        const replyToDisplayName = parentCommentId && typeof parentComment?.authorDisplayName === "string"
+          ? parentComment.authorDisplayName
+          : undefined;
         const lastCommentAt = timestampMilliseconds(actorAccount.data()?.lastCommentAt);
         if (lastCommentAt !== undefined && actionNow - lastCommentAt < 15_000)
           throw new HttpsError("resource-exhausted", "Wait a moment before commenting again.");
@@ -1673,6 +1697,9 @@ export const manageLieuvaCreatorPostInteraction = onCall(
           authorHandle: actorProfile.handle,
           authorDisplayName: actorProfile.displayName,
           body,
+          ...(parentCommentId ? { parentCommentId } : {}),
+          ...(replyToHandle ? { replyToHandle } : {}),
+          ...(replyToDisplayName ? { replyToDisplayName } : {}),
           moderationStatus: "published",
           createdAt: FieldValue.serverTimestamp(),
           schemaVersion: 1,
@@ -1688,8 +1715,41 @@ export const manageLieuvaCreatorPostInteraction = onCall(
           postId,
           bodyPreview: body.slice(0, 100),
         }), { merge: true });
+        if (replyTargetCreatorId && replyTargetCreatorId !== targetCreatorId) {
+          const replyNotificationReference = db.collection("creatorNotifications")
+            .doc(replyTargetCreatorId)
+            .collection("items")
+            .doc(creatorNotificationAggregateId({
+              kind: "comment",
+              actorCreatorId,
+              targetCreatorId: replyTargetCreatorId,
+              resourceId: postId,
+              now: actionNow,
+            }));
+          transaction.set(replyNotificationReference, {
+            ...notificationAggregatePatch({
+              kind: "comment",
+              actorCreatorId,
+              actorHandle: actorProfile.handle,
+              actorDisplayName: actorProfile.displayName,
+              postId,
+              bodyPreview: body.slice(0, 100),
+            }),
+            replyToCommentId: parentCommentId,
+          }, { merge: true });
+        }
+        return { replyToHandle, replyToDisplayName };
       });
-      return { comment: { id: commentReference.id, handle: actorProfile.handle, displayName: actorProfile.displayName, body, createdAt: new Date().toISOString() } };
+      return { comment: {
+        id: commentReference.id,
+        handle: actorProfile.handle,
+        displayName: actorProfile.displayName,
+        body,
+        createdAt: new Date().toISOString(),
+        ...(parentCommentId ? { parentCommentId } : {}),
+        ...(commentResult.replyToHandle ? { replyToHandle: commentResult.replyToHandle } : {}),
+        ...(commentResult.replyToDisplayName ? { replyToDisplayName: commentResult.replyToDisplayName } : {}),
+      } };
     }
 
     const reactionReference = postReference.collection("reactions").doc(actorCreatorId);
@@ -1893,6 +1953,40 @@ export const getMyLieuvaCreatorHome = onCall(
       return notification ? [{ id: document.id, ...notification }] : [];
     });
     return { schemaVersion: 1, following, updates, posts: postsWithViewerState, notifications };
+  },
+);
+
+/** Loads a bounded, allow-listed discussion only for signed-in Hub members. */
+export const getLieuvaCreatorPostComments = onCall(
+  { region: REGION, timeoutSeconds: 20, memory: "256MiB", enforceAppCheck: true },
+  async (request) => {
+    const uid = requireAccount(request.auth);
+    await assertAccountMutationAllowed(uid);
+    const handle = normalizeCreatorHandle(request.data?.handle);
+    const postId = typeof request.data?.postId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(request.data.postId)
+      ? request.data.postId
+      : null;
+    if (!handle || !postId) throw new HttpsError("invalid-argument", "Choose a valid Creator discussion.");
+    const handleSnapshot = await db.collection("creatorHandles").doc(handle).get();
+    const targetCreatorId = handleSnapshot.data()?.creatorId;
+    if (typeof targetCreatorId !== "string") throw new HttpsError("not-found", "Creator post not found.");
+    const postReference = db.collection("creatorAccounts").doc(targetCreatorId).collection("posts").doc(postId);
+    const [profileSnapshot, postSnapshot] = await Promise.all([
+      db.collection("creatorProfiles").doc(targetCreatorId).get(),
+      postReference.get(),
+    ]);
+    if (!isPublicCreatorProfile(parseCreatorProfileInput(profileSnapshot.data()))
+      || !postSnapshot.exists
+      || postSnapshot.data()?.moderationStatus === "removed")
+      throw new HttpsError("not-found", "Creator post not found.");
+    const snapshot = await postReference.collection("comments").orderBy("createdAt", "asc").limit(100).get();
+    const comments = snapshot.docs.flatMap((document) => {
+      const createdAt = timestampMilliseconds(document.data().createdAt);
+      if (createdAt === undefined) return [];
+      const projected = creatorCommentProjection(document.id, document.data(), new Date(createdAt).toISOString());
+      return projected ? [projected] : [];
+    });
+    return { comments };
   },
 );
 

@@ -28,4 +28,12 @@ describe("Creator Hub feed card actions", () => {
     expect(hubSource).toContain("Block Creator");
     expect(hubSource).not.toContain("Safety ···");
   });
+
+  it("offers emoji input and persistent reply-aware discussions", () => {
+    expect(hubSource).toContain("Add emoji to studio note");
+    expect(hubSource).toContain("Add emoji to comment");
+    expect(hubSource).toContain("loadCreatorPostComments");
+    expect(hubSource).toContain("parentCommentId");
+    expect(hubSource).toContain(">Reply</button>");
+  });
 });
