@@ -10,6 +10,13 @@ import {
   type TelemetryEvent,
 } from './telemetry';
 
+const { callable, httpsCallable } = vi.hoisted(() => ({
+  callable: vi.fn().mockResolvedValue({ data: {} }),
+  httpsCallable: vi.fn(),
+}));
+vi.mock('firebase/functions', () => ({ httpsCallable }));
+vi.mock('./firebase', () => ({ firebaseFunctions: 'test-functions-instance' }));
+
 function memoryStorage(): Storage {
   const values = new Map<string, string>();
   return {
@@ -26,6 +33,8 @@ describe('privacy-safe telemetry boundary', () => {
   let received: TelemetryEvent[];
   beforeEach(() => {
     received = [];
+    callable.mockReset().mockResolvedValue({ data: {} });
+    httpsCallable.mockReset().mockReturnValue(callable);
     vi.stubGlobal('localStorage', memoryStorage());
     vi.stubGlobal('sessionStorage', memoryStorage());
     vi.stubGlobal('location', { pathname: '/', hash: '#/' });
@@ -36,6 +45,28 @@ describe('privacy-safe telemetry boundary', () => {
   afterEach(() => {
     __resetTelemetryForTests();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it('sends the production batch through the lazy Functions transport', async () => {
+    __setTelemetryTransportForTests(null);
+    vi.stubEnv('VITE_TELEMETRY_MODE', 'functions');
+    trackTelemetry('publish_failed', { error_class: 'network' });
+    await __flushTelemetryForTests();
+    expect(httpsCallable).toHaveBeenCalledWith('test-functions-instance', 'recordLieuvaTelemetry');
+    expect(callable).toHaveBeenCalledWith({ events: [expect.objectContaining({
+      name: 'publish_failed', properties: { error_class: 'network' },
+    })] });
+  });
+
+  it('keeps a failed production transport from blocking the app', async () => {
+    __setTelemetryTransportForTests(null);
+    vi.stubEnv('VITE_TELEMETRY_MODE', 'functions');
+    callable.mockRejectedValueOnce(new Error('offline'));
+    trackTelemetry('application_error');
+    await expect(__flushTelemetryForTests()).resolves.toBeUndefined();
+    await __flushTelemetryForTests();
+    expect(callable).toHaveBeenCalledTimes(1);
   });
 
   it('is a no-op for optional analytics before consent', async () => {

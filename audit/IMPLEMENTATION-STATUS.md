@@ -123,3 +123,8 @@ Der lokale Produktstand ist für einen geführten Proof-of-Concept-Pitch belastb
 ## Studio design catalogue · 2026-09-08
 
 Lokale Erweiterung auf 16 Wandoptionen, 15 Bodenmaterialien und 13 unterschiedliche Katalogobjekte. Der Curator erzeugt regelbasierte Variationen mit Stil-/Umfangswahl, validierten Platzierungen, freien Hauptwegen, Schutz gesperrter Werke und einer History-Transaktion. Neue IDs sind in Client- und Functions-Validierung ergänzt; keine Veröffentlichung erfolgt. Die lokalen Browserprüfungen bei 1440×1000 und 390×844 sind abgeschlossen: alle drei Räume, Mobile-GLBs, Varianten, Wiederherstellung und Geometrieprüfung funktionieren. Möbel-Griffpunkt, Seitenüberlauf und mobile Curator-Rückmeldung wurden dabei korrigiert. Echte iOS-/Android-Performance und eine künstlerische Qualitätsfreigabe bleiben separat offen. Details und Abgrenzung zum vorherigen Premium-Runtime-Pass: [LIEUVA-STUDIO-DESIGN-2026-09-08.md](./LIEUVA-STUDIO-DESIGN-2026-09-08.md).
+
+
+## Production artifact correction · 2026-09-08
+
+The subsequent GitHub production artifact exceeded the JS ceiling when App Check and Functions telemetry were both enabled. The local correction preserves all room assets, shader instructions and quality settings, adds safe build compression, and makes the production-feature budget check part of `npm run check`. See [production budget fix](./LIEUVA-PRODUCTION-BUDGET-FIX-2026-09-08.md) for updated measurements and verification scope. Commit/Publish remains the same user workflow; no automatic release was triggered.

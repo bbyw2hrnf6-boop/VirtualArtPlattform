@@ -157,11 +157,8 @@ export function isTelemetryEvent(value: unknown): value is TelemetryEvent {
 
 async function firebaseTransport(events: readonly TelemetryEvent[]) {
   if (import.meta.env.VITE_TELEMETRY_MODE !== 'functions') return;
-  const [{ httpsCallable }, { firebaseFunctions }] = await Promise.all([
-    import('firebase/functions'),
-    import('./firebase'),
-  ]);
-  await httpsCallable(firebaseFunctions, 'recordLieuvaTelemetry')({ events });
+  const { sendTelemetry } = await import('./telemetryTransport');
+  await sendTelemetry(events);
 }
 
 async function flush() {

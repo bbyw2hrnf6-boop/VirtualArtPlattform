@@ -78,3 +78,8 @@ These fixes are included in the final passing `npm run check` and the bundle fig
 ### Remaining limits
 
 The local functional and viewport checks are complete. Actual iOS/Android sustained FPS, thermal behaviour, memory pressure and physical touch comfort remain unmeasured. These runtime captures do not establish pixel parity with the supplied reference images or a professional art-direction sign-off. The separate Cycles beauty masters remain 4K stills; the walkable room continues to use its interactive optimized scene. Manual release must include both frontend and the updated Functions validator. No commit, push, deployment or publication was performed.
+
+
+## Production artifact correction · 2026-09-08
+
+The subsequent GitHub production artifact exceeded the JS ceiling when App Check and Functions telemetry were both enabled. The local correction preserves all room assets, shader instructions and quality settings, adds safe build compression, and makes the production-feature budget check part of `npm run check`. See [production budget fix](./LIEUVA-PRODUCTION-BUDGET-FIX-2026-09-08.md) for updated measurements and verification scope. Commit/Publish remains the same user workflow; no automatic release was triggered.

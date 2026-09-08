@@ -1,6 +1,7 @@
 import { gzipSync } from 'node:zlib';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   PERFORMANCE_RELEASE_CEILINGS,
   PERFORMANCE_TARGETS,
@@ -8,7 +9,7 @@ import {
   performanceBudgetOverages,
 } from './lib/performance-budgets.mjs';
 
-const root = new URL('../dist/', import.meta.url);
+const root = process.argv[2] ? resolve(process.argv[2]) : fileURLToPath(new URL('../dist/', import.meta.url));
 const files = [];
 function walk(directory) {
   for (const name of readdirSync(directory)) {
@@ -17,18 +18,18 @@ function walk(directory) {
     else files.push(path);
   }
 }
-walk(root.pathname);
+walk(root);
 
 const assets = files
   .filter((file) => /\.(js|css)$/.test(file))
   .map((file) => {
     const bytes = readFileSync(file);
-    return { file: relative(root.pathname, file), raw: bytes.length, gzip: gzipSync(bytes).length };
+    return { file: relative(root, file), raw: bytes.length, gzip: gzipSync(bytes).length };
   });
 const js = assets.filter((asset) => asset.file.endsWith('.js'));
 const css = assets.filter((asset) => asset.file.endsWith('.css'));
 const assetByPath = new Map(assets.map((asset) => [asset.file, asset]));
-const initial = initialAssetReferences(readFileSync(join(root.pathname, 'index.html'), 'utf8'));
+const initial = initialAssetReferences(readFileSync(join(root, 'index.html'), 'utf8'));
 const initialAssets = (paths, kind) => paths.map((path) => {
   const asset = assetByPath.get(path);
   if (!asset) throw new Error(`Built index references missing ${kind} asset: ${path}`);

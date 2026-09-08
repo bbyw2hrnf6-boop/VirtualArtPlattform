@@ -83,7 +83,8 @@ npm run preview
 | `npm test` | Run the editor, placement, review, storage, and runtime-quality tests. |
 | `npm run build` | Type-check the app, create `dist/`, and prepare the generated HTML shell used by privacy-aware Space delivery. |
 | `npm run preview` | Serve `dist/` locally for production verification. |
-| `npm run check` | Run lint, all tests, type-checking, and the complete production build; this is the deployment quality gate. |
+| `npm run check` | Run lint, tests, GLB checks, type-checking, the standard build and a separate production-feature budget build. |
+| `npm run check:production-build` | Check the App Check + Functions telemetry code paths with a nonfunctional public key fixture in `artifacts/production-budget-check/`; does not replace `dist/` or the Functions HTML shell. CI builds the deployable artifact with the real production variables. |
 | `npm run check:functions` | Test and type-check the trusted branded-email/newsletter Functions. |
 | `npm run review:public-content -- --kind spaces\|posts` | Read a bounded, read-only page for Space review or post moderation. Creator profiles are not reviewed. |
 | `npm run review:public-content:decision -- --kind space …` | Dry-run or execute one exact Space discovery decision with the documented guards. |
