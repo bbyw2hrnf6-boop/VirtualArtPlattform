@@ -1,6 +1,15 @@
-# AURA Blender → GLB contract
+# LIEUVA Blender → GLB contract
 
-This is the authored-space contract for future GLB-backed AURA templates. One Blender unit equals one metre. Blender sources are Z-up; exported glTF files are Y-up for Three.js.
+This is the authored-space contract for LIEUVA templates. Legacy `aura_*` keys remain compatibility identifiers. One Blender unit equals one metre. Blender sources are Z-up; exported glTF files are Y-up for Three.js.
+
+
+## Current production path — 8 September 2026
+
+The shared Studio/visitor renderer loads `public/assets/templates/premium-v2/{id}-{desktop,mobile}.glb` by default. Use `blender/production/build_premium.py` and `npm run validate:premium`; see [production instructions](./production/README.md). The older `create_templates.py` and `blender/templates/` files below are retained historical concepts and are not the current Studio-compatible export path.
+
+Additional required metadata: `lieuva_production_version=premium-v2`, `aura_dimensions=[width, depth, hanging-height]`. Exactly four exterior `shell` meshes plus one `floor`; stable IDs come from `galleryWalls()` (4/4/14). `architecture` and `ceiling` are visual batches; `lieuva_overhead` controls their visibility independently from hidden collision geometry. Overhead visual height may exceed the protected hanging datum (Grand Forum rooflight 8.9 m).
+
+Architecture AO uses `occlusionTexture.texCoord=1` with a separate atlas; albedo remains sRGB and metric/repeating. Imported materials preserve AO, normal and alpha state. Functional helpers never render. The existing placement planes and collision/path controller remain authoritative: imported colliders are consumed; navmesh and anchors are verified export data, not an alternative controller. Current Studio artwork eye line and WALK_START are 1.75 m; the older 1.55–1.60 m recommendation below is historical, not the current default.
 
 ## Required scene metadata
 

@@ -1,5 +1,7 @@
 # LIEUVA Premium 3D Quality — WP11
 
+> Update 2026-09-08: The three templates now load authored `premium-v2` GLBs by default in the shared Studio/visitor renderer, with procedural fallback. Beauty renders, editable sources, Runtime-GLBs and integration remain separate deliverables. The historical snapshot below is retained; current implementation and test evidence are in [Blender production](./LIEUVA-BLENDER-PRODUCTION-2026-09-08.md). This update does not assert a live deployment.
+
 Date: 2026-08-26  
 Verdict: **PASS WITH CONDITIONS**
 
@@ -149,3 +151,8 @@ The increase is under 1 KB gzip and stays inside all current warning budgets. No
 ## Completion
 
 WP11 is complete locally with the two external real-device/authorized-viewer checks above recorded as conditions. The repository is ready for WP12 without changing Firebase, Storage, IDs, URLs or legacy persistence contracts.
+
+
+## Studio design catalogue · 2026-09-08
+
+Lokale Erweiterung auf 16 Wandoptionen, 15 Bodenmaterialien und 13 unterschiedliche Katalogobjekte. Der Curator erzeugt regelbasierte Variationen mit Stil-/Umfangswahl, validierten Platzierungen, freien Hauptwegen, Schutz gesperrter Werke und einer History-Transaktion. Neue IDs sind in Client- und Functions-Validierung ergänzt; keine Veröffentlichung erfolgt. Die lokalen Browserprüfungen bei 1440×1000 und 390×844 sind abgeschlossen: alle drei Räume, Mobile-GLBs, Varianten, Wiederherstellung und Geometrieprüfung funktionieren. Möbel-Griffpunkt, Seitenüberlauf und mobile Curator-Rückmeldung wurden dabei korrigiert. Echte iOS-/Android-Performance und eine künstlerische Qualitätsfreigabe bleiben separat offen. Details und Abgrenzung zum vorherigen Premium-Runtime-Pass: [LIEUVA-STUDIO-DESIGN-2026-09-08.md](./LIEUVA-STUDIO-DESIGN-2026-09-08.md).

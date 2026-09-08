@@ -507,7 +507,7 @@ export function findAvailableArtworkPlacement(
   return null;
 }
 
-const DECOR_FOOTPRINTS: Record<DecorId, [number, number]> = {
+export const DECOR_FOOTPRINTS: Record<DecorId, [number, number]> = {
   olive: [1.25, 1.25],
   monstera: [1.55, 1.55],
   "arc-lamp": [2.05, 0.9],
@@ -520,6 +520,9 @@ const DECOR_FOOTPRINTS: Record<DecorId, [number, number]> = {
   "leather-bench": [2.45, 0.92],
   "wood-stool": [0.72, 0.72],
   "rope-barrier": [2.25, 0.58],
+  "lounge-chair": [1.12, 1.12],
+  "stone-table": [1.4, 0.9],
+  "light-column": [0.64, 0.64],
 };
 
 function decorRectangle(

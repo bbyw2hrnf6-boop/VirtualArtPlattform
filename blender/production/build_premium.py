@@ -8,7 +8,7 @@ import bpy
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT/'blender/production/v1'
+OUT = ROOT/'blender/production/v2'
 parser=argparse.ArgumentParser()
 parser.add_argument('--room', choices=['white-cube','nocturne','pavilion'],required=True)
 parser.add_argument('--round',type=int,default=1)
@@ -17,6 +17,7 @@ parser.add_argument('--samples',type=int,default=32)
 parser.add_argument('--export',action='store_true')
 parser.add_argument('--device',choices=['CPU','GPU'],default='CPU')
 parser.add_argument('--no-render',action='store_true')
+parser.add_argument('--bake-ao',action='store_true')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:])
 ROOM=args.room
 W,D,H={'white-cube':(16,12,5.3),'nocturne':(15.5,11.5,5.8),'pavilion':(40,60,5.6)}[ROOM]
@@ -28,7 +29,7 @@ scene.unit_settings.system='METRIC'
 scene['aura_template_id']=ROOM
 scene['aura_schema_version']=2
 scene['aura_units']='metres'
-scene['lieuva_production_version']='premium-v1'
+scene['lieuva_production_version']='premium-v2'
 scene['aura_dimensions']=[W,D,H]
 COL={}
 for name in ['SHELL','ARCHITECTURE','OVERHEAD','SURFACES','COLLISION','NAVIGATION','ANCHORS','BEAUTY_STAGING','BEAUTY_LIGHTS','CAMERAS']:
@@ -404,9 +405,9 @@ if args.export:
   for link in list(mat.node_tree.links):
    if link.to_node==p and link.to_socket.name=='Normal':mat.node_tree.links.remove(link)
   if mat.name=='Warm charcoal plaster':
-   for link in list(mat.node_tree.links):
-    if link.to_node==p and link.to_socket.name=='Base Color':mat.node_tree.links.remove(link)
-   p.inputs['Base Color'].default_value=(.11,.085,.064,1)
+   sys.path.insert(0,str(Path(__file__).resolve().parent))
+   from runtime_bakes import prepare_runtime_charcoal
+   prepare_runtime_charcoal(mat,OUT/'runtime-maps')
  # Merge static details by material and overhead policy, but never functional nodes.
  for collection in ['ARCHITECTURE','OVERHEAD']:
   batches={}
@@ -423,6 +424,11 @@ if args.export:
    bpy.context.view_layer.objects.active=objects[0];bpy.ops.object.join()
    o=bpy.context.object;o.name=collection+'_'+matname;tag(o,role)
    if collection=='OVERHEAD':o['lieuva_overhead']=True
+ if args.bake_ao:
+  sys.path.insert(0,str(Path(__file__).resolve().parent))
+  from runtime_bakes import bake_runtime_occlusion
+  bake_runtime_occlusion(scene,COL,OUT/'runtime-maps',ROOM)
+  bpy.ops.wm.save_as_mainfile(filepath=str(OUT/(ROOM+'-runtime.blend')),compress=True)
  for size,suffix in [(1024,'desktop'),(512,'mobile')]:
   for img in bpy.data.images:
    if img.size[0]>size or img.size[1]>size:
@@ -432,7 +438,7 @@ if args.export:
     for o in COL[collection].objects:
      if o.type=='MESH':
       m=o.modifiers.new('Mobile coplanar reduction','DECIMATE');m.decimate_type='DISSOLVE';m.angle_limit=.06
-  target=ROOT/'public/assets/templates/premium-v1';target.mkdir(parents=True,exist_ok=True)
+  target=ROOT/'public/assets/templates/premium-v2';target.mkdir(parents=True,exist_ok=True)
   bpy.ops.export_scene.gltf(filepath=str(target/(ROOM+'-'+suffix+'.glb')),export_format='GLB',export_extras=True,export_apply=True,export_yup=True,export_lights=False,export_cameras=False,export_animations=False,export_image_format='JPEG',export_jpeg_quality=85)
  print('SURFACE_CONTRACT',json.dumps({'id':ROOM,'surfaces':sorted(surfaces),'obstacles':len(obstacles),'nav_triangles':len(faces)}))
-print('LIEUVA COMPLETE',ROOM,str(renderpath))
+print('LIEUVA COMPLETE',ROOM,'source/export only' if args.no_render else str(renderpath))

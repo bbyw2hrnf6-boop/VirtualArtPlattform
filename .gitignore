@@ -14,3 +14,8 @@ service-account*.json
 *-service-account.json
 *firebase-adminsdk*.json
 gha-creds-*.json
+
+# Reproducible Blender production scratch and automatic backups
+blender/production/__pycache__/
+blender/production/**/*.log
+blender/production/**/*.blend1

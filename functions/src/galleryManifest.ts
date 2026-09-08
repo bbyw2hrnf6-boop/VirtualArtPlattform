@@ -31,6 +31,10 @@ const WALL_FINISHES = [
   "black-slats",
   "marble-wall",
   "dark-stone",
+  "sage",
+  "ink-blue",
+  "dusty-rose",
+  "sand",
 ] as const;
 const FLOOR_FINISHES = [
   "concrete",
@@ -44,6 +48,10 @@ const FLOOR_FINISHES = [
   "slate",
   "dark-concrete",
   "travertine-floor",
+  "cork",
+  "terracotta",
+  "basalt-terrazzo",
+  "parquet",
 ] as const;
 const CEILING_FINISHES = ["gallery", "warm", "dark", "skylight", "vaulted"] as const;
 const LIGHTING_PRESETS = ["daylight", "museum", "evening"] as const;
@@ -60,6 +68,9 @@ const DECOR_IDS = [
   "leather-bench",
   "wood-stool",
   "rope-barrier",
+  "lounge-chair",
+  "stone-table",
+  "light-column",
 ] as const;
 const POT_FINISHES = ["light", "black"] as const;
 const ARTWORK_FRAMES = ["black", "white", "oak", "dark-wood", "metal", "none"] as const;

@@ -1,22 +1,8 @@
-.object-thumbnail--ficus i,
 .object-thumbnail--snake-plant i {
   width: 16px;
   height: 18px;
   border-radius: 4px 4px 8px 8px;
   background: #a49b88;
-}
-
-.object-thumbnail--ficus i::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 12px;
-  width: 34px;
-  height: 33px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: #48634a;
-  box-shadow: -9px -5px 0 -3px #638066, 9px -8px 0 -4px #304f37;
 }
 
 .object-thumbnail--snake-plant i::before {
@@ -67,3 +53,17 @@
   border-bottom: 4px solid #6c2e28;
   border-radius: 0 0 50% 50%;
 }
+
+/* Studio catalogue: distinct silhouettes and full, readable finish names. */
+.catalog-control{width:100%;min-height:44px;margin:0 0 12px;padding:10px;background:#242620;color:#efeee7;border:1px solid #55584f;border-radius:0;font:inherit;font-size:12px}
+.catalog-control::placeholder{color:#b5b7ab}
+.studio .swatch-current{grid-column:1/-1;margin:0 0 6px}
+.studio .swatches{grid-template-columns:repeat(3,minmax(0,1fr))}
+.studio .swatches button span{white-space:normal;overflow:visible;font-size:12px;line-height:1.35}
+.studio .object-grid button[aria-pressed=true]{border-color:#a6ac94}
+.studio .object-grid small{font-size:12px}
+.studio .ai-undo{min-height:44px;margin-right:12px;font-size:12px}
+.studio .ai-result-close{min-width:44px;min-height:44px;right:0;top:0}
+.object-thumbnail--lounge-chair i{width:31px;height:26px;border-radius:8px 8px 3px 3px;background:linear-gradient(#c9bca5 60%,#968775 62% 83%,#45392b 85%)}
+.object-thumbnail--stone-table i{width:38px;height:9px;bottom:21px;border-radius:4px;background:#bfaf95;box-shadow:0 10px 0 -1px #8f816d}
+.object-thumbnail--light-column i{width:15px;height:36px;border-radius:4px;background:repeating-linear-gradient(90deg,#a79065 0 1px,#eed6a3 2px 5px)}

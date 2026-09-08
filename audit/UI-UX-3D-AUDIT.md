@@ -609,3 +609,8 @@ Exit-Kriterium: Ein fremder Besucher versteht Produkt, Qualität, Zielgruppe, Ri
 ## Schluss
 
 Die richtige Richtung ist bereits sichtbar: AURA wirkt nicht wie ein generischer SaaS-Builder. Die Marke hat Charakter und die Danny-Demo beweist Atmosphäre. Der nächste Qualitätshebel ist nicht mehr Copy oder zusätzliche Features. Er ist Konsistenz: Das, was der Hero verspricht, muss jeder Builder-Raum, jede Platzierung und jede Besucherbewegung tatsächlich einlösen.
+
+
+## Studio design catalogue · 2026-09-08
+
+Lokale Erweiterung auf 16 Wandoptionen, 15 Bodenmaterialien und 13 unterschiedliche Katalogobjekte. Der Curator erzeugt regelbasierte Variationen mit Stil-/Umfangswahl, validierten Platzierungen, freien Hauptwegen, Schutz gesperrter Werke und einer History-Transaktion. Neue IDs sind in Client- und Functions-Validierung ergänzt; keine Veröffentlichung erfolgt. Die lokalen Browserprüfungen bei 1440×1000 und 390×844 sind abgeschlossen: alle drei Räume, Mobile-GLBs, Varianten, Wiederherstellung und Geometrieprüfung funktionieren. Möbel-Griffpunkt, Seitenüberlauf und mobile Curator-Rückmeldung wurden dabei korrigiert. Echte iOS-/Android-Performance und eine künstlerische Qualitätsfreigabe bleiben separat offen. Details und Abgrenzung zum vorherigen Premium-Runtime-Pass: [LIEUVA-STUDIO-DESIGN-2026-09-08.md](./LIEUVA-STUDIO-DESIGN-2026-09-08.md).

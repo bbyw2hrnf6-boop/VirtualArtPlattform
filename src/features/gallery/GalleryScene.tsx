@@ -1,3 +1,4 @@
+import { createDesignObject } from "./scene/designObjects";
 import { memo, useEffect, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -147,6 +148,26 @@ function artworkLightPose(
   source.z = THREE.MathUtils.clamp(source.z, -d / 2 + 0.5, d / 2 - 0.5);
   return { source, target };
 }
+const wallProfiles = {
+    chalk: { color: "#ffffff", bump: 0.009, roughness: 0.82, clearcoat: 0.025 },
+    warm: { color: "#ffffff", bump: 0.015, roughness: 0.86, clearcoat: 0.015 },
+    travertine: { color: "#ffffff", bump: 0.02, roughness: 0.7, clearcoat: 0.035 },
+    linen: { color: "#ddd6ca", bump: 0.024, roughness: 0.92, clearcoat: 0 },
+    charcoal: { color: "#ffffff", bump: 0.008, roughness: 0.72, clearcoat: 0.05 },
+    microcement: { color: "#ffffff", bump: 0.012, roughness: 0.76, clearcoat: 0.018 },
+    limestone: { color: "#ffffff", bump: 0.022, roughness: 0.81, clearcoat: 0.008 },
+    "oak-slats": { color: "#ffffff", bump: 0.016, roughness: 0.68, clearcoat: 0.055 },
+    "light-concrete": { color: "#ffffff", bump: 0.01, roughness: 0.8, clearcoat: 0.018 },
+    "black-slats": { color: "#ffffff", bump: 0.016, roughness: 0.7, clearcoat: 0.04 },
+    "marble-wall": { color: "#ffffff", bump: 0.006, roughness: 0.34, clearcoat: 0.26 },
+    "dark-stone": { color: "#ffffff", bump: 0.02, roughness: 0.73, clearcoat: 0.025 },
+    sage: { color: "#ffffff", bump: .012, roughness: .88, clearcoat: .01 },
+    "ink-blue": { color: "#ffffff", bump: .004, roughness: .69, clearcoat: .03 },
+    "dusty-rose": { color: "#ffffff", bump: .015, roughness: .9, clearcoat: .01 },
+    sand: { color: "#ffffff", bump: .012, roughness: .86, clearcoat: .01 },
+};
+
+
 const wallColors = {
   chalk: "#dfdcd4",
   warm: "#b86f58",
@@ -160,6 +181,10 @@ const wallColors = {
   "black-slats": "#252625",
   "marble-wall": "#e8e6df",
   "dark-stone": "#24332d",
+  sage: "#8c9b88",
+  "ink-blue": "#344752",
+  "dusty-rose": "#b98f89",
+  sand: "#c7b697",
 };
 
 function createWoodFrameTexture(dark = false) {
@@ -203,6 +228,10 @@ const floorColors = {
   slate: "#262927",
   "dark-concrete": "#444644",
   "travertine-floor": "#d7c5a8",
+  cork: "#aa8153",
+  terracotta: "#a65f43",
+  "basalt-terrazzo": "#303536",
+  parquet: "#b58b61",
 };
 type SurfaceKind = GalleryDraft["wall"] | GalleryDraft["floor"];
 const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
@@ -275,7 +304,48 @@ function createSurfaceTexture(kind: SurfaceKind, base: string, anisotropy = 8) {
     seed = (seed * 9301 + 49297) % 233280;
     return seed / 233280;
   };
-  if (kind === "linen") {
+  if (["cork", "terracotta", "basalt-terrazzo", "parquet"].includes(kind)) {
+    const tile = kind === "terracotta";
+    const parquet = kind === "parquet";
+    if (tile || parquet) {
+      const step = tile ? 128 : 32;
+      context.fillStyle = tile ? "#897c69" : "#59412d";
+      context.fillRect(0, 0, size, size);
+      for (let y = 0; y < size; y += step) {
+        for (let x = 0; x < size; x += step) {
+          const variation = random();
+          context.fillStyle = tile ? `hsl(17 43% ${46 + variation * 4}%)` : `hsl(31 35% ${48 + variation * 5}%)`;
+          const joint = tile ? 1 : .15;
+          context.fillRect(x + joint, y + joint, step - joint * 2, step - joint * 2);
+          if (parquet) {
+            context.strokeStyle = "#42271520";
+            context.lineWidth = .35;
+            for (let line = 3; line < step; line += 4) {
+              context.beginPath();
+              const vertical = (Math.floor(x / step) + Math.floor(y / step)) % 2;
+              context.moveTo(x + (vertical ? line : 0), y + (vertical ? 0 : line));
+              context.lineTo(x + (vertical ? line : step), y + (vertical ? step : line));
+              context.stroke();
+            }
+          }
+        }
+      }
+    }
+    for (let grain = 0; grain < (kind === "cork" ? 11000 : 2400); grain++) {
+      const chip = kind === "basalt-terrazzo";
+      context.fillStyle = chip
+        ? ["#8c8171", "#626c69", "#7c7367", "#1a2425"][Math.floor(random() * 4)]
+        : random() > .5 ? "#ffedd428" : "#37241528";
+      const radius = chip ? 1 + random() * 4 : .5 + random() * 2;
+      const x = random() * size, y = random() * size;
+      context.beginPath();
+      context.moveTo(x - radius, y);
+      context.lineTo(x, y - radius);
+      context.lineTo(x + radius, y + radius * .7);
+      context.closePath();
+      context.fill();
+    }
+  } else if (kind === "linen") {
     for (let x = 0; x < size; x += 4) {
       context.fillStyle = x % 8 ? "#ffffff12" : "#332d2515";
       context.fillRect(x, 0, 1, size);
@@ -292,114 +362,6 @@ function createSurfaceTexture(kind: SurfaceKind, base: string, anisotropy = 8) {
         0.4 + random() * 1.2,
         0.4 + random() * 2,
       );
-    }
-  } else if (kind === "oak" || kind === "walnut" || kind === "dark-oak") {
-    const rowHeight = 64;
-    for (let row = 0; row < 8; row++) {
-      const y = row * rowHeight;
-      context.fillStyle = row % 2 ? "#f2c98d0b" : "#20140d12";
-      context.fillRect(0, y, size, rowHeight);
-      context.fillStyle = "#21150f66";
-      context.fillRect(0, y, size, 1);
-      const offset = row % 2 ? 128 : 0;
-      for (let x = offset; x < size; x += 256)
-        context.fillRect(x, y, 1, rowHeight);
-      for (let grain = 0; grain < 12; grain++) {
-        const grainY = y + 6 + random() * 50;
-        context.strokeStyle = `rgba(27,15,9,${0.025 + random() * 0.055})`;
-        context.lineWidth = 0.7 + random();
-        context.beginPath();
-        context.moveTo(0, grainY);
-        context.bezierCurveTo(
-          130,
-          grainY + random() * 7,
-          360,
-          grainY - random() * 7,
-          size,
-          grainY + random() * 3,
-        );
-        context.stroke();
-      }
-    }
-  } else if (kind === "marble" || kind === "black-marble") {
-    const wash = context.createLinearGradient(0, 0, size, size);
-    wash.addColorStop(0, "#f4f1e9");
-    wash.addColorStop(0.48, base);
-    wash.addColorStop(1, "#bbb8b1");
-    context.fillStyle = wash;
-    context.fillRect(0, 0, size, size);
-    for (let vein = 0; vein < 16; vein++) {
-      const startY = -80 + random() * 670;
-      const drift = -150 + random() * 300;
-      const dark = random() > 0.3;
-      context.strokeStyle = dark
-        ? `rgba(76,79,77,${0.035 + random() * 0.09})`
-        : `rgba(255,252,242,${0.12 + random() * 0.16})`;
-      context.lineWidth = 5 + random() * 18;
-      context.beginPath();
-      context.moveTo(-30, startY);
-      context.bezierCurveTo(
-        120,
-        startY + drift * 0.35,
-        330,
-        startY + drift * 0.8,
-        size + 30,
-        startY + drift,
-      );
-      context.stroke();
-      context.strokeStyle = dark
-        ? `rgba(65,69,68,${0.11 + random() * 0.13})`
-        : `rgba(255,255,251,${0.26 + random() * 0.18})`;
-      context.lineWidth = 0.6 + random() * 2.2;
-      context.beginPath();
-      context.moveTo(-30, startY);
-      context.bezierCurveTo(
-        120,
-        startY + drift * 0.35,
-        330,
-        startY + drift * 0.8,
-        size + 30,
-        startY + drift,
-      );
-      context.stroke();
-    }
-  } else if (kind === "terrazzo") {
-    const chips = ["#eee9dc", "#555652", "#b99a7d", "#8e8177", "#242624"];
-    for (let index = 0; index < 900; index++) {
-      const x = random() * size;
-      const y = random() * size;
-      const radius = 1 + random() * 4;
-      context.fillStyle = `${chips[Math.floor(random() * chips.length)]}${Math.floor(
-        80 + random() * 100,
-      )
-        .toString(16)
-        .padStart(2, "0")}`;
-      context.beginPath();
-      context.moveTo(x + radius, y);
-      context.lineTo(x - radius * 0.65, y + radius * 0.72);
-      context.lineTo(x - radius * 0.35, y - radius);
-      context.closePath();
-      context.fill();
-    }
-  } else if (kind === "concrete") {
-    for (let index = 0; index < 2100; index++) {
-      const light = random() > 0.48;
-      const alpha = 0.012 + random() * 0.05;
-      const grainSize = 0.4 + random() * 1.7;
-      context.fillStyle = light
-        ? `rgba(255,250,238,${alpha})`
-        : `rgba(25,24,22,${alpha})`;
-      context.fillRect(random() * size, random() * size, grainSize, grainSize);
-    }
-    for (let cloud = 0; cloud < 34; cloud++) {
-      const x = random() * size;
-      const y = random() * size;
-      const radius = 25 + random() * 70;
-      const gradient = context.createRadialGradient(x, y, 1, x, y, radius);
-      gradient.addColorStop(0, random() > 0.5 ? "#ffffff08" : "#18181809");
-      gradient.addColorStop(1, "#00000000");
-      context.fillStyle = gradient;
-      context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
     }
   } else {
     for (let patch = 0; patch < 70; patch++) {
@@ -425,13 +387,7 @@ function createSurfaceTexture(kind: SurfaceKind, base: string, anisotropy = 8) {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   texture.anisotropy = 4;
-  if (kind === "oak" || kind === "walnut" || kind === "dark-oak")
-    texture.repeat.set(2.5, 3.5);
-  else if (kind === "marble" || kind === "black-marble")
-    texture.repeat.set(1.35, 1.15);
-  else if (kind === "chalk" || kind === "warm" || kind === "charcoal")
-    texture.repeat.set(3, 2.5);
-  else texture.repeat.set(4, 3);
+  texture.repeat.set(4, 3);
   return texture;
 }
 
@@ -445,7 +401,7 @@ function createSurfaceDetailMaps(kind: SurfaceKind) {
   const roughness = roughnessCanvas.getContext("2d");
   if (!height || !roughness)
     throw new Error("Surface detail maps could not be created.");
-  const wood = ["oak", "walnut", "dark-oak", "oak-slats", "black-slats"].includes(kind);
+  const wood = ["oak", "walnut", "dark-oak", "parquet", "oak-slats", "black-slats"].includes(kind);
   const stone = ["travertine", "limestone", "slate", "dark-stone", "travertine-floor"].includes(kind);
   const marble = ["marble", "black-marble", "marble-wall"].includes(kind);
   const textile = kind === "linen";
@@ -459,7 +415,7 @@ function createSurfaceDetailMaps(kind: SurfaceKind) {
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
       const index = (y * size + x) * 4;
-      const wave = wood
+      const wave = kind === "terracotta" && (x % 64 < 1 || y % 64 < 1) ? -65 : wood
         ? Math.sin(y * .19 + Math.sin(x * .035) * 2.4) * 18
         : textile
           ? ((x % 5 === 0 ? 11 : 0) + (y % 5 === 0 ? 11 : 0))
@@ -468,7 +424,7 @@ function createSurfaceDetailMaps(kind: SurfaceKind) {
             : marble
               ? Math.sin((x + y * .42) * .055) * 8
               : Math.sin(x * .032) * 3 + Math.cos(y * .041) * 3;
-      const grain = (random() - .5) * (stone ? 28 : wood ? 18 : 14);
+      const grain = (random() - .5) * (kind === "cork" ? 48 : stone ? 28 : wood ? 18 : 14);
       const heightValue = Math.max(0, Math.min(255, 128 + wave + grain));
       const roughBase = marble ? 205 : wood ? 218 : stone ? 234 : textile ? 242 : 228;
       const roughValue = Math.max(24, Math.min(245, roughBase + grain * .7 - wave * .25));
@@ -486,6 +442,29 @@ function createSurfaceDetailMaps(kind: SurfaceKind) {
     texture.anisotropy = 2;
   });
   return { bumpMap, roughnessMap };
+}
+
+function preparePremiumRoomMaterial(material: THREE.MeshPhysicalMaterial, draft: GalleryDraft) {
+  if (material.name.includes("Rooflight diffuse sky")) {
+    material.color.set("#000000");
+    material.emissive.set("#b7d3ed");
+    material.emissiveIntensity = 0.9;
+    return;
+  }
+  if (material.bumpMap || material.metalness > 0.5 || material.emissiveIntensity > 1) return;
+  const role = material.userData.surfaceRole;
+  const wood = /oak|walnut/i.test(material.name);
+  const kind: SurfaceKind = role === "floor" ? draft.floor : role === "wall" ? draft.wall : wood ? "dark-oak" : "limestone";
+  const details = createSurfaceDetailMaps(kind);
+  material.bumpMap = details.bumpMap;
+  material.roughnessMap = details.roughnessMap;
+  material.bumpScale = wood ? 0.018 : role === "floor" ? 0.009 : 0.012;
+  material.envMapIntensity = role === "floor" ? 0.75 : wood ? 0.45 : 0.25;
+  if (role === "floor") {
+    material.clearcoat = draft.floor === "marble" ? 0.24 : 0.06;
+    material.clearcoatRoughness = 0.35;
+  }
+  if (material.map) material.map.anisotropy = 4;
 }
 
 function showSceneError(
@@ -886,6 +865,8 @@ function createDecor(item: DecorPlacement, selected: boolean) {
     ficus.scale.set(1.08, 1.18, 1.08);
     group.add(ficus);
   }
+  const designObject = createDesignObject(item.type);
+  if (designObject) group.add(designObject);
   if (item.type === "snake-plant") group.add(createSnakePlant(item.potColor));
   if (item.type === "leather-bench") group.add(createLeatherBench());
   if (item.type === "wood-stool") group.add(createWoodStool());
@@ -1505,20 +1486,7 @@ function buildRoom(
   [ceilingDetailsMaps.bumpMap, ceilingDetailsMaps.roughnessMap].forEach((texture) =>
     texture.repeat.copy(ceilingTexture.repeat),
   );
-  const wallProfile = {
-    chalk: { color: "#ffffff", bump: 0.009, roughness: 0.82, clearcoat: 0.025 },
-    warm: { color: "#ffffff", bump: 0.015, roughness: 0.86, clearcoat: 0.015 },
-    travertine: { color: "#ffffff", bump: 0.02, roughness: 0.7, clearcoat: 0.035 },
-    linen: { color: "#ddd6ca", bump: 0.024, roughness: 0.92, clearcoat: 0 },
-    charcoal: { color: "#ffffff", bump: 0.008, roughness: 0.72, clearcoat: 0.05 },
-    microcement: { color: "#ffffff", bump: 0.012, roughness: 0.76, clearcoat: 0.018 },
-    limestone: { color: "#ffffff", bump: 0.022, roughness: 0.81, clearcoat: 0.008 },
-    "oak-slats": { color: "#ffffff", bump: 0.016, roughness: 0.68, clearcoat: 0.055 },
-    "light-concrete": { color: "#ffffff", bump: 0.01, roughness: 0.8, clearcoat: 0.018 },
-    "black-slats": { color: "#ffffff", bump: 0.016, roughness: 0.7, clearcoat: 0.04 },
-    "marble-wall": { color: "#ffffff", bump: 0.006, roughness: 0.34, clearcoat: 0.26 },
-    "dark-stone": { color: "#ffffff", bump: 0.02, roughness: 0.73, clearcoat: 0.025 },
-  }[draft.wall];
+  const wallProfile = wallProfiles[draft.wall];
   const wall = new THREE.MeshPhysicalMaterial({
     color: wallProfile.color,
     map: wallTexture,
@@ -1548,7 +1516,7 @@ function buildRoom(
   const isWood =
     draft.floor === "oak" ||
     draft.floor === "walnut" ||
-    draft.floor === "dark-oak";
+    draft.floor === "dark-oak" || draft.floor === "parquet";
   const isSlate = draft.floor === "slate";
   const isPolishedConcrete = draft.floor === "dark-concrete";
   const floor = new THREE.MeshPhysicalMaterial({
@@ -2179,29 +2147,11 @@ function updateRoomSurface(
     const details = createSurfaceDetailMaps(draft.wall);
     [details.bumpMap, details.roughnessMap].forEach((item) => item.repeat.copy(texture.repeat));
     replaceRoomSurfaceTexture(materials, texture, details);
-    const profile = {
-      chalk: { color: "#ffffff", roughness: 0.84, clearcoat: 0.015 },
-      warm: { color: "#ffffff", roughness: 0.88, clearcoat: 0.01 },
-      travertine: { color: "#ffffff", roughness: 0.72, clearcoat: 0.025 },
-      linen: { color: "#ddd6ca", roughness: 0.93, clearcoat: 0 },
-      charcoal: { color: "#ffffff", roughness: 0.76, clearcoat: 0.025 },
-      microcement: { color: "#ffffff", roughness: 0.78, clearcoat: 0.012 },
-      limestone: { color: "#ffffff", roughness: 0.82, clearcoat: 0.006 },
-      "oak-slats": { color: "#ffffff", roughness: 0.7, clearcoat: 0.045 },
-      "light-concrete": { color: "#ffffff", roughness: 0.81, clearcoat: 0.012 },
-      "black-slats": { color: "#ffffff", roughness: 0.72, clearcoat: 0.035 },
-      "marble-wall": { color: "#ffffff", roughness: 0.36, clearcoat: 0.24 },
-      "dark-stone": { color: "#ffffff", roughness: 0.75, clearcoat: 0.02 },
-    }[draft.wall];
+    const profile = wallProfiles[draft.wall];
     materials.forEach((material) => {
       material.color.set(profile.color);
       material.roughness = profile.roughness;
-      material.bumpScale = {
-        chalk: .009, warm: .015, travertine: .02, linen: .024,
-        charcoal: .008, microcement: .012, limestone: .022,
-        "oak-slats": .016, "light-concrete": .01, "black-slats": .016,
-        "marble-wall": .006, "dark-stone": .02,
-      }[draft.wall];
+      material.bumpScale = profile.bump;
       material.clearcoat = profile.clearcoat;
       material.envMapIntensity = 0.2;
       material.emissive.set("#000000");
@@ -2219,7 +2169,7 @@ function updateRoomSurface(
     const wood =
       draft.floor === "oak" ||
       draft.floor === "walnut" ||
-      draft.floor === "dark-oak";
+      draft.floor === "dark-oak" || draft.floor === "parquet";
     const slate = draft.floor === "slate";
     const polishedConcrete = draft.floor === "dark-concrete";
     materials.forEach((material) => {
@@ -2475,12 +2425,19 @@ function addLighting(
   dollhouse = false,
   shadowMapSize = 1024,
   qualityTier: ReturnType<typeof getRenderQuality>["tier"] = "balanced",
+  authored = false,
 ) {
   const settings = roomLightingProfile(
     draft.templateId,
     draft.lighting,
     qualityTier,
   );
+  if (authored) {
+    settings.ambient *= 0.8;
+    settings.hemi *= 0.9;
+    if (draft.templateId === "pavilion") settings.key *= 0.8;
+    if (draft.templateId === "nocturne") settings.key *= 0.65;
+  }
   // The environment stays neutral; only this room-owned rig changes presets.
   scene.background = new THREE.Color(
     draft.templateId === "nocturne"
@@ -2519,7 +2476,13 @@ function addLighting(
   // resolve the same authored light without disabling architectural shadows.
   main.position.set(-w * 0.28, Math.max(1.8, h - 0.32), d * 0.22);
   main.target.position.set(w * 0.05, 0.35, -d * 0.08);
+  if (authored && draft.templateId !== "nocturne") {
+    main.position.set(draft.templateId === "pavilion" ? 6 : 4.8,
+      draft.templateId === "pavilion" ? 8.6 : 6.6, d * 0.3);
+    main.target.position.set(-w * 0.15, 0, -d * 0.2);
+  }
   main.castShadow = true;
+  if (authored && draft.templateId === "nocturne") main.castShadow = false;
   main.shadow.mapSize.set(shadowMapSize, shadowMapSize);
   main.shadow.bias = -0.00018;
   // Keep the shadow attached to feet, plinths and frames. The previous large
@@ -2532,7 +2495,7 @@ function addLighting(
   main.shadow.camera.top = shadowExtent;
   main.shadow.camera.bottom = -shadowExtent;
   main.shadow.camera.near = 0.5;
-  main.shadow.camera.far = Math.max(h * 4, 24);
+  main.shadow.camera.far = Math.max(h * 4, Math.max(w, d) * 2, 24);
   main.shadow.camera.updateProjectionMatrix();
   rig.add(main, main.target);
 
@@ -2556,6 +2519,30 @@ function addLighting(
   bounceLights[1].position.set(w * 0.4, h * 0.48, d * 0.17);
   bounceLights[1].lookAt(0, h * 0.3, -d * 0.08);
   rig.add(...bounceLights);
+  if (authored) {
+    // Broad, non-shadowed architectural fill is inexpensive on both tiers.
+    // Contact AO provides local depth without baking artwork or furniture.
+    if (draft.templateId === "nocturne") {
+      for (const side of [-1, 1]) {
+        const cove = new THREE.RectAreaLight("#ffd4a0", settings.bounce * 3, d * 0.8, 0.65);
+        cove.position.set(side * w * 0.42, h - 0.3, 0);
+        cove.lookAt(0, h * 0.45, 0);
+        rig.add(cove);
+      }
+      const wash = new THREE.RectAreaLight("#ffe0b8", settings.bounce * 4, w * 0.65, 0.6);
+      wash.position.set(0, h - 0.5, -d * 0.3);
+      wash.lookAt(0, h * 0.4, -d / 2);
+      rig.add(wash);
+    } else {
+      const forum = draft.templateId === "pavilion";
+      for (const z of forum ? [-18, 0, 18] : [0]) {
+        const sky = new THREE.RectAreaLight("#eaf2ff", settings.bounce * (forum ? 1.1 : 1.2), forum ? 12 : 4, forum ? 16 : 8);
+        sky.position.set(forum ? 0 : 4, forum ? 8.2 : 5.8, z);
+        sky.lookAt(sky.position.x, 0, z);
+        rig.add(sky);
+      }
+    }
+  }
 
   const artworkTargets = draft.artworks
     .filter((artwork) => !artwork.hidden)
@@ -3352,7 +3339,7 @@ function configureSceneCanvas(canvas: HTMLCanvasElement, label: string) {
 
 function createSceneStatus(element: HTMLElement, initial: string) {
   const status = document.createElement("div");
-  status.className = "scene-status";
+  status.className = "scene-status visually-hidden";
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
   status.textContent = initial;
@@ -4166,13 +4153,14 @@ function GallerySceneRenderer({
         )
           rememberVisibility(object, false);
       });
+      premiumEnvironment?.apply(false, currentDraft);
       let nextTarget: THREE.WebGLRenderTarget | null = null;
       try {
         nextTarget = captureRoomEnvironment(
           renderer,
           scene,
           baseEnvironment,
-          new THREE.Vector3(0, h * 0.48, 0),
+          new THREE.Vector3(0, h * 0.48, currentDraft.templateId === "pavilion" ? 9 : currentDraft.templateId === "nocturne" ? 3.2 : 0),
           Math.max(w, d) * 1.8,
           premiumQuality.reflectionProbeSize,
         );
@@ -4189,6 +4177,7 @@ function GallerySceneRenderer({
           material.side = state.side;
           material.needsUpdate = true;
         });
+        premiumEnvironment?.apply(isCutawayActive(), currentDraft);
       }
       if (!nextTarget) return;
       const previous = reflectionEnvironmentTarget;
@@ -4639,6 +4628,7 @@ function GallerySceneRenderer({
     let focusedArtwork: THREE.Object3D | null = null;
     let focusedArtworkId: string | null = null;
     let draggedDecor: THREE.Group | null = null;
+    const decorGrabOffset = new THREE.Vector3();
     let draggedArtwork: ArtworkObject | null = null;
     let draggedArtworkPlacement: {
       id: string;
@@ -4669,7 +4659,12 @@ function GallerySceneRenderer({
       const hit = raycaster.intersectObjects(
         [...wallSurfaces, architecture],
         true,
-      )[0];
+      ).find(({ object }) => {
+        if (object.userData.aura_role === "collider") return false;
+        for (let parent: THREE.Object3D | null = object; parent; parent = parent.parent)
+          if (!parent.visible) return false;
+        return true;
+      });
       return hit?.object.userData.wallId ? hit : undefined;
     };
     const placementFromWallHit = (
@@ -4753,7 +4748,13 @@ function GallerySceneRenderer({
             x: artwork.x,
             y: artwork.y,
           };
-      } else if (decorId) draggedDecor = decorById.get(decorId) ?? null;
+      } else if (decorId) {
+        draggedDecor = decorById.get(decorId) ?? null;
+        const floorHit = raycaster.intersectObject(floorMesh, false)[0];
+        decorGrabOffset.set(0, 0, 0);
+        if (draggedDecor && floorHit)
+          decorGrabOffset.copy(draggedDecor.position).sub(floorHit.point);
+      }
       if (!draggedArtwork && !draggedDecor) return;
       dragPointerId = event.pointerId;
       controls.enabled = false;
@@ -4799,12 +4800,12 @@ function GallerySceneRenderer({
         const floorHit = raycaster.intersectObject(floorMesh, false)[0];
         if (!floorHit) return;
         draggedDecor.position.x = THREE.MathUtils.clamp(
-          floorHit.point.x,
+          floorHit.point.x + decorGrabOffset.x,
           roomBounds.minX,
           roomBounds.maxX,
         );
         draggedDecor.position.z = THREE.MathUtils.clamp(
-          floorHit.point.z,
+          floorHit.point.z + decorGrabOffset.z,
           roomBounds.minZ,
           roomBounds.maxZ,
         );
@@ -5110,11 +5111,13 @@ function GallerySceneRenderer({
           isCutawayActive(),
           quality.shadowMapSize,
           quality.tier,
+          premiumEnvironment?.loaded ?? false,
         );
         applyCutawayMode();
       } else if (previousLayoutKey !== nextLayoutKey)
         updateLightingLayout(lighting, next, w, d, h);
       currentDraft = next;
+      premiumEnvironment?.apply(isCutawayActive(), currentDraft);
       currentSelectedId = nextSelectedId;
       currentSelectedDecorId = nextSelectedDecorId;
       if (previousCollisionKey !== nextCollisionKey) rebuildCollision();
@@ -5172,11 +5175,14 @@ function GallerySceneRenderer({
     rebuildCollision();
     if (premiumEnvironmentRequested(window.location.search)) {
       premiumEnvironment = attachPremiumEnvironment({
-        scene, templateId: currentDraft.templateId, mobile: quality.tier === "low",
+        templateId: currentDraft.templateId, mobile: quality.tier === "low" ||
+          window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 700,
         element, floor: floorMesh, exteriorWalls, architecture, roof,
         ceiling: ceilingPlane, ceilingDetails,
-        currentDraft: () => currentDraft,
+        prepareMaterial: (material) => preparePremiumRoomMaterial(material, currentDraft),
         disposeTree: disposeObjectTree,
+        onSettled: () => status.ready(element.dataset.environment === "procedural-fallback"
+          ? "Space ready · standard environment" : "3D Space ready"),
         onReady: () => {
           if (disposed) return;
           // Respect material edits made while the GLB was loading.
@@ -5187,14 +5193,19 @@ function GallerySceneRenderer({
               : { wall: "travertine", floor: "marble" };
           if (currentDraft.wall !== defaults.wall) updateRoomSurface(scene, currentDraft, w, d, "wall");
           if (currentDraft.floor !== defaults.floor) updateRoomSurface(scene, currentDraft, w, d, "floor");
+          disposeAndRemove(scene, lighting.rig);
+          lighting = addLighting(scene, currentDraft, w, d, h, isCutawayActive(), quality.shadowMapSize, quality.tier, true);
           rebuildCollision(); applyCutawayMode();
+          scheduleRoomReflection();
           renderer.shadowMap.needsUpdate = true;
         },
       });
     }
-    status.ready();
+    if (premiumEnvironment) status.update("Preparing your Space…", 90);
+    else { element.dataset.environment = "procedural"; status.ready(); }
     element.dataset.sceneReadyMs = String(Math.round(performance.now() - sceneStartedAt));
     const capture: GallerySceneCapture = async (options = {}) => {
+      await premiumEnvironment?.ready;
       if (disposed) throw new Error("The 3D Space is no longer available.");
       const sourceWidth = Math.max(1, renderer.domElement.width);
       const sourceHeight = Math.max(1, renderer.domElement.height);
@@ -5242,7 +5253,7 @@ function GallerySceneRenderer({
       element.dataset.lastCapture = `${width}x${height}`;
       return { dataUrl, width, height, mimeType, mode };
     };
-    element.dataset.captureReady = "true";
+    if (!premiumEnvironment) element.dataset.captureReady = "true";
     const galleryTourPoses = () => {
       const entranceTarget = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, -1);
       const entrance = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, d / 2 - 1);
@@ -5520,13 +5531,15 @@ function GallerySceneRenderer({
         .subVectors(camera.position, overviewCenter)
         .setY(0)
         .normalize();
+      const insideRoom = Math.abs(camera.position.x) < w / 2 - 0.2 &&
+        Math.abs(camera.position.z) < d / 2 - 0.2 && camera.position.y < h - 0.25;
       exteriorWalls.forEach((mesh) => {
         const material = mesh.material as THREE.MeshPhysicalMaterial;
         const facing =
           wallNormals[String(mesh.userData.wallId)]?.dot(overviewDirection) ??
           -1;
         const targetOpacity =
-          facing > 0.42
+          insideRoom ? 1 : facing > 0.42
             ? 0.045
             : facing > -0.16
               ? 0.28

@@ -53,3 +53,12 @@ dee976fb8c30c31a04e295a66792403c8acb79c92ca803b6aa905b89b350f172  aura-clay-lime
 d6984d80c3f8410d6b57ba95e5b795d94eb7cd5d280d624ab9ab4263286ced85  aura-greige-microcement-v5.webp
 6cbd53963e1ddb60d235f41b396154873eae557b56146616e189c421a202904a  aura-light-concrete-v5.webp
 ```
+
+
+## Runtime procedural additions · 2026-09-08
+
+`src/features/gallery/designCatalog.ts` is the Studio's visible catalogue: 16 wall and 15 floor choices. Newly authored IDs are `sage`, `ink-blue`, `dusty-rose`, `sand` (walls), and `cork`, `terracotta`, `basalt-terrazzo`, `parquet` (floors). The parquet pattern is alternating-grain basketweave, not herringbone. Existing `linen`, `travertine` and `dark-oak` choices are now visible as well.
+
+The new surfaces are produced on demand by code in `GalleryScene.tsx`, using a deterministic seed per material. Albedo canvases use 512 × 512 sRGB; separate 256 × 256 scalar height and roughness canvases use linear data. Fine cork aggregate, tile grout, light chips in dark terrazzo and alternating wood grain distinguish the floors. At this resolution, an active procedural surface uses roughly 2 MiB for RGBA textures including mipmaps; the catalogue is not preloaded as a set of textures. Replacing a surface disposes replaced texture objects while preserving the imported AO map. No raster files, external textures or extra image-generation assets were added for this pass. Native Blender beauty renders and source files are separate deliverables.
+
+Provenance and rights: see `ASSET_LICENSES.md`. All four new wall colours and floor patterns were inspected in the actual Studio. Terracotta/parquet variation, parquet joints and dark terrazzo aggregate were softened after browser review. Desktop/mobile viewport and recovery checks are recorded in `audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md`; these checks do not establish photorealism or physical-phone performance.

@@ -27,12 +27,12 @@ type UnknownRecord = Record<string, unknown>;
 
 const TEMPLATE_IDS = ['white-cube', 'nocturne', 'pavilion'] as const satisfies readonly TemplateId[];
 const WALL_IDS = ['north', 'south', 'west', 'east', 'divider-front', 'divider-back', ...FORUM_INTERIOR_WALLS] as const satisfies readonly WallId[];
-const WALL_FINISHES = ['chalk', 'warm', 'travertine', 'linen', 'charcoal', 'microcement', 'limestone', 'oak-slats', 'light-concrete', 'black-slats', 'marble-wall', 'dark-stone'] as const satisfies readonly WallFinish[];
-const FLOOR_FINISHES = ['concrete', 'oak', 'terrazzo', 'marble', 'black-marble', 'walnut', 'dark-oak', 'microcement', 'slate', 'dark-concrete', 'travertine-floor'] as const satisfies readonly FloorFinish[];
+const WALL_FINISHES = ['chalk', 'warm', 'travertine', 'linen', 'charcoal', 'microcement', 'limestone', 'oak-slats', 'light-concrete', 'black-slats', 'marble-wall', 'dark-stone', "sage", "ink-blue", "dusty-rose", "sand"] as const satisfies readonly WallFinish[];
+const FLOOR_FINISHES = ['concrete', 'oak', 'terrazzo', 'marble', 'black-marble', 'walnut', 'dark-oak', 'microcement', 'slate', 'dark-concrete', 'travertine-floor', "cork", "terracotta", "basalt-terrazzo", "parquet"] as const satisfies readonly FloorFinish[];
 const CEILING_FINISHES = ['gallery', 'warm', 'dark', 'skylight', 'vaulted'] as const satisfies readonly CeilingFinish[];
 const LIGHTING_PRESETS = ['daylight', 'museum', 'evening'] as const satisfies readonly LightingPreset[];
 const PLANT_POT_FINISHES = ['light', 'black'] as const satisfies readonly PlantPotFinish[];
-const DECOR_IDS = ['olive', 'monstera', 'arc-lamp', 'pedestal', 'gallery-bench', 'stone-sculpture', 'floor-vase', 'ficus', 'snake-plant', 'leather-bench', 'wood-stool', 'rope-barrier'] as const satisfies readonly DecorId[];
+const DECOR_IDS = ['olive', 'monstera', 'arc-lamp', 'pedestal', 'gallery-bench', 'stone-sculpture', 'floor-vase', 'ficus', 'snake-plant', 'leather-bench', 'wood-stool', 'rope-barrier', "lounge-chair", "stone-table", "light-column"] as const satisfies readonly DecorId[];
 const ARTWORK_FRAMES = ['black', 'white', 'oak', 'dark-wood', 'metal', 'none'] as const satisfies readonly ArtworkFrame[];
 const ARTWORK_MATS = ['white', 'warm-white', 'black', 'none'] as const satisfies readonly ArtworkMat[];
 const GALLERY_VISIBILITIES = ['public', 'unlisted', 'private'] as const satisfies readonly GalleryVisibility[];

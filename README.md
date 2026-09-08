@@ -33,9 +33,10 @@ Live product: [lieuva.com](https://lieuva.com/)
 - Separate **Arrange** and **Walk Preview** modes, plus open-roof and finished-ceiling inspection without rebuilding the WebGL renderer.
 - Reset View restores a dependable composition; entering Walk Preview starts in front of the selected visible artwork when one is selected.
 - The Grand Forum includes a five-zone floor-plan navigator for its central axis and four connected galleries.
-- Five wall finishes, five current floor choices, three ceiling systems, and three lighting presets.
-- Seven decorative object types, with up to eight object placements in a published gallery.
-- A local **AI Curator** that analyzes image color palettes in the browser and proposes a different layout, atmosphere, and object arrangement. It does not send artwork to an external AI API.
+- Sixteen wall colours/finishes, fifteen floor finishes, five ceiling systems, and three lighting presets.
+- Thirteen distinct catalogue objects, with up to eight placements. Selecting an existing object opens its inspector instead of adding a duplicate; legacy Ficus/bench variants remain readable.
+- Object dragging preserves the pointer’s grab position. Compact Curator actions reveal the proposed room and keep variation/undo controls above the collapsed tool panel.
+- A local **AI Curator** with fresh, palette-aware variations, three design directions plus Surprise me, and scopes for surfaces/objects, artwork layout, or objects alone. It works in empty rooms, reserves circulation space, preserves locked/hidden artwork and applies each proposal as one undo step. It does not send artwork to an external AI API.
 - Cinematic gallery introductions, 1.75 m visitor eye height, walk and overview modes, artwork information cards, an accessible text-first artwork directory, and click-to-walk navigation.
 - The Danny Hirsch reference offers an optional 45-second guided tour, authored Smart Views, Reset View, exact GLB artwork metadata, and an automatic artwork-directory fallback when WebGL is unavailable.
 - Discover keeps the Danny reference exhibition visible when the live community feed is empty or unavailable.
@@ -116,7 +117,7 @@ The intended creation flow is:
 7. Use **Reset view** whenever orientation is lost. In the Grand Forum, use the five-zone floor-plan navigator to jump between the central axis and four side galleries.
 8. Keep **Arrange** and **Open roof** enabled while editing, then enter **Walk Preview** and **Preview ceiling** to inspect the visitor experience. The same canvas and camera session stay alive; a selected visible artwork becomes the Walk Preview start focus.
 9. Add and position objects by dragging them or clicking an empty floor location.
-10. Optionally run **AI Curator**. Re-running it intentionally produces a new proposal, and its result can be undone during the current editing session.
+10. Use **Design direction** to choose a style and scope, then **Generate variation** or the header **AI Curator**. The default changes surfaces and objects while retaining artwork positions and the authored ceiling. **Another variation** generates a fresh arrangement; **Undo AI curation** restores the preceding design. Local image analysis and architectural rules drive the proposals, with no external model call.
 11. Open **Review & publish**. LIEUVA validates every visible work and object, shows the captured share cover, blocks invalid geometry, and publishes only after the review passes.
 
 Drafts autosave per template in IndexedDB. Direct template routes survive refresh and offer recovery before editing continues.
@@ -192,7 +193,7 @@ scripts/validate-glb-contract.mjs   Template-export contract validator
 .github/workflows/                  Pages deployment and expiry cleanup
 ```
 
-The three builder rooms are generated procedurally in `GalleryScene.tsx`; marketing copy states this honestly. The Danny reference exhibition is an authored Blender GLB. [`blender/EXPORT_CONTRACT.md`](./blender/EXPORT_CONTRACT.md), `blender/create_templates.py`, and the validator define the path for replacing procedural rooms with exported GLBs without pretending that migration is already complete.
+White Cube, Warm Gallery (`nocturne`) and Grand Forum now load authored `premium-v2` Blender GLBs by default in the shared Studio and visitor renderer. The existing procedural builder remains the loading/error fallback and explicit `?environment=procedural` rollback. Editable artwork, placement, camera, history and publication contracts remain owned by Studio. Desktop/mobile files, AO maps, editable sources and the separate 4K Cycles masters are documented in [`blender/production/README.md`](./blender/production/README.md). `npm run validate:premium` checks all six exports and is included in `npm run check`. Danny retains its separate authored runtime.
 
 The Danny demo ships a full desktop GLB and a metadata-equivalent mobile derivative with reduced geometry and texture sizes. Runtime quality detection selects the derivative on low-tier devices and Meshopt decoding uses Web Workers. See [`public/assets/demo/README.md`](./public/assets/demo/README.md).
 
@@ -296,3 +297,5 @@ Review [ASSET_LICENSES.md](./ASSET_LICENSES.md) before reusing artwork, models, 
 ## Asset notice
 
 The project owner has confirmed permission to display and distribute the Danny Hirsch artwork and gallery assets as part of the LIEUVA demo. That project-specific permission does not automatically grant third parties a reusable asset license. See [ASSET_LICENSES.md](./ASSET_LICENSES.md) for the current notice and items that still require formal provenance records.
+
+Studio catalogue and curation implementation, validation and pending visual QA: [`audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md`](./audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md).

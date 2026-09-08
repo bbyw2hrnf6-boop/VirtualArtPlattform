@@ -1,15 +1,17 @@
-# LIEUVA template runtime previews
+# LIEUVA template environments and runtime previews
 
-These three 965 × 752 WebP files are real captures of the shared Three.js Studio runtime, taken from each template's Walk Preview on 2026-08-27. They use the bundled sample artworks and truthfully represent the architecture, lighting and default material direction that opens in Studio.
+Updated 2026-09-08. White Cube, Warm Gallery (internal `nocturne`) and Grand Forum load `premium-v2` by default in Studio and the shared visitor renderer. `premium-v1` is retained as the archived first review candidate. Sources and reproducible Blender commands: [production README](../../../blender/production/README.md).
 
-- `white-cube-preview.webp`: neutral contemporary room, framed openings and museum light
-- `nocturne-preview.webp`: intimate warm room, timber floor, bronze details and focused artwork light
-- `pavilion-preview.webp`: large museum forum, skylight, connected zones and a ceremonial axis
+The three preview images below were captured by the real Studio capture function from each default sample collection's Walk Preview, via the local publish-review dialog. No publication was submitted. They are actual browser renderings, not Cycles beauty images or generated UI concepts. Display URLs include `?v=premium-v2` to refresh browser caches. The three native 4K Cycles masters remain separate in `blender/production/v1/`.
 
-SHA-256 checksums:
+| Preview | Pixels | Bytes | SHA-256 |
+| --- | --- | --- | --- |
+| `white-cube-preview.webp` | 661 × 540 | 5,252 | `2bf809d69c366e819ee8a93cb9528cca05245627fa6ec675720583f2d74c4cc6` |
+| `nocturne-preview.webp` | 661 × 540 | 8,974 | `d5f585ccd5c104714739578cfd16689b6f6ae77222b437f9663b6ab287b46694` |
+| `pavilion-preview.webp` | 661 × 540 | 13,480 | `b6d982982e864f413fdf3af8e2d4900c15747348497d88e160e3e3bfba893a6f` |
 
-```text
-0d478b23f0d78eb2cd820d82a240e5bde31f9a33a62a1281428d9aa65493a786  nocturne-preview.webp
-ef52c79c7982da6691bc557376fb0be91e82f39ea3293aa160dfafee54a17d9f  pavilion-preview.webp
-4db2d125d6aaebbe6eded6542537b0e512812a34b164823d05eb528108c7e126  white-cube-preview.webp
-```
+## Runtime assets
+
+Six self-contained GLBs ship under `premium-v2/`. Maximum texture dimensions are 1024 px desktop / 512 px mobile. Each retains exact template dimensions, 4/4/14 placement IDs, hidden colliders, navmesh, start/look and artwork/view anchors. Cosmetic meshes are batched separately from functional geometry. Geometry-only AO is in UV channel 1; editable albedo/detail uses metric UV channel 0. The current controller consumes colliders and canonical Studio surfaces, while exported navmesh/anchors remain contract evidence.
+
+Run `npm run validate:premium` for exact current measurements in `audit/premium-glb-measurements.json`. File size is distinct from decoded texture memory. See [licenses](../../../ASSET_LICENSES.md) for project-generated geometry, existing albedo derivatives and fictional demo artwork.

@@ -1,3 +1,4 @@
+import { catalogObject, DECOR_CATALOG, FLOOR_OPTIONS, WALL_OPTIONS } from "./features/gallery/designCatalog";
 import {
   lazy,
   Suspense,
@@ -19,6 +20,8 @@ import { TEMPLATES } from "./features/gallery/templates";
 import {
   autoCurateGallery,
   type CurationPhase,
+  type CurationStyle,
+  type CurationScope,
   type CurationReport,
 } from "./features/gallery/autoCurator";
 import {
@@ -175,22 +178,6 @@ type GalleryLoadState =
   | { status: "access-denied" }
   | { status: "error" };
 const MAX_DECOR_OBJECTS = 8;
-const DECOR_CATALOG: Array<{ id: DecorId; name: string; size: string }> = [
-  { id: "olive", name: "Olive tree", size: "1.8 m high · 1.25 m footprint" },
-  {
-    id: "snake-plant",
-    name: "Snake plant",
-    size: "1.0 m high · 0.78 m footprint",
-  },
-  { id: "arc-lamp", name: "Arc lamp", size: "2.0 m high · 2.05 × 0.9 m" },
-  { id: "pedestal", name: "Pedestal", size: "1.0 m high · 1.05 m square" },
-  { id: "leather-bench", name: "Leather bench", size: "2.45 × 0.92 m footprint" },
-  {
-    id: "stone-sculpture",
-    name: "Stone study",
-    size: "0.9 m high · 1.2 m footprint",
-  },
-];
 const decorName = (id: DecorId) =>
   DECOR_CATALOG.find((item) => item.id === id)?.name ?? id.replaceAll("-", " ");
 
@@ -497,12 +484,12 @@ function LandingProductProof() {
           aria-label="Open a working LIEUVA Studio Space"
         >
           <img
-            src="./assets/templates/nocturne-preview.webp"
+            src="./assets/templates/nocturne-preview.webp?v=premium-v2"
             width="965"
             height="752"
             loading="eager"
             decoding="async"
-            alt="Nocturne Space concept shown from visitor eye level"
+            alt="Warm Gallery captured from the interactive Studio at visitor eye level"
           />
           <span className="landing-proof__status"><i /> Walk preview ready</span>
           <span className="landing-proof__open">Open working Studio <b>↗</b></span>
@@ -640,7 +627,7 @@ function RoomShowcase({ embedded = false }: { embedded?: boolean }) {
               aria-label={`Try ${template.name} with sample artwork`}
             >
               <img
-                src={`./assets/templates/${template.id}-preview.webp`}
+                src={`./assets/templates/${template.id}-preview.webp?v=premium-v2`}
                 width="965"
                 height="752"
                 loading="lazy"
@@ -904,7 +891,7 @@ function TemplatePicker({
                 <span className="template-number">{template.index}</span>
                 <div className="template-preview">
                   <img
-                    src={`./assets/templates/${template.id}-preview.webp`}
+                    src={`./assets/templates/${template.id}-preview.webp?v=premium-v2`}
                     width="965"
                     height="752"
                     decoding="async"
@@ -1089,7 +1076,11 @@ function Studio({
   const [curating, setCurating] = useState(false);
   const [curationPhase, setCurationPhase] = useState<CurationPhase>("palette");
   const [curationReport, setCurationReport] = useState<CurationReport>();
-  const [curationSnapshot, setCurationSnapshot] = useState<GalleryDraft>();
+  const [curationAppliedDraft, setCurationAppliedDraft] = useState<GalleryDraft>();
+  const [curationStyle, setCurationStyle] = useState<CurationStyle>("auto");
+  const [curationScope, setCurationScope] = useState<CurationScope>("room");
+  const curationRecent = useRef<string[]>([]);
+  const [objectSearch, setObjectSearch] = useState("");
   const [curationError, setCurationError] = useState<string>();
   const [wallFocus, setWallFocus] = useState<WallFocusRequest>();
   const [placementNotice, setPlacementNotice] = useState<string>();
@@ -1491,6 +1482,8 @@ function Studio({
     decorInsertion.current = { x, z };
   }, []);
   const addDecor = (type: DecorId) => {
+    const existing = catalogObject(draft.decor, type);
+    if (existing) { selectDecor(existing.id); return; }
     if (draft.decor.length >= MAX_DECOR_OBJECTS) return;
     const item: DecorPlacement = {
       id: crypto.randomUUID(),
@@ -1514,25 +1507,34 @@ function Studio({
     setSelectedId(undefined);
   };
   const curateWithAi = async () => {
-    if (!draft.artworks.length || curating) return;
-    setCurationSnapshot(draft);
+    if (curating || uploading) return;
+    const source = draftRef.current;
+    setCurationAppliedDraft(undefined);
     setCurationReport(undefined);
     setCurationError(undefined);
     setSelectedId(undefined);
     setSelectedDecorId(undefined);
     setCurating(true);
+    if (usesCompactInteractionLayout()) setToolSheet("peek");
     setCurationPhase("palette");
     try {
       const result = await autoCurateGallery(
-        draft,
+        source,
         roomTemplate,
         setCurationPhase,
+        { style: curationStyle, scope: curationScope, recent: curationRecent.current },
       );
+      if (draftRef.current !== source) {
+        setCurationError("Your draft changed during curation. Your edits were kept; try another variation.");
+        return;
+      }
       const curatedDraft = {
         ...result.draft,
         decor: result.draft.decor.slice(0, MAX_DECOR_OBJECTS),
       };
       setDraft(curatedDraft);
+      setCurationAppliedDraft(curatedDraft);
+      curationRecent.current = [...curationRecent.current, result.report.signature].slice(-12);
       setPlacementError(undefined);
       setCurationReport({
         ...result.report,
@@ -1549,11 +1551,10 @@ function Studio({
     }
   };
   const undoCuration = () => {
-    if (!curationSnapshot) return;
-    setDraft(curationSnapshot);
-    setCurationSnapshot(undefined);
+    if (draftRef.current !== curationAppliedDraft) return;
+    undoDraft();
+    setCurationAppliedDraft(undefined);
     setCurationReport(undefined);
-    setCurationError(undefined);
     setSelectedId(undefined);
     setSelectedDecorId(undefined);
   };
@@ -1652,7 +1653,7 @@ function Studio({
         setDraft(working);
         setPlacementError(undefined);
         setCurationReport(undefined);
-        setCurationSnapshot(undefined);
+        setCurationAppliedDraft(undefined);
         selectArtwork(placed[0].id);
         requestWallFocus(placed[0].wall);
         trackTelemetry("artwork_placed", {
@@ -2126,12 +2127,8 @@ function Studio({
           <button
             className="ai-curate-button"
             onClick={() => void curateWithAi()}
-            disabled={!draft.artworks.length || curating || uploading}
-            title={
-              draft.artworks.length
-                ? "Automatically curate this Project"
-                : "Upload artwork first"
-            }
+            disabled={curating || uploading}
+            title="Generate a new room variation; adjust its direction in the tools"
           >
             <span>✦</span>
             {curating ? "Curating…" : "AI Curator"}
@@ -2227,12 +2224,35 @@ function Studio({
               type="button"
               className="studio-mobile-actions__curate"
               onClick={() => void curateWithAi()}
-              disabled={!draft.artworks.length || curating || uploading}
+              disabled={curating || uploading}
             >
               <span aria-hidden="true">✦</span>{" "}
               {curating ? "Curating…" : "Curate with AI"}
             </button>
           </section>
+          <Accordion title="Design direction">
+            <div className="placement">
+              <label>Style
+                <select aria-label="Curation style" value={curationStyle} onChange={(event) => setCurationStyle(event.target.value as CurationStyle)}>
+                  <option value="auto">Surprise me</option>
+                  <option value="quiet">Quiet & light</option>
+                  <option value="warm">Earth & timber</option>
+                  <option value="bold">Sculptural contrast</option>
+                </select>
+              </label>
+              <label>Change
+                <select aria-label="Curation scope" value={curationScope} onChange={(event) => setCurationScope(event.target.value as CurationScope)}>
+                  <option value="room">Surfaces & objects</option>
+                  <option value="all">Include artwork layout</option>
+                  <option value="objects">Objects only</option>
+                </select>
+              </label>
+            </div>
+            <p className="object-help">A fresh arrangement with every run. Locked artworks stay in place. Undo restores the previous design.</p>
+            <button className="catalog-control" onClick={() => void curateWithAi()} disabled={curating || uploading}>
+              {curating ? "Curating…" : "Generate variation"}
+            </button>
+          </Accordion>
           <section>
             <p className="tool-label">01 · Artwork</p>
             <label
@@ -2610,34 +2630,11 @@ function Studio({
           </section>
           <Accordion title="02 · Walls">
             <p className="object-help">
-              Ten distinct architectural finishes, tuned to remain calm behind the
-              artwork.
+              Choose a wall colour or an architectural material. Changes appear
+              immediately in the room.
             </p>
             <Swatches
-              options={[
-                ["chalk", "linear-gradient(135deg,#f1eee6,#cfcac0)", "plaster"],
-                ["warm", "linear-gradient(135deg,#c99478,#8f5545)", "clay limewash"],
-                ["light-concrete", "linear-gradient(135deg,#d6d6d4,#aeb0b0)", "light concrete"],
-                ["charcoal", "linear-gradient(135deg,#3a3c39,#202220)", "dark concrete"],
-                [
-                  "microcement",
-                  "linear-gradient(135deg,#a9a398,#777970)",
-                  "greige microcement",
-                ],
-                [
-                  "limestone",
-                  "linear-gradient(135deg,#e4bb72,#b67832)",
-                  "gold sandstone",
-                ],
-                [
-                  "oak-slats",
-                  "repeating-linear-gradient(90deg,#b58d5c 0 8px,#1f1b17 9px 12px)",
-                  "light oak slats",
-                ],
-                ["black-slats", "repeating-linear-gradient(90deg,#272827 0 8px,#050606 9px 12px)", "black oak slats"],
-                ["marble-wall", "linear-gradient(135deg,#f0eee8 38%,#9b9d99 40%,#e3e0d8 43%)", "white marble"],
-                ["dark-stone", "linear-gradient(135deg,#15241f,#445148 52%,#202a25)", "green stone"],
-              ]}
+              options={WALL_OPTIONS}
               value={draft.wall}
               onChange={(value) =>
                 update("wall", value as GalleryDraft["wall"])
@@ -2646,38 +2643,11 @@ function Studio({
           </Accordion>
           <Accordion title="03 · Floor">
             <p className="object-help">
-              Ten distinct gallery-grade surfaces with calibrated grain and natural
-              reflections.
+              Stone, timber, tile or cork. Choose a finish and compare it
+              directly in the room; Undo takes you back.
             </p>
             <Swatches
-              options={[
-                [
-                  "concrete",
-                  "linear-gradient(135deg,#777672,#a7a39a)",
-                  "mineral concrete",
-                ],
-                ["dark-concrete", "linear-gradient(135deg,#303231,#595b58)", "dark polished concrete"],
-                ["microcement", "linear-gradient(135deg,#b8aa95,#8e8272)", "warm microcement"],
-                ["slate", "linear-gradient(135deg,#171918,#444845 48%,#222422)", "black slate"],
-                ["travertine-floor", "repeating-linear-gradient(0deg,#d8c8aa 0 3px,#e9ddc8 4px 9px)", "beige travertine"],
-                [
-                  "marble",
-                  "linear-gradient(135deg,#ece9e1 35%,#8c8f8c 37%,#e2ded4 40%)",
-                  "white marble",
-                ],
-                [
-                  "black-marble",
-                  "linear-gradient(135deg,#111 35%,#b8b8b3 37%,#191919 40%)",
-                  "black marble",
-                ],
-                [
-                  "walnut",
-                  "repeating-linear-gradient(0deg,#392116 0 8px,#6b4028 9px 16px)",
-                  "walnut",
-                ],
-                ["oak", "repeating-linear-gradient(90deg,#c59a66 0 12px,#d6b17f 13px 25px)", "natural oak"],
-                ["terrazzo", "radial-gradient(circle at 20% 25%,#777 0 2px,transparent 3px),radial-gradient(circle at 65% 70%,#b78f76 0 2px,#d8d4ca 3px)", "light terrazzo"],
-              ]}
+              options={FLOOR_OPTIONS}
               value={draft.floor}
               onChange={(value) =>
                 update("floor", value as GalleryDraft["floor"])
@@ -2739,7 +2709,8 @@ function Studio({
           <Accordion title="06 · Objects">
             <p className="object-help">
               Add an object, then drag it directly in the room or click an empty
-              floor position. Every card shows its real collision footprint.
+              floor position. Selecting a card already in the room opens that object,
+              without adding a duplicate.
             </p>
             <p
               className={`object-limit ${draft.decor.length >= MAX_DECOR_OBJECTS ? "is-full" : ""}`}
@@ -2750,11 +2721,13 @@ function Studio({
                 ? " · Remove one to add another."
                 : ""}
             </p>
+            <input type="search" className="catalog-control" aria-label="Find an object" placeholder="Find an object…" value={objectSearch} onChange={(event) => setObjectSearch(event.target.value)} />
             <div className="object-grid">
-              {DECOR_CATALOG.map((item) => (
+              {DECOR_CATALOG.filter(item => `${item.name} ${item.size}`.toLowerCase().includes(objectSearch.trim().toLowerCase())).map((item) => (
                 <button
                   key={item.id}
-                  disabled={draft.decor.length >= MAX_DECOR_OBJECTS}
+                  disabled={draft.decor.length >= MAX_DECOR_OBJECTS && !catalogObject(draft.decor, item.id)}
+                  aria-pressed={Boolean(catalogObject(draft.decor, item.id))}
                   onClick={() => addDecor(item.id)}
                 >
                   <span
@@ -2765,7 +2738,7 @@ function Studio({
                   </span>
                   <span>
                     <strong>{item.name}</strong>
-                    <small>{item.size}</small>
+                    <small>{catalogObject(draft.decor, item.id) ? "In room · Select to edit" : item.size}</small>
                   </span>
                 </button>
               ))}
@@ -2949,14 +2922,16 @@ function Studio({
                 <>
                   <h3>{curationReport?.mood}</h3>
                   <p>
-                    {curationReport?.placementCount} artworks composed ·{" "}
+                    {curationReport?.placementCount ? `${curationReport.placementCount} artworks composed · ` : ""}
                     {curationReport?.decorCount} objects placed
                     <br />
                     {curationReport?.palette}
                   </p>
+                  <p>{curationReport?.rationale}</p>
+                  <button className="ai-undo" onClick={() => void curateWithAi()}>Another variation</button>
                 </>
               )}
-              {curationSnapshot && !curationError && (
+              {curationAppliedDraft === draft && !curationError && (
                 <button className="ai-undo" onClick={undoCuration}>
                   Undo AI curation
                 </button>
@@ -3419,6 +3394,7 @@ function Swatches({
 }) {
   return (
     <div className="swatches">
+      <p className="object-help swatch-current">Selected: {options.find(([name]) => name === value)?.[2] ?? value}</p>
       {options.map(([name, color, label]) => (
         <button
           type="button"

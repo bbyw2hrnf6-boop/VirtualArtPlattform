@@ -1,13 +1,177 @@
 [
   {
+    "file": "white-cube-desktop.glb",
+    "id": "white-cube",
+    "bytes": 1008172,
+    "visibleTriangles": 8732,
+    "totalTriangles": 10004,
+    "navTriangles": 1192,
+    "materialBatches": 12,
+    "aoMaterials": 7,
+    "estimatedTextureBytes": 50331648,
+    "images": [
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ]
+    ],
+    "roles": {
+      "architecture": 6,
+      "art-anchor": 4,
+      "collider": 6,
+      "navmesh": 1,
+      "ceiling": 1,
+      "room": 1,
+      "shell": 4,
+      "floor": 1,
+      "surface": 4,
+      "view": 1,
+      "walk-look": 1,
+      "walk-start": 1
+    }
+  },
+  {
+    "file": "white-cube-mobile.glb",
+    "id": "white-cube",
+    "bytes": 723428,
+    "visibleTriangles": 8732,
+    "totalTriangles": 10004,
+    "navTriangles": 1192,
+    "materialBatches": 12,
+    "aoMaterials": 7,
+    "estimatedTextureBytes": 12582912,
+    "images": [
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ]
+    ],
+    "roles": {
+      "architecture": 6,
+      "art-anchor": 4,
+      "collider": 6,
+      "navmesh": 1,
+      "ceiling": 1,
+      "room": 1,
+      "shell": 4,
+      "floor": 1,
+      "surface": 4,
+      "view": 1,
+      "walk-look": 1,
+      "walk-start": 1
+    }
+  },
+  {
     "file": "nocturne-desktop.glb",
     "id": "nocturne",
-    "bytes": 1991840,
+    "bytes": 2332364,
     "visibleTriangles": 25600,
     "totalTriangles": 26592,
     "navTriangles": 900,
     "materialBatches": 14,
+    "aoMaterials": 8,
+    "estimatedTextureBytes": 67108864,
     "images": [
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
       [
         1024,
         1024
@@ -39,12 +203,50 @@
   {
     "file": "nocturne-mobile.glb",
     "id": "nocturne",
-    "bytes": 1639904,
+    "bytes": 1763840,
     "visibleTriangles": 25102,
     "totalTriangles": 26094,
     "navTriangles": 900,
     "materialBatches": 14,
+    "aoMaterials": 8,
+    "estimatedTextureBytes": 16777216,
     "images": [
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
       [
         512,
         512
@@ -76,12 +278,42 @@
   {
     "file": "pavilion-desktop.glb",
     "id": "pavilion",
-    "bytes": 2440488,
-    "visibleTriangles": 18892,
-    "totalTriangles": 35908,
+    "bytes": 2757192,
+    "visibleTriangles": 18140,
+    "totalTriangles": 35156,
     "navTriangles": 16688,
     "materialBatches": 13,
+    "aoMaterials": 7,
+    "estimatedTextureBytes": 50331648,
     "images": [
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
       [
         1024,
         1024
@@ -109,12 +341,42 @@
   {
     "file": "pavilion-mobile.glb",
     "id": "pavilion",
-    "bytes": 2242320,
-    "visibleTriangles": 18892,
-    "totalTriangles": 35908,
+    "bytes": 2383060,
+    "visibleTriangles": 18140,
+    "totalTriangles": 35156,
     "navTriangles": 16688,
     "materialBatches": 13,
+    "aoMaterials": 7,
+    "estimatedTextureBytes": 12582912,
     "images": [
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
       [
         512,
         512

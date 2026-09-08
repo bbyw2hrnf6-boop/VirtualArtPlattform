@@ -59,4 +59,42 @@ The [Blender glTF manual](https://docs.blender.org/manual/en/5.2/addons/scene_gl
 
 ## Execution evidence
 
-To be completed with actual outputs, render rounds, measurements and test results.
+### Delivered assets and user-authorized default migration
+
+The initial v1 integration was explicitly opt-in. The user's subsequent request authorized showing the upgrade inside walkable rooms and Studio by default. The final implementation therefore selects `premium-v2` on ordinary Studio and visitor URLs. `?environment=procedural` is an explicit local rollback. No gallery IDs, publication revisions, ACL, Storage names, route contracts or `aura_*` identifiers were migrated.
+
+- All three rooms have actual round-1 and round-2 1200 px Cycles proofs, plus native round-3 **3840 × 2160 / 16-bit PNG** masters, 48 samples and denoising in `blender/production/v1/`. Metal startup did not complete promptly; the finished rounds used CPU Cycles on local Blender 5.2.0 LTS. No 8K deliverable or real-time 4K image substitution is claimed.
+- `blender/production/v2/` contains three packed editable beauty scenes and three packed runtime scenes. The new source exports add explicit short-distance AO and a texture-preserving warm charcoal albedo. `runtime_bakes.py` bakes only architecture, without artwork or movable furniture.
+- Six v2 GLBs contain PBR materials, metric UVs and independent AO atlases. The browser retains AO during material edits, rebuilds architectural light/reflections after attachment, preserves editable host transforms, and removes retired GPU resources. The Forum reflection probe is outside the divider.
+- Default ceiling geometry is authored; alternate finishes use the existing editable system. Overhead does not intercept placement rays, merged cosmetics do not become giant collision boxes, and a Floor edit does not recolor timber overhead. Inside-room Arrange wall views remain opaque for accurate placement.
+- Fresh real Studio capture images replace all three preview cards. The new cache selector is also used by Explore/Creator fallback cards. The beauty masters are **not** substituted for these runtime previews.
+
+### Export measurements
+
+`npm run validate:premium` independently parses GLB JSON/BIN, checks dimensions, exact surface IDs/origins/usable sizes, required helpers, exported navigation vertices against authored oriented colliders, geometry/file/material budgets, embedded texture sizes, and AO UV-channel presence. Triangle counts below are exported visible architecture, not a full scene with user content. Estimated texture memory assumes RGBA8 plus mipmaps; it excludes the renderer, artwork, probes and intermediate resources.
+
+| Asset | MiB file | Visible triangles | Material batches | Estimated texture MiB |
+| --- | ---: | ---: | ---: | ---: |
+| white-cube-desktop.glb | 0.96 | 8,732 | 12 | 48 |
+| white-cube-mobile.glb | 0.69 | 8,732 | 12 | 12 |
+| nocturne-desktop.glb | 2.22 | 25,600 | 14 | 64 |
+| nocturne-mobile.glb | 1.68 | 25,102 | 14 | 16 |
+| pavilion-desktop.glb | 2.63 | 18,140 | 13 | 48 |
+| pavilion-mobile.glb | 2.27 | 18,140 | 13 | 12 |
+
+### Validation evidence — local, 8 September 2026
+
+- `npm run check` using Node **22.23.2**: passed. **326 Vitest tests / 54 files**, **43 Node script tests**, lint, TypeScript, six export validations, production build and enforced release budgets passed.
+- Focused authored-environment suite: **22 tests**, including late disposal, rejected downloads/contracts without host mutation, duplicate/missing shells, AO/UV retention, transformed host geometry, ceiling switches and collision separation.
+- Final release bundle: JS gzip **572,525 bytes** (<575,000), CSS gzip **53,631** (<54,000), largest lazy JS **173,062** (<195,000). Stricter aspirational JS/CSS/entry targets remain open; their ceilings were not increased.
+- Browser: all three templates loaded v2 in Arrange and Walk Preview at 1440×1000 and 390×844. Mobile selected each `-mobile.glb`; the tested mobile pages had 390 px document width and 390 px scroll width. No new console errors were observed in the checked fresh sessions.
+- White Cube: uploaded a bundled fictional study locally, changed wall, set height to 1.80 m, placed by clicking the wall (east, x=1.38 m, y=1.69 m), and reversed all test edits back to the three-work sample. The renderer remained persistent.
+- Nocturne: switched default ceiling → modern → undo/redo → default, changed floor to concrete with timber overhead preserved, undid the change, reloaded and recovered the three-work local draft. The new room remained in the recovered Studio.
+- Grand Forum: room-map targets arrived at NW (-15,3.9,-15), NE (15,3.9,-15), SW (-15,3.9,15), SE (15,3.9,15). Existing canonical placement and collision tests also passed.
+- All three publish-review dialogs reported **Geometry valid / 0 warnings** and produced images from the imported room. Final sign-in/publish actions were not taken. Public visitor integration is supported by the shared renderer and automated publishing regressions; no newly deployed public-room test is claimed.
+
+### Remaining limits
+
+The runtime uses rasterized lighting, AO and reflection probes, while the beauty scenes use Cycles and staged exhibition compositions. The shipped real-time result is a measurable architectural/material upgrade; it is not a claim of pixel parity with the supplied references or a professional art-direction sign-off. Actual iOS/Android sustained FPS, thermal behavior and memory-pressure tests remain a release task. Browser viewport emulation cannot establish those results. Exported navmesh is checked at vertices against colliders; this is not a proof of every triangle/path or an integrated navmesh controller.
+
+No automatic commit, push, deployment or publishing was performed. The owner controls the release. The installed pipeline and source assets are documented in `blender/production/README.md`; licensing is recorded in `ASSET_LICENSES.md`.

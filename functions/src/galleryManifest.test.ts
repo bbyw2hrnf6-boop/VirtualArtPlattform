@@ -102,3 +102,14 @@ describe("trusted gallery manifest", () => {
       .toThrow(/explicit boolean/);
   });
 });
+
+
+it("accepts the expanded Studio material and furnishing contract without changing schema v3", () => {
+  for (const change of [
+    ...["sage", "ink-blue", "dusty-rose", "sand"].map(wall => ({ wall })),
+    ...["cork", "terracotta", "basalt-terrazzo", "parquet"].map(floor => ({ floor })),
+    ...["lounge-chair", "stone-table", "light-column"].map(type => ({ decor: [{ id: "furnishing", type, x: 3, z: 2, rotation: 0, scale: 1 }] })),
+  ]) {
+    expect(validateTrustedGalleryManifest(validManifest(change), context)).toMatchObject(change);
+  }
+});

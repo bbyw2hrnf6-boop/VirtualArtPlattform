@@ -40,7 +40,11 @@ export type WallFinish =
   | "light-concrete"
   | "black-slats"
   | "marble-wall"
-  | "dark-stone";
+  | "dark-stone"
+  | "sage"
+  | "ink-blue"
+  | "dusty-rose"
+  | "sand";
 export type FloorFinish =
   | "concrete"
   | "oak"
@@ -52,7 +56,11 @@ export type FloorFinish =
   | "microcement"
   | "slate"
   | "dark-concrete"
-  | "travertine-floor";
+  | "travertine-floor"
+  | "cork"
+  | "terracotta"
+  | "basalt-terrazzo"
+  | "parquet";
 export type CeilingFinish = "gallery" | "warm" | "dark" | "skylight" | "vaulted";
 export type LightingPreset = "daylight" | "museum" | "evening";
 export type PlantPotFinish = "light" | "black";
@@ -68,7 +76,10 @@ export type DecorId =
   | "snake-plant"
   | "leather-bench"
   | "wood-stool"
-  | "rope-barrier";
+  | "rope-barrier"
+  | "lounge-chair"
+  | "stone-table"
+  | "light-column";
 export type ArtworkFrame =
   | "black"
   | "white"

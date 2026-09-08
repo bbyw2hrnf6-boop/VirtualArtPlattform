@@ -1,9 +1,9 @@
+import { FLOOR_OPTIONS, WALL_OPTIONS } from "./designCatalog";
 import type { GalleryTemplate } from "./templates";
 import {
   FORUM_INTERIOR_WALLS,
   isShortGalleryWall,
   type Artwork,
-  type CeilingFinish,
   type DecorId,
   type DecorPlacement,
   type FloorFinish,
@@ -16,6 +16,9 @@ import {
   DEFAULT_ARTWORK_EYE_LINE_METRES,
   repairDraftPlacements,
   snapToPlacementGrid,
+  DECOR_FOOTPRINTS,
+  validateDecorPlacement,
+  validateDraftPlacements,
 } from "./editor/placementValidation";
 
 export type CurationPhase = "palette" | "composition" | "atmosphere";
@@ -25,6 +28,8 @@ export interface CurationReport {
   palette: string;
   placementCount: number;
   decorCount: number;
+  signature: string;
+  rationale: string;
 }
 
 type PaletteAnalysis = {
@@ -32,29 +37,31 @@ type PaletteAnalysis = {
   saturation: number;
   warmth: number;
 };
-type CuratedAtmosphere = {
-  wall: WallFinish;
-  floor: FloorFinish;
-  ceiling: CeilingFinish;
-  lighting: LightingPreset;
-  mood: string;
-  palette: string;
-};
+export type CurationStyle = "auto" | "quiet" | "warm" | "bold";
+export type CurationScope = "room" | "all" | "objects";
+export interface CurationOptions {
+  style?: CurationStyle;
+  scope?: CurationScope;
+  seed?: number;
+  recent?: string[];
+}
 
-const pause = (duration: number) =>
-  new Promise<void>((resolve) => window.setTimeout(resolve, duration));
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value));
 
 async function imagePalette(source: string): Promise<PaletteAnalysis | null> {
   const image = new Image();
   image.decoding = "async";
+  image.crossOrigin = "anonymous";
   image.src = source;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await image.decode();
+    await Promise.race([image.decode(), new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Image unavailable")), 3000);
+    })]);
   } catch {
     return null;
-  }
+  } finally { clearTimeout(timer); }
   const canvas = document.createElement("canvas");
   canvas.width = 36;
   canvas.height = 36;
@@ -111,16 +118,9 @@ async function analyzeCollection(
 }
 
 type Random = () => number;
-type ScoredAtmosphere = CuratedAtmosphere & {
-  score: (analysis: PaletteAnalysis) => number;
-};
-
-function createRandom(): Random {
-  const values = new Uint32Array(1);
-  crypto.getRandomValues(values);
-  let seed = values[0] || Date.now();
+function createRandom(initial?: number): Random {
+  let seed = initial ?? crypto.getRandomValues(new Uint32Array(1))[0];
   return () => {
-    seed |= 0;
     seed = (seed + 0x6d2b79f5) | 0;
     let value = Math.imul(seed ^ (seed >>> 15), 1 | seed);
     value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
@@ -137,166 +137,39 @@ function shuffled<T>(items: T[], random: Random) {
   return result;
 }
 
-function chooseAtmosphere(
-  analysis: PaletteAnalysis,
-  templateId: GalleryDraft["templateId"],
-  current: GalleryDraft,
-  random: Random,
-): CuratedAtmosphere {
-  const collections: Record<GalleryDraft["templateId"], ScoredAtmosphere[]> = {
-    "white-cube": [
-      {
-        wall: "chalk",
-        floor: "marble",
-        ceiling: "gallery",
-        lighting: "daylight",
-        mood: "Luminous restraint",
-        palette: "Plaster · white marble · daylight",
-        score: (item) => 1.2 - item.luminance + (1 - item.saturation) * 0.25,
-      },
-      {
-        wall: "linen",
-        floor: "concrete",
-        ceiling: "gallery",
-        lighting: "museum",
-        mood: "Quiet modernism",
-        palette: "Linen · mineral concrete · museum light",
-        score: (item) => 0.6 + (1 - item.saturation) * 0.4,
-      },
-      {
-        wall: "warm",
-        floor: "walnut",
-        ceiling: "warm",
-        lighting: "evening",
-        mood: "Warm minimalism",
-        palette: "Limewash · walnut · evening light",
-        score: (item) => 0.55 + Math.max(0, item.warmth) * 3,
-      },
-      {
-        wall: "charcoal",
-        floor: "black-marble",
-        ceiling: "dark",
-        lighting: "museum",
-        mood: "Graphic contrast",
-        palette: "Charcoal · black marble · museum light",
-        score: (item) => 0.4 + item.saturation + item.luminance * 0.25,
-      },
-    ],
-    nocturne: [
-      {
-        wall: "charcoal",
-        floor: "walnut",
-        ceiling: "warm",
-        lighting: "evening",
-        mood: "Warm nocturne",
-        palette: "Charcoal · walnut · amber light",
-        score: (item) => 0.8 + Math.max(0, item.warmth) * 3,
-      },
-      {
-        wall: "charcoal",
-        floor: "black-marble",
-        ceiling: "dark",
-        lighting: "museum",
-        mood: "Cinematic contrast",
-        palette: "Charcoal · black marble · focused light",
-        score: (item) => 0.7 + item.saturation * 0.7,
-      },
-      {
-        wall: "warm",
-        floor: "dark-oak",
-        ceiling: "dark",
-        lighting: "evening",
-        mood: "Bronze dusk",
-        palette: "Limewash · smoked oak · low light",
-        score: (item) => 0.55 + Math.abs(item.warmth),
-      },
-      {
-        wall: "linen",
-        floor: "black-marble",
-        ceiling: "gallery",
-        lighting: "museum",
-        mood: "Gallery chiaroscuro",
-        palette: "Linen · nero marble · museum light",
-        score: (item) => 0.55 + (1 - item.luminance) * 0.35,
-      },
-    ],
-    pavilion: [
-      {
-        wall: "travertine",
-        floor: "dark-oak",
-        ceiling: "warm",
-        lighting: "museum",
-        mood: "Sculptural warmth",
-        palette: "Travertine · dark oak · museum light",
-        score: (item) => 0.7 + item.saturation * 0.65,
-      },
-      {
-        wall: "warm",
-        floor: "marble",
-        ceiling: "warm",
-        lighting: "evening",
-        mood: "Soft monumentality",
-        palette: "Limewash · white marble · evening light",
-        score: (item) => 0.65 + Math.max(0, item.warmth) * 2,
-      },
-      {
-        wall: "linen",
-        floor: "walnut",
-        ceiling: "gallery",
-        lighting: "daylight",
-        mood: "Natural atrium",
-        palette: "Linen · walnut · daylight",
-        score: (item) => 0.6 + item.luminance * 0.35,
-      },
-      {
-        wall: "chalk",
-        floor: "black-marble",
-        ceiling: "dark",
-        lighting: "museum",
-        mood: "Monumental monochrome",
-        palette: "Plaster · nero marble · halo light",
-        score: (item) => 0.5 + item.saturation * 0.5,
-      },
-      {
-        wall: "travertine",
-        floor: "marble",
-        ceiling: "gallery",
-        lighting: "daylight",
-        mood: "Daylight forum",
-        palette: "Travertine · carrara · sky light",
-        score: (item) => 0.5 + (1 - item.saturation) * 0.35,
-      },
-    ],
-  };
-  const currentSignature = [
-    current.wall,
-    current.floor,
-    current.ceiling,
-    current.lighting,
-  ].join("|");
-  const candidates = collections[templateId]
-    .filter(
-      (item) =>
-        [item.wall, item.floor, item.ceiling, item.lighting].join("|") !==
-        currentSignature,
-    )
-    .map((item) => ({ item, value: item.score(analysis) + random() * 0.42 }))
-    .sort((a, b) => b.value - a.value);
-  const chosen =
-    candidates[
-      Math.min(
-        candidates.length - 1,
-        Math.floor(random() * Math.min(2, candidates.length)),
-      )
-    ].item;
-  return {
-    wall: chosen.wall,
-    floor: chosen.floor,
-    ceiling: chosen.ceiling,
-    lighting: chosen.lighting,
-    mood: chosen.mood,
-    palette: chosen.palette,
-  };
+const atmospheres: Record<Exclude<CurationStyle, "auto">, {
+  walls: WallFinish[]; floors: FloorFinish[]; lights: LightingPreset[]; mood: string;
+}> = {
+  quiet: {
+    walls: ["chalk", "linen", "sage", "light-concrete", "sand"],
+    floors: ["concrete", "oak", "terrazzo", "cork", "marble"],
+    lights: ["daylight", "museum"], mood: "Quiet modernism",
+  },
+  warm: {
+    walls: ["travertine", "sand", "dusty-rose", "warm", "linen"],
+    floors: ["walnut", "dark-oak", "terracotta", "parquet", "travertine-floor"],
+    lights: ["museum", "evening"], mood: "Earth & timber",
+  },
+  bold: {
+    walls: ["ink-blue", "charcoal", "dark-stone", "microcement"],
+    floors: ["marble", "black-marble", "basalt-terrazzo", "walnut"],
+    lights: ["museum", "evening"], mood: "Sculptural contrast",
+  },
+};
+
+const pick = <T,>(items: T[], random: Random): T => items[Math.floor(random() * items.length)];
+function chooseAtmosphere(analysis: PaletteAnalysis, draft: GalleryDraft, options: CurationOptions, random: Random) {
+  const preferred = analysis.warmth > .08 ? "warm" : analysis.saturation > .45 ? "bold" : "quiet";
+  const style = options.style && options.style !== "auto" ? options.style
+    : pick(["quiet", "warm", "bold", preferred, draft.templateId === "nocturne" ? "warm" : "quiet"] as Array<Exclude<CurationStyle, "auto">>, random);
+  const family = atmospheres[style];
+  // Enumerate compatible pairings, then sample without returning the active pairing.
+  const pairs = family.walls.flatMap(wall => family.floors.map(floor => ({ wall, floor })))
+    .filter(pair => pair.wall !== draft.wall || pair.floor !== draft.floor);
+  const pair = pick(pairs, random);
+  const lighting = pick(family.lights, random);
+  const palette = `${WALL_OPTIONS.find(item => item[0] === pair.wall)?.[2]} · ${FLOOR_OPTIONS.find(item => item[0] === pair.floor)?.[2]} · ${lighting}`;
+  return { ...pair, lighting, mood: family.mood, palette };
 }
 
 function wallWidth(wall: WallId, template: GalleryTemplate) {
@@ -402,152 +275,115 @@ function artworkWidthFactor(aspect: number) {
   return Math.min(2.4, Math.max(0.72, aspect));
 }
 
-function curatedDecor(
-  template: GalleryTemplate,
-  artworkCount: number,
-  current: DecorPlacement[],
-  random: Random,
-): DecorPlacement[] {
+// Furniture occupies the edges of a gallery, with a continuous 2.4 m main aisle.
+// In the Forum, side-room doors at z = ±21 also keep a 2.4 m corridor.
+export function curationCirculationClear(item: DecorPlacement, template: GalleryTemplate) {
+  const [w, d] = DECOR_FOOTPRINTS[item.type];
+  const xExtent = (Math.abs(Math.cos(item.rotation)) * w + Math.abs(Math.sin(item.rotation)) * d) * item.scale / 2;
+  const zExtent = (Math.abs(Math.sin(item.rotation)) * w + Math.abs(Math.cos(item.rotation)) * d) * item.scale / 2;
+  const lampOffset = item.type === "arc-lamp" ? .5 * item.scale : 0;
+  if (Math.abs(item.x) - xExtent - lampOffset < 1.2) return false;
+  if (template.id === "pavilion" && Math.abs(Math.abs(item.z) - 21) - zExtent - lampOffset < 1.2) return false;
+  // Leave a viewing strip in front of the perimeter artworks.
+  return Math.abs(item.x) + xExtent + lampOffset < template.dimensions[0] / 2 - 1.45
+    && Math.abs(item.z) + zExtent + lampOffset < template.dimensions[1] / 2 - 1.45;
+}
+
+function curatedDecor(draft: GalleryDraft, template: GalleryTemplate, random: Random): DecorPlacement[] {
+  const categories: DecorId[][] = [
+    ["leather-bench", "lounge-chair", "wood-stool"],
+    ["olive", "monstera", "snake-plant"],
+    ["stone-sculpture", "pedestal", "floor-vase"],
+    ["stone-table", "light-column", "arc-lamp"],
+  ];
+  const types = categories.map(items => pick(items, random));
+  if (template.id === "pavilion") {
+    types.push(...shuffled(categories.flat().filter(type => !types.includes(type)), random).slice(0, 1 + Math.floor(random() * 2)));
+  } else if (random() < .35) types.pop();
   const [width, depth] = template.dimensions;
-  const count =
-    template.id === "pavilion"
-      ? artworkCount > 10
-        ? 6
-        : 5
-      : artworkCount > 5
-        ? 4
-        : 3;
-  const pools: Record<GalleryDraft["templateId"], DecorId[]> = {
-    "white-cube": [
-      "olive",
-      "snake-plant",
-      "arc-lamp",
-      "pedestal",
-      "stone-sculpture",
-      "leather-bench",
-    ],
-    nocturne: [
-      "olive",
-      "snake-plant",
-      "arc-lamp",
-      "stone-sculpture",
-      "leather-bench",
-      "pedestal",
-    ],
-    pavilion: [
-      "olive",
-      "snake-plant",
-      "leather-bench",
-      "stone-sculpture",
-      "arc-lamp",
-      "pedestal",
-    ],
-  };
-  let types = shuffled(pools[template.id], random).slice(0, count);
-  const currentTypes = current
-    .map((item) => item.type)
-    .sort()
-    .join("|");
-  if (types.slice().sort().join("|") === currentTypes)
-    types = [
-      ...types.slice(1),
-      pools[template.id].find((item) => !types.includes(item)) ?? types[0],
-    ];
-  const points: Array<[number, number]> =
-    template.id === "pavilion"
-      ? [
-          [-0.37, 0.34],
-          [0.37, 0.34],
-          [-0.37, -0.34],
-          [0.37, -0.34],
-          [-0.37, 0],
-          [0.37, 0],
-          [-0.12, 0.36],
-          [0.12, -0.36],
-        ]
-      : [
-          [-0.4, 0.35],
-          [0.4, 0.34],
-          [-0.38, -0.35],
-          [0.38, -0.34],
-          [-0.16, 0.28],
-          [0.18, -0.28],
-        ];
-  return shuffled(points, random)
-    .slice(0, count)
-    .map(([xRatio, zRatio], index) => {
-      const type = types[index];
-      const x = xRatio * width + (random() - 0.5) * width * 0.035;
-      const z = zRatio * depth + (random() - 0.5) * depth * 0.035;
-      const scaleBase =
-        type === "floor-vase" || type === "snake-plant" || type === "wood-stool"
-          ? 0.9
-          : type === "gallery-bench" || type === "leather-bench"
-            ? 1.04
-            : type === "stone-sculpture"
-              ? 0.95
-              : 1;
-      return {
-        id: crypto.randomUUID(),
-        type,
-        x: snapToPlacementGrid(x),
-        z: snapToPlacementGrid(z),
-        rotation: Math.atan2(-x, -z) + (random() - 0.5) * 0.5,
-        scale: scaleBase * (0.9 + random() * 0.22),
+  const points: Array<[number, number]> = template.id === "pavilion"
+    ? [-.36, -.15, .15, .36].flatMap(x => [-.41, -.27, -.09, .09, .27, .41].map(z => [x, z] as [number, number]))
+    : [-.27, .27].flatMap(x => [-.24, 0, .24].map(z => [x, z] as [number, number]));
+  const decor: DecorPlacement[] = [];
+  for (const type of types) {
+    const seat = decor[0];
+    const candidates = shuffled(points, random);
+    if (type === "stone-table" && seat) candidates.unshift([
+      (seat.x + Math.sin(seat.rotation) * 1.65) / width,
+      (seat.z + Math.cos(seat.rotation) * 1.65) / depth,
+    ]);
+    for (const [x, z] of candidates) {
+      const item: DecorPlacement = {
+        id: crypto.randomUUID(), type,
+        x: snapToPlacementGrid(x * width + (random() - .5) * .65),
+        z: snapToPlacementGrid(z * depth + (random() - .5) * .65),
+        // Seats face the collection across the room; objects align to architecture.
+        rotation: type === "lounge-chair" ? (x < 0 ? Math.PI / 2 : Math.PI * 1.5) : pick([0, Math.PI / 2, Math.PI], random),
+        scale: snapToPlacementGrid(.88 + random() * .2),
+        ...(["olive", "monstera", "snake-plant"].includes(type) ? { potColor: pick(["light", "black"] as Array<"light" | "black">, random) } : {}),
       };
-    });
+      if (!curationCirculationClear(item, template) || validateDecorPlacement({ ...draft, decor }, item)) continue;
+      decor.push(item);
+      break;
+    }
+  }
+  return decor;
+}
+
+/** Content signature excludes generated object IDs, so a fresh UUID cannot disguise repetition. */
+export function curationSignature(draft: GalleryDraft) {
+  return JSON.stringify([draft.wall, draft.floor, draft.ceiling, draft.lighting,
+    draft.artworks.map(({ id, wall, x, y, scale }) => [id, wall, x, y, scale]),
+    draft.decor.map(({ type, x, z, rotation, scale, potColor }) => [type, x, z, rotation, scale, potColor]),
+  ]);
+}
+
+export function composeGallery(
+  draft: GalleryDraft, template: GalleryTemplate, options: CurationOptions = {},
+  analysis: PaletteAnalysis = { luminance: .55, saturation: .25, warmth: 0 },
+): { draft: GalleryDraft; report: CurationReport } {
+  const random = createRandom(options.seed);
+  const scope = options.scope ?? "room";
+  const excluded = new Set([curationSignature(draft), ...(options.recent ?? [])]);
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const atmosphere = chooseAtmosphere(analysis, draft, options, random);
+    let candidate: GalleryDraft = { ...draft, ...(scope === "objects" ? {} : {
+      wall: atmosphere.wall, floor: atmosphere.floor, lighting: atmosphere.lighting,
+    }) };
+    if (scope === "all") {
+      const movable = draft.artworks.filter(item => !item.locked && !item.hidden);
+      const fixed = draft.artworks.filter(item => item.locked || item.hidden);
+      const repaired = repairDraftPlacements({ ...candidate, decor: [], artworks: [
+        ...fixed, ...curateArtworkPlacement(movable, template, random),
+      ] });
+      if (repaired.unresolved.length) continue;
+      candidate = { ...candidate, artworks: draft.artworks.map(item =>
+        fixed.includes(item) ? item : repaired.draft.artworks.find(art => art.id === item.id)!),
+      };
+    }
+    candidate = { ...candidate, decor: curatedDecor(candidate, template, random) };
+    if (candidate.decor.length < 3 || validateDraftPlacements(candidate).length) continue;
+    const signature = curationSignature(candidate);
+    if (excluded.has(signature)) continue;
+    return { draft: candidate, report: {
+      mood: scope === "objects" ? "A new composition" : atmosphere.mood,
+      palette: scope === "objects" ? "Your surfaces and lighting retained" : atmosphere.palette,
+      placementCount: scope === "all" ? candidate.artworks.filter(item => !item.locked && !item.hidden).length : 0,
+      decorCount: candidate.decor.length, signature,
+      rationale: `${scope === "all" ? "Locked and hidden works retained." : "Artwork positions retained."} Clear main aisle; no repeated objects.`,
+    } };
+  }
+  throw new Error("No safe new composition fits this draft. Check the highlighted placements or free some wall space.");
 }
 
 export async function autoCurateGallery(
-  draft: GalleryDraft,
-  template: GalleryTemplate,
-  onPhase?: (phase: CurationPhase) => void,
+  draft: GalleryDraft, template: GalleryTemplate,
+  onPhase?: (phase: CurationPhase) => void, options: CurationOptions = {},
 ): Promise<{ draft: GalleryDraft; report: CurationReport }> {
-  const curatable = draft.artworks.filter(
-    (artwork) => !artwork.hidden && !artwork.locked,
-  );
-  if (!draft.artworks.length)
-    throw new Error("Upload at least one artwork before using AI Curator.");
-  if (!curatable.length)
-    throw new Error(
-      "Show or unlock at least one artwork before using AI Curator.",
-    );
-  const random = createRandom();
   onPhase?.("palette");
-  const analysis = await analyzeCollection(curatable);
-  await pause(280);
+  const analysis = await analyzeCollection(draft.artworks.filter(item => !item.hidden));
   onPhase?.("composition");
-  const curated = curateArtworkPlacement(curatable, template, random);
-  const curatedById = new Map(curated.map((artwork) => [artwork.id, artwork]));
-  const artworks = draft.artworks.map(
-    (artwork) => curatedById.get(artwork.id) ?? artwork,
-  );
-  await pause(320);
+  const result = composeGallery(draft, template, options, analysis);
   onPhase?.("atmosphere");
-  const atmosphere = chooseAtmosphere(analysis, template.id, draft, random);
-  const decor = curatedDecor(template, curatable.length, draft.decor, random);
-  await pause(320);
-  const candidate = {
-    ...draft,
-    artworks,
-    decor,
-    wall: atmosphere.wall,
-    floor: atmosphere.floor,
-    ceiling: atmosphere.ceiling,
-    lighting: atmosphere.lighting,
-  };
-  const repaired = repairDraftPlacements(candidate);
-  if (repaired.unresolved.length)
-    throw new Error(
-      `AI Curator could not make every placement safe. ${repaired.unresolved[0].message}`,
-    );
-  return {
-    draft: repaired.draft,
-    report: {
-      mood: atmosphere.mood,
-      palette: atmosphere.palette,
-      placementCount: repaired.draft.artworks.length,
-      decorCount: repaired.draft.decor.length,
-    },
-  };
+  return result;
 }

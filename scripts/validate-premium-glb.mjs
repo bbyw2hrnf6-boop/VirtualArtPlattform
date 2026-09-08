@@ -34,7 +34,7 @@ export async function inspectPremiumGlb(path) {
   const meta = doc.scenes[doc.scene ?? 0].extras;
   const id = meta?.aura_template_id; const index = ids.indexOf(id);
   check(index >= 0 && meta.aura_schema_version === 2 && meta.aura_units === 'metres', 'Invalid scene contract');
-  check(meta.lieuva_production_version === 'premium-v1', 'Incorrect production version');
+  check(meta.lieuva_production_version === 'premium-v2', 'Incorrect production version');
   check(JSON.stringify(meta.aura_dimensions) === JSON.stringify(dimensions[index]), 'Dimensions differ from Studio');
   const [w, d, h] = dimensions[index]; const mobile = path.includes('-mobile');
   check(bytes.length < (mobile ? 4 : 8) * 1024 * 1024, 'Asset size budget exceeded');
@@ -74,6 +74,9 @@ export async function inspectPremiumGlb(path) {
       check(expected.has(e.aura_surface_id), `Unexpected or duplicate surface ${e.aura_surface_id}`);
       check(pos.distanceTo(new Vector3(...expected.get(e.aura_surface_id))) < .002, `Misplaced surface ${e.aura_surface_id}`);
       check(e.aura_width > 0 && e.aura_height > 0, 'Surface has no usable dimensions');
+      const exterior = ['north', 'south', 'west', 'east'].includes(e.aura_surface_id);
+      const width = ['north', 'south'].includes(e.aura_surface_id) ? w : ['west', 'east'].includes(e.aura_surface_id) ? d : e.aura_surface_id.startsWith('divider') ? 14 : 10;
+      check(Math.abs(e.aura_width - width) < .002 && Math.abs(e.aura_height - (exterior ? h : 4.55)) < .002, 'Placement surface size differs from Studio');
       expected.delete(e.aura_surface_id);
     }
     if (role === 'walk-start') check(Math.abs(pos.y - 1.75) < .001, 'Incorrect eye height');
@@ -92,6 +95,18 @@ export async function inspectPremiumGlb(path) {
   for (const role of ['floor', 'collider', 'navmesh', 'art-anchor', 'view']) check(roles[role] > 0, `Missing ${role}`);
   for (const role of ['walk-start', 'walk-look']) check(roles[role] === 1, `Expected one ${role}`);
   check(visible < (mobile ? 80000 : 180000), `Visible triangle budget exceeded: ${visible}`);
+  check(batches <= (mobile ? 40 : 60), `Material batch budget exceeded: ${batches}`);
+  let aoMaterials = 0;
+  for (const material of doc.materials ?? []) {
+    if (!material.occlusionTexture) continue;
+    aoMaterials++;
+    check(material.occlusionTexture.texCoord === 1, 'AO must use an independent UV channel');
+  }
+  check(aoMaterials >= 5, 'Missing architectural contact AO');
+  for (const mesh of doc.meshes) for (const primitive of mesh.primitives) {
+    const material = doc.materials[primitive.material];
+    if (material?.occlusionTexture) check(primitive.attributes.TEXCOORD_1 !== undefined, 'AO geometry has no second UV');
+  }
   const images = (doc.images ?? []).map((img) => {
     check(img.bufferView !== undefined && !img.uri, 'Textures must be embedded');
     const view = doc.bufferViews[img.bufferView]; const size = imageSize(bin.subarray(view.byteOffset, view.byteOffset + view.byteLength));
@@ -114,8 +129,10 @@ export async function inspectPremiumGlb(path) {
       }
     }
   }
-  return { file: basename(path), id, bytes: bytes.length, visibleTriangles: visible, totalTriangles: total, navTriangles: nav, materialBatches: batches, images, roles };
+  const estimatedTextureBytes = Math.round(images.reduce((sum, [width, height]) => sum + width * height * 4 * 4 / 3, 0));
+  return { file: basename(path), id, bytes: bytes.length, visibleTriangles: visible, totalTriangles: total, navTriangles: nav, materialBatches: batches, aoMaterials, estimatedTextureBytes, images, roles };
 }
 const results = [];
-for (const path of process.argv.slice(2)) { const result = await inspectPremiumGlb(path); results.push(result); console.log(JSON.stringify(result)); }
+const paths = process.argv.length > 2 ? process.argv.slice(2) : ids.flatMap(id => ['desktop', 'mobile'].map(tier => `public/assets/templates/premium-v2/${id}-${tier}.glb`));
+for (const path of paths) { const result = await inspectPremiumGlb(path); results.push(result); console.log(JSON.stringify(result)); }
 if (results.length) await writeFile('audit/premium-glb-measurements.json', JSON.stringify(results, null, 2) + '\n');

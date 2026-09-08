@@ -1,5 +1,7 @@
 # LIEUVA Premium Template & Environment System — WP12
 
+> Update 2026-09-08: The three templates now load authored `premium-v2` GLBs by default in the shared Studio/visitor renderer, with procedural fallback. Beauty renders, editable sources, Runtime-GLBs and integration remain separate deliverables. The historical snapshot below is retained; current implementation and test evidence are in [Blender production](./LIEUVA-BLENDER-PRODUCTION-2026-09-08.md). This update does not assert a live deployment.
+
 ## 1. Verdict
 
 **PASS.** LIEUVA now exposes three intentionally different, production-ready environment directions through one shared template configuration and one shared procedural renderer. The implementation preserves the persistent template IDs (`white-cube`, `nocturne`, `pavilion`), publication schema, Storage paths, routes and Firebase contracts.
@@ -146,3 +148,8 @@ The existing deterministic release-gate suite covers publication validation, pub
 ## 19. Completion
 
 WP12 is complete. The repository is ready for WP13 without a template-system migration.
+
+
+## Studio design catalogue · 2026-09-08
+
+Lokale Erweiterung auf 16 Wandoptionen, 15 Bodenmaterialien und 13 unterschiedliche Katalogobjekte. Der Curator erzeugt regelbasierte Variationen mit Stil-/Umfangswahl, validierten Platzierungen, freien Hauptwegen, Schutz gesperrter Werke und einer History-Transaktion. Neue IDs sind in Client- und Functions-Validierung ergänzt; keine Veröffentlichung erfolgt. Die lokalen Browserprüfungen bei 1440×1000 und 390×844 sind abgeschlossen: alle drei Räume, Mobile-GLBs, Varianten, Wiederherstellung und Geometrieprüfung funktionieren. Möbel-Griffpunkt, Seitenüberlauf und mobile Curator-Rückmeldung wurden dabei korrigiert. Echte iOS-/Android-Performance und eine künstlerische Qualitätsfreigabe bleiben separat offen. Details und Abgrenzung zum vorherigen Premium-Runtime-Pass: [LIEUVA-STUDIO-DESIGN-2026-09-08.md](./LIEUVA-STUDIO-DESIGN-2026-09-08.md).

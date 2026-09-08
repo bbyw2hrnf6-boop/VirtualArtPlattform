@@ -21,7 +21,7 @@ That permission is specific to their use within this LIEUVA project. It does not
 
 The three fictional studies in `public/assets/artworks/` were generated specifically for the product demo. Exact generation and processing details are recorded in [`public/assets/artworks/README.md`](./public/assets/artworks/README.md). They are not presented as works by a real artist.
 
-The three images in `public/assets/templates/` are LIEUVA-specific concept-direction images generated with OpenAI ImageGen on 2026-08-04. Their role, prompts' visual intent, dimensions, and checksums are recorded in [`public/assets/templates/README.md`](./public/assets/templates/README.md). They are disclosed as concept imagery in the UI and are not presented as captures of the live Studio.
+The three active preview images in `public/assets/templates/` are captures from the interactive Studio, refreshed on 2026-09-08. They replace the ImageGen concept images used previously. Their current role and provenance are recorded in [`public/assets/templates/README.md`](./public/assets/templates/README.md).
 
 ## Material images
 
@@ -43,3 +43,18 @@ The `.blend` files in `blender/templates/` and the generator in `blender/create_
 No general `LICENSE` file is currently present. Unless and until the rights holder adds one, do not assume the application source is open-source or available for downstream commercial reuse.
 
 This notice records the repository's current licensing state without assigning new rights or replacing agreements held by the project owner.
+
+## Blender premium production — September 2026
+
+`blender/production/build_premium.py` and `runtime_bakes.py` create original metric gallery architecture, fixtures, geometry-only AO maps and the fictional bronze ribbon study for LIEUVA. Generated geometry is not a scan or a downloaded third-party model. Packed albedos are derivatives of the existing documented LIEUVA material library; the runtime charcoal map is a tinted derivative of `aura-greige-microcement-v5.webp`. No additional external texture, model, HDRI or MCP package was downloaded for production.
+
+`blender/production/v1/` contains render iterations and three native 3840×2160 Cycles beauty masters. `v2/` contains editable beauty/runtime sources and runtime maps. `public/assets/templates/premium-v1/` is the archived review candidate; `premium-v2/` contains the six active runtime exports. Beauty staging uses the existing fictional demo studies, never Danny's licensed artwork, and is excluded from runtime exports.
+
+The three `public/assets/templates/*-preview.webp` images were refreshed from actual Studio capture output on 2026-09-08. They represent the interactive renderer, not the Cycles beauty masters. The user-provided architectural screenshots were used as visual references only and are not redistributed in product assets. No standalone reuse license for these project assets is granted here.
+
+
+## Studio design catalogue · 2026-09-08
+
+The new sage, ink-blue, rose and sand wall surfaces and cork, terracotta, basalt-terrazzo and basketweave-parquet floors are deterministic procedural materials authored in `src/features/gallery/GalleryScene.tsx`. Their 512px albedo and 256px height/roughness maps are created locally on demand. They are not photographs, scans, downloaded material libraries, or ImageGen outputs. Existing runtime AO maps remain separate and are retained when a finish changes.
+
+The lounge chair, stone table and light column are original procedural geometry in `src/features/gallery/scene/designObjects.ts`, assembled with Three.js primitives and the existing RoundedBoxGeometry helper. They do not reproduce a named designer's product and introduce no external model or texture license. Previously hidden Monstera, branch vase, walnut stool and rope barrier models reuse the project's existing geometry. Legacy Ficus and gallery-bench IDs remain supported, but are not offered as additional catalogue variants. No standalone reuse license is granted for these project assets.
