@@ -28,6 +28,7 @@ import {
 } from "./scene/dannyLighting";
 import { roomLightingProfile } from "./scene/roomLighting";
 import { premiumQualityForTier } from "./scene/premiumQuality";
+import { attachPremiumEnvironment, premiumEnvironmentRequested, type PremiumEnvironmentHandle } from "./scene/premiumEnvironment";
 import { VisitorControls } from "./VisitorControls";
 import { publicAssetUrl } from "../../services/publicAssetUrl";
 import { trackTelemetry } from "../../services/telemetry";
@@ -3922,6 +3923,7 @@ function GallerySceneRenderer({
       editorOpenTop,
       quality.tier,
     );
+    let premiumEnvironment: PremiumEnvironmentHandle | undefined;
     const isCutawayActive = () =>
       initial.visitor
         ? mode === "overview"
@@ -4082,6 +4084,7 @@ function GallerySceneRenderer({
       lighting.rig.traverse((object) => {
         if (object.userData.hideInCutaway) object.visible = !active;
       });
+      premiumEnvironment?.apply(active, currentDraft);
       element.dataset.cutaway = active ? "active" : "inactive";
       element.dataset.roofPreference = editorCutawayOpen ? "open" : "ceiling";
       renderer.shadowMap.needsUpdate = true;
@@ -5167,6 +5170,28 @@ function GallerySceneRenderer({
     };
     syncDraft(currentDraft, currentSelectedId, currentSelectedDecorId);
     rebuildCollision();
+    if (premiumEnvironmentRequested(window.location.search)) {
+      premiumEnvironment = attachPremiumEnvironment({
+        scene, templateId: currentDraft.templateId, mobile: quality.tier === "low",
+        element, floor: floorMesh, exteriorWalls, architecture, roof,
+        ceiling: ceilingPlane, ceilingDetails,
+        currentDraft: () => currentDraft,
+        disposeTree: disposeObjectTree,
+        onReady: () => {
+          if (disposed) return;
+          // Respect material edits made while the GLB was loading.
+          const defaults = currentDraft.templateId === "white-cube"
+            ? { wall: "chalk", floor: "concrete" }
+            : currentDraft.templateId === "nocturne"
+              ? { wall: "charcoal", floor: "dark-oak" }
+              : { wall: "travertine", floor: "marble" };
+          if (currentDraft.wall !== defaults.wall) updateRoomSurface(scene, currentDraft, w, d, "wall");
+          if (currentDraft.floor !== defaults.floor) updateRoomSurface(scene, currentDraft, w, d, "floor");
+          rebuildCollision(); applyCutawayMode();
+          renderer.shadowMap.needsUpdate = true;
+        },
+      });
+    }
     status.ready();
     element.dataset.sceneReadyMs = String(Math.round(performance.now() - sceneStartedAt));
     const capture: GallerySceneCapture = async (options = {}) => {
@@ -5800,6 +5825,7 @@ function GallerySceneRenderer({
     wakeRender();
     return () => {
       disposed = true;
+      premiumEnvironment?.dispose();
       runtime.current = null;
       cancelAnimationFrame(frame);
       renderActivity.dispose();

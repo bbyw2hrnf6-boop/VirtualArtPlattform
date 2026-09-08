@@ -1,0 +1,10 @@
+/Users/uhorizon/Documents/VirtualArtPlattform/blender/production/build_premium.py:48: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m=bpy.data.materials.new(name);m.use_nodes=True
+/Users/uhorizon/Documents/VirtualArtPlattform/blender/production/build_premium.py:294: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world=bpy.data.worlds.new('LIEUVA studio sky');world.use_nodes=True;scene.world=world
+52:09.217  render           | Saved: '/Users/uhorizon/Documents/VirtualArtPlattform/blender/production/v1/white-cube-r1-1200.png'
+Info: Saved as "white-cube.blend"
+LIEUVA COMPLETE white-cube /Users/uhorizon/Documents/VirtualArtPlattform/blender/production/v1/white-cube-r1-1200.png
+Blender 5.2.0 LTS (hash fbe6228777e7 built 2026-07-14 01:31:22)
+
+Blender quit

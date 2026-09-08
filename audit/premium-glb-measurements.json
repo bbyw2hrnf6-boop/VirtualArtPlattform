@@ -1,0 +1,142 @@
+[
+  {
+    "file": "nocturne-desktop.glb",
+    "id": "nocturne",
+    "bytes": 1991840,
+    "visibleTriangles": 25600,
+    "totalTriangles": 26592,
+    "navTriangles": 900,
+    "materialBatches": 14,
+    "images": [
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ]
+    ],
+    "roles": {
+      "architecture": 8,
+      "art-anchor": 4,
+      "collider": 7,
+      "navmesh": 1,
+      "ceiling": 1,
+      "room": 1,
+      "shell": 4,
+      "floor": 1,
+      "surface": 4,
+      "view": 1,
+      "walk-look": 1,
+      "walk-start": 1
+    }
+  },
+  {
+    "file": "nocturne-mobile.glb",
+    "id": "nocturne",
+    "bytes": 1639904,
+    "visibleTriangles": 25102,
+    "totalTriangles": 26094,
+    "navTriangles": 900,
+    "materialBatches": 14,
+    "images": [
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ]
+    ],
+    "roles": {
+      "architecture": 8,
+      "art-anchor": 4,
+      "collider": 7,
+      "navmesh": 1,
+      "ceiling": 1,
+      "room": 1,
+      "shell": 4,
+      "floor": 1,
+      "surface": 4,
+      "view": 1,
+      "walk-look": 1,
+      "walk-start": 1
+    }
+  },
+  {
+    "file": "pavilion-desktop.glb",
+    "id": "pavilion",
+    "bytes": 2440488,
+    "visibleTriangles": 18892,
+    "totalTriangles": 35908,
+    "navTriangles": 16688,
+    "materialBatches": 13,
+    "images": [
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ]
+    ],
+    "roles": {
+      "architecture": 7,
+      "art-anchor": 14,
+      "collider": 25,
+      "navmesh": 1,
+      "ceiling": 1,
+      "room": 5,
+      "shell": 4,
+      "floor": 1,
+      "surface": 14,
+      "view": 5,
+      "walk-look": 1,
+      "walk-start": 1
+    }
+  },
+  {
+    "file": "pavilion-mobile.glb",
+    "id": "pavilion",
+    "bytes": 2242320,
+    "visibleTriangles": 18892,
+    "totalTriangles": 35908,
+    "navTriangles": 16688,
+    "materialBatches": 13,
+    "images": [
+      [
+        512,
+        512
+      ],
+      [
+        512,
+        512
+      ]
+    ],
+    "roles": {
+      "architecture": 7,
+      "art-anchor": 14,
+      "collider": 25,
+      "navmesh": 1,
+      "ceiling": 1,
+      "room": 5,
+      "shell": 4,
+      "floor": 1,
+      "surface": 14,
+      "view": 5,
+      "walk-look": 1,
+      "walk-start": 1
+    }
+  }
+]

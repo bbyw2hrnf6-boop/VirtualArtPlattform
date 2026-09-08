@@ -1,0 +1,4 @@
+/Users/uhorizon/Documents/VirtualArtPlattform/blender/production/build_premium.py:47: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m=bpy.data.materials.new(name);m.use_nodes=True
+/Users/uhorizon/Documents/VirtualArtPlattform/blender/production/build_premium.py:293: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world=bpy.data.worlds.new('LIEUVA studio sky');world.use_nodes=True;scene.world=world
