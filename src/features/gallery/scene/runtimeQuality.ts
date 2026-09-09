@@ -242,5 +242,8 @@ export function createAdaptiveDpr(
     frames = 0;
     sampleStartedAt = now;
   };
-  return { update, getTier: () => tier };
+  const resetSampling = (now = performance.now()) => {
+    sampleStartedAt = now; frames = 0; healthyWindows = 0;
+  };
+  return { update, resetSampling, getTier: () => tier };
 }

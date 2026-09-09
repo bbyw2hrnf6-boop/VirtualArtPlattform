@@ -1,5 +1,7 @@
 # LIEUVA — Immersive 3D presentation platform
 
+Current local visual/runtime production: [Arrival, materials and homepage story](./audit/LIEUVA-ARRIVAL-MATERIAL-STORY-2026-09-08.md). This round uses premium-v3 assets and keeps beauty renders, Blender sources, runtime GLBs and Studio integration separate. No automatic release is implied.
+
 LIEUVA lets people create, publish and explore immersive 3D spaces for art, design and ideas — directly in the browser. This repository contains the current production-pilot product: LIEUVA Studio, three Space templates, a visitor experience, Discover, Creator identity and community, account access, and a Firebase publishing lifecycle.
 
 > **Compatibility firewall:** LIEUVA is the visible brand. Existing AURA/gallery identifiers in Firebase, Storage, callable Functions, local persistence, `.aura.json`, routes and GLB metadata are intentional compatibility contracts and must not be casually renamed.
@@ -194,7 +196,7 @@ scripts/validate-glb-contract.mjs   Template-export contract validator
 .github/workflows/                  Pages deployment and expiry cleanup
 ```
 
-White Cube, Warm Gallery (`nocturne`) and Grand Forum now load authored `premium-v2` Blender GLBs by default in the shared Studio and visitor renderer. The existing procedural builder remains the loading/error fallback and explicit `?environment=procedural` rollback. Editable artwork, placement, camera, history and publication contracts remain owned by Studio. Desktop/mobile files, AO maps, editable sources and the separate 4K Cycles masters are documented in [`blender/production/README.md`](./blender/production/README.md). `npm run validate:premium` checks all six exports and is included in `npm run check`. Danny retains its separate authored runtime.
+White Cube, Warm Gallery (`nocturne`) and Grand Forum now load authored `premium-v3` Blender GLBs by default in the shared Studio and visitor renderer. The existing procedural builder remains the loading/error fallback and explicit `?environment=procedural` rollback. Editable artwork, placement, camera, history and publication contracts remain owned by Studio. Desktop/mobile files, AO maps, editable sources and the separate 4K Cycles masters are documented in [`blender/production/README.md`](./blender/production/README.md). `npm run validate:premium` checks all six exports and is included in `npm run check`. Danny retains its separate authored runtime.
 
 The Danny demo ships a full desktop GLB and a metadata-equivalent mobile derivative with reduced geometry and texture sizes. Runtime quality detection selects the derivative on low-tier devices and Meshopt decoding uses Web Workers. See [`public/assets/demo/README.md`](./public/assets/demo/README.md).
 
@@ -299,4 +301,4 @@ Review [ASSET_LICENSES.md](./ASSET_LICENSES.md) before reusing artwork, models, 
 
 The project owner has confirmed permission to display and distribute the Danny Hirsch artwork and gallery assets as part of the LIEUVA demo. That project-specific permission does not automatically grant third parties a reusable asset license. See [ASSET_LICENSES.md](./ASSET_LICENSES.md) for the current notice and items that still require formal provenance records.
 
-Studio catalogue and curation implementation, validation and pending visual QA: [`audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md`](./audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md).
+Earlier Studio catalogue and curation production record (8 September): [`audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md`](./audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md).

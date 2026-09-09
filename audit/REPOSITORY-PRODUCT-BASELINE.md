@@ -1,5 +1,7 @@
 # Repository & Product Baseline — AURA / future LIEUVA
 
+> Update 2026-09-09: Current local quality work uses premium-v3, a resource-gated arrival, physically paced tours, and a four-chapter White Cube homepage demonstration with direct Studio handoff. The owner explicitly permitted replacing the Danny homepage subject; the standalone Danny demo and compatibility identifiers remain. See [current production and acceptance](./LIEUVA-ARRIVAL-MATERIAL-STORY-2026-09-08.md). Earlier measurements below are historical; this note does not assert deployment.
+
 > Update 2026-09-08: The three templates now load authored `premium-v2` GLBs by default in the shared Studio/visitor renderer, with procedural fallback. Beauty renders, editable sources, Runtime-GLBs and integration remain separate deliverables. The historical snapshot below is retained; current implementation and test evidence are in [Blender production](./LIEUVA-BLENDER-PRODUCTION-2026-09-08.md). This update does not assert a live deployment.
 
 **Snapshot:** 23 August 2026  

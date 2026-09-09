@@ -2,7 +2,7 @@
   {
     "file": "white-cube-desktop.glb",
     "id": "white-cube",
-    "bytes": 1008172,
+    "bytes": 1072524,
     "visibleTriangles": 8732,
     "totalTriangles": 10004,
     "navTriangles": 1192,
@@ -65,7 +65,7 @@
   {
     "file": "white-cube-mobile.glb",
     "id": "white-cube",
-    "bytes": 723428,
+    "bytes": 739812,
     "visibleTriangles": 8732,
     "totalTriangles": 10004,
     "navTriangles": 1192,
@@ -278,14 +278,18 @@
   {
     "file": "pavilion-desktop.glb",
     "id": "pavilion",
-    "bytes": 2757192,
+    "bytes": 2904748,
     "visibleTriangles": 18140,
     "totalTriangles": 35156,
     "navTriangles": 16688,
     "materialBatches": 13,
     "aoMaterials": 7,
-    "estimatedTextureBytes": 50331648,
+    "estimatedTextureBytes": 55924053,
     "images": [
+      [
+        1024,
+        1024
+      ],
       [
         1024,
         1024
@@ -341,14 +345,18 @@
   {
     "file": "pavilion-mobile.glb",
     "id": "pavilion",
-    "bytes": 2383060,
+    "bytes": 2414272,
     "visibleTriangles": 18140,
     "totalTriangles": 35156,
     "navTriangles": 16688,
     "materialBatches": 13,
     "aoMaterials": 7,
-    "estimatedTextureBytes": 12582912,
+    "estimatedTextureBytes": 13981013,
     "images": [
+      [
+        512,
+        512
+      ],
       [
         512,
         512

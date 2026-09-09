@@ -17,7 +17,7 @@ type ExploreSpacesMenuProps = {
 const normalized = (value: string) => value.trim().toLocaleLowerCase();
 
 function SpaceCover({ space }: { space: GalleryRecord }) {
-  const fallback = `./assets/templates/${space.templateId}-preview.webp?v=premium-v2`;
+  const fallback = `./assets/templates/${space.templateId}-preview.webp?v=premium-v3`;
   return (
     <img
       src={space.coverSrc ?? fallback}

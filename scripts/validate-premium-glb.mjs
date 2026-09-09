@@ -34,7 +34,7 @@ export async function inspectPremiumGlb(path) {
   const meta = doc.scenes[doc.scene ?? 0].extras;
   const id = meta?.aura_template_id; const index = ids.indexOf(id);
   check(index >= 0 && meta.aura_schema_version === 2 && meta.aura_units === 'metres', 'Invalid scene contract');
-  check(meta.lieuva_production_version === 'premium-v2', 'Incorrect production version');
+  check(meta.lieuva_production_version === 'premium-v3', 'Incorrect production version');
   check(JSON.stringify(meta.aura_dimensions) === JSON.stringify(dimensions[index]), 'Dimensions differ from Studio');
   const [w, d, h] = dimensions[index]; const mobile = path.includes('-mobile');
   check(bytes.length < (mobile ? 4 : 8) * 1024 * 1024, 'Asset size budget exceeded');
@@ -91,6 +91,29 @@ export async function inspectPremiumGlb(path) {
     }
     if (role === 'navmesh') nav += triangles;
   }
+  // An upper pier must meet the lower pier at its top plane. The previous
+  // export overlapped it vertically, leaving nearly coplanar stone faces.
+  if (id === 'pavilion') {
+    const piers = colliders.filter(box => {
+      const size = box.getSize(new Vector3());
+      return Math.abs(size.x - .72) < .01 && Math.abs(size.z - .72) < .01;
+    });
+    check(piers.length > 0, 'Missing Forum pier collision bounds');
+    let inspected = 0;
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (!node.extras?.lieuva_overhead || node.mesh === undefined) continue;
+      for (const { acc, view, offset } of positions(doc.meshes[node.mesh])) for (let v = 0; v < acc.count; v++) {
+        const j = offset + v * (view.byteStride ?? 12);
+        const p = new Vector3(bin.readFloatLE(j), bin.readFloatLE(j + 4), bin.readFloatLE(j + 8)).applyMatrix4(matrices.get(i));
+        for (const pier of piers) if (p.x >= pier.min.x - .002 && p.x <= pier.max.x + .002 && p.z >= pier.min.z - .002 && p.z <= pier.max.z + .002) {
+          inspected++;
+          check(p.y >= pier.max.y - .002, 'Overhead geometry overlaps a Forum pier');
+        }
+      }
+    }
+    check(inspected > 0, 'Forum upper pier geometry was not inspected');
+  }
   check(expected.size === 0, `Missing surfaces ${[...expected.keys()]}`);
   for (const role of ['floor', 'collider', 'navmesh', 'art-anchor', 'view']) check(roles[role] > 0, `Missing ${role}`);
   for (const role of ['walk-start', 'walk-look']) check(roles[role] === 1, `Expected one ${role}`);
@@ -133,6 +156,6 @@ export async function inspectPremiumGlb(path) {
   return { file: basename(path), id, bytes: bytes.length, visibleTriangles: visible, totalTriangles: total, navTriangles: nav, materialBatches: batches, aoMaterials, estimatedTextureBytes, images, roles };
 }
 const results = [];
-const paths = process.argv.length > 2 ? process.argv.slice(2) : ids.flatMap(id => ['desktop', 'mobile'].map(tier => `public/assets/templates/premium-v2/${id}-${tier}.glb`));
+const paths = process.argv.length > 2 ? process.argv.slice(2) : ids.flatMap(id => ['desktop', 'mobile'].map(tier => `public/assets/templates/premium-v3/${id}-${tier}.glb`));
 for (const path of paths) { const result = await inspectPremiumGlb(path); results.push(result); console.log(JSON.stringify(result)); }
 if (results.length) await writeFile('audit/premium-glb-measurements.json', JSON.stringify(results, null, 2) + '\n');

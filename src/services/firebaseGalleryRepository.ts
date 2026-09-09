@@ -62,6 +62,7 @@ const MAX_CACHED_OBJECT_URLS = 64;
 const ARTWORK_DOWNLOAD_CONCURRENCY = 3;
 const DISCOVER_COVER_CONCURRENCY = 4;
 const objectUrls = new Map<string, Promise<string>>();
+const pendingObjectUrls = new Map<string, Promise<string>>();
 
 const slugify = (value: string) =>
   value
@@ -331,13 +332,19 @@ async function embedLocalArtworkSources(
   return { ...draft, artworks };
 }
 
-function storageObjectUrl(path: string, maximumBytes: number) {
+function storageObjectUrl(path: string, maximumBytes: number, retryPending = false) {
+  const previous = objectUrls.get(path);
+  if (retryPending && previous && pendingObjectUrls.get(path) === previous) {
+    objectUrls.delete(path);
+    void previous.then(url => URL.revokeObjectURL(url), () => undefined);
+  }
   const cached = objectUrls.get(path);
   if (cached) return cached;
   const pending = getBlob(ref(firebaseStorage, path), maximumBytes).then((blob) =>
     URL.createObjectURL(blob),
   );
   objectUrls.set(path, pending);
+  pendingObjectUrls.set(path, pending);
   if (objectUrls.size > MAX_CACHED_OBJECT_URLS) {
     const oldest = objectUrls.entries().next().value as
       | [string, Promise<string>]
@@ -347,7 +354,13 @@ function storageObjectUrl(path: string, maximumBytes: number) {
       void oldest[1].then((url) => URL.revokeObjectURL(url), () => undefined);
     }
   }
-  pending.catch(() => objectUrls.delete(path));
+  void pending.then(() => {
+    if (pendingObjectUrls.get(path) === pending) pendingObjectUrls.delete(path);
+  }, () => {
+    // A superseded request must never evict the successful retry.
+    if (objectUrls.get(path) === pending) objectUrls.delete(path);
+    if (pendingObjectUrls.get(path) === pending) pendingObjectUrls.delete(path);
+  });
   return pending;
 }
 
@@ -370,6 +383,7 @@ async function publishedArtworkSource(
   gallery: GalleryRecord,
   artwork: Artwork,
   index: number,
+  retryPending = false,
 ): Promise<string | undefined> {
   if (artwork.storagePath) {
     validateStoragePathOwnership(
@@ -378,7 +392,7 @@ async function publishedArtworkSource(
       gallery.id,
       `artworks[${index}].storagePath`,
     );
-    return storageObjectUrl(artwork.storagePath, MAX_ARTWORK_DOWNLOAD_BYTES);
+    return storageObjectUrl(artwork.storagePath, MAX_ARTWORK_DOWNLOAD_BYTES, retryPending);
   }
   if (artwork.assetId) {
     const asset = await getDoc(doc(firebaseDb, "galleryArtworks", artwork.assetId));
@@ -781,6 +795,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
   async hydrateGalleryArtworks(
     gallery: GalleryRecord,
     onArtwork?: (gallery: GalleryRecord, loaded: number, total: number) => void,
+    retryPending = false,
   ): Promise<GalleryRecord> {
     const hydrated = gallery.artworks.map((artwork) => ({ ...artwork }));
     let loaded = hydrated.filter((artwork) => Boolean(artwork.src)).length;
@@ -792,7 +807,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         if (artwork.storagePath || artwork.assetId) {
           next = {
             ...artwork,
-            src: (await publishedArtworkSource(gallery, artwork, index)) ?? "",
+            src: (await publishedArtworkSource(gallery, artwork, index, retryPending)) ?? "",
           };
         }
         hydrated[index] = next;

@@ -1,0 +1,160 @@
+[
+  {
+    "file": "material-library.blend",
+    "objects": 3,
+    "images": 3,
+    "unpacked": [],
+    "engine": "BLENDER_EEVEE",
+    "resolution": [
+      1920,
+      1080
+    ],
+    "samples": 4096,
+    "cameras": 0,
+    "lights": 0
+  },
+  {
+    "file": "nocturne-arrival.blend",
+    "objects": 317,
+    "images": 7,
+    "unpacked": [],
+    "engine": "CYCLES",
+    "resolution": [
+      960,
+      540
+    ],
+    "samples": 16,
+    "cameras": 2,
+    "lights": 11,
+    "cameraName": "Arrival \u00b7 runtime path",
+    "sensorFit": "VERTICAL",
+    "frames": [
+      1,
+      157
+    ]
+  },
+  {
+    "file": "nocturne-runtime.blend",
+    "objects": 34,
+    "images": 20,
+    "unpacked": [],
+    "engine": "CYCLES",
+    "resolution": [
+      1200,
+      675
+    ],
+    "samples": 16,
+    "cameras": 0,
+    "lights": 0
+  },
+  {
+    "file": "nocturne.blend",
+    "objects": 316,
+    "images": 11,
+    "unpacked": [],
+    "engine": "CYCLES",
+    "resolution": [
+      3840,
+      2160
+    ],
+    "samples": 96,
+    "cameras": 1,
+    "lights": 11
+  },
+  {
+    "file": "pavilion-arrival.blend",
+    "objects": 228,
+    "images": 6,
+    "unpacked": [],
+    "engine": "CYCLES",
+    "resolution": [
+      960,
+      540
+    ],
+    "samples": 16,
+    "cameras": 2,
+    "lights": 15,
+    "cameraName": "Arrival \u00b7 runtime path",
+    "sensorFit": "VERTICAL",
+    "frames": [
+      1,
+      267
+    ]
+  },
+  {
+    "file": "pavilion-runtime.blend",
+    "objects": 79,
+    "images": 19,
+    "unpacked": [],
+    "engine": "CYCLES",
+    "resolution": [
+      1200,
+      675
+    ],
+    "samples": 16,
+    "cameras": 0,
+    "lights": 0
+  },
+  {
+    "file": "pavilion.blend",
+    "objects": 227,
+    "images": 11,
+    "unpacked": [],
+    "engine": "CYCLES",
+    "resolution": [
+      3840,
+      2160
+    ],
+    "samples": 96,
+    "cameras": 1,
+    "lights": 15
+  },
+  {
+    "file": "white-cube-arrival.blend",
+    "objects": 93,
+    "images": 6,
+    "unpacked": [],
+    "engine": "CYCLES",
+    "resolution": [
+      960,
+      540
+    ],
+    "samples": 16,
+    "cameras": 2,
+    "lights": 8,
+    "cameraName": "Arrival \u00b7 runtime path",
+    "sensorFit": "VERTICAL",
+    "frames": [
+      1,
+      157
+    ]
+  },
+  {
+    "file": "white-cube-runtime.blend",
+    "objects": 31,
+    "images": 19,
+    "unpacked": [],
+    "engine": "CYCLES",
+    "resolution": [
+      1200,
+      675
+    ],
+    "samples": 16,
+    "cameras": 0,
+    "lights": 0
+  },
+  {
+    "file": "white-cube.blend",
+    "objects": 92,
+    "images": 11,
+    "unpacked": [],
+    "engine": "CYCLES",
+    "resolution": [
+      3840,
+      2160
+    ],
+    "samples": 96,
+    "cameras": 1,
+    "lights": 8
+  }
+]

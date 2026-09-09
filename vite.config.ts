@@ -25,6 +25,12 @@ export default defineConfig(({ command }) => ({
         codeSplitting: {
           // Keep the SDK and its account adapter together for compression.
           groups: [{
+            // Share the scene implementation without merging it into the Three
+            // renderer vendor chunk when the homepage also imports the Studio.
+            name: 'studio-scene',
+            test: /src[\\/]features[\\/]gallery[\\/]GalleryScene\.tsx$/,
+            includeDependenciesRecursively: false,
+          }, {
             name: 'firebase',
             test: /node_modules[\\/](?:@firebase|firebase)[\\/]|src[\\/]services[\\/](?:firebase|accountService)\.ts$/,
           }],

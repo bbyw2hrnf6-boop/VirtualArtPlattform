@@ -1,5 +1,7 @@
 # LIEUVA Brand & Product Language Contract
 
+> Update 2026-09-09: Current local quality work uses premium-v3, a resource-gated arrival, physically paced tours, and a four-chapter White Cube homepage demonstration with direct Studio handoff. The owner explicitly permitted replacing the Danny homepage subject; the standalone Danny demo and compatibility identifiers remain. See [current production and acceptance](./LIEUVA-ARRIVAL-MATERIAL-STORY-2026-09-08.md). Earlier measurements below are historical; this note does not assert deployment.
+
 **Frozen:** 23 August 2026  
 **Work package:** WP3  
 **Status:** **PASS WITH CONDITIONS**  

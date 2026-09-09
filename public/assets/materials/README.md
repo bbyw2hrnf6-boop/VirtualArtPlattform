@@ -62,3 +62,26 @@ d6984d80c3f8410d6b57ba95e5b795d94eb7cd5d280d624ab9ab4263286ced85  aura-greige-mi
 The new surfaces are produced on demand by code in `GalleryScene.tsx`, using a deterministic seed per material. Albedo canvases use 512 × 512 sRGB; separate 256 × 256 scalar height and roughness canvases use linear data. Fine cork aggregate, tile grout, light chips in dark terrazzo and alternating wood grain distinguish the floors. At this resolution, an active procedural surface uses roughly 2 MiB for RGBA textures including mipmaps; the catalogue is not preloaded as a set of textures. Replacing a surface disposes replaced texture objects while preserving the imported AO map. No raster files, external textures or extra image-generation assets were added for this pass. Native Blender beauty renders and source files are separate deliverables.
 
 Provenance and rights: see `ASSET_LICENSES.md`. All four new wall colours and floor patterns were inspected in the actual Studio. Terracotta/parquet variation, parquet joints and dark terrazzo aggregate were softened after browser review. Desktop/mobile viewport and recovery checks are recorded in `audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md`; these checks do not establish photorealism or physical-phone performance.
+
+## Premium-v3 material studies · 8–9 September 2026
+
+Three original base-color studies were produced with the built-in OpenAI image-generation tool for this production round. The tool did not report a specific image-model version. Raw PNGs are **1254 × 1254**, despite the requested 2048-pixel brief. Shipping WebPs are downsampled to **1024 × 1024** with `cwebp -q 88 -resize 1024 1024`. Neither is described as a native 2K/4K capture.
+
+Art-direction briefs below summarize the requests; they are not a verbatim prompt transcript:
+
+- **honed-concrete:** Neutral warm-grey honed concrete, fine restrained aggregate and pores, 3 m repeat; flat orthographic diffuse illumination with no shadows, gloss, grid or perspective.
+- **honed-limestone:** Ivory/greige limestone, fine fossil and sediment detail, 3 m repeat; avoid yellow marble veins, grout, lighting gradients and highlights.
+- **natural-oak:** Natural European oak; eight parallel vertical staggered floorboards, restrained grain/knots, narrow joints, 2.4 m repeat; no heavy gloss or baked shadows.
+
+Inputs were reviewed as neutral, tileable color studies. Blender and the runtime apply separate procedural height/roughness, color management and metric repeats. These images are not normal, roughness, AO or illumination maps. Concrete and limestone are packed into the v3 room sources/exports; natural oak is an editable Studio finish. Black marble and the existing ceiling materials retain their previous sources.
+
+| File | Bytes | SHA-256 |
+| --- | --- | --- |
+| `blender/production/v3/material-studies/honed-concrete.png` | 3,246,532 | `ddd27204c140813e01fc05619bafcd88f3ba28fc309662384f4245ca1b05335b` |
+| `public/assets/materials/premium-v3/honed-concrete.webp` | 286,984 | `54bba3fca50e2465727b97d83074c356e6028e1334441b824533e624e9ede519` |
+| `blender/production/v3/material-studies/honed-limestone.png` | 2,907,571 | `49bd103aa9a0234e5481f18009690f3ec6c6717c6ce6408c9e96e356b7252e18` |
+| `public/assets/materials/premium-v3/honed-limestone.webp` | 205,972 | `32deb7eba2c5aabc0371b24ece79d2695004d56ab7af07ad93d7d2d51159d000` |
+| `blender/production/v3/material-studies/natural-oak.png` | 2,119,328 | `ff224030455ce0cfd0670a3ae9d575c5c0abc355884cff33a5879a2077daa6a1` |
+| `public/assets/materials/premium-v3/natural-oak.webp` | 135,560 | `3f9550bd2bd6e57e9caeab71cbdb989a56214eee849da33a23efc3af8839a4d0` |
+
+The separate `blender/production/v3/material-library.blend` packs all three new material studies, including natural oak, with editable Principled shaders, independent procedural microstructure and metric sample planes. Rebuild with `blender/production/build_material_library.py`; it does not replace any room source or claim a measured PBR scan.

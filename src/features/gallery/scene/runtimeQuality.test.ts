@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { createPlanarCollisionSystem, planarCollidersFromAuthoredNodes, renderQualityForCapabilities } from './runtimeQuality';
+import { createAdaptiveDpr, createPlanarCollisionSystem, planarCollidersFromAuthoredNodes, renderQualityForCapabilities } from './runtimeQuality';
 
 describe('planar gallery collision', () => {
   const obstacle = { minX: -.5, maxX: .5, minZ: -.5, maxZ: .5, name: 'partition' };
@@ -72,4 +72,22 @@ describe('runtime quality selection', () => {
     expect(quality.tier).toBe('low');
     expect(quality.dpr).toBe(1.15);
   });
+});
+
+
+it('keeps loading and hidden-tab time out of the DPR measurement, while still responding to slow rendering', () => {
+  vi.stubGlobal('devicePixelRatio', 2);
+  const renderer = { setPixelRatio: vi.fn() } as unknown as THREE.WebGLRenderer;
+  const quality = renderQualityForCapabilities({ coarse:false, compact:false, cores:8, memory:8, dpr:2 });
+  const adaptive = createAdaptiveDpr(renderer, quality);
+  adaptive.resetSampling(10_000);
+  for (let frame=1; frame<=120; frame++) adaptive.update(10_000 + frame*16.7);
+  expect(adaptive.getTier()).toBe('high');
+  adaptive.resetSampling(60_000);
+  for (let frame=1; frame<=120; frame++) adaptive.update(60_000 + frame*16.7);
+  expect(renderer.setPixelRatio).not.toHaveBeenCalled();
+  for (let frame=1; frame<=120; frame++) adaptive.update(62_004 + frame*30);
+  expect(adaptive.getTier()).toBe('low');
+  expect(renderer.setPixelRatio).toHaveBeenCalledWith(1);
+  vi.unstubAllGlobals();
 });

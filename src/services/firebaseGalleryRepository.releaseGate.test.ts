@@ -463,6 +463,7 @@ vi.mock("./firebase", () => ({
   FIREBASE_PROJECT_ID: "release-gate-test",
 }));
 
+import { getBlob } from "firebase/storage";
 import { FirebaseGalleryRepository } from "./firebaseGalleryRepository";
 import { GalleryAccessDeniedError } from "./galleryRepository";
 
@@ -600,6 +601,23 @@ describe("publish → visit → edit → update release gate", () => {
     const visited = await repository.find(published.id);
     expect(visited?.artworks.every((artwork) => artwork.src.startsWith("blob:"))).toBe(true);
     expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
+  });
+
+  it("retries a stalled artwork transfer and ignores the old request's late failure", async () => {
+    const repository = new FirebaseGalleryRepository();
+    const published = await repository.publish(draft(), media.webp, { visibility: "public" });
+    const manifest = await repository.findManifest(published.id);
+    if (!manifest) throw new Error("Expected manifest");
+    let rejectOld!: (error: Error) => void;
+    vi.mocked(getBlob).mockImplementationOnce(() => new Promise<Blob>((_, reject) => { rejectOld = reject; }));
+    const old = expect(repository.hydrateGalleryArtworks(manifest)).rejects.toThrow("old transfer");
+    await Promise.resolve();
+    const retried = await repository.hydrateGalleryArtworks(manifest, undefined, true);
+    expect(retried.artworks.every(artwork => artwork.src.startsWith("blob:"))).toBe(true);
+    const downloads = vi.mocked(getBlob).mock.calls.length;
+    rejectOld(new Error("old transfer")); await old;
+    await repository.hydrateGalleryArtworks(manifest);
+    expect(vi.mocked(getBlob).mock.calls.length).toBe(downloads);
   });
 
   it("keeps homepage and public-profile placement independent and editable by the owner", async () => {

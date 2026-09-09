@@ -24,7 +24,7 @@ function deferredAsset() {
 function authoredFixture(id: TemplateId = 'white-cube') {
   const root = new THREE.Group(), template = getTemplate(id);
   root.userData = { aura_template_id: id, aura_schema_version: 2, aura_units: 'metres',
-    lieuva_production_version: 'premium-v2', aura_dimensions: [...template.dimensions, template.height] };
+    lieuva_production_version: 'premium-v3', aura_dimensions: [...template.dimensions, template.height] };
   for (const wall of galleryWalls(id)) {
     const node = new THREE.Object3D(); node.userData = { aura_role: 'surface', aura_surface_id: wall }; root.add(node);
   }
@@ -95,7 +95,7 @@ beforeEach(() => { loadAsync.mockReset(); });
 
 describe('authored environment boundary', () => {
   it('defaults Studio and visitor URLs to premium with an explicit procedural rollback', () => {
-    for (const search of ['', '?environment=premium-v2', '?environment=premium-v1', '?environment=unknown'])
+    for (const search of ['', '?environment=premium-v3', '?environment=premium-v1', '?environment=unknown'])
       expect(premiumEnvironmentRequested(search)).toBe(true);
     expect(premiumEnvironmentRequested('?environment=procedural')).toBe(false);
     expect(premiumEnvironmentRequested('?other=1&environment=procedural')).toBe(false);
@@ -125,10 +125,10 @@ describe('asynchronous premium attachment', () => {
     host.expectUnchanged(); expect(handle.loaded).toBe(false);
     expect(host.options.element.dataset.captureReady).toBe('false'); expect(host.options.onReady).not.toHaveBeenCalled();
     expect(loadAsync).toHaveBeenCalledWith(expect.stringContaining(
-      `/assets/templates/premium-v2/${id}-${id === 'nocturne' ? 'mobile' : 'desktop'}.glb`));
+      `/assets/templates/premium-v3/${id}-${id === 'nocturne' ? 'mobile' : 'desktop'}.glb`), expect.any(Function));
     pending.resolve({ scene: asset.root }); await handle.ready;
     expect(handle.loaded).toBe(true);
-    expect(host.options.element.dataset).toMatchObject({ environment: 'premium-v2', captureReady: 'true' });
+    expect(host.options.element.dataset).toMatchObject({ environment: 'premium-v3', captureReady: 'false' });
     expect(host.options.onReady).toHaveBeenCalledOnce(); expect(host.options.onSettled).toHaveBeenCalledOnce();
     expect(host.options.architecture.children).toContain(host.exitSign);
     expect(host.options.architecture.children).not.toContain(host.originalArchitecture);
@@ -157,7 +157,7 @@ describe('asynchronous premium attachment', () => {
     const handle = attachPremiumEnvironment(host.options);
     pending.resolve({ scene: asset.root }); await handle.ready;
     host.expectUnchanged(); expect(handle.loaded).toBe(false);
-    expect(host.options.element.dataset).toMatchObject({ environment: 'procedural-fallback', captureReady: 'true' });
+    expect(host.options.element.dataset).toMatchObject({ environment: 'procedural-fallback', captureReady: 'false' });
     expect(host.options.element.dataset.environmentError).toMatch(/shell/i);
     expect(host.options.onReady).not.toHaveBeenCalled(); expect(host.options.onSettled).toHaveBeenCalledOnce();
     expect(host.options.disposeTree.mock.calls.filter(([root]) => root === asset.root)).toHaveLength(1);
@@ -186,7 +186,7 @@ describe('asynchronous premium attachment', () => {
     const handle = attachPremiumEnvironment(host.options);
     pending.reject(new Error('Download failed')); await handle.ready;
     host.expectUnchanged();
-    expect(host.options.element.dataset).toMatchObject({ environment: 'procedural-fallback', environmentError: 'Download failed', captureReady: 'true' });
+    expect(host.options.element.dataset).toMatchObject({ environment: 'procedural-fallback', environmentError: 'Download failed', captureReady: 'false' });
     expect(host.options.onReady).not.toHaveBeenCalled(); expect(host.options.onSettled).toHaveBeenCalledOnce();
   });
 

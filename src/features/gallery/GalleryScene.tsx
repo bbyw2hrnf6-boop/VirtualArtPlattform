@@ -1,3 +1,6 @@
+import { cameraTourTiming, cameraTourFrame, dollyProgress, type TourTiming } from "./scene/cameraMotion";
+import roomIntroductions from "./scene/roomIntroductions.json";
+import { loadSceneTexture, sceneTextures, waitForSceneTextures } from "./scene/sceneReadiness";
 import { createDesignObject } from "./scene/designObjects";
 import { memo, useEffect, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
@@ -242,26 +245,28 @@ const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
   "black-marble": "./assets/materials/aura-nero-marquina-v2.webp",
   walnut: "./assets/materials/aura-american-walnut-v2.webp",
   "dark-oak": "./assets/materials/aura-smoked-oak-v2.webp",
-  oak: "./assets/materials/aura-natural-oak-v3.webp",
+  oak: "./assets/materials/premium-v3/natural-oak.webp",
   terrazzo: "./assets/materials/aura-light-terrazzo-v3.webp",
-  concrete: "./assets/materials/aura-light-concrete-v5.webp",
+  concrete: "./assets/materials/premium-v3/honed-concrete.webp",
   travertine: "./assets/materials/aura-roman-travertine-v2.webp",
   microcement: "./assets/materials/aura-greige-microcement-v5.webp",
   limestone: "./assets/materials/aura-golden-sandstone-v4.webp",
   "oak-slats": "./assets/materials/aura-light-oak-slats-v3.webp",
   slate: "./assets/materials/aura-black-slate-v3.webp",
   "dark-concrete": "./assets/materials/aura-graphite-concrete-v5.webp",
-  "travertine-floor": "./assets/materials/aura-roman-travertine-v2.webp",
+  "travertine-floor": "./assets/materials/premium-v3/honed-limestone.webp",
   "light-concrete": "./assets/materials/aura-light-concrete-v5.webp",
   "black-slats": "./assets/materials/aura-black-oak-slats-v3.webp",
   "marble-wall": "./assets/materials/aura-calacatta-marble-v4.webp",
   "dark-stone": "./assets/materials/aura-green-stone-v4.webp",
 };
 
+const premiumFloorTiles: Partial<Record<SurfaceKind, number>> = { concrete: 3, oak: 2.4, "travertine-floor": 3 };
+
 function createSurfaceTexture(kind: SurfaceKind, base: string, anisotropy = 8) {
   const asset = surfaceAssets[kind];
   if (asset) {
-    const texture = new THREE.TextureLoader().load(publicAssetUrl(asset));
+    const texture = loadSceneTexture(publicAssetUrl(asset));
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.anisotropy = anisotropy;
@@ -464,7 +469,7 @@ function preparePremiumRoomMaterial(material: THREE.MeshPhysicalMaterial, draft:
     material.clearcoat = draft.floor === "marble" ? 0.24 : 0.06;
     material.clearcoatRoughness = 0.35;
   }
-  if (material.map) material.map.anisotropy = 4;
+  if (material.map) material.map.anisotropy = premiumQualityForTier(getRenderQuality().tier).surfaceAnisotropy;
 }
 
 function showSceneError(
@@ -866,7 +871,19 @@ function createDecor(item: DecorPlacement, selected: boolean) {
     group.add(ficus);
   }
   const designObject = createDesignObject(item.type);
-  if (designObject) group.add(designObject);
+  if (designObject) {
+    if (item.type === "stone-table") {
+      const texture = createSurfaceTexture("travertine-floor", "#c7bcaa");
+      texture.repeat.setScalar(.45);
+      designObject.traverse((object) => {
+        if (object instanceof THREE.Mesh) {
+          const material = object.material as THREE.MeshStandardMaterial;
+          material.map = texture; material.color.set("#ebe5da"); material.roughness = .56;
+        }
+      });
+    }
+    group.add(designObject);
+  }
   if (item.type === "snake-plant") group.add(createSnakePlant(item.potColor));
   if (item.type === "leather-bench") group.add(createLeatherBench());
   if (item.type === "wood-stool") group.add(createWoodStool());
@@ -2161,7 +2178,12 @@ function updateRoomSurface(
   }
   if (role === "floor") {
     const texture = createSurfaceTexture(draft.floor, floorColors[draft.floor]);
-    texture.repeat.multiplyScalar(Math.max(1, Math.max(w, d) / 18));
+    const tile = premiumFloorTiles[draft.floor];
+    const authored = [...materials][0].userData;
+    if (tile) {
+      if (authored.metricUv) texture.repeat.setScalar((authored.tile_metres ?? 4) / tile);
+      else texture.repeat.set(w / tile, d / tile);
+    } else texture.repeat.multiplyScalar(Math.max(1, Math.max(w, d) / 18));
     const details = createSurfaceDetailMaps(draft.floor);
     [details.bumpMap, details.roughnessMap].forEach((item) => item.repeat.copy(texture.repeat));
     replaceRoomSurfaceTexture(materials, texture, details);
@@ -2183,7 +2205,8 @@ function updateRoomSurface(
             : polishedConcrete
               ? 0.52
               : 0.82;
-      material.bumpScale = marble ? .008 : wood ? .022 : slate ? .035 : .018;
+      material.bumpScale = tile ? .003 : marble ? .008 : wood ? .022 : slate ? .035 : .018;
+      if (tile) material.roughness = wood ? .46 : .52;
       material.metalness = marble ? 0.02 : 0.005;
       material.clearcoat = marble
         ? 0.44
@@ -2696,6 +2719,7 @@ function createFirstPersonWalk(
   findPath?: (from: THREE.Vector3, to: THREE.Vector3) => THREE.Vector3[] | null,
   onUserIntent?: () => void,
   onEscape?: () => void,
+  allowWheelZoom = true,
 ) {
   const keys = new Set<string>();
   let enabled = true;
@@ -2820,7 +2844,7 @@ function createFirstPersonWalk(
     canvas.classList.remove("is-looking");
   };
   const wheel = (event: WheelEvent) => {
-    if (!enabled) return;
+    if (!enabled || !allowWheelZoom) return;
     onUserIntent?.();
     targetFov = THREE.MathUtils.clamp(targetFov + event.deltaY * 0.012, 40, 72);
     event.preventDefault();
@@ -3016,11 +3040,7 @@ function createCinematicIntro(
     "centripetal",
     0.38,
   );
-  const duration = THREE.MathUtils.clamp(
-    curve.getLength() * (innerWidth < 620 ? 600 : 560),
-    innerWidth < 620 ? 10_500 : 10_000,
-    innerWidth < 620 ? 22_000 : 24_000,
-  );
+  const duration = Math.max(6500, curve.getLength() * 1000 / 1.075);
   const baseFov = camera.fov;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let complete = false;
@@ -3087,7 +3107,7 @@ function createCinematicIntro(
     previousUpdateAt = now;
     playhead = Math.min(duration, playhead + frameDelta);
     const raw = playhead / duration;
-    const eased = raw * raw * raw * (raw * (raw * 6 - 15) + 10);
+    const eased = dollyProgress(raw);
     curve.getPointAt(eased, position);
     lookCurve.getPointAt(eased, cinematicLook);
     camera.position.copy(position);
@@ -3123,76 +3143,11 @@ function createCinematicIntro(
   };
 }
 
-function galleryIntroTour(
-  draft: GalleryDraft,
-  w: number,
-  d: number,
-): CinematicTour {
-  const finish = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, d / 2 - 1);
-  const finalLook = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, -1);
-  const artworkLooks = draft.artworks
-    .filter((artwork) => !artwork.hidden)
-    .slice(0, 8)
-    .map((artwork) => {
-      const [x, y, z] = WALLS[artwork.wall].position(
-        artwork.x,
-        artwork.y,
-        w,
-        d,
-      );
-      return new THREE.Vector3(x, y, z);
-    });
-  const focus = (index: number, fallback: THREE.Vector3) =>
-    artworkLooks.length ? artworkLooks[index % artworkLooks.length] : fallback;
-  if (draft.templateId === "pavilion") {
-    const southRoomZ = d * 0.35;
-    const northRoomZ = -southRoomZ;
-    const positions = [
-      new THREE.Vector3(0, 4.15, d / 2 - 1),
-      new THREE.Vector3(0, 3.2, southRoomZ),
-      new THREE.Vector3(w * 0.36, 2.75, southRoomZ),
-      new THREE.Vector3(0, 3.15, southRoomZ),
-      new THREE.Vector3(w * 0.38, 2.8, 0),
-      new THREE.Vector3(0, 3.25, northRoomZ),
-      new THREE.Vector3(-w * 0.36, 2.7, northRoomZ),
-      new THREE.Vector3(0, 3.25, northRoomZ),
-      new THREE.Vector3(-w * 0.38, 2.75, 0),
-      finish,
-    ];
-    const looks = [
-      new THREE.Vector3(0, 2.25, 0),
-      focus(0, new THREE.Vector3(w / 2, 2.4, southRoomZ)),
-      focus(1, new THREE.Vector3(w / 2, 2.45, southRoomZ)),
-      new THREE.Vector3(0, 2.4, PAVILION_DIVIDER_Z),
-      focus(2, new THREE.Vector3(w / 2, 2.4, 0)),
-      focus(3, new THREE.Vector3(w / 2, 2.4, northRoomZ)),
-      focus(4, new THREE.Vector3(-w / 2, 2.4, northRoomZ)),
-      new THREE.Vector3(0, 2.4, PAVILION_DIVIDER_Z),
-      focus(5, new THREE.Vector3(-w / 2, 2.4, 0)),
-      finalLook,
-    ];
-    return { positions, looks, finalLook };
-  }
-  const height = draft.templateId === "nocturne" ? 3.15 : 3.35;
-  const positions = [
-    new THREE.Vector3(0, height, d / 2 - 0.8),
-    new THREE.Vector3(-w * 0.29, 2.55, d * 0.14),
-    new THREE.Vector3(-w * 0.27, 2.2, -d * 0.31),
-    new THREE.Vector3(0, 2.05, -d * 0.38),
-    new THREE.Vector3(w * 0.27, 2.1, -d * 0.29),
-    new THREE.Vector3(w * 0.28, 1.9, d * 0.2),
-    finish,
-  ];
-  const looks = [
-    new THREE.Vector3(0, 1.8, -d * 0.15),
-    focus(0, new THREE.Vector3(-w / 2, 1.8, -d * 0.1)),
-    focus(1, new THREE.Vector3(0, 1.9, -d / 2)),
-    focus(2, new THREE.Vector3(w * 0.2, 1.9, -d / 2)),
-    focus(3, new THREE.Vector3(w / 2, 1.8, 0)),
-    focus(4, new THREE.Vector3(0, 1.75, -d * 0.2)),
-    finalLook,
-  ];
-  return { positions, looks, finalLook };
+function galleryIntroTour(draft: GalleryDraft): CinematicTour {
+  const path = roomIntroductions[draft.templateId];
+  const positions = path.positions.map((point) => new THREE.Vector3(...point));
+  const looks = path.looks.map((point) => new THREE.Vector3(...point));
+  return { positions, looks, finalLook: looks[looks.length - 1] };
 }
 
 export interface ArtworkFocusInfo {
@@ -3230,7 +3185,16 @@ export type GallerySceneCapture = (
   options?: GallerySceneCaptureOptions,
 ) => Promise<GallerySceneCaptureResult>;
 
+export interface GalleryPresentation {
+  fov?: number;
+  progress: number;
+  position: [number, number, number];
+  target: [number, number, number];
+  interactive: boolean;
+}
+
 export interface GallerySceneProps {
+  presentation?: RefObject<GalleryPresentation>;
   draft: GalleryDraft;
   selectedId?: string;
   selectedDecorId?: string;
@@ -3244,6 +3208,8 @@ export interface GallerySceneProps {
   visitor?: boolean;
   viewMode?: GalleryViewMode;
   playIntro?: boolean;
+  contentReady?: boolean;
+  onRetryContent?: () => void;
   onIntroComplete?: () => void;
   onArtworkFocus?: (artwork: ArtworkFocusInfo | null) => void;
   onCaptureReady?: (capture: GallerySceneCapture | null) => void;
@@ -3494,7 +3460,7 @@ function syncArtworkObject(
       previous?.dispose();
       return;
     }
-    const texture = new THREE.TextureLoader().load(
+    const texture = loadSceneTexture(
       publicAssetUrl(artwork.src),
       (loadedTexture) => {
         if (group.userData.source !== artwork.src) {
@@ -3505,7 +3471,6 @@ function syncArtworkObject(
         loadedTexture.needsUpdate = true;
         canvas.material.needsUpdate = true;
       },
-      undefined,
       () => {
         if (group.userData.source !== artwork.src) return;
         group.userData.source = undefined;
@@ -3645,9 +3610,11 @@ type GalleryActiveTour = {
   segment: number;
   pausedAt?: number;
   lastUiUpdate: number;
+  timing: TourTiming;
 };
 
 function GallerySceneRenderer({
+  presentation,
   draft,
   selectedId,
   selectedDecorId,
@@ -3661,6 +3628,8 @@ function GallerySceneRenderer({
   visitor = false,
   viewMode = "walk",
   playIntro = false,
+  contentReady = true,
+  onRetryContent,
   onIntroComplete,
   onArtworkFocus,
   onCaptureReady,
@@ -3703,12 +3672,16 @@ function GallerySceneRenderer({
     editorMode,
     editorCutaway,
     playIntro,
+    contentReady,
+    onRetryContent,
+    presentation,
     onIntroComplete,
     onArtworkFocus,
     onViewModeChange,
     onExitSpace,
   });
-  const runtimeKey = `${draft.templateId}:${visitor ? "visitor" : "editor"}`;
+  const [arrivalAttempt, setArrivalAttempt] = useState(0);
+  const runtimeKey = `${draft.templateId}:${visitor ? "visitor" : "editor"}:${arrivalAttempt}`;
   useEffect(() => {
     latest.current = {
       draft,
@@ -3724,6 +3697,9 @@ function GallerySceneRenderer({
       editorMode,
       editorCutaway,
       playIntro,
+    contentReady,
+    onRetryContent,
+    presentation,
       onIntroComplete,
       onArtworkFocus,
       onViewModeChange,
@@ -3743,6 +3719,9 @@ function GallerySceneRenderer({
     editorMode,
     editorCutaway,
     playIntro,
+    contentReady,
+    onRetryContent,
+    presentation,
     onIntroComplete,
     onArtworkFocus,
     onViewModeChange,
@@ -3857,6 +3836,7 @@ function GallerySceneRenderer({
     element.dataset.environmentIntensity =
       scene.environmentIntensity.toFixed(2);
     const controls = new OrbitControls(camera, renderer.domElement);
+    if (initial.presentation) renderer.domElement.style.touchAction = "pan-y pinch-zoom";
     const largestDimension = Math.max(templateW, templateD);
     controls.enableDamping = true;
     controls.dampingFactor = 0.075;
@@ -3959,6 +3939,7 @@ function GallerySceneRenderer({
       (from, to) => collision.findPath(from, to),
       () => onWalkIntent(),
       () => onWalkEscape(),
+      !initial.presentation,
     );
     const walkMarker = new THREE.Mesh(
       new THREE.RingGeometry(0.18, 0.25, 32),
@@ -4027,23 +4008,71 @@ function GallerySceneRenderer({
     controls.enablePan =
       mode === "overview" ||
       (mode === "arrange" && currentDraft.templateId === "pavilion");
-    navigation.setEnabled(mode === "walk" && !initial.playIntro);
+    navigation.syncFromCamera();
+    navigation.setEnabled(false);
     const status = createSceneStatus(element, "Preparing 3D Space…");
-    let intro =
-      navigation && initial.playIntro && mode === "walk" && !introPlayed.current
-        ? createCinematicIntro(
-            camera,
-            galleryIntroTour(currentDraft, w, d),
-            navigation,
-            element,
-            () => {
-              introPlayed.current = true;
-              latest.current.onIntroComplete?.();
-            },
-            "Private view",
-            currentDraft.title,
-          )
-        : null;
+    let arrivalReady = false;
+    let preparingArrival = false;
+    let arrivalFailed = false;
+    let environmentSettled = false;
+    let arrivalRevision = 0;
+    let preparationAbort = new AbortController();
+    let intro: ReturnType<typeof createCinematicIntro> | null = null;
+    element.dataset.arrival = "loading";
+    element.dataset.intro = "waiting";
+    const arrival = document.createElement("div");
+    arrival.className = "space-arrival";
+    const arrivalLabel = document.createElement("p");
+    arrivalLabel.textContent = "LIEUVA / PREPARING YOUR SPACE";
+    const arrivalTitle = document.createElement("strong");
+    arrivalTitle.textContent = template.name;
+    const arrivalDetail = document.createElement("span");
+    const arrivalProgress = document.createElement("progress");
+    arrivalProgress.max = 100;
+    arrivalProgress.setAttribute("aria-label", "Space preparation progress");
+    arrival.append(arrivalLabel, arrivalTitle, arrivalProgress, arrivalDetail);
+    element.appendChild(arrival);
+    const reportArrival = (message: string, progress?: number) => {
+      if (arrivalReady || disposed) return;
+      arrivalDetail.textContent = message;
+      if (progress === undefined) arrivalProgress.removeAttribute("value");
+      else arrivalProgress.value = Math.max(arrivalProgress.value, progress);
+      status.update(message, progress);
+    };
+    const retryArrival = document.createElement("button");
+    retryArrival.type = "button";
+    retryArrival.textContent = "Try again";
+    retryArrival.hidden = true;
+    retryArrival.onclick = () => {
+      if (!latest.current.contentReady && latest.current.onRetryContent)
+        latest.current.onRetryContent();
+      // Recreate scene-owned requests and GPU resources, retaining the current draft.
+      setArrivalAttempt((attempt) => attempt + 1);
+    };
+    const failArrival = () => {
+      if (disposed || arrivalReady) return;
+      arrivalRevision += 1;
+      preparationAbort.abort();
+      arrivalFailed = true;
+      arrival.classList.remove("is-ready");
+      element.dataset.arrival = "error";
+      reportArrival("This Space could not finish loading. Check your connection and try again.");
+      retryArrival.hidden = false;
+    };
+    // Covers architecture, collection hydration and GPU preparation as well as images.
+    const arrivalDeadline = window.setTimeout(failArrival, 90_000);
+    arrival.appendChild(retryArrival);
+    reportArrival("Loading architecture and materials…");
+    const beginIntro = () => {
+      if (!arrivalReady || mode !== "walk" || introPlayed.current || !latest.current.playIntro) return;
+      intro = createCinematicIntro(camera, galleryIntroTour(currentDraft), navigation,
+        element, () => {
+          introPlayed.current = true;
+          walkState.position.copy(camera.position);
+          walkState.quaternion.copy(camera.quaternion);
+          latest.current.onIntroComplete?.();
+        }, "Private view", currentDraft.title);
+    };
     let activeGuidedTour: GalleryActiveTour | null = null;
     let smartGalleryViewIndex = -1;
     const applyCutawayMode = () => {
@@ -4188,6 +4217,7 @@ function GallerySceneRenderer({
       element.dataset.reflections = "room-probe";
     };
     const scheduleRoomReflection = () => {
+      if (!arrivalReady) return;
       if (quality.tier === "low") {
         element.dataset.reflections = "light-card-pmrem";
         return;
@@ -5117,6 +5147,8 @@ function GallerySceneRenderer({
       } else if (previousLayoutKey !== nextLayoutKey)
         updateLightingLayout(lighting, next, w, d, h);
       currentDraft = next;
+      arrivalRevision += 1;
+      if (!arrivalReady) { preparationAbort.abort(); preparationAbort = new AbortController(); }
       premiumEnvironment?.apply(isCutawayActive(), currentDraft);
       currentSelectedId = nextSelectedId;
       currentSelectedDecorId = nextSelectedDecorId;
@@ -5175,14 +5207,15 @@ function GallerySceneRenderer({
     rebuildCollision();
     if (premiumEnvironmentRequested(window.location.search)) {
       premiumEnvironment = attachPremiumEnvironment({
+        requestKey: arrivalAttempt ? String(arrivalAttempt) : undefined,
         templateId: currentDraft.templateId, mobile: quality.tier === "low" ||
           window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 700,
         element, floor: floorMesh, exteriorWalls, architecture, roof,
         ceiling: ceilingPlane, ceilingDetails,
         prepareMaterial: (material) => preparePremiumRoomMaterial(material, currentDraft),
         disposeTree: disposeObjectTree,
-        onSettled: () => status.ready(element.dataset.environment === "procedural-fallback"
-          ? "Space ready · standard environment" : "3D Space ready"),
+        onProgress: (progress) => reportArrival("Loading architecture and materials…", progress * .7),
+        onSettled: () => { environmentSettled = true; },
         onReady: () => {
           if (disposed) return;
           // Respect material edits made while the GLB was loading.
@@ -5192,7 +5225,7 @@ function GallerySceneRenderer({
               ? { wall: "charcoal", floor: "dark-oak" }
               : { wall: "travertine", floor: "marble" };
           if (currentDraft.wall !== defaults.wall) updateRoomSurface(scene, currentDraft, w, d, "wall");
-          if (currentDraft.floor !== defaults.floor) updateRoomSurface(scene, currentDraft, w, d, "floor");
+          if (currentDraft.floor !== defaults.floor || premiumFloorTiles[currentDraft.floor]) updateRoomSurface(scene, currentDraft, w, d, "floor");
           disposeAndRemove(scene, lighting.rig);
           lighting = addLighting(scene, currentDraft, w, d, h, isCutawayActive(), quality.shadowMapSize, quality.tier, true);
           rebuildCollision(); applyCutawayMode();
@@ -5201,11 +5234,10 @@ function GallerySceneRenderer({
         },
       });
     }
-    if (premiumEnvironment) status.update("Preparing your Space…", 90);
-    else { element.dataset.environment = "procedural"; status.ready(); }
-    element.dataset.sceneReadyMs = String(Math.round(performance.now() - sceneStartedAt));
+    if (!premiumEnvironment) { element.dataset.environment = "procedural"; environmentSettled = true; }
     const capture: GallerySceneCapture = async (options = {}) => {
       await premiumEnvironment?.ready;
+      await waitForSceneTextures(scene);
       if (disposed) throw new Error("The 3D Space is no longer available.");
       const sourceWidth = Math.max(1, renderer.domElement.width);
       const sourceHeight = Math.max(1, renderer.domElement.height);
@@ -5253,16 +5285,16 @@ function GallerySceneRenderer({
       element.dataset.lastCapture = `${width}x${height}`;
       return { dataUrl, width, height, mimeType, mode };
     };
-    if (!premiumEnvironment) element.dataset.captureReady = "true";
+    element.dataset.captureReady = "false";
     const galleryTourPoses = () => {
       const entranceTarget = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, -1);
-      const entrance = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, d / 2 - 1);
-      const center = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, 0);
+      const entrance = camera.position.clone().setY(VISITOR_EYE_HEIGHT);
+      const center = new THREE.Vector3(0, VISITOR_EYE_HEIGHT, currentDraft.templateId === "pavilion" ? 9 : 3);
       const poses: GalleryTourPose[] = [
         {
           position: entrance,
-          quaternion: cameraQuaternionFor(entrance, entranceTarget),
-          label: "Entrance",
+          quaternion: camera.quaternion.clone(),
+          label: "Your starting view",
           isStop: true,
         },
         {
@@ -5307,7 +5339,8 @@ function GallerySceneRenderer({
       for (const destination of poses.slice(1)) {
         const from = routed.at(-1)?.position ?? poses[0].position;
         const path = collision.findPath(from, destination.position);
-        if (path?.length) {
+        if (!path) continue;
+        if (path.length) {
           path.slice(0, -1).forEach((point, index) => {
             if (point.distanceToSquared(from) < 0.04) return;
             const next = path[index + 1] ?? destination.position;
@@ -5404,7 +5437,7 @@ function GallerySceneRenderer({
       );
       const index = stopIndexes[stopIndex];
       const pose = tour.poses[index];
-      const progress = index / Math.max(1, tour.poses.length - 1);
+      const progress = index ? tour.timing.segments[index - 1].end / tour.duration : 0;
       tour.segment = Math.max(-1, index - 1);
       tour.startedAt = performance.now() - progress * tour.duration;
       tour.pausedAt = performance.now();
@@ -5418,27 +5451,18 @@ function GallerySceneRenderer({
         navigation.syncFromCamera();
         navigation.setEnabled(true);
       };
-      modeTransition = {
-        startedAt: performance.now(),
-        durationMs: 520,
-        fromPosition: camera.position.clone(),
-        toPosition: pose.position.clone(),
-        fromQuaternion: camera.quaternion.clone(),
-        toQuaternion: pose.quaternion.clone(),
-        fromFov: camera.fov,
-        toFov: 58,
-        finish,
-      };
-      if (reducedMotion.matches) finish();
+      finish();
+      if (!reducedMotion.matches) renderer.domElement.animate([{ opacity: .2 }, { opacity: 1 }], { duration: 260 });
       publishGalleryTourState("paused", progress, pose, index, tour.poses);
     };
     const startGuidedTour = () => {
-      if (disposed || mode !== "walk" || activeGuidedTour) return;
+      if (disposed || !arrivalReady || mode !== "walk" || activeGuidedTour) return;
       intro?.dispose();
       intro = null;
       latest.current.onArtworkFocus?.(null);
       walkMarker.visible = false;
       const poses = galleryTourPoses();
+      if (poses.length < 2) return;
       const featured = poses.find((pose) => pose.artworkId) ?? poses[1];
       if (reducedMotion.matches) {
         camera.position.copy(featured.position);
@@ -5457,10 +5481,13 @@ function GallerySceneRenderer({
       camera.fov = 58;
       camera.updateProjectionMatrix();
       navigation.setEnabled(false);
+      const timing = cameraTourTiming(poses);
+      element.dataset.tourDuration = String(Math.round(timing.duration));
       activeGuidedTour = {
+        timing,
         poses,
         startedAt: performance.now(),
-        duration: THREE.MathUtils.clamp((poses.length - 1) * 4_500, 20_000, 45_000),
+        duration: timing.duration,
         segment: -1,
         lastUiUpdate: 0,
       };
@@ -5595,6 +5622,8 @@ function GallerySceneRenderer({
     let placementFrame = 0;
     let lastDiagnosticsAt = Number.NEGATIVE_INFINITY;
     let lastPerformanceDiagnosticsAt = Number.NEGATIVE_INFINITY;
+    let lastPresentationShadow = "";
+    let lastPresentationReflection = "";
     let renderRunning = false;
     const renderActivity: ReturnType<typeof observeRenderActivity> = {
       active: () => true,
@@ -5610,19 +5639,67 @@ function GallerySceneRenderer({
         renderRunning = false;
         return;
       }
+      if (!arrivalReady && !arrivalFailed && environmentSettled && !preparingArrival) {
+        if (!latest.current.contentReady) reportArrival("Preparing the collection…", 72);
+        else {
+          preparingArrival = true;
+          const revision = arrivalRevision;
+          void (async () => {
+            reportArrival("Preparing the collection…", 78);
+            await waitForSceneTextures(scene, preparationAbort.signal);
+            if (disposed || revision !== arrivalRevision || !latest.current.contentReady) return;
+            reportArrival("Lighting your Space…", 90);
+            cancelScheduledRoomReflection();
+            sceneTextures(scene).forEach((texture) => renderer.initTexture(texture));
+            bakeRoomReflection();
+            const compilation = renderer.compileAsync(scene, camera);
+            // Submit the prepared scene behind the overlay. Some WebGL drivers
+            // only advance parallel shader completion once a draw is submitted.
+            renderer.render(scene, camera);
+            await compilation;
+            if (disposed || revision !== arrivalRevision || arrivalFailed) return;
+            renderer.render(scene, camera);
+            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+            if (disposed || revision !== arrivalRevision || !latest.current.contentReady) return;
+            renderer.render(scene, camera);
+            reportArrival("Ready to enter", 100);
+            // Reveal the already rendered first pose before advancing the dolly.
+            if (mode === "walk" && latest.current.playIntro && !introPlayed.current) {
+              const tour = galleryIntroTour(currentDraft);
+              camera.position.copy(tour.positions[0]); camera.lookAt(tour.looks[0]);
+              renderer.render(scene, camera);
+            }
+            arrival.classList.add("is-ready");
+            await new Promise<void>((resolve) => window.setTimeout(resolve, reducedMotion.matches ? 0 : 240));
+            if (disposed) return;
+            if (revision !== arrivalRevision || !latest.current.contentReady) {
+              arrival.classList.remove("is-ready"); arrivalProgress.value = 70; return;
+            }
+            adaptiveDpr.resetSampling();
+            arrivalReady = true;
+            window.clearTimeout(arrivalDeadline);
+            element.dataset.arrival = "ready";
+            element.dataset.captureReady = "true";
+            element.dataset.sceneReadyMs = String(Math.round(performance.now() - sceneStartedAt));
+            status.ready();
+            arrival.remove();
+            navigation.setEnabled(mode === "walk");
+            beginIntro();
+          })().catch(() => {
+            if (!disposed && revision === arrivalRevision) failArrival();
+          }).finally(() => { preparingArrival = false; });
+        }
+      }
       intro?.update();
       if (activeGuidedTour && activeGuidedTour.pausedAt === undefined) {
         const tour = activeGuidedTour;
         const raw = THREE.MathUtils.clamp((now - tour.startedAt) / tour.duration, 0, 1);
-        const scaled = raw * Math.max(1, tour.poses.length - 1);
-        const segment = Math.min(tour.poses.length - 2, Math.floor(scaled));
-        const localRaw = scaled - segment;
-        const local = localRaw * localRaw * (3 - 2 * localRaw);
+        const { index: segment, amount: local } = cameraTourFrame(tour.timing, now - tour.startedAt);
         const from = tour.poses[segment];
         const to = tour.poses[segment + 1];
         camera.position.lerpVectors(from.position, to.position, local);
         camera.quaternion.slerpQuaternions(from.quaternion, to.quaternion, local);
-        camera.fov = 58 + Math.sin(local * Math.PI) * 1.2;
+        camera.fov = 58;
         camera.updateProjectionMatrix();
         if (tour.segment !== segment || now - tour.lastUiUpdate > 120) {
           tour.segment = segment;
@@ -5815,7 +5892,7 @@ function GallerySceneRenderer({
             .join(",");
         else delete element.dataset.cameraTarget;
         element.dataset.intro =
-          intro && !intro.isComplete() ? "active" : "complete";
+          !arrivalReady ? "waiting" : intro && !intro.isComplete() ? "active" : "complete";
       }
       if (now - lastPerformanceDiagnosticsAt >= 1000) {
         lastPerformanceDiagnosticsAt = now;
@@ -5823,21 +5900,71 @@ function GallerySceneRenderer({
         element.dataset.triangles = String(renderer.info.render.triangles);
         element.dataset.textureCount = String(renderer.info.memory.textures);
       }
-      adaptiveDpr.update(now);
-      renderer.render(scene, camera);
+      const presentation = latest.current.presentation?.current;
+      if (presentation) {
+        const reveal = (start: number, end: number) => {
+          const value = THREE.MathUtils.clamp((presentation.progress - start) / (end - start), 0, 1);
+          return value * value * (3 - 2 * value);
+        };
+        const artReveal = reveal(.18, .38), decorReveal = reveal(.46, .64);
+        for (const object of artworkObjects) {
+          object.visible = artReveal > .001;
+          object.scale.setScalar(.92 + .08 * artReveal);
+          object.position.y = (artworkById.get(object.userData.artworkId)?.y ?? 1.75) - (1 - artReveal) * .2;
+        }
+        for (const item of currentDraft.decor) {
+          const object = decorById.get(item.id);
+          if (object) { object.visible = decorReveal > .001; object.scale.setScalar(item.scale * decorReveal); }
+        }
+        const visibilityState = `${artReveal > .001}:${decorReveal > .001}`;
+        const shadowState = `${visibilityState}:${artReveal.toFixed(2)}:${decorReveal.toFixed(2)}`;
+        if (shadowState !== lastPresentationShadow) {
+          renderer.shadowMap.needsUpdate = true;
+          lastPresentationShadow = shadowState;
+        }
+        const reflectionState = `${visibilityState}:${artReveal === 1}:${decorReveal === 1}`;
+        if (reflectionState !== lastPresentationReflection) {
+          scheduleRoomReflection();
+          lastPresentationReflection = reflectionState;
+        }
+        if (!presentation.interactive) {
+          navigation.setEnabled(false);
+          camera.position.set(...presentation.position);
+          camera.lookAt(new THREE.Vector3(...presentation.target));
+          if (presentation.fov && camera.fov !== presentation.fov) { camera.fov = presentation.fov; camera.updateProjectionMatrix(); }
+        } else if (element.dataset.presentation !== "interactive") {
+          navigation.syncFromCamera();
+          navigation.setEnabled(arrivalReady);
+        }
+        element.dataset.presentation = presentation.interactive ? "interactive" : "story";
+      }
+      if (arrivalReady) {
+        adaptiveDpr.update(now);
+        renderer.render(scene, camera);
+      }
       frame = requestAnimationFrame(animate);
     };
+    let inactiveAt: number | undefined;
     const observedRenderActivity = observeRenderActivity(element, (active) => {
       if (!active) {
+        inactiveAt = performance.now();
         cancelAnimationFrame(frame);
         renderRunning = false;
-      } else wakeRender();
+      } else {
+        if (inactiveAt !== undefined && activeGuidedTour && activeGuidedTour.pausedAt === undefined)
+          activeGuidedTour.startedAt += performance.now() - inactiveAt;
+        if (inactiveAt !== undefined) adaptiveDpr.resetSampling();
+        inactiveAt = undefined;
+        wakeRender();
+      }
     });
     renderActivity.active = observedRenderActivity.active;
     renderActivity.dispose = observedRenderActivity.dispose;
     wakeRender();
     return () => {
       disposed = true;
+      window.clearTimeout(arrivalDeadline);
+      preparationAbort.abort();
       premiumEnvironment?.dispose();
       runtime.current = null;
       cancelAnimationFrame(frame);
@@ -5858,6 +5985,7 @@ function GallerySceneRenderer({
       navigation.dispose();
       controls.dispose();
       status.remove();
+      arrival.remove();
       cancelScheduledRoomReflection();
       reflectionEnvironmentTarget?.dispose();
       baseEnvironmentTarget.dispose();
@@ -5867,7 +5995,7 @@ function GallerySceneRenderer({
       renderer.domElement.remove();
       setExitPortalFocused(false);
     };
-  }, [runtimeKey]);
+  }, [runtimeKey, arrivalAttempt]);
   useEffect(() => {
     runtime.current?.sync(draft, selectedId, selectedDecorId);
   }, [draft, selectedId, selectedDecorId]);
@@ -5909,7 +6037,7 @@ function GallerySceneRenderer({
       }
       ref={host}
     >
-      {(visitor || editorMode === "walk") && (
+      {!presentation && (visitor || editorMode === "walk") && (
         <VisitorControls
           mode={visitor ? viewMode : editorMode}
           modeOptions={
@@ -6133,6 +6261,9 @@ export const GalleryScene = memo(
     previous.visitor === next.visitor &&
     previous.viewMode === next.viewMode &&
     previous.playIntro === next.playIntro &&
+    previous.contentReady === next.contentReady &&
+    previous.onRetryContent === next.onRetryContent &&
+    previous.presentation === next.presentation &&
     previous.onIntroComplete === next.onIntroComplete &&
     previous.onArtworkFocus === next.onArtworkFocus &&
     previous.onCaptureReady === next.onCaptureReady &&
@@ -6184,8 +6315,7 @@ type DannyActiveTour = {
   startedAt: number;
   duration: number;
   poses: DannyTourPose[];
-  weights: number[];
-  totalWeight: number;
+  timing: TourTiming;
   segment: number;
   pausedAt?: number;
   lastUiUpdate: number;
@@ -6201,7 +6331,6 @@ type DannyDemoRuntime = {
   setTouchMovement: (direction?: "forward" | "backward" | "left" | "right") => void;
 };
 
-const DANNY_GUIDED_TOUR_DURATION_MS = 45_000;
 
 export function DannyDemoScene({
   viewMode = "walk",
@@ -6301,7 +6430,7 @@ export function DannyDemoScene({
     element.dataset.guidedTour = "idle";
     element.dataset.tourAutoplay =
       quality.tier === "low" ? "disabled-low-tier" : "disabled";
-    element.dataset.tourDuration = String(DANNY_GUIDED_TOUR_DURATION_MS);
+    element.dataset.tourPacing = "distance-and-turn";
     element.dataset.lightingPreset = "pitch-neutral-v3";
     element.dataset.toneMappingExposure =
       renderer.toneMappingExposure.toFixed(2);
@@ -6567,10 +6696,7 @@ export function DannyDemoScene({
     };
     const progressForDannyPose = (poseIndex: number) => {
       if (!activeTour || poseIndex <= 0) return 0;
-      const distance = activeTour.weights
-        .slice(0, Math.min(poseIndex, activeTour.weights.length))
-        .reduce((sum, weight) => sum + weight, 0);
-      return distance / Math.max(activeTour.totalWeight, 0.001);
+      return activeTour.timing.segments[poseIndex - 1].end / activeTour.duration;
     };
     const pauseOrResumeGuidedTour = () => {
       if (!activeTour) return;
@@ -6792,21 +6918,13 @@ export function DannyDemoScene({
       camera.quaternion.copy(tourPoses[0].quaternion);
       camera.fov = 58;
       camera.updateProjectionMatrix();
-      const weights = tourPoses
-        .slice(1)
-        .map(
-          (pose, index) =>
-            Math.max(
-              0.65,
-              pose.position.distanceTo(tourPoses[index].position),
-            ) + (pose.isView ? 1.45 : 0),
-        );
+      const timing = cameraTourTiming(tourPoses.map((pose) => ({ ...pose, isStop: pose.isView })));
+      element.dataset.tourDuration = String(Math.round(timing.duration));
       activeTour = {
         startedAt: performance.now(),
-        duration: DANNY_GUIDED_TOUR_DURATION_MS,
+        duration: timing.duration,
         poses: tourPoses,
-        weights,
-        totalWeight: weights.reduce((sum, weight) => sum + weight, 0),
+        timing,
         segment: -1,
         lastUiUpdate: 0,
       };
@@ -7432,6 +7550,15 @@ export function DannyDemoScene({
             isView: step.isView,
           };
         });
+        void (async () => {
+          status.update("Lighting the exhibition…", 95);
+          sceneTextures(scene).forEach((texture) => renderer.initTexture(texture));
+          await renderer.compileAsync(scene, camera);
+          if (destroyed) return;
+          renderer.render(scene, camera);
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          if (destroyed) return;
+          renderer.render(scene, camera);
         loaded = true;
         element.dataset.colliders = String(colliderNodes.length);
         element.dataset.artworkTargets = String(artworkHitObjects.length);
@@ -7473,53 +7600,12 @@ export function DannyDemoScene({
             quality.tier !== "low" &&
             !introPlayed.current
           ) {
-            const width = bounds.maxX - bounds.minX;
-            const depth = bounds.maxZ - bounds.minZ;
-            const centerX = lookTarget.x;
-            const centerZ = (walkState.position.z + lookTarget.z) / 2;
-            const radiusX = Math.min(width * 0.28, 4.6);
-            const radiusZ = Math.min(
-              Math.abs(walkState.position.z - lookTarget.z) * 0.46,
-              depth * 0.24,
-            );
             const tour = [
-              walkState.position.clone().add(new THREE.Vector3(0, 1.15, 0)),
-              new THREE.Vector3(
-                centerX - radiusX,
-                walkState.position.y + 0.95,
-                centerZ + radiusZ,
-              ),
-              new THREE.Vector3(
-                centerX - radiusX,
-                walkState.position.y + 0.78,
-                centerZ - radiusZ,
-              ),
-              new THREE.Vector3(
-                centerX,
-                walkState.position.y + 0.88,
-                centerZ - radiusZ * 1.08,
-              ),
-              new THREE.Vector3(
-                centerX + radiusX,
-                walkState.position.y + 0.68,
-                centerZ - radiusZ,
-              ),
-              new THREE.Vector3(
-                centerX + radiusX,
-                walkState.position.y + 0.48,
-                centerZ + radiusZ,
-              ),
+              walkState.position.clone().add(new THREE.Vector3(0, 1.0, 0)),
+              walkState.position.clone().add(new THREE.Vector3(0, .6, -.35)),
               walkState.position.clone(),
             ];
-            const tourLooks = [
-              lookTarget.clone(),
-              new THREE.Vector3(centerX, 2.2, centerZ - radiusZ),
-              new THREE.Vector3(centerX + radiusX * 0.35, 2.1, centerZ),
-              new THREE.Vector3(centerX, 2.15, centerZ + radiusZ),
-              new THREE.Vector3(centerX - radiusX * 0.35, 2.05, centerZ),
-              lookTarget.clone(),
-              lookTarget.clone(),
-            ];
+            const tourLooks = tour.map(() => lookTarget.clone());
             intro = createCinematicIntro(
               camera,
               { positions: tour, looks: tourLooks, finalLook: lookTarget },
@@ -7546,6 +7632,11 @@ export function DannyDemoScene({
         setSceneReady(true);
         trackTelemetry("three_milestone", { runtime: "danny", stage: "interactive", quality: quality.tier });
         latest.current.onLoadProgress?.(100);
+        })().catch(() => {
+          if (destroyed) return;
+          status.update("Exhibition could not finish loading");
+          modelErrorCleanup = showSceneError(element, "The exhibition could not finish preparing. Please reload to try again.");
+        });
       },
       (event) => {
         if (!event.total) {
@@ -7639,23 +7730,7 @@ export function DannyDemoScene({
           1,
           (now - activeTour.startedAt) / activeTour.duration,
         );
-        const distance = raw * activeTour.totalWeight;
-        let cumulative = 0;
-        let segment = activeTour.weights.length - 1;
-        for (let index = 0; index < activeTour.weights.length; index += 1) {
-          if (distance <= cumulative + activeTour.weights[index]) {
-            segment = index;
-            break;
-          }
-          cumulative += activeTour.weights[index];
-        }
-        const local = activeTour.weights[segment]
-          ? THREE.MathUtils.clamp(
-              (distance - cumulative) / activeTour.weights[segment],
-              0,
-              1,
-            )
-          : 1;
+        const { index: segment, amount: local } = cameraTourFrame(activeTour.timing, now - activeTour.startedAt);
         const from = activeTour.poses[segment];
         const to = activeTour.poses[segment + 1];
         camera.position.lerpVectors(from.position, to.position, local);
@@ -7664,7 +7739,7 @@ export function DannyDemoScene({
           to.quaternion,
           local,
         );
-        camera.fov = 58 + Math.sin(local * Math.PI) * 1.25;
+        camera.fov = 58;
         camera.updateProjectionMatrix();
         if (activeTour.segment !== segment || now - activeTour.lastUiUpdate > 120) {
           activeTour.segment = segment;
@@ -7719,11 +7794,15 @@ export function DannyDemoScene({
       renderer.render(scene, camera);
       frame = requestAnimationFrame(animate);
     };
+    let inactiveAt: number | undefined;
     const observedRenderActivity = observeRenderActivity(element, (active) => {
       if (!active) {
-        cancelAnimationFrame(frame);
-        renderRunning = false;
-      } else wakeRender();
+        inactiveAt = performance.now(); cancelAnimationFrame(frame); renderRunning = false;
+      } else {
+        if (inactiveAt !== undefined && activeTour && activeTour.pausedAt === undefined)
+          activeTour.startedAt += performance.now() - inactiveAt;
+        inactiveAt = undefined; wakeRender();
+      }
     });
     renderActivity.active = observedRenderActivity.active;
     renderActivity.dispose = observedRenderActivity.dispose;

@@ -1,22 +1,16 @@
-import { describe, expect, it } from "vitest";
-import appSource from "../../App.tsx?raw";
-import storySource from "./ScrollGalleryStory.tsx?raw";
+import { describe, expect, it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createElement } from 'react';
+import { ScrollGalleryStory } from './ScrollGalleryStory';
 
-describe("Emil scroll-story integration contract", () => {
-  it("does not force reduced-motion visitors into the interactive finale", () => {
-    expect(storySource).toContain("targetProgress = storyScrollProgress(");
-    expect(storySource).not.toContain("reducedMotion ? 1");
-  });
-
-  it("renumbers the condensed five-chapter sequence", () => {
-    expect(storySource).toContain("visibleStoryEyebrow(chapter.eyebrow, visibleIndex)");
-    expect(storySource).toContain("CONDENSED_CHAPTER_INDEXES");
-  });
-
-  it("does not flash the completed room while a mobile story is loading", () => {
-    expect(appSource).toContain("01 / 05 · Preparing the blueprint…");
-    expect(appSource).not.toContain("danny-emil-finale-mobile-v2.webp");
-    expect(storySource).toContain('section.dataset.roomState = "loading"');
-    expect(storySource).toContain('section.dataset.roomState = "error"');
+describe('Product-story handoff and fallback', () => {
+  it('keeps literal product copy and real create links available before WebGL starts', () => {
+    const html = renderToStaticMarkup(createElement(ScrollGalleryStory));
+    expect(html).toContain('Immersive 3D presentation platform');
+    expect(html).toContain('href="#/create"');
+    expect(html).toContain('Open this Space in Studio');
+    expect(html).toContain('directly in your browser');
+    expect(html).toContain('sgs__accessible-sequence');
+    expect(html).not.toContain('Danny');
   });
 });

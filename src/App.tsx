@@ -1,3 +1,4 @@
+import { consumeStudioHandoff } from './services/studioHandoff';
 import { catalogObject, DECOR_CATALOG, FLOOR_OPTIONS, WALL_OPTIONS } from "./features/gallery/designCatalog";
 import {
   lazy,
@@ -375,7 +376,7 @@ function BrandHero({ onExplore }: { onExplore: () => void }) {
   return (
     <section className="brand-hero brand-hero--follow" aria-labelledby="brand-hero-title">
       <p className="eyebrow"><i aria-hidden="true" /> Live on LIEUVA</p>
-      <h1 id="brand-hero-title">Follow the work.</h1>
+      <h2 id="brand-hero-title">Follow the work.</h2>
       <p>Enter published Spaces. Meet the Creators behind them. Follow new rooms and studio notes as the work develops.</p>
       <div className="brand-hero__actions">
         <button className="button button--light" type="button" onClick={onExplore} aria-haspopup="dialog">Explore Spaces <span>↓</span></button>
@@ -484,7 +485,7 @@ function LandingProductProof() {
           aria-label="Open a working LIEUVA Studio Space"
         >
           <img
-            src="./assets/templates/nocturne-preview.webp?v=premium-v2"
+            src="./assets/templates/nocturne-preview.webp?v=premium-v3"
             width="965"
             height="752"
             loading="eager"
@@ -538,7 +539,7 @@ function DeferredScrollStory() {
           className="story-placeholder story-placeholder--opening"
           aria-label="Preparing the interactive Space story"
         >
-          <span>01 / 05 · Preparing the blueprint…</span>
+          <span>01 / 04 · Preparing your Space…</span>
         </section>
       ) : (
       <Suspense
@@ -547,7 +548,7 @@ function DeferredScrollStory() {
             className="story-placeholder"
             aria-label="Loading interactive Space story"
           >
-            <span>Preparing Danny Hirsch Arts…</span>
+            <span>Preparing your Space…</span>
           </section>
         }
       >
@@ -627,7 +628,7 @@ function RoomShowcase({ embedded = false }: { embedded?: boolean }) {
               aria-label={`Try ${template.name} with sample artwork`}
             >
               <img
-                src={`./assets/templates/${template.id}-preview.webp?v=premium-v2`}
+                src={`./assets/templates/${template.id}-preview.webp?v=premium-v3`}
                 width="965"
                 height="752"
                 loading="lazy"
@@ -891,7 +892,7 @@ function TemplatePicker({
                 <span className="template-number">{template.index}</span>
                 <div className="template-preview">
                   <img
-                    src={`./assets/templates/${template.id}-preview.webp?v=premium-v2`}
+                    src={`./assets/templates/${template.id}-preview.webp?v=premium-v3`}
                     width="965"
                     height="752"
                     decoding="async"
@@ -1187,6 +1188,10 @@ function Studio({
             setPublishVisibility(stored.publication.visibility);
             setPublishExploreListed(stored.publication.exploreListed ?? true);
             setPublishCreatorProfileListed(stored.publication.creatorProfileListed ?? true);
+            resetDraft(stored.draft);
+            setStorageReady(true);
+            setSaveStatus("saved");
+          } else if (consumeStudioHandoff(initialProjectId)) {
             resetDraft(stored.draft);
             setStorageReady(true);
             setSaveStatus("saved");
@@ -4062,6 +4067,7 @@ function PublishedGallery({ id }: { id: string }) {
               setLoadState({ status: "ready", gallery: next });
               setArtworkLoad({ loaded, total, failed: false });
             },
+            loadAttempt > 0,
           );
           if (!stale) {
             setLoadState({ status: "ready", gallery: hydrated });
@@ -4207,6 +4213,8 @@ function PublishedGallery({ id }: { id: string }) {
       </header>
       <GalleryScene
         draft={gallery}
+        contentReady={artworkLoad.failed || artworkLoad.loaded >= artworkLoad.total}
+        onRetryContent={() => setLoadAttempt((attempt) => attempt + 1)}
         visitor
         viewMode={viewMode}
         playIntro

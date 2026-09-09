@@ -26,7 +26,7 @@
   background: currentColor;
 }
 
-.brand-hero.brand-hero--follow h1 {
+.brand-hero.brand-hero--follow h2 {
   margin: 24px 0 30px;
   font-size: clamp(76px, 8.4vw, 136px);
   white-space: nowrap;
@@ -69,7 +69,7 @@
     max-width: 74vw;
   }
 
-  .brand-hero.brand-hero--follow h1 {
+  .brand-hero.brand-hero--follow h2 {
     white-space: normal;
   }
 }
@@ -85,7 +85,7 @@
     max-width: 100%;
   }
 
-  .brand-hero.brand-hero--follow h1 {
+  .brand-hero.brand-hero--follow h2 {
     font-size: clamp(64px, 20vw, 84px);
   }
 

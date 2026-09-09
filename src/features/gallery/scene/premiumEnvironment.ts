@@ -5,7 +5,7 @@ import { getTemplate } from '../templates';
 import { galleryWalls } from '../editor/placementValidation';
 import type { GalleryDraft, TemplateId } from '../types';
 
-export const PREMIUM_ENVIRONMENT_VERSION = 'premium-v2';
+export const PREMIUM_ENVIRONMENT_VERSION = 'premium-v3';
 
 /** Shared Studio/visitor default. The explicit procedural selector is a local rollback. */
 export function premiumEnvironmentRequested(search: string) {
@@ -71,6 +71,7 @@ export type PremiumEnvironmentHandle = {
 };
 
 type Options = {
+  requestKey?: string;
   templateId: TemplateId;
   mobile: boolean;
   element: HTMLElement;
@@ -83,6 +84,7 @@ type Options = {
   prepareMaterial: (material: THREE.MeshPhysicalMaterial) => void;
   onReady: () => void;
   onSettled: () => void;
+  onProgress?: (progress: number) => void;
   disposeTree: (root: THREE.Object3D) => void;
 };
 
@@ -107,7 +109,10 @@ export function attachPremiumEnvironment(options: Options): PremiumEnvironmentHa
   element.dataset.captureReady = 'false';
   delete element.dataset.environmentError;
   const path = publicAssetUrl(`assets/templates/${PREMIUM_ENVIRONMENT_VERSION}/${templateId}-${options.mobile ? 'mobile' : 'desktop'}.glb`);
-  const ready = new GLTFLoader().loadAsync(path).then((gltf) => {
+  const requestPath = options.requestKey ? `${path}?arrival=${encodeURIComponent(options.requestKey)}` : path;
+  const ready = new GLTFLoader().loadAsync(requestPath, (event) => {
+    if (event.total && !disposed) options.onProgress?.(event.loaded / event.total * 100);
+  }).then((gltf) => {
     const asset = gltf.scene;
     try {
       if (disposed) return;
@@ -192,7 +197,6 @@ export function attachPremiumEnvironment(options: Options): PremiumEnvironmentHa
   }).finally(() => {
     if (disposed) return;
     element.dataset.environmentReadyMs = String(Math.round(performance.now() - startedAt));
-    element.dataset.captureReady = 'true';
     options.onSettled();
   });
   return { get loaded() { return loaded; }, ready, apply, dispose: () => {

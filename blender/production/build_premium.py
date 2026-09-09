@@ -1,4 +1,4 @@
-"""LIEUVA premium v1: repeatable, metric Blender sources, runtime exports and Cycles.
+"""LIEUVA premium v3: repeatable, metric Blender sources, runtime exports and Cycles.
 Run: Blender -b --python blender/production/build_premium.py -- --room white-cube --round 1
 Runtime coordinates are (x,y,z); Blender coordinates are (x,-z,y).
 """
@@ -8,7 +8,7 @@ import bpy
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT/'blender/production/v2'
+OUT = ROOT/'blender/production/v3'
 parser=argparse.ArgumentParser()
 parser.add_argument('--room', choices=['white-cube','nocturne','pavilion'],required=True)
 parser.add_argument('--round',type=int,default=1)
@@ -29,7 +29,7 @@ scene.unit_settings.system='METRIC'
 scene['aura_template_id']=ROOM
 scene['aura_schema_version']=2
 scene['aura_units']='metres'
-scene['lieuva_production_version']='premium-v2'
+scene['lieuva_production_version']='premium-v3'
 scene['aura_dimensions']=[W,D,H]
 COL={}
 for name in ['SHELL','ARCHITECTURE','OVERHEAD','SURFACES','COLLISION','NAVIGATION','ANCHORS','BEAUTY_STAGING','BEAUTY_LIGHTS','CAMERAS']:
@@ -76,10 +76,10 @@ def emission(name,color,power):
 white=material('Mineral plaster',(.72,.69,.62),.82,texture='aura-chalk-plaster-v5.webp',tile=3)
 charcoal=material('Warm charcoal plaster',(.11,.085,.064),.76,texture='aura-greige-microcement-v5.webp',tile=3)
 stone=material('Cut limestone',(.62,.53,.4),.64,texture='aura-roman-travertine-v2.webp',tile=4)
-concrete=material('Honed pale concrete',(.51,.5,.46),.32,texture='aura-light-concrete-v5.webp',tile=4)
+concrete=material('Honed pale concrete',(.51,.5,.46),.32,texture='premium-v3/honed-concrete.webp',tile=3,bump=.0015)
 oak=material('Smoked oak',(.12,.075,.04),.36,texture='aura-smoked-oak-v2.webp',tile=2.6)
 walnut=material('Walnut joinery',(.15,.075,.03),.32,texture='aura-american-walnut-v2.webp',tile=2.4)
-marble=material('Honed travertine',(.58,.5,.39),.27,texture='aura-roman-travertine-v2.webp',tile=4)
+marble=material('Honed limestone floor',(.58,.5,.39),.3,texture='premium-v3/honed-limestone.webp',tile=3,bump=.001)
 darkstone=material('Dark mineral plinth',(.025,.022,.019),.3,texture='aura-nero-marquina-v2.webp',tile=2)
 bronze=material('Patinated bronze',(.34,.20,.075),.26,.88,bump=.001)
 metal=material('Blackened track',(.012,.014,.014),.32,.55,bump=0)
@@ -199,12 +199,14 @@ else:
  # Existing five-zone plan, 5.6 m clear portals and one divider at z=0.
  for xs in [-1,1]:
   for zs in [-1,1]:
-   for ds in [-1,1]:solid('Side gallery partition',(xs*10,2.76,zs*21+ds*5.9),(.34,5.52,6.2))
+   for ds in [-1,1]:
+    near_pier = ds == -zs
+    solid('Side gallery partition',(xs*10,2.76,zs*21+ds*(5.72 if near_pier else 5.9)),(.34,5.52,5.84 if near_pier else 6.2))
    solid('Gallery portal header',(xs*10,4.535,zs*21),(.34,1.97,5.6))
-   solid('Cross gallery wall',(xs*15,2.76,zs*12),(10,5.52,.34))
+   solid('Cross gallery wall',(xs*15.18,2.76,zs*12),(9.64,5.52,.34))
    solid('Junction pier',(xs*10,2.76,zs*12),(.72,5.52,.72),bevel=.025)
    for z in [zs*12]:
-    box('Upper limestone pier',(xs*10,6.5,z),(.72,3,.72),stone,'OVERHEAD',.025)
+    box('Upper limestone pier',(xs*10,6.76,z),(.72,2.48,.72),stone,'OVERHEAD',.025)
    side='west' if xs<0 else 'east';prefix='north' if zs<0 else 'south'
    surface(prefix+'-cross-'+side,(xs*15,2.275,zs*12-zs*.175),10,4.55,0 if zs<0 else math.pi,prefix+'-'+side)
    surface(prefix+'-room-'+side,(xs*15,2.275,zs*12+zs*.175),10,4.55,math.pi if zs<0 else 0,prefix+'-'+side)
@@ -307,7 +309,11 @@ positions={'white-cube':((-4.9,1.8,4.85),(-.3,2.1,-4.2),23),'nocturne':((-.6,1.8
 p,target,lens=positions[ROOM]
 data=bpy.data.cameras.new('Beauty 01');o=bpy.data.objects.new('Beauty 01',data);COL['CAMERAS'].objects.link(o);o.location=vec(p);o.rotation_euler=(Vector(vec(target))-o.location).to_track_quat('-Z','Y').to_euler();data.lens=lens;data.clip_end=200;scene.camera=o
 scene.render.engine='CYCLES';scene.cycles.samples=args.samples;scene.cycles.use_denoising=True;scene.cycles.seed=612
-scene.cycles.max_bounces=8;scene.cycles.diffuse_bounces=4;scene.cycles.glossy_bounces=4;scene.cycles.sample_clamp_indirect=4
+scene.cycles.adaptive_threshold=.006
+scene.cycles.max_bounces=10
+scene.cycles.diffuse_bounces=6
+scene.cycles.glossy_bounces=6
+scene.cycles.sample_clamp_indirect=6
 prefs=bpy.context.preferences.addons['cycles'].preferences
 try:
  if args.device=='CPU':raise RuntimeError('CPU selected')
@@ -382,6 +388,24 @@ if args.round>=3 and ROOM=='white-cube':
   source=links[0].from_socket;walnut.node_tree.links.remove(links[0])
   mix=walnut.node_tree.nodes.new('ShaderNodeMixRGB');mix.blend_type='MULTIPLY';mix.inputs[0].default_value=1;mix.inputs[2].default_value=(.3,.23,.16,1)
   walnut.node_tree.links.new(source,mix.inputs[1]);walnut.node_tree.links.new(mix.outputs[0],p.inputs['Base Color'])
+if args.round>=5:
+ # Near-vertical daylight gives the floor readable rooflight shadows and keeps
+ # stone microstructure visible. Beauty-only lights do not enter Runtime GLBs.
+ if ROOM!='nocturne':
+  world.node_tree.nodes['Background'].inputs[1].default_value=.18
+  for l in COL['BEAUTY_LIGHTS'].objects:
+   if l.type!='LIGHT':continue
+   if l.data.type=='SUN':
+    l.data.energy=3.0;l.data.angle=.018
+    l.rotation_euler=(Vector(vec((-.3,-1,-.25)))).to_track_quat('-Z','Y').to_euler()
+   if 'daylight' in l.name.lower() or l.name=='Daylight roof':l.data.energy*=.65
+ if ROOM=='pavilion':
+  scene.camera.data.lens=22
+  scene.view_settings.exposure=-.55
+ if ROOM=='nocturne':
+  scene.camera.location=vec((-1.7,2.0,5.3))
+  scene.camera.rotation_euler=(Vector(vec((0,2.35,-3.9)))-scene.camera.location).to_track_quat('-Z','Y').to_euler()
+  light('Bronze reflection card',(-2.8,3.2,2.2),(0,1.5,.65),85,(.85,.92,1),2.8,'RECTANGLE',.5)
 OUT.mkdir(parents=True,exist_ok=True)
 for img in bpy.data.images:
  if img.source=='FILE':img.pack()
@@ -438,7 +462,7 @@ if args.export:
     for o in COL[collection].objects:
      if o.type=='MESH':
       m=o.modifiers.new('Mobile coplanar reduction','DECIMATE');m.decimate_type='DISSOLVE';m.angle_limit=.06
-  target=ROOT/'public/assets/templates/premium-v2';target.mkdir(parents=True,exist_ok=True)
+  target=ROOT/'public/assets/templates/premium-v3';target.mkdir(parents=True,exist_ok=True)
   bpy.ops.export_scene.gltf(filepath=str(target/(ROOM+'-'+suffix+'.glb')),export_format='GLB',export_extras=True,export_apply=True,export_yup=True,export_lights=False,export_cameras=False,export_animations=False,export_image_format='JPEG',export_jpeg_quality=85)
  print('SURFACE_CONTRACT',json.dumps({'id':ROOM,'surfaces':sorted(surfaces),'obstacles':len(obstacles),'nav_triangles':len(faces)}))
 print('LIEUVA COMPLETE',ROOM,'source/export only' if args.no_render else str(renderpath))

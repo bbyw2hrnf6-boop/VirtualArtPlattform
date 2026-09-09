@@ -40,7 +40,7 @@
   z-index: 1;
 }
 
-.brand-hero h1 {
+.brand-hero h2 {
   max-width: min(960px, 73vw);
 }
 
@@ -261,7 +261,7 @@
 }
 
 @media (max-width: 900px) {
-  .brand-hero h1 {
+  .brand-hero h2 {
     max-width: 92vw;
   }
 

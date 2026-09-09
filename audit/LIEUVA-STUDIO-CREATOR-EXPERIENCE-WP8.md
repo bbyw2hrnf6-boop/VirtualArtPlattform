@@ -1,5 +1,7 @@
 # LIEUVA Studio Creator Experience — Work Package 8
 
+> Update 2026-09-09: Current local quality work uses premium-v3, a resource-gated arrival, physically paced tours, and a four-chapter White Cube homepage demonstration with direct Studio handoff. The owner explicitly permitted replacing the Danny homepage subject; the standalone Danny demo and compatibility identifiers remain. See [current production and acceptance](./LIEUVA-ARRIVAL-MATERIAL-STORY-2026-09-08.md). Earlier measurements below are historical; this note does not assert deployment.
+
 Date: 2026-08-25  
 Scope: premium Studio creator experience, mobile authoring, upload feedback, selection/editing clarity, Arrange/Walk continuity, accessibility and privacy-safe creator telemetry.  
 Environment: local Vite implementation at `http://127.0.0.1:5174/`; no deploy, commit, push, Firebase mutation or DNS change was performed.

@@ -21,7 +21,7 @@ That permission is specific to their use within this LIEUVA project. It does not
 
 The three fictional studies in `public/assets/artworks/` were generated specifically for the product demo. Exact generation and processing details are recorded in [`public/assets/artworks/README.md`](./public/assets/artworks/README.md). They are not presented as works by a real artist.
 
-The three active preview images in `public/assets/templates/` are captures from the interactive Studio, refreshed on 2026-09-08. They replace the ImageGen concept images used previously. Their current role and provenance are recorded in [`public/assets/templates/README.md`](./public/assets/templates/README.md).
+The three active preview images in `public/assets/templates/` are captures from the interactive Studio, refreshed on 2026-09-09. They replace the ImageGen concept images used previously. Their current role and provenance are recorded in [`public/assets/templates/README.md`](./public/assets/templates/README.md).
 
 ## Material images
 
@@ -48,9 +48,9 @@ This notice records the repository's current licensing state without assigning n
 
 `blender/production/build_premium.py` and `runtime_bakes.py` create original metric gallery architecture, fixtures, geometry-only AO maps and the fictional bronze ribbon study for LIEUVA. Generated geometry is not a scan or a downloaded third-party model. Packed albedos are derivatives of the existing documented LIEUVA material library; the runtime charcoal map is a tinted derivative of `aura-greige-microcement-v5.webp`. No additional external texture, model, HDRI or MCP package was downloaded for production.
 
-`blender/production/v1/` contains render iterations and three native 3840×2160 Cycles beauty masters. `v2/` contains editable beauty/runtime sources and runtime maps. `public/assets/templates/premium-v1/` is the archived review candidate; `premium-v2/` contains the six active runtime exports. Beauty staging uses the existing fictional demo studies, never Danny's licensed artwork, and is excluded from runtime exports.
+`blender/production/v1/` contains render iterations and three native 3840×2160 Cycles beauty masters. `v2/` contains editable beauty/runtime sources and runtime maps. `public/assets/templates/premium-v1/` is the archived review candidate; `premium-v2/` is the previous runtime; `premium-v3/` contains the six current local runtime exports. `blender/production/v3/` holds editable sources, camera studies, two proof rounds and separate 4K Cycles masters. Beauty staging uses the existing fictional demo studies, never Danny's licensed artwork, and is excluded from runtime exports.
 
-The three `public/assets/templates/*-preview.webp` images were refreshed from actual Studio capture output on 2026-09-08. They represent the interactive renderer, not the Cycles beauty masters. The user-provided architectural screenshots were used as visual references only and are not redistributed in product assets. No standalone reuse license for these project assets is granted here.
+The three `public/assets/templates/*-preview.webp` images were refreshed from actual Studio capture output on 2026-09-09. They represent the interactive renderer, not the Cycles beauty masters. The user-provided architectural screenshots were used as visual references only and are not redistributed in product assets. No standalone reuse license for these project assets is granted here.
 
 
 ## Studio design catalogue · 2026-09-08
@@ -62,3 +62,9 @@ The lounge chair, stone table and light column are original procedural geometry 
 ## Production bundle optimization · 2026-09-08
 
 Terser 5.51.2 is a pinned, build-only development dependency under BSD-2-Clause (license in its installed package and upstream repository). It is not an additional browser runtime. The build compacts whitespace in recognized Three.js shader strings while preserving their tokens and preprocessor instructions; Three.js remains under its existing MIT license and the transform leaves its JavaScript/license notices intact. No artwork, texture, model, GLB, Blender source or visual asset was added or replaced in this fix.
+
+## Premium-v3 generated material and camera studies · 2026-09-09
+
+`blender/production/v3/material-studies/` contains original project-specific generated concrete, limestone and oak albedo studies from the built-in OpenAI image-generation tool. Shipping derivatives are in `public/assets/materials/premium-v3/`; the material README records dimensions, processing, briefs and SHA-256 hashes. The backend model was not reported. No third-party photograph or the user's reference UI screenshots is redistributed as a new texture.
+
+The new homepage uses LIEUVA's three fictional demo studies and shared Studio renderer. It does not copy Danny Hirsch's works or change the separate licensed demo. Camera paths and geometry are project-authored; these records do not grant a new standalone redistribution license.

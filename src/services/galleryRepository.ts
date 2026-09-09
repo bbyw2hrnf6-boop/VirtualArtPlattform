@@ -76,6 +76,7 @@ export interface GalleryRepository {
   hydrateGalleryArtworks(
     gallery: GalleryRecord,
     onArtwork?: (gallery: GalleryRecord, loaded: number, total: number) => void,
+    retryPending?: boolean,
   ): Promise<GalleryRecord>;
   editableDraft(id: string): Promise<EditableGalleryProject>;
   discover(): Promise<GalleryRecord[]>;
@@ -115,7 +116,7 @@ export const galleryRepository: GalleryRepository = {
   async updatePublished(target, draft, roomCoverSource) { return (await loadRepository()).updatePublished(target, draft, roomCoverSource); },
   async find(id) { return (await loadRepository()).find(id); },
   async findManifest(id) { return (await loadRepository()).findManifest(id); },
-  async hydrateGalleryArtworks(gallery, onArtwork) { return (await loadRepository()).hydrateGalleryArtworks(gallery, onArtwork); },
+  async hydrateGalleryArtworks(gallery, onArtwork, retryPending) { return (await loadRepository()).hydrateGalleryArtworks(gallery, onArtwork, retryPending); },
   async editableDraft(id) { return (await loadRepository()).editableDraft(id); },
   async discover() { return (await loadRepository()).discover(); },
   async mine() { return (await loadRepository()).mine(); },
