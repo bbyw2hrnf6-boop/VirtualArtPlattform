@@ -96,6 +96,15 @@ jobs:
         if: github.event_name != 'push' || github.ref != 'refs/heads/main'
         run: npm run test:browser-smoke
 
+      - name: Retain failed preview browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-smoke-preview-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/playwright-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Record verified revision
         if: always()
         run: |
@@ -259,6 +268,15 @@ jobs:
 
       - name: Smoke the exact production artifact in Chromium
         run: npm run test:browser-smoke
+
+      - name: Retain failed production browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-smoke-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/playwright-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Install and verify the locked Firebase CLI
         run: |

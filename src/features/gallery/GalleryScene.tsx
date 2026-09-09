@@ -4,6 +4,7 @@ import { loadSceneTexture, sceneTextures, waitForSceneTextures } from "./scene/s
 import { createDesignObject } from "./scene/designObjects";
 import { memo, useEffect, useRef, useState, type RefObject } from "react";
 import * as THREE from "three";
+import { finiteEnvironmentCapture } from "./scene/finiteEnvironment";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -2402,8 +2403,11 @@ function captureRoomEnvironment(
   const previousEnvironment = scene.environment;
   const cubeTarget = new THREE.WebGLCubeRenderTarget(probeSize, {
     type: THREE.HalfFloatType,
-    generateMipmaps: true,
-    minFilter: THREE.LinearMipmapLinearFilter,
+    // Filter only after invalid GPU radiance has been repaired. Even one NaN
+    // otherwise contaminates the PMREM and blacks out entire lit surfaces.
+    generateMipmaps: false,
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
   });
   const probe = new THREE.CubeCamera(0.2, far, cubeTarget);
   probe.position.copy(position);
@@ -2411,10 +2415,14 @@ function captureRoomEnvironment(
   scene.add(probe);
   try {
     probe.update(renderer, scene);
+    const finiteCapture = finiteEnvironmentCapture(renderer, cubeTarget);
     const generator = new THREE.PMREMGenerator(renderer);
-    const target = generator.fromCubemap(cubeTarget.texture);
-    generator.dispose();
-    return target;
+    try {
+      return generator.fromCubemap(finiteCapture.texture);
+    } finally {
+      generator.dispose();
+      finiteCapture.dispose();
+    }
   } finally {
     scene.remove(probe);
     scene.environment = previousEnvironment;
@@ -3745,6 +3753,9 @@ function GallerySceneRenderer({
     const sceneStartedAt = performance.now();
     const initial = latest.current;
     let currentDraft = initial.draft;
+    let presentationRevision = 0;
+    let presentationTextureRequest = 0;
+    let presentationTexturesPending = false;
     let currentSelectedId = initial.selectedId;
     let currentSelectedDecorId = initial.selectedDecorId;
     let mode: GallerySceneMode = initial.visitor
@@ -4226,6 +4237,7 @@ function GallerySceneRenderer({
       const previous = reflectionEnvironmentTarget;
       reflectionEnvironmentTarget = nextTarget;
       scene.environment = nextTarget.texture;
+      presentationRevision += 1;
       previous?.dispose();
       renderer.shadowMap.needsUpdate = true;
       element.dataset.reflections = "room-probe";
@@ -5161,8 +5173,23 @@ function GallerySceneRenderer({
       } else if (previousLayoutKey !== nextLayoutKey)
         updateLightingLayout(lighting, next, w, d, h);
       currentDraft = next;
+      presentationRevision += 1;
+      if (initial.presentation) element.dataset.presentationIdle = "false";
       arrivalRevision += 1;
       if (!arrivalReady) { preparationAbort.abort(); preparationAbort = new AbortController(); }
+      if (initial.presentation) {
+        // A late material image must refresh a stationary story as well.
+        const request = ++presentationTextureRequest;
+        presentationTexturesPending = true;
+        void waitForSceneTextures(scene, preparationAbort.signal)
+          .catch(() => { /* Existing texture fallbacks/readiness own failures. */ })
+          .finally(() => {
+            if (!disposed && request === presentationTextureRequest) {
+              presentationTexturesPending = false;
+              presentationRevision += 1;
+            }
+          });
+      }
       premiumEnvironment?.apply(isCutawayActive(), currentDraft);
       currentSelectedId = nextSelectedId;
       currentSelectedDecorId = nextSelectedDecorId;
@@ -5566,8 +5593,12 @@ function GallerySceneRenderer({
       west: new THREE.Vector3(-1, 0, 0),
       east: new THREE.Vector3(1, 0, 0),
     };
-    const updateCutaway = () => {
-      if (!isCutawayActive()) return;
+    let lastCutawayAt = performance.now();
+    const updateCutaway = (now: number) => {
+      const amount = initial.presentation ? 1 - Math.exp(-Math.max(0, now - lastCutawayAt) / 100) : .16;
+      lastCutawayAt = now;
+      if (!isCutawayActive()) return false;
+      let changed = false;
       overviewDirection
         .subVectors(camera.position, overviewCenter)
         .setY(0)
@@ -5587,15 +5618,16 @@ function GallerySceneRenderer({
               : mode === "overview"
                 ? 0.9
                 : 0.78;
-        material.opacity = THREE.MathUtils.lerp(
-          material.opacity,
-          targetOpacity,
-          0.16,
-        );
+        const nextOpacity = initial.presentation && Math.abs(material.opacity - targetOpacity) < .001
+          ? targetOpacity : THREE.MathUtils.lerp(material.opacity, targetOpacity, amount);
+        changed ||= nextOpacity !== material.opacity;
+        material.opacity = nextOpacity;
       });
+      return changed;
     };
     let frame = 0;
     const resize = () => {
+      presentationRevision += 1;
       const width = element.clientWidth;
       const height = element.clientHeight;
       renderer.setSize(width, height, false);
@@ -5638,6 +5670,9 @@ function GallerySceneRenderer({
     let lastPerformanceDiagnosticsAt = Number.NEGATIVE_INFINITY;
     let lastPresentationShadow = "";
     let lastPresentationReflection = "";
+    let lastRenderedProgress = Number.NaN;
+    let lastRenderedRevision = -1;
+    let presentationFrames = 0;
     let renderRunning = false;
     const renderActivity: ReturnType<typeof observeRenderActivity> = {
       active: () => true,
@@ -5723,7 +5758,7 @@ function GallerySceneRenderer({
         }
         if (raw >= 1) stopGuidedTour("completed");
       } else if (mode === "walk" && !modeTransition) navigation.update();
-      updateCutaway();
+      const cutawayChanging = updateCutaway(now);
       if (modeTransition) {
         const raw = Math.min(1, (now - modeTransition.startedAt) / (modeTransition.durationMs ?? 320));
         const eased = raw * raw * (3 - 2 * raw);
@@ -5956,8 +5991,23 @@ function GallerySceneRenderer({
         element.dataset.presentation = presentation.interactive ? "interactive" : "story";
       }
       if (arrivalReady) {
-        adaptiveDpr.update(now);
-        renderer.render(scene, camera);
+        // A paused homepage is a still image. Re-submitting it every RAF can
+        // saturate a software GPU and block otherwise independent DOM controls.
+        const needsFrame = !presentation || presentation.interactive || cutawayChanging ||
+          presentation.progress !== lastRenderedProgress || presentationRevision !== lastRenderedRevision ||
+          renderer.shadowMap.needsUpdate;
+        if (needsFrame) {
+          adaptiveDpr.update(now);
+          renderer.render(scene, camera);
+          lastRenderedProgress = presentation?.interactive ? Number.NaN : presentation?.progress ?? Number.NaN;
+          lastRenderedRevision = presentationRevision;
+          if (presentation) {
+            element.dataset.presentationFrames = String(++presentationFrames);
+            element.dataset.presentationProgress = String(presentation.progress);
+          }
+        } else adaptiveDpr.resetSampling(now);
+        if (presentation) element.dataset.presentationIdle = String(!needsFrame &&
+          !presentationTexturesPending && !reflectionTimer && !reflectionIdle && !reflectionFrame);
       }
       frame = requestAnimationFrame(animate);
     };

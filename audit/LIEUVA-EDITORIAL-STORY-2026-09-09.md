@@ -167,3 +167,81 @@ captures were visually reviewed. Production gzip: JS 572,411 bytes, CSS 52,806,
 largest lazy JS 175,192, entry JS 302,196, entry CSS 31,790. All existing ceilings
 pass; no ceiling was raised. Logs are under ignored `artifacts/deployment-*`.
 No GitHub run, commit, push or deployment was triggered.
+
+## Second CI follow-up after revision `25eceee`
+
+Read the actual logs of GitHub run `34394176346`, production job `102610240390`.
+The mount checks progressed, but the desktop oak click exhausted the 90-second
+journey budget after the button had become visible/stable; mobile chapter progress
+again missed five seconds. The earlier local passes did not establish runner
+reliability. Only the policy archive was retained by that run, so its referenced
+Playwright traces/screenshots were unavailable through the artifacts endpoint.
+
+Local SwiftShader plus 6× CDP CPU throttling reproduced the mobile failure before
+this follow-up (the first progress sample remained zero). Profiling also showed
+long WebGL/reflection tasks. A stationary homepage kept submitting identical 3D
+frames, competing with input and compositor work on the software GPU.
+
+Implemented:
+
+- Explicit chapter selection publishes its UI state and destination immediately.
+  Normal native scrolling and optional film playback still use the authored camera
+  path and time-based smoothing.
+- The shared renderer skips unchanged frames only for a non-interactive homepage
+  presentation. Camera/reveal changes, cutaway settling, material/draft updates,
+  late texture completion, resize and completed room reflections invalidate it.
+  Look Around, Studio and visitor navigation keep continuous rendering.
+- Homepage cutaway opacity settles by elapsed time and reaches an exact endpoint;
+  it no longer takes dozens of expensive low-FPS frames to settle. Other editor
+  cutaway interpolation retains its existing behavior.
+- Browser tests wait for the actual rendered chapter and completed preparation,
+  assert that a resting story stops drawing and that material editing draws again.
+  No force-clicks, disabled WebGL, skipped cases, reduced room assets, quality caps
+  or further timeout increases are used. CPU throttling is an opt-in test setting.
+- Both workflow branches retain failed Playwright diagnostics for seven days.
+  The browser gate still blocks release after failure; no continue-on-error path.
+- Visual review caught a separate existing reflection defect, also reproduced in
+  a build of unchanged `25eceee`: the mobile interior was nearly black under
+  SwiftShader despite successful DOM checks. GPU readback found five invalid RGB
+  texels (15 half-float NaN components) in the raw 128px room cube. PMREM filtering
+  spread these into 29,034 non-finite components. A small GPU pass now repairs only
+  invalid samples from finite neighbors before generating mipmaps/PMREM. A fresh
+  readback finds zero invalid values in all six repaired faces and the PMREM;
+  the interior is visibly lit again. This keeps HDR, room lighting, reflections
+  and existing probe resolution. There is no production GPU-to-CPU readback.
+  A separate native-GPU check of all three rooms compared original finite texels
+  against the repaired captures: zero changed valid RGB texels across all 18 cube
+  faces, and zero non-finite values in the resulting PMREMs. Arrange and Walk
+  Preview captures at 1440×1000 were reviewed for White Cube, Warm Gallery and
+  Grand Forum (`artifacts/ci-final-room-visuals.log`).
+  The mobile smoke test now checks a rendered pale-wall patch as well as DOM
+  controls, so this black-room failure cannot silently pass that journey again.
+
+Camera poses, GLBs, images, materials, texture/probe/shadow resolutions, and Blender
+sources are unchanged. The Blender camera and material/hash validator passed;
+workflow YAML parsed and its failure-only artifact retention was checked. The
+first targeted rerun with software rendering and 6× CPU throttling passed both
+affected journeys. Final full-suite results follow.
+
+Final source validation: `npm run check` passed (345 unit tests, 46 script tests,
+six premium GLBs, lint/type checks and both builds). Default Chromium passed all
+eight browser journeys in 26.5 seconds with retries disabled. Camera/material
+validation again passed all 1,729 samples and original asset hashes. Production
+gzip is 573,423 bytes JS, 52,806 CSS, 175,202 largest lazy JS, 302,195 entry JS and
+31,790 entry CSS, within every existing enforced ceiling. Stretch targets remain
+open.
+
+The final production artifact also uses the actual public App Check site key
+observed in the failed CI job, with the same functions/production telemetry
+branches. This build is 573,433 bytes JS gzip and passes the same ceilings. All
+eight browser journeys passed against it under SwiftShader and 6× CDP CPU
+throttling in 3.5 minutes, with retries disabled. The mobile wall-color regression
+passes and its 390×844 capture is visibly lit; the 1440×1000 story/material capture
+was also reviewed. These are local macOS Chromium results, not a claim that the
+next Linux GitHub run or deployment has already succeeded.
+
+Final logs: ignored `artifacts/ci-final-check.log`, `ci-final-browser.log`,
+`ci-final-public-build.log`, `ci-final-stress.log`, and
+`ci-final-blender-validation.log`. The GPU diagnostic readback is confined to an
+ignored comparison build; no debugging globals or readback code enter production.
+No commit, push, workflow rerun, publishing action or live Firebase write occurred.

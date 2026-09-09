@@ -11,6 +11,7 @@ import './scrollGalleryStory.css';
 export function ScrollGalleryStory() {
   const sectionRef = useRef<HTMLElement>(null);
   const chapters = useRef<Array<HTMLElement | null>>([]);
+  const seek = useRef<((progress: number) => void) | null>(null);
   const presentation = useRef<GalleryPresentation>(storyPresentation(0));
   const [arrival, setArrival] = useState<'loading' | 'ready' | 'error'>('loading');
   const playing = useRef(false);
@@ -35,7 +36,11 @@ export function ScrollGalleryStory() {
   const goTo = (progress: number) => {
     stopFilm(); explore.current = false; setExploring(false);
     const section = sectionRef.current;
-    if (section) window.scrollTo({ top: scrollY + section.getBoundingClientRect().top + (progress > 1 ? section.offsetHeight : progress * (section.offsetHeight - innerHeight)), behavior: 'instant' });
+    if (section) {
+      window.scrollTo({ top: scrollY + section.getBoundingClientRect().top + (progress > 1 ? section.offsetHeight : progress * (section.offsetHeight - innerHeight)), behavior: 'instant' });
+      // An explicit chapter selection is immediate; it must not wait for WebGL.
+      seek.current?.(progress);
+    }
   };
   useEffect(() => {
     const stop = (event: Event) => {
@@ -54,6 +59,21 @@ export function ScrollGalleryStory() {
     if (!section) return;
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0, progress = 0, last = performance.now(), visible = true;
+    const publish = () => {
+      presentation.current = storyPresentation(progress, innerWidth < 700, motion.matches);
+      presentation.current.interactive = explore.current && !motion.matches && progress >= .75;
+      const chapter = motion.matches ? 0 : Math.min(3, Math.floor(progress * 4));
+      section.dataset.chapter = String(chapter);
+      section.dataset.interactive = String(presentation.current.interactive);
+      section.dataset.motion = motion.matches ? 'reduced' : 'full';
+      section.style.setProperty('--story-progress', String(progress));
+      chapters.current.forEach((item, index) => { if (item) item.hidden = index !== chapter; });
+    };
+    seek.current = (target) => {
+      progress = motion.matches ? 0 : Math.max(0, Math.min(1, target));
+      last = performance.now();
+      publish();
+    };
     const update = (now: number) => {
       frame = 0;
       if (!visible || document.hidden) { playing.current = false; setPlaying(false); return; }
@@ -66,14 +86,7 @@ export function ScrollGalleryStory() {
       }
       progress = motion.matches ? 0 : advanceStoryProgress(progress, target, now - last);
       last = now;
-      presentation.current = storyPresentation(progress, innerWidth < 700, motion.matches);
-      presentation.current.interactive = explore.current && !motion.matches && progress >= .75;
-      const chapter = motion.matches ? 0 : Math.min(3, Math.floor(progress * 4));
-      section.dataset.chapter = String(chapter);
-      section.dataset.interactive = String(presentation.current.interactive);
-      section.dataset.motion = motion.matches ? 'reduced' : 'full';
-      section.style.setProperty('--story-progress', String(progress));
-      chapters.current.forEach((item, index) => { if (item) item.hidden = index !== chapter; });
+      publish();
       frame = requestAnimationFrame(update);
     };
     const observer = new IntersectionObserver(([entry]) => {
@@ -86,6 +99,7 @@ export function ScrollGalleryStory() {
     motion.addEventListener('change', resume);
     frame = requestAnimationFrame(update);
     return () => {
+      seek.current = null;
       cancelAnimationFrame(frame); observer.disconnect();
       document.removeEventListener('visibilitychange', resume); motion.removeEventListener('change', resume);
     };
