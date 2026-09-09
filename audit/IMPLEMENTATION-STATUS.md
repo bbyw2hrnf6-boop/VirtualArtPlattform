@@ -1,5 +1,7 @@
 # AURA – Umsetzungsstatus nach dem Audit
 
+> CI timing correction 2026-09-09: The homepage camera now settles by elapsed time even on slow/software renderers. Deferred-module and poster-transition assertions use bounded preparation waits. Room assets and rendering quality are unchanged. See the follow-up in [editorial acceptance](./LIEUVA-EDITORIAL-STORY-2026-09-09.md#ci-timing-correction-after-revision-28869a0); this records local verification, not a live deployment.
+
 > Editorial update 2026-09-09: [Screenshot decisions and acceptance](./LIEUVA-EDITORIAL-STORY-2026-09-09.md) document the longer White Cube camera score, a single arrival visual contract, quiet homepage posters, metric floor relief, mobile material completion and direct post-publication copying. Existing GLBs, 4K masters, publishing permissions and URL contracts remain. Local implementation only; no deployment is asserted.
 
 > Update 2026-09-09: Current local quality work uses premium-v3, a resource-gated arrival, physically paced tours, and a four-chapter White Cube homepage demonstration with direct Studio handoff. The owner explicitly permitted replacing the Danny homepage subject; the standalone Danny demo and compatibility identifiers remain. See [current production and acceptance](./LIEUVA-ARRIVAL-MATERIAL-STORY-2026-09-08.md). Earlier measurements below are historical; this note does not assert deployment.

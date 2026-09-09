@@ -123,3 +123,47 @@ Audit logs and screenshots are under ignored `artifacts/editorial-*`,
 `artifacts/homepage-production-smoke-results/`. Screenshot source decisions above
 were written before implementation. No commit, push, deployment or live
 publication was performed.
+
+## CI timing correction after revision `28869a0`
+
+The owner supplied a failed GitHub browser-smoke log: six tests passed; the
+desktop story did not mount within the assertion's five-second default and the
+mobile fourth chapter did not settle within five seconds. The previous local
+hardware-rendered passes did not cover the runner's slower rendering path.
+
+Forced SwiftShader reproduced the mobile failure locally: after five seconds,
+progress was `0.7369663589851587` instead of exceeding `.754`. The desktop test
+also failed locally, at its separate poster-transition assertion rather than
+the mount assertion reported by GitHub.
+
+The story's exponential smoothing and optional playback capped every elapsed
+frame at 80 ms. At low frame rates that discarded real elapsed time, delaying
+chapter selection and extending the nominal 72-second film. Both now use actual
+nonnegative elapsed time; the existing visibility pause/reset remains. A new
+regression compares forward and reverse settling after one second at 1 fps and
+25 fps. Camera stops, interpolation paths, materials, DPR/shadow quality settings,
+geometry, source blends and images are unchanged.
+
+Only the deferred-mount and poster-transition assertions receive the same bounded
+30-second preparation allowance already used by the room readiness checks. The
+two-scene desktop journey has a 90-second total allowance. Chapter convergence
+still must pass within five seconds; no test is skipped and no retries are needed
+to qualify a pass. `LIEUVA_BROWSER_SMOKE_SOFTWARE_GL=1` makes the slow rendering path
+reproducible through the standard Playwright configuration without changing the
+product's quality settings.
+
+The Blender validator still compares all 1,729 camera samples/proof poses exactly,
+checks original asset hashes and independent material buffers. It now records
+the current runtime-code hash separately from the historical authoring-code hash,
+so a timing-only code edit does not require relabelling or regenerating unchanged
+Blender scenes. That validation passed.
+
+Local follow-up evidence: both affected tests passed under SwiftShader (1.7 min);
+`npm run check` passed with 345 unit tests, 46 script tests, six GLB validations
+and both builds. The complete default Chromium suite passed 8/8 (26.4 sec), and
+the complete production-feature suite passed 8/8 under SwiftShader (3.2 min),
+both with retries explicitly disabled. Desktop 1440×1000 and compact 390×844
+captures were visually reviewed. Production gzip: JS 572,411 bytes, CSS 52,806,
+largest lazy JS 175,192, entry JS 302,196, entry CSS 31,790. All existing ceilings
+pass; no ceiling was raised. Logs are under ignored `artifacts/deployment-*`.
+No GitHub run, commit, push or deployment was triggered.

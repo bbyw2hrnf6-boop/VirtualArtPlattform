@@ -3,8 +3,13 @@
   "node": "v22.23.2",
   "currentCameraCode": {
     "path": "src/features/landing/scrollStoryModel.ts",
+    "sha256": "d73c854decd53c442af18d373eb205861a74d3067ee5411d7b15845e48575b1d"
+  },
+  "renderCameraCode": {
+    "path": "src/features/landing/scrollStoryModel.ts",
     "sha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
   },
+  "cameraSamplesUnchanged": true,
   "desktopPoseSha256": "7b8fae98ce4e701cd791d589ff6ae56b7ed861001071d7cb2cd1674708da8d86",
   "desktopFrames": 1729,
   "artifactAndOriginalHashesMatch": true,

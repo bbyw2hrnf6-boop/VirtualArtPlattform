@@ -60,7 +60,7 @@ export function ScrollGalleryStory() {
       const rect = section.getBoundingClientRect();
       let target = storyScrollProgress(-rect.top, 0, section.offsetHeight - innerHeight, motion.matches);
       if (playing.current && !motion.matches) {
-        target = Math.min(1, target + Math.min(80, now - last) / STORY_DURATION_MS);
+        target = Math.min(1, target + Math.max(0, now - last) / STORY_DURATION_MS);
         window.scrollTo({ top: scrollY + rect.top + target * (section.offsetHeight - innerHeight), behavior: 'instant' });
         if (target === 1) { playing.current = false; setPlaying(false); }
       }

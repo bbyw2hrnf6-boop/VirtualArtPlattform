@@ -10,6 +10,16 @@ describe('Product story motion', () => {
     for (let i = 0; i < 60; i++) progress = advanceStoryProgress(progress, .2, 16.67);
     expect(progress).toBeCloseTo(.2, 3);
   });
+  it('reaches the same chapter in wall-clock time at low and high frame rates', () => {
+    for (const [start, target] of [[0, .755], [.755, .005]]) {
+      const slow = advanceStoryProgress(start, target, 1000);
+      let fast = start;
+      for (let frame = 0; frame < 25; frame++) fast = advanceStoryProgress(fast, target, 40);
+      expect(slow).toBeCloseTo(fast, 8);
+      expect(Math.abs(target - slow)).toBeLessThan(.001);
+      expect(advanceStoryProgress(start, target, -100)).toBe(start);
+    }
+  });
   it('keeps the descending camera outside closed walls and overhead until inside', () => {
     for (const compact of [false, true]) for (let i = 0; i <= 1728; i++) {
       const pose = storyPresentation(i / 1728, compact);

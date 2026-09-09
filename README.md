@@ -86,7 +86,7 @@ npm run preview
 | `npm run build` | Type-check the app, create `dist/`, and prepare the generated HTML shell used by privacy-aware Space delivery. |
 | `npm run preview` | Serve `dist/` locally for production verification. |
 | `npm run check` | Run lint, tests, GLB checks, type-checking, the standard build and a separate production-feature budget build. |
-| `npm run test:browser-smoke` | Run Chromium checks against the built `dist/`: homepage heading hierarchy, Create Space shell, browser errors and candidate CSP enforcement. Run after `npm run build`; install the locked browser with `npm run test:browser-smoke:install` if needed. This is a separate CI gate, not part of `npm run check`. |
+| `npm run test:browser-smoke` | Run Chromium checks against the built `dist/`: public shell/CSP, quiet story preparation, chapter navigation, Studio handoff, all three room arrivals and mobile material editing/undo. Run after `npm run build`; install the locked browser with `npm run test:browser-smoke:install` if needed. Set `LIEUVA_BROWSER_SMOKE_SOFTWARE_GL=1` to reproduce CPU-only CI rendering locally. This is a separate CI gate, not part of `npm run check`. |
 | `npm run check:production-build` | Check the App Check + Functions telemetry code paths with a nonfunctional public key fixture in `artifacts/production-budget-check/`; does not replace `dist/` or the Functions HTML shell. CI builds the deployable artifact with the real production variables. |
 | `npm run check:functions` | Test and type-check the trusted branded-email/newsletter Functions. |
 | `npm run review:public-content -- --kind spaces\|posts` | Read a bounded, read-only page for Space review or post moderation. Creator profiles are not reviewed. |

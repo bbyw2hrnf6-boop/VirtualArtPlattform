@@ -27,4 +27,9 @@ the editable story and refreshes its source hash; material proofs render separat
 
 After authoring, run the Node 22.23.2 sampler again with `--validate` to verify current camera code/samples, source and output hashes, and byte-exact independent detail maps against the current runtime function. It writes `final-validation.json` and does not replace the camera samples or render images.
 
+Timing-only runtime changes may leave every sampled pose unchanged. Validation
+compares all current frame/proof poses exactly, checks the saved render-code hash
+against its authoring manifest, and records current and render-time code hashes
+separately. It does not relabel an existing Blender source or image as a new render.
+
 Provenance refresh: the runtime now restricts the new directional grain to oak. Revalidation confirms unchanged concrete, limestone and oak detail buffers; existing images and blends are preserved. The material manifest retains its render-time source hash and records the current runtime validation separately.

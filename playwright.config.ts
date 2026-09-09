@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const externalBaseUrl = process.env.LIEUVA_BROWSER_SMOKE_BASE_URL?.trim();
+const softwareRendering = process.env.LIEUVA_BROWSER_SMOKE_SOFTWARE_GL === '1';
 
 export default defineConfig({
   testDir: './tests/browser-smoke',
@@ -25,6 +26,12 @@ export default defineConfig({
     name: 'chromium',
     // Use the pinned full Chromium's modern headless mode. The separate legacy
     // headless shell can stall during the homepage's real WebGL shader warm-up.
-    use: { ...devices['Desktop Chrome'], channel: 'chromium' },
+    use: {
+      ...devices['Desktop Chrome'], channel: 'chromium',
+      // Reproduce CPU-only CI rendering locally without changing product quality.
+      ...(softwareRendering ? { launchOptions: {
+        args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+      } } : {}),
+    },
   }],
 });

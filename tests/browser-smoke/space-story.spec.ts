@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 test.describe.configure({ timeout: 60_000 });
 
 test('quiet preparation, reversible chapters and the real Studio handoff', async ({ page }, testInfo) => {
+  // This journey prepares two real WebGL scenes, with separate bounded waits.
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -12,13 +14,15 @@ test('quiet preparation, reversible chapters and the real Studio handoff', async
   await page.goto('/');
   const story = page.locator('.sgs');
   try {
-    await expect(story).toHaveAttribute('data-arrival', 'loading');
+    // The quiet poster precedes a deferred JS chunk. Software-rendered CI can
+    // take longer than the default assertion timeout to mount that chunk.
+    await expect(story).toHaveAttribute('data-arrival', 'loading', { timeout: 30_000 });
     await expect(story.locator('.sgs__poster')).toBeVisible();
     await expect(page.getByRole('progressbar')).toHaveCount(0);
     await expect(story.getByRole('heading', { level: 1 })).toBeVisible();
   } finally { release(); }
   await expect(story).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
-  await expect(story.locator('.sgs__poster')).toHaveCSS('opacity', '0');
+  await expect(story.locator('.sgs__poster')).toHaveCSS('opacity', '0', { timeout: 30_000 });
   await page.screenshot({ path: testInfo.outputPath('story-desktop-opening.png') });
   await page.getByRole('button', { name: 'Chapter 3: Your atmosphere', exact: true }).click();
   await expect(story).toHaveAttribute('data-chapter', '2');

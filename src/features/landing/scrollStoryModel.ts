@@ -12,7 +12,9 @@ export function storyScrollProgress(scroll: number, top: number, travel: number,
 export function advanceStoryProgress(current: number, target: number, elapsed: number) {
   const delta = clamp(target) - clamp(current);
   if (Math.abs(delta) < .0001) return clamp(target);
-  return clamp(current + delta * (1 - Math.exp(-Math.min(80, Math.max(0, elapsed)) / 125)));
+  // Exponential smoothing is stable for long frames too. Capping elapsed time
+  // made chapter changes lag behind native scroll on software/slow renderers.
+  return clamp(current + delta * (1 - Math.exp(-Math.max(0, elapsed) / 125)));
 }
 export const STORY_DURATION_MS = 72_000;
 // A pre-authored camera score: elevated establish, collection, descending arc,
