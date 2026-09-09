@@ -1,3 +1,5 @@
+import { SpaceLoading } from "./components/SpaceLoading";
+import { StoryPoster } from "./features/landing/StoryPoster";
 import { consumeStudioHandoff } from './services/studioHandoff';
 import { catalogObject, DECOR_CATALOG, FLOOR_OPTIONS, WALL_OPTIONS } from "./features/gallery/designCatalog";
 import {
@@ -13,6 +15,7 @@ import {
 } from "react";
 import { Logo } from "./components/Logo";
 import { SpaceShareMenu } from "./components/SpaceShareMenu";
+import { publicAssetUrl } from "./services/publicAssetUrl";
 import { FullscreenButton } from "./components/FullscreenButton";
 import { PRODUCT_BRAND } from "./config/brand";
 import "./features/landing/landingConversion.css";
@@ -532,32 +535,11 @@ function DeferredScrollStory() {
     const handle = window.setTimeout(reveal, 350);
     return () => window.clearTimeout(handle);
   }, []);
-  return (
-    <div className="story-deferred">
-      {!ready ? (
-        <section
-          className="story-placeholder story-placeholder--opening"
-          aria-label="Preparing the interactive Space story"
-        >
-          <span>01 / 04 · Preparing your Space…</span>
-        </section>
-      ) : (
-      <Suspense
-        fallback={
-          <section
-            className="story-placeholder"
-            aria-label="Loading interactive Space story"
-          >
-            <span>Preparing your Space…</span>
-          </section>
-        }
-      >
-        <ScrollGalleryStory />
-      </Suspense>
-      )}
-    </div>
-  );
+  return <div className="story-deferred">
+    {!ready ? <StoryPoster /> : <Suspense fallback={<StoryPoster />}><ScrollGalleryStory /></Suspense>}
+  </div>;
 }
+
 function Landing() {
   const landingQuery = new URLSearchParams(location.search);
   const [directoryOpen, setDirectoryOpen] = useState(false);
@@ -1094,6 +1076,11 @@ function Studio({
   const [toolSheet, setToolSheet] = useState<"peek" | "half" | "full">(() =>
     usesCompactInteractionLayout() ? "peek" : "half",
   );
+  const toolSheetHandle = useRef<HTMLButtonElement>(null);
+  const finishMaterialEditing = () => {
+    setToolSheet("peek");
+    toolSheetHandle.current?.focus();
+  };
   const [editorDirectoryOpen, setEditorDirectoryOpen] = useState(false);
   const wallFocusToken = useRef(0);
   const decorInsertion = useRef({ x: 0, z: 1 });
@@ -1716,7 +1703,7 @@ function Studio({
     setPublishReviewOpen(true);
     void galleryRepository.currentSession().then(handleAccountSessionChange);
     void sceneCapture
-      .current?.({ maxWidth: 720, maxHeight: 540, quality: 0.72 })
+      .current?.({ maxWidth: 1280, maxHeight: 960, quality: 0.84 })
       .then((capture) => setPublishCover(capture.dataUrl))
       .catch((error) =>
         console.warn("Publish cover preview unavailable.", error),
@@ -1752,9 +1739,9 @@ function Studio({
       try {
         roomCoverSource ??= (
           await sceneCapture.current?.({
-            maxWidth: 960,
-            maxHeight: 720,
-            quality: 0.76,
+            maxWidth: 1280,
+            maxHeight: 960,
+            quality: 0.84,
           })
         )?.dataUrl;
       } catch (captureError) {
@@ -1809,6 +1796,7 @@ function Studio({
         galleryDraftSignature(finalDraft),
       );
       setPublishedDraftSignature(galleryDraftSignature(finalDraft));
+      setPublishCover(roomCoverSource);
       setPublished(publishedGallery);
       trackTelemetry(editTarget ? "published_update_succeeded" : "publish_succeeded", {
         template: finalDraft.templateId,
@@ -1951,6 +1939,10 @@ function Studio({
     }
   };
 
+  useEffect(() => {
+    if (published) document.getElementById("publish-success-title")?.focus();
+  }, [published]);
+
   if (published) {
     const wasUpdate = published.revision > 1;
     const url = galleryShareUrl(published.id, window.location.href);
@@ -1959,7 +1951,7 @@ function Studio({
       month: "long",
       year: "numeric",
     }).format(new Date(published.expiresAt));
-    const coverSrc = published.coverSrc ?? publishCover;
+    const coverSrc = publishCover ?? published.coverSrc;
     return (
       <main className="publish-success">
         <section
@@ -1969,7 +1961,7 @@ function Studio({
           <Logo />
           <div className="publish-success__copy">
             <p className="eyebrow">{wasUpdate ? "Space updated" : "Published successfully"}</p>
-            <h1 id="publish-success-title">
+            <h1 id="publish-success-title" tabIndex={-1}>
               {wasUpdate ? "Your changes are" : "Your space is"}
               <br />
               <em>{wasUpdate ? "now live." : "ready to share."}</em>
@@ -2002,7 +1994,7 @@ function Studio({
             )}
             <div className="success-actions">
               <a className="button button--light" href={url}>
-                Enter the Space <span aria-hidden="true">↗</span>
+                Open Space <span aria-hidden="true">↗</span>
               </a>
               {published.visibility === "public" && published.exploreListed && (
                 <a
@@ -2026,10 +2018,10 @@ function Studio({
         </section>
         <section
           className="publish-success__preview"
-          aria-label="Published Space preview image"
+          aria-label="Space cover"
         >
           {coverSrc ? (
-            <img src={coverSrc} alt={`Published view of ${published.title}`} />
+              <img src={coverSrc} alt={`${publishCover ? "Studio capture" : "Space cover"} for ${published.title}`} />
           ) : (
             <div className="publish-success__preview-empty" aria-hidden="true" />
           )}
@@ -2175,11 +2167,12 @@ function Studio({
       <div className="studio-body">
         <aside className={`tool-panel tool-panel--${toolSheet}`}>
           <button
+            ref={toolSheetHandle}
             className="tool-sheet-handle"
             type="button"
             onClick={cycleToolSheet}
             aria-label={`Editor tools are ${toolSheet}. Change panel size`}
-            aria-expanded={toolSheet === "full"}
+            aria-expanded={toolSheet !== "peek"}
           >
             <i aria-hidden="true" />
             <span>
@@ -2641,6 +2634,7 @@ function Studio({
             <Swatches
               options={WALL_OPTIONS}
               value={draft.wall}
+              onDone={finishMaterialEditing}
               onChange={(value) =>
                 update("wall", value as GalleryDraft["wall"])
               }
@@ -2654,6 +2648,7 @@ function Studio({
             <Swatches
               options={FLOOR_OPTIONS}
               value={draft.floor}
+              onDone={finishMaterialEditing}
               onChange={(value) =>
                 update("floor", value as GalleryDraft["floor"])
               }
@@ -2693,6 +2688,7 @@ function Studio({
                 ],
               ]}
               value={draft.ceiling ?? "gallery"}
+              onDone={finishMaterialEditing}
               onChange={(value) =>
                 update("ceiling", value as NonNullable<GalleryDraft["ceiling"]>)
               }
@@ -3388,18 +3384,35 @@ function Accordion({
     </details>
   );
 }
+const FLOOR_SWATCH_IMAGES: Record<string, string> = {
+  concrete: "premium-v3/honed-concrete",
+  "dark-concrete": "aura-graphite-concrete-v5",
+  microcement: "aura-greige-microcement-v5",
+  slate: "aura-black-slate-v3",
+  "travertine-floor": "premium-v3/honed-limestone",
+  marble: "aura-calacatta-marble-v4",
+  "black-marble": "aura-nero-marquina-v2",
+  walnut: "aura-american-walnut-v2",
+  oak: "premium-v3/natural-oak",
+  terrazzo: "aura-light-terrazzo-v3",
+  "dark-oak": "aura-smoked-oak-v2",
+};
+
 function Swatches({
   options,
   value,
   onChange,
+  onDone,
 }: {
   options: [string, string, string?][];
   value: string;
   onChange: (value: string) => void;
+  onDone?: () => void;
 }) {
   return (
     <div className="swatches">
       <p className="object-help swatch-current">Selected: {options.find(([name]) => name === value)?.[2] ?? value}</p>
+      {onDone && <button type="button" className="inspector-done material-done" onClick={onDone}>Done · Back to room</button>}
       {options.map(([name, color, label]) => (
         <button
           type="button"
@@ -3408,7 +3421,9 @@ function Swatches({
           aria-pressed={value === name}
           onClick={() => onChange(name)}
         >
-          <i style={{ background: color }} />
+          <i aria-hidden="true" style={{ background: options === FLOOR_OPTIONS && FLOOR_SWATCH_IMAGES[name]
+            ? `url("${publicAssetUrl(`assets/materials/${FLOOR_SWATCH_IMAGES[name]}.webp`)}") center / cover`
+            : color }} />
           <span>{label || name}</span>
         </button>
       ))}
@@ -3865,38 +3880,11 @@ function DemoLoadingPoster({
   progress?: number;
   ready?: boolean;
 }) {
-  return (
-    <div
-      className={`demo-loading-poster ${ready ? "is-ready" : ""}`}
-      role="status"
-      aria-live="polite"
-      aria-hidden={ready}
-    >
-      <img
-        src="./assets/demo/danny-cover.webp"
-        width="1440"
-        height="1000"
-        fetchPriority="high"
-        decoding="async"
-        alt="Threshold exhibition by Danny Hirsch Arts"
-      />
-      <span />
-      <p>Preparing exhibition · {Math.round(progress)}%</p>
-    </div>
-  );
+  return <SpaceLoading title="Threshold" detail="Preparing the exhibition…" progress={progress || undefined} ready={ready} />;
 }
 
 function SpaceLoadingPoster() {
-  return (
-    <main className="space-entry-loading" role="status" aria-live="polite">
-      <Logo />
-      <div aria-hidden="true" className="space-entry-loading__frame" />
-      <p className="eyebrow">Immersive Space</p>
-      <h1>Preparing your visit.</h1>
-      <p>Loading the room, artworks and visitor route…</p>
-      <span aria-hidden="true" />
-    </main>
-  );
+  return <SpaceLoading detail="Loading the room and collection…" />;
 }
 
 function Demo() {
@@ -4382,7 +4370,7 @@ export default function App() {
       <div id="main-content" tabIndex={-1}>
         <Suspense
           key={routeKey}
-          fallback={<div className="loading" role="status" aria-live="polite">Preparing your space…</div>}
+          fallback={route.page === "home" ? <StoryPoster /> : <SpaceLoading />}
         >
           {page}
         </Suspense>

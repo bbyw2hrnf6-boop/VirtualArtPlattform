@@ -1,0 +1,21 @@
+{
+  "source": "Actual GalleryScene capture; STORY_DRAFT; storyPresentation(0), separate desktop/mobile framing",
+  "date": "2026-09-09",
+  "encoding": "cwebp quality 86; no enlargement",
+  "assets": [
+    {
+      "file": "opening-desktop.webp",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 24516,
+      "sha256": "bfd98cb15805a95bfb989dc57cf7b4ab2603a1a0c3e7226d0a08e7198d0d5342"
+    },
+    {
+      "file": "opening-mobile.webp",
+      "width": 390,
+      "height": 844,
+      "bytes": 5714,
+      "sha256": "57a79cf35139d712420b6034eaa4a6aedbdb2b11871fd7a1f5cb73552ac0dcff"
+    }
+  ]
+}

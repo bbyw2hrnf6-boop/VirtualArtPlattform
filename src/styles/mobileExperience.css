@@ -31,7 +31,7 @@
   text-align: left;
   text-transform: uppercase;
   letter-spacing: .08em;
-  font-size: 10px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -220,6 +220,10 @@
     box-shadow: 0 8px 18px #0008;
   }
 
+  .studio .swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .studio .swatches i { height: 80px; }
+  .studio .swatches .material-done { display: block; background: #22251e; grid-column: 1 / -1; border-color: #6a705f; font-size: 12px; }
+
   .builder-scene-controls {
     border-color: #ffffff1c;
     border-radius: 8px;
@@ -306,7 +310,9 @@
     padding-right: max(16px, env(safe-area-inset-right));
   }
 
-  .publish-success__panel {
+  .publish-success .publish-success__panel {
+    flex: none;
+    overflow: visible;
     padding-right: max(24px, env(safe-area-inset-right));
     padding-left: max(24px, env(safe-area-inset-left));
   }

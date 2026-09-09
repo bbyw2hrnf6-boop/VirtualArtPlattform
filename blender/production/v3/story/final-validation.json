@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "node": "v22.23.2",
+  "currentCameraCode": {
+    "path": "src/features/landing/scrollStoryModel.ts",
+    "sha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
+  },
+  "desktopPoseSha256": "7b8fae98ce4e701cd791d589ff6ae56b7ed861001071d7cb2cd1674708da8d86",
+  "desktopFrames": 1729,
+  "artifactAndOriginalHashesMatch": true,
+  "runtimeDetailSourceSha256": "20ea9172b2cd7adf27ad061e1c7a6cd7dcb15865c048a85eb722f4dc73529743",
+  "runtimeDetailFunctionSha256": "5088dfd6adcccb2e8ccd439e69e585bc8bcbb3e6dc24bffb895ad6f85e089310",
+  "materialDetailByteExactMatches": [
+    "concrete",
+    "travertine-floor",
+    "oak"
+  ],
+  "savedMaterialNodesValidated": 3
+}

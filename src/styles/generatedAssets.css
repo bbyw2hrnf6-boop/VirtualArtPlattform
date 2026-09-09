@@ -60,6 +60,7 @@
 .studio .swatch-current{grid-column:1/-1;margin:0 0 6px}
 .studio .swatches{grid-template-columns:repeat(3,minmax(0,1fr))}
 .studio .swatches button span{white-space:normal;overflow:visible;font-size:12px;line-height:1.35}
+.material-done{display:none}
 .studio .object-grid button[aria-pressed=true]{border-color:#a6ac94}
 .studio .object-grid small{font-size:12px}
 .studio .ai-undo{min-height:44px;margin-right:12px;font-size:12px}

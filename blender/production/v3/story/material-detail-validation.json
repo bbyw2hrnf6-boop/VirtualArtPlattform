@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "node": "v22.23.2",
+  "runtimeCodeSha256": "20ea9172b2cd7adf27ad061e1c7a6cd7dcb15865c048a85eb722f4dc73529743",
+  "detailFunctionSha256": "5088dfd6adcccb2e8ccd439e69e585bc8bcbb3e6dc24bffb895ad6f85e089310",
+  "proofs": [
+    {
+      "kind": "concrete",
+      "heightRgbaSha256": "f573480b401822519386cc738aa03903e4a332aa966d7c2ea14978a04633ce01",
+      "roughnessRgbaSha256": "63572845e9fbd3e73a77c8ec6eeacf0ba2762767758e328c79952621adf54fcd",
+      "byteExactMatch": true
+    },
+    {
+      "kind": "travertine-floor",
+      "heightRgbaSha256": "6556ceadf6ae0a4cf2cf8daf233ebeb78b14c3503191b748d71ded94c9152eb8",
+      "roughnessRgbaSha256": "ddf0c585f20afed3a6eae36af5d505e90118136380fa5f1dcdedf0dca8068ab8",
+      "byteExactMatch": true
+    },
+    {
+      "kind": "oak",
+      "heightRgbaSha256": "b4199dfdd6d22c017615b59e195b089d4d1bac7a6fcb8addd594ffef397c5be1",
+      "roughnessRgbaSha256": "3983c6d8db72e5f837fec3dfea8cf3e1362e53dbbf46d648ed294c4266aeaf6c",
+      "byteExactMatch": true
+    }
+  ]
+}

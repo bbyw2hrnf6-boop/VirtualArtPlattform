@@ -1,3 +1,5 @@
+import { SpaceLoading } from "./components/SpaceLoading";
+import { StoryPoster } from "./features/landing/StoryPoster";
 import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
@@ -25,7 +27,7 @@ if (canonicalRedirect) {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <AppErrorBoundary>
-        <Suspense fallback={<div className="loading" role="status" aria-live="polite">Preparing your space…</div>}>
+        <Suspense fallback={(location.pathname === "/" && (!location.hash || location.hash === "#/") ? <StoryPoster /> : <SpaceLoading />)}>
           <App />
         </Suspense>
       </AppErrorBoundary>

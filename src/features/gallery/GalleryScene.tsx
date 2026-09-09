@@ -261,7 +261,10 @@ const surfaceAssets: Partial<Record<SurfaceKind, string>> = {
   "dark-stone": "./assets/materials/aura-green-stone-v4.webp",
 };
 
-const premiumFloorTiles: Partial<Record<SurfaceKind, number>> = { concrete: 3, oak: 2.4, "travertine-floor": 3 };
+const premiumFloorTiles: Partial<Record<SurfaceKind, number>> = {
+  concrete: 3, oak: 2.4, "travertine-floor": 3,
+  microcement: 3, "dark-concrete": 3, slate: 2.4, terrazzo: 2,
+};
 
 function createSurfaceTexture(kind: SurfaceKind, base: string, anisotropy = 8) {
   const asset = surfaceAssets[kind];
@@ -421,7 +424,7 @@ function createSurfaceDetailMaps(kind: SurfaceKind) {
     for (let x = 0; x < size; x += 1) {
       const index = (y * size + x) * 4;
       const wave = kind === "terracotta" && (x % 64 < 1 || y % 64 < 1) ? -65 : wood
-        ? Math.sin(y * .19 + Math.sin(x * .035) * 2.4) * 18
+        ? (kind === "oak" ? Math.sin(x * .59 + Math.sin(y * Math.PI / 128) * 2.4) * 12 : Math.sin(y * .19 + Math.sin(x * .035) * 2.4) * 18)
         : textile
           ? ((x % 5 === 0 ? 11 : 0) + (y % 5 === 0 ? 11 : 0))
           : stone
@@ -2186,6 +2189,9 @@ function updateRoomSurface(
     } else texture.repeat.multiplyScalar(Math.max(1, Math.max(w, d) / 18));
     const details = createSurfaceDetailMaps(draft.floor);
     [details.bumpMap, details.roughnessMap].forEach((item) => item.repeat.copy(texture.repeat));
+    // Albedo carries centimetre-scale mineral/cloud variation. Independent relief
+    // is millimetric, not a 3-metre-wide noisy heightfield. AO stays on TEXCOORD_1.
+    if (tile) details.bumpMap.repeat.multiplyScalar(4);
     replaceRoomSurfaceTexture(materials, texture, details);
     const marble = draft.floor === "marble" || draft.floor === "black-marble";
     const wood =
@@ -2205,8 +2211,8 @@ function updateRoomSurface(
             : polishedConcrete
               ? 0.52
               : 0.82;
-      material.bumpScale = tile ? .003 : marble ? .008 : wood ? .022 : slate ? .035 : .018;
-      if (tile) material.roughness = wood ? .46 : .52;
+      material.bumpScale = tile ? (wood ? .0012 : slate ? .003 : .0015) : marble ? .008 : wood ? .022 : slate ? .035 : .018;
+      if (tile) material.roughness = wood ? .5 : slate ? .74 : .6;
       material.metalness = marble ? 0.02 : 0.005;
       material.clearcoat = marble
         ? 0.44
@@ -3186,6 +3192,7 @@ export type GallerySceneCapture = (
 ) => Promise<GallerySceneCaptureResult>;
 
 export interface GalleryPresentation {
+  cutaway?: boolean;
   fov?: number;
   progress: number;
   position: [number, number, number];
@@ -3195,6 +3202,7 @@ export interface GalleryPresentation {
 
 export interface GallerySceneProps {
   presentation?: RefObject<GalleryPresentation>;
+  onArrivalChange?: (state: "loading" | "ready" | "error") => void;
   draft: GalleryDraft;
   selectedId?: string;
   selectedDecorId?: string;
@@ -3615,6 +3623,7 @@ type GalleryActiveTour = {
 
 function GallerySceneRenderer({
   presentation,
+  onArrivalChange,
   draft,
   selectedId,
   selectedDecorId,
@@ -3675,6 +3684,7 @@ function GallerySceneRenderer({
     contentReady,
     onRetryContent,
     presentation,
+  onArrivalChange,
     onIntroComplete,
     onArtworkFocus,
     onViewModeChange,
@@ -3700,6 +3710,7 @@ function GallerySceneRenderer({
     contentReady,
     onRetryContent,
     presentation,
+  onArrivalChange,
       onIntroComplete,
       onArtworkFocus,
       onViewModeChange,
@@ -3722,6 +3733,7 @@ function GallerySceneRenderer({
     contentReady,
     onRetryContent,
     presentation,
+  onArrivalChange,
     onIntroComplete,
     onArtworkFocus,
     onViewModeChange,
@@ -3892,7 +3904,7 @@ function GallerySceneRenderer({
     );
     let premiumEnvironment: PremiumEnvironmentHandle | undefined;
     const isCutawayActive = () =>
-      initial.visitor
+      latest.current.presentation ? Boolean(latest.current.presentation.current.cutaway) : initial.visitor
         ? mode === "overview"
         : mode === "arrange" && editorCutawayOpen;
     let lighting = addLighting(
@@ -4019,6 +4031,7 @@ function GallerySceneRenderer({
     let preparationAbort = new AbortController();
     let intro: ReturnType<typeof createCinematicIntro> | null = null;
     element.dataset.arrival = "loading";
+    latest.current.onArrivalChange?.("loading");
     element.dataset.intro = "waiting";
     const arrival = document.createElement("div");
     arrival.className = "space-arrival";
@@ -4056,6 +4069,7 @@ function GallerySceneRenderer({
       arrivalFailed = true;
       arrival.classList.remove("is-ready");
       element.dataset.arrival = "error";
+      latest.current.onArrivalChange?.("error");
       reportArrival("This Space could not finish loading. Check your connection and try again.");
       retryArrival.hidden = false;
     };
@@ -4092,7 +4106,7 @@ function GallerySceneRenderer({
           const mesh = object as THREE.Mesh;
           const material = mesh.material as THREE.MeshPhysicalMaterial;
           material.transparent = active;
-          material.opacity = active ? 0.38 : 1;
+          material.opacity = active && !initial.presentation ? 0.38 : 1;
           material.depthWrite = !active;
           material.needsUpdate = true;
         }
@@ -5566,7 +5580,7 @@ function GallerySceneRenderer({
           wallNormals[String(mesh.userData.wallId)]?.dot(overviewDirection) ??
           -1;
         const targetOpacity =
-          insideRoom ? 1 : facing > 0.42
+          initial.presentation ? (insideRoom || facing <= .42 ? 1 : 0) : insideRoom ? 1 : facing > 0.42
             ? 0.045
             : facing > -0.16
               ? 0.28
@@ -5679,6 +5693,7 @@ function GallerySceneRenderer({
             arrivalReady = true;
             window.clearTimeout(arrivalDeadline);
             element.dataset.arrival = "ready";
+            latest.current.onArrivalChange?.("ready");
             element.dataset.captureReady = "true";
             element.dataset.sceneReadyMs = String(Math.round(performance.now() - sceneStartedAt));
             status.ready();
@@ -5902,11 +5917,13 @@ function GallerySceneRenderer({
       }
       const presentation = latest.current.presentation?.current;
       if (presentation) {
+        const nextCutaway = presentation.cutaway ? "active" : "inactive";
+        if (element.dataset.cutaway !== nextCutaway) applyCutawayMode();
         const reveal = (start: number, end: number) => {
           const value = THREE.MathUtils.clamp((presentation.progress - start) / (end - start), 0, 1);
           return value * value * (3 - 2 * value);
         };
-        const artReveal = reveal(.18, .38), decorReveal = reveal(.46, .64);
+        const artReveal = reveal(.25, .43), decorReveal = reveal(.43, .52);
         for (const object of artworkObjects) {
           object.visible = artReveal > .001;
           object.scale.setScalar(.92 + .08 * artReveal);
@@ -6264,6 +6281,7 @@ export const GalleryScene = memo(
     previous.contentReady === next.contentReady &&
     previous.onRetryContent === next.onRetryContent &&
     previous.presentation === next.presentation &&
+    previous.onArrivalChange === next.onArrivalChange &&
     previous.onIntroComplete === next.onIntroComplete &&
     previous.onArtworkFocus === next.onArtworkFocus &&
     previous.onCaptureReady === next.onCaptureReady &&

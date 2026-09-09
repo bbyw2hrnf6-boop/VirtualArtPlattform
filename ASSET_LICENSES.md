@@ -68,3 +68,20 @@ Terser 5.51.2 is a pinned, build-only development dependency under BSD-2-Clause 
 `blender/production/v3/material-studies/` contains original project-specific generated concrete, limestone and oak albedo studies from the built-in OpenAI image-generation tool. Shipping derivatives are in `public/assets/materials/premium-v3/`; the material README records dimensions, processing, briefs and SHA-256 hashes. The backend model was not reported. No third-party photograph or the user's reference UI screenshots is redistributed as a new texture.
 
 The new homepage uses LIEUVA's three fictional demo studies and shared Studio renderer. It does not copy Danny Hirsch's works or change the separate licensed demo. Camera paths and geometry are project-authored; these records do not grant a new standalone redistribution license.
+
+## Editorial story and floor relief · 2026-09-09
+
+`public/assets/templates/story/` contains optimized captures of original LIEUVA
+runtime geometry/materials at the authored homepage opening camera. No user
+reference screenshot, third-party artwork or generated UI is incorporated.
+Dimensions, capture provenance, encoding and hashes are recorded in its README
+and manifest. These assets are preparation posters, not new 4K beauty masters.
+
+`blender/production/v3/story/` contains a separate project-authored camera source,
+three camera QA stills, a packed material library and three material QA closeups.
+It reuses the existing fictional LIEUVA sample artwork and material albedos. Its
+independent deterministic height/roughness maps are project-authored, not derived
+from copyrighted photographs or copied from albedo brightness. The directory's
+manifests record source/output hashes and the source-vs-runtime staging boundary.
+Existing project provenance applies; no additional standalone reuse license is
+granted. The eleven concept screenshots remain art-direction references only.

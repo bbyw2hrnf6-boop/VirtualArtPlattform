@@ -15,3 +15,7 @@ The three preview images below were captured by the real Studio capture function
 Six self-contained GLBs ship under `premium-v3/`. Maximum texture dimensions are 1024 px desktop / 512 px mobile. Each retains exact template dimensions, 4/4/14 placement IDs, hidden colliders, navmesh, start/look and artwork/view anchors. Cosmetic meshes are batched separately from functional geometry. Geometry-only AO is in UV channel 1; editable albedo/detail uses metric UV channel 0. The current controller consumes colliders and canonical Studio surfaces, while exported navmesh/anchors remain contract evidence.
 
 Run `npm run validate:premium` for exact current measurements in `audit/premium-glb-measurements.json`. File size is distinct from decoded texture memory. See [licenses](../../../ASSET_LICENSES.md) for project-generated geometry, existing albedo derivatives and fictional demo artwork.
+
+## Editorial opening posters · 9 September 2026
+
+`story/` contains two responsive captures of the actual White Cube opening camera. They are quiet homepage preparation images, not replacement templates or beauty masters. See `story/manifest.json` and `story/README.md`. No runtime GLB changed in this pass.

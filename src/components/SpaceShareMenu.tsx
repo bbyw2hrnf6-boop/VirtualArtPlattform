@@ -28,19 +28,25 @@ export function SpaceShareMenu({
 }: SpaceShareMenuProps) {
   const panelId = useId();
   const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const inline = source === "publish_success";
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareFailed, setShareFailed] = useState(false);
   const [qrSource, setQrSource] = useState<string>();
   const [qrStatus, setQrStatus] = useState<"idle" | "loading" | "error">("idle");
   const nativeShareAvailable = typeof navigator.share === "function";
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || inline) return undefined;
     const close = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) setOpen(false);
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        trigger.current?.focus();
+      }
     };
     document.addEventListener("pointerdown", close);
     document.addEventListener("keydown", escape);
@@ -48,7 +54,7 @@ export function SpaceShareMenu({
       document.removeEventListener("pointerdown", close);
       document.removeEventListener("keydown", escape);
     };
-  }, [open]);
+  }, [open, inline]);
 
   const recordShare = (operation: string) =>
     trackTelemetry("share_action", { source, visibility, operation });
@@ -58,6 +64,7 @@ export function SpaceShareMenu({
     void copyText(url)
       .then(() => {
         setCopied(true);
+        setShareFailed(false);
         window.setTimeout(() => setCopied(false), 1800);
       })
       .catch(() => window.prompt("Copy your Space link:", url));
@@ -65,6 +72,7 @@ export function SpaceShareMenu({
 
   const handleNativeShare = () => {
     if (!nativeShareAvailable) return;
+    setShareFailed(false);
     recordShare("native");
     void navigator.share({
       title: `${title} — ${creator}`,
@@ -75,6 +83,7 @@ export function SpaceShareMenu({
     }).catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") return;
       console.warn("Native sharing was unavailable.", error);
+      setShareFailed(true);
     });
   };
 
@@ -100,9 +109,10 @@ export function SpaceShareMenu({
   return (
     <div
       ref={root}
-      className={`space-share ${compact ? "space-share--compact" : ""}`}
+      className={`space-share ${compact ? "space-share--compact" : ""} ${inline ? "space-share--inline" : ""}`}
     >
-      <button
+      {!inline && <button
+        ref={trigger}
         type="button"
         className="space-share__trigger"
         aria-expanded={open}
@@ -110,19 +120,14 @@ export function SpaceShareMenu({
         onClick={() => setOpen((current) => !current)}
       >
         Share <span aria-hidden="true">↗</span>
-      </button>
-      {open && (
+      </button>}
+      {(inline || open) && (
         <div id={panelId} className="space-share__panel" role="group" aria-label={`Share this ${subject}`}>
           <div className="space-share__heading">
             <span>Share this {subject}</span>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close sharing options">×</button>
+            {!inline && <button type="button" onClick={() => { setOpen(false); trigger.current?.focus(); }} aria-label="Close sharing options">×</button>}
           </div>
           <p>{visibility === "private" ? "Only invited accounts can open this link." : "One clean link, ready to send."}</p>
-          <div className="space-share__actions">
-            <button type="button" onClick={handleCopy}>{copied ? "Copied ✓" : "Copy link"}</button>
-            {nativeShareAvailable && <button type="button" onClick={handleNativeShare}>Share…</button>}
-            <button type="button" onClick={showQrCode}>QR code</button>
-          </div>
           <input
             aria-label={`Shareable ${subject} URL`}
             readOnly
@@ -130,6 +135,12 @@ export function SpaceShareMenu({
             value={url}
             onFocus={(event) => event.currentTarget.select()}
           />
+          <div className="space-share__actions">
+            <button type="button" onClick={handleCopy}>{copied ? "Copied ✓" : "Copy link"}</button>
+            {nativeShareAvailable && <button type="button" onClick={handleNativeShare}>Share…</button>}
+            <button type="button" onClick={showQrCode}>QR code</button>
+          </div>
+          {shareFailed && <span className="space-share__status" role="status">Sharing unavailable. Copy the link instead.</span>}
           {qrStatus === "loading" && <span className="space-share__status" role="status">Preparing QR code…</span>}
           {qrStatus === "error" && <span className="space-share__status" role="status">QR unavailable. Copy the link instead.</span>}
           {qrSource && (

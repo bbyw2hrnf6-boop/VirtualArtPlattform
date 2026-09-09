@@ -62,3 +62,12 @@ Architecture is batched by material/overhead policy. Functional nodes stay separ
 See `../../audit/LIEUVA-BLENDER-PRODUCTION-2026-09-08.md` and `../../audit/premium-glb-measurements.json` for evidence and limits. Existing project asset provenance applies; see `../../ASSET_LICENSES.md`. The supplied reference screenshots guide art direction, not product functionality or reproduction rights.
 
 The separate `blender/production/v3/material-library.blend` packs all three new material studies, including natural oak, with editable Principled shaders, independent procedural microstructure and metric sample planes. Rebuild with `blender/production/build_material_library.py`; it does not replace any room source or claim a measured PBR scan.
+
+## Editorial camera and material studies · 9 September 2026
+
+`v3/story/` adds an independent 72-second camera source, three 960×540 camera
+proofs, a separate packed material library and three surface closeups. The camera
+samples the actual desktop homepage score; the source beauty staging differs
+from the runtime collection and is explicitly labelled. None of the original
+room sources, six runtime GLBs or three 4K masters is overwritten. See the
+[study README](v3/story/README.md) for authoring, provenance and verification.

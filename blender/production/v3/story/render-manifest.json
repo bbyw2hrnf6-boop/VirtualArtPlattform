@@ -1,0 +1,157 @@
+{
+  "status": "complete",
+  "blender": "5.2.0 LTS",
+  "sourceBlend": "blender/production/v3/white-cube.blend",
+  "sourceBlendSha256": "12058412676ba20d275759fac4ac2db409918b02e01c9c1602a213609877f60d",
+  "cameraSource": {
+    "path": "src/features/landing/scrollStoryModel.ts",
+    "sha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
+  },
+  "durationSeconds": 72,
+  "fps": 24,
+  "desktopPoseSha256": "7b8fae98ce4e701cd791d589ff6ae56b7ed861001071d7cb2cd1674708da8d86",
+  "previousSampleValidation": {
+    "source": {
+      "path": "src/features/landing/scrollStoryModel.ts",
+      "sha256": "a1fc5b05a9ef599707ba8b8c811476a3bea6a90de3eea3f116d97abf169f488b"
+    },
+    "desktopSamplesIdentical": true,
+    "proofSamplesIdentical": true
+  },
+  "frameStart": 1,
+  "frameEnd": 1729,
+  "inclusiveEndpoint": true,
+  "render": {
+    "width": 960,
+    "height": 540,
+    "samples": 16,
+    "device": "CPU",
+    "threads": 2,
+    "bitDepth": 16,
+    "viewTransform": "AgX"
+  },
+  "staging": {
+    "artworkGroups": [
+      "Arrival study",
+      "Field study 0",
+      "Field study 1",
+      "Field study 2"
+    ],
+    "decorObjects": [
+      "Walnut bench seat",
+      "Bench leg",
+      "Bench leg.001"
+    ],
+    "beautyOnlyBackdrop": "STORY_Backdrop \u00b7 beauty only"
+  },
+  "proofs": [
+    {
+      "frame": 1,
+      "progress": 0,
+      "position": [
+        -9,
+        12,
+        18
+      ],
+      "target": [
+        0,
+        0.5,
+        -1
+      ],
+      "fov": 51,
+      "cutaway": true,
+      "path": "white-cube-story-00.png",
+      "seconds": 5.13,
+      "reused": true,
+      "renderCameraSource": {
+        "path": "src/features/landing/scrollStoryModel.ts",
+        "sha256": "a1fc5b05a9ef599707ba8b8c811476a3bea6a90de3eea3f116d97abf169f488b"
+      },
+      "sha256": "0a01090736a68d66b9df823dbaafffc757b01ecde275fbfee18647945e0c6e2d",
+      "bytes": 2058978,
+      "positionErrorMetres": 0.0,
+      "verticalFovDegrees": 50.999999344243484,
+      "directionErrorRadians": 0.0,
+      "hiddenShells": [
+        "south",
+        "west"
+      ],
+      "overheadHidden": true
+    },
+    {
+      "frame": 865,
+      "progress": 0.5,
+      "position": [
+        3.1836734693877546,
+        7.367346938775509,
+        12.073469387755102
+      ],
+      "target": [
+        0,
+        1.5110787172011662,
+        -3.1329446064139943
+      ],
+      "fov": 51.60932944606414,
+      "cutaway": true,
+      "path": "white-cube-story-50.png",
+      "seconds": 7.34,
+      "reused": true,
+      "renderCameraSource": {
+        "path": "src/features/landing/scrollStoryModel.ts",
+        "sha256": "a1fc5b05a9ef599707ba8b8c811476a3bea6a90de3eea3f116d97abf169f488b"
+      },
+      "sha256": "c5387a222fe98cdf6fe6a5692f873290f6e23019ad3d5b6e68f7eaf4886ddce2",
+      "bytes": 2334716,
+      "positionErrorMetres": 0.0,
+      "verticalFovDegrees": 51.60933023794684,
+      "directionErrorRadians": 0.0,
+      "hiddenShells": [
+        "south"
+      ],
+      "overheadHidden": true
+    },
+    {
+      "frame": 1556.2,
+      "progress": 0.9,
+      "position": [
+        -2.0500000000000007,
+        1.825,
+        3.3000000000000007
+      ],
+      "target": [
+        0.6999999999999991,
+        1.7000000000000002,
+        -4.900000000000001
+      ],
+      "fov": 60,
+      "cutaway": false,
+      "path": "white-cube-story-90.png",
+      "seconds": 19.77,
+      "reused": true,
+      "renderCameraSource": {
+        "path": "src/features/landing/scrollStoryModel.ts",
+        "sha256": "a1fc5b05a9ef599707ba8b8c811476a3bea6a90de3eea3f116d97abf169f488b"
+      },
+      "sha256": "f734502e7dce5b1b5f8c772e4d19065b63390ec5d2e4f142e85b6563ae876954",
+      "bytes": 2787126,
+      "positionErrorMetres": 0.0,
+      "verticalFovDegrees": 60.000002028949005,
+      "directionErrorRadians": 0.0,
+      "hiddenShells": [],
+      "overheadHidden": false
+    }
+  ],
+  "editableBlend": {
+    "path": "white-cube-story.blend",
+    "sha256": "1fde42359f7f7534bc4e7a8d035368d799fb220481b2dc27be0a3c99d8a8f7cc"
+  },
+  "savedFileValidation": {
+    "sampleCount": 1729,
+    "additionalExactProofPoses": 3,
+    "maximumPositionErrorMetres": 0,
+    "maximumVerticalFovErrorDegrees": 2.3728470921469125e-06,
+    "maximumDirectionErrorRadians": 0,
+    "allOverheadVisibilitySamplesMatch": true,
+    "currentCameraCodeSha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
+  }
+}

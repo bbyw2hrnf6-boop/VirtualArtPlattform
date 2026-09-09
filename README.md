@@ -1,6 +1,6 @@
 # LIEUVA — Immersive 3D presentation platform
 
-Current local visual/runtime production: [Arrival, materials and homepage story](./audit/LIEUVA-ARRIVAL-MATERIAL-STORY-2026-09-08.md). This round uses premium-v3 assets and keeps beauty renders, Blender sources, runtime GLBs and Studio integration separate. No automatic release is implied.
+Current local visual/runtime production: [Editorial story, materials and sharing](./audit/LIEUVA-EDITORIAL-STORY-2026-09-09.md). The 72-second optional White Cube film uses the real Studio renderer, with native scroll, chapter controls, quiet readiness posters, mobile material sheets and direct publication sharing. Premium-v3 GLBs and existing 4K beauty masters remain separate. No automatic release is implied.
 
 LIEUVA lets people create, publish and explore immersive 3D spaces for art, design and ideas — directly in the browser. This repository contains the current production-pilot product: LIEUVA Studio, three Space templates, a visitor experience, Discover, Creator identity and community, account access, and a Firebase publishing lifecycle.
 
@@ -12,7 +12,7 @@ Live product: [lieuva.com](https://lieuva.com/)
 
 ## What the production-pilot product includes
 
-- A premium landing page, featured Danny Hirsch exhibition, and Discover carousel.
+- A cinematic White Cube product story, a separate Danny Hirsch reference exhibition, and public Space discovery.
 - A Creator Hub with self-service public/private profiles, profile and cover images,
   three controlled profile type styles, six accessible profile color moods, Creator
   search, follows, studio notes, persistent comment discussions and replies,

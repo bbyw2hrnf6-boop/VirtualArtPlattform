@@ -1,0 +1,103 @@
+{
+  "status": "complete",
+  "source": "blender/production/v3/material-library.blend",
+  "sourceSha256": "eac8b8f7ed8af28ef544f122528f51fa5646bfdf225812bbba1d7893be7ad6c3",
+  "blend": "material-library-closeup.blend",
+  "blendSha256": "419920584f00046244775bc4627829cfb8ad3701f57d056302a72d8e24bbdf8e",
+  "pixels": [
+    960,
+    540
+  ],
+  "runtimeCodeSource": "src/features/gallery/GalleryScene.tsx",
+  "runtimeCodeSourceSha256": "5efefa3d681919ae703d600f4281c70c9ba001d2d0a55dbddef2be71ecb51985",
+  "samples": 16,
+  "device": "CPU",
+  "threads": 2,
+  "note": "Same independent detail formula and metric intent; Blender and Three.js bump/shading are not pixel-identical. Original albedo tint retained for source inspection. No geometry displacement.",
+  "proofs": [
+    {
+      "material": "honed-concrete",
+      "kind": "concrete",
+      "tileMetres": 3,
+      "bumpDistanceMetres": 0.0015,
+      "baseRoughness": 0.6,
+      "bumpRepeatsPerAlbedo": 4,
+      "roughnessRepeatsPerAlbedo": 1,
+      "heightRgbaSha256": "f573480b401822519386cc738aa03903e4a332aa966d7c2ea14978a04633ce01",
+      "roughnessRgbaSha256": "63572845e9fbd3e73a77c8ec6eeacf0ba2762767758e328c79952621adf54fcd",
+      "grainDirection": "mineral",
+      "frame": 1,
+      "image": "honed-concrete-closeup.png",
+      "imageSha256": "2ea7f1ff75dd9391ed497041b1aba56660ae60722e4387ffdb36300ebf7eb165",
+      "seconds": 4.92
+    },
+    {
+      "material": "honed-limestone",
+      "kind": "travertine-floor",
+      "tileMetres": 3,
+      "bumpDistanceMetres": 0.0015,
+      "baseRoughness": 0.6,
+      "bumpRepeatsPerAlbedo": 4,
+      "roughnessRepeatsPerAlbedo": 1,
+      "heightRgbaSha256": "6556ceadf6ae0a4cf2cf8daf233ebeb78b14c3503191b748d71ded94c9152eb8",
+      "roughnessRgbaSha256": "ddf0c585f20afed3a6eae36af5d505e90118136380fa5f1dcdedf0dca8068ab8",
+      "grainDirection": "mineral",
+      "frame": 2,
+      "image": "honed-limestone-closeup.png",
+      "imageSha256": "8dcfaee7bfe729fd0dfea02843d2bb00169a0b2182d6d3494b24808dc0e79f71",
+      "seconds": 4.69
+    },
+    {
+      "material": "natural-oak",
+      "kind": "oak",
+      "tileMetres": 2.4,
+      "bumpDistanceMetres": 0.0012,
+      "baseRoughness": 0.5,
+      "bumpRepeatsPerAlbedo": 4,
+      "roughnessRepeatsPerAlbedo": 1,
+      "heightRgbaSha256": "b4199dfdd6d22c017615b59e195b089d4d1bac7a6fcb8addd594ffef397c5be1",
+      "roughnessRgbaSha256": "3983c6d8db72e5f837fec3dfea8cf3e1362e53dbbf46d648ed294c4266aeaf6c",
+      "grainDirection": "V (vertical in albedo)",
+      "frame": 3,
+      "image": "natural-oak-closeup.png",
+      "imageSha256": "f5bc9eb0c211371d035cd0ded0ab50667591bbb9df4e262835e12b6e9ae2517c",
+      "seconds": 4.7
+    }
+  ],
+  "savedFileValidation": [
+    {
+      "material": "honed-concrete",
+      "metricPlane": true,
+      "separatePackedBumpAndRoughness": true,
+      "bumpRepeatAndDistanceMatch": true,
+      "roughnessBaseAndRepeatMatch": true,
+      "singleVisibleStudyAtFrame": 1
+    },
+    {
+      "material": "honed-limestone",
+      "metricPlane": true,
+      "separatePackedBumpAndRoughness": true,
+      "bumpRepeatAndDistanceMatch": true,
+      "roughnessBaseAndRepeatMatch": true,
+      "singleVisibleStudyAtFrame": 2
+    },
+    {
+      "material": "natural-oak",
+      "metricPlane": true,
+      "separatePackedBumpAndRoughness": true,
+      "bumpRepeatAndDistanceMatch": true,
+      "roughnessBaseAndRepeatMatch": true,
+      "singleVisibleStudyAtFrame": 3
+    }
+  ],
+  "currentRuntimeValidation": {
+    "runtimeCodeSourceSha256": "20ea9172b2cd7adf27ad061e1c7a6cd7dcb15865c048a85eb722f4dc73529743",
+    "runtimeDetailFunctionSha256": "5088dfd6adcccb2e8ccd439e69e585bc8bcbb3e6dc24bffb895ad6f85e089310",
+    "byteExactMatches": [
+      "concrete",
+      "travertine-floor",
+      "oak"
+    ],
+    "note": "After restricting new directional grain to oak: existing concrete, limestone and oak detail buffers unchanged. Original render/source hashes retained; no images or blend files rewritten."
+  }
+}

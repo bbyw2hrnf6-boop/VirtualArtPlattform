@@ -85,3 +85,19 @@ Inputs were reviewed as neutral, tileable color studies. Blender and the runtime
 | `public/assets/materials/premium-v3/natural-oak.webp` | 135,560 | `3f9550bd2bd6e57e9caeab71cbdb989a56214eee849da33a23efc3af8839a4d0` |
 
 The separate `blender/production/v3/material-library.blend` packs all three new material studies, including natural oak, with editable Principled shaders, independent procedural microstructure and metric sample planes. Rebuild with `blender/production/build_material_library.py`; it does not replace any room source or claim a measured PBR scan.
+
+## Runtime finish refinement · 9 September 2026
+
+The existing concrete, limestone and natural-oak albedos are retained. Floor
+relief now repeats four times per albedo tile with 1.5 mm nominal bump scale
+(1.2 mm oak; 3 mm slate). Roughness remains independent of albedo and AO. Natural
+oak relief follows its vertical grain; all other wood formulas, including the
+approved overhead finishes, retain their previous behavior. Microcement, dark
+concrete, slate and terrazzo also use explicit metric floor repeats. Black marble
+keeps its existing shader profile. These are artistic shader parameters, not scans.
+
+The picker displays eleven existing raster inputs and four procedural previews;
+no duplicate material IDs are added. `blender/production/v3/story/` contains packed,
+editable material closeups with byte-validated independent detail maps. Refer to
+its manifests for dimensions, hashes and the differences between Blender and
+Three.js. The original albedos and prior license records remain unchanged.

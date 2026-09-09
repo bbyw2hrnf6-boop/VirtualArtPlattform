@@ -1,7 +1,8 @@
+import { StoryPosterImage } from "./StoryPoster";
 import { useEffect, useRef, useState } from 'react';
 import { GalleryScene, type GalleryPresentation, type ArtworkFocusInfo } from '../gallery/GalleryScene';
 import { STORY_DRAFT } from './storyDraft';
-import { storyPresentation, storyScrollProgress, advanceStoryProgress, STORY_CHAPTERS } from './scrollStoryModel';
+import { storyPresentation, storyScrollProgress, advanceStoryProgress, STORY_CHAPTERS, STORY_DURATION_MS } from './scrollStoryModel';
 import { saveGalleryDraft } from '../../services/draftStorage';
 import { stageStudioHandoff } from '../../services/studioHandoff';
 import './scrollGalleryStory.css';
@@ -11,6 +12,9 @@ export function ScrollGalleryStory() {
   const sectionRef = useRef<HTMLElement>(null);
   const chapters = useRef<Array<HTMLElement | null>>([]);
   const presentation = useRef<GalleryPresentation>(storyPresentation(0));
+  const [arrival, setArrival] = useState<'loading' | 'ready' | 'error'>('loading');
+  const playing = useRef(false);
+  const [isPlaying, setPlaying] = useState(false);
   const [draft, setDraft] = useState(STORY_DRAFT);
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState('');
@@ -27,6 +31,24 @@ export function ScrollGalleryStory() {
   const explore = useRef(false);
   const [exploring, setExploring] = useState(false);
   const [focus, setFocus] = useState<ArtworkFocusInfo | null>(null);
+  const stopFilm = () => { playing.current = false; setPlaying(false); };
+  const goTo = (progress: number) => {
+    stopFilm(); explore.current = false; setExploring(false);
+    const section = sectionRef.current;
+    if (section) window.scrollTo({ top: scrollY + section.getBoundingClientRect().top + (progress > 1 ? section.offsetHeight : progress * (section.offsetHeight - innerHeight)), behavior: 'instant' });
+  };
+  useEffect(() => {
+    const stop = (event: Event) => {
+      // A pause tap/Space activation must reach the button with its current state.
+      if (event.target instanceof Element && event.target.closest('.sgs__play') &&
+        (event.type === 'touchstart' || (event instanceof KeyboardEvent && [' ', 'Enter'].includes(event.key)))) return;
+      playing.current = false; setPlaying(false);
+    };
+    window.addEventListener('wheel', stop, { passive: true });
+    window.addEventListener('touchstart', stop, { passive: true });
+    window.addEventListener('keydown', stop);
+    return () => { window.removeEventListener('wheel', stop); window.removeEventListener('touchstart', stop); window.removeEventListener('keydown', stop); };
+  }, []);
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
@@ -34,9 +56,14 @@ export function ScrollGalleryStory() {
     let frame = 0, progress = 0, last = performance.now(), visible = true;
     const update = (now: number) => {
       frame = 0;
-      if (!visible || document.hidden) return;
+      if (!visible || document.hidden) { playing.current = false; setPlaying(false); return; }
       const rect = section.getBoundingClientRect();
-      const target = storyScrollProgress(-rect.top, 0, section.offsetHeight - innerHeight, motion.matches);
+      let target = storyScrollProgress(-rect.top, 0, section.offsetHeight - innerHeight, motion.matches);
+      if (playing.current && !motion.matches) {
+        target = Math.min(1, target + Math.min(80, now - last) / STORY_DURATION_MS);
+        window.scrollTo({ top: scrollY + rect.top + target * (section.offsetHeight - innerHeight), behavior: 'instant' });
+        if (target === 1) { playing.current = false; setPlaying(false); }
+      }
       progress = motion.matches ? 0 : advanceStoryProgress(progress, target, now - last);
       last = now;
       presentation.current = storyPresentation(progress, innerWidth < 700, motion.matches);
@@ -64,10 +91,13 @@ export function ScrollGalleryStory() {
     };
   }, []);
   return (
-    <section className="sgs" ref={sectionRef} aria-label="From your collection to your own Space">
+    <section className="sgs" data-arrival={arrival} ref={sectionRef} aria-label="From your collection to your own Space">
       <div className="sgs__sticky">
-        <div className="sgs__room"><GalleryScene draft={draft} visitor presentation={presentation} onArtworkFocus={setFocus} /></div>
-        <div className="sgs__masthead"><p>Immersive 3D presentation platform</p><a href="#/create">Create a Space <span>↗</span></a></div>
+        <div className="sgs__room"><GalleryScene draft={draft} visitor presentation={presentation} onArrivalChange={setArrival} onArtworkFocus={setFocus} /></div>
+        <StoryPosterImage className="sgs__poster" />
+        <div className="sgs__masthead"><p>Immersive 3D presentation platform</p><button className="sgs__play" disabled={arrival !== 'ready'} aria-pressed={isPlaying} onClick={() => {
+          if (isPlaying) stopFilm(); else { if (Number(sectionRef.current?.style.getPropertyValue('--story-progress')) > .97) goTo(0); explore.current = false; setExploring(false); playing.current = true; setPlaying(true); }
+        }}>{isPlaying ? 'Pause film' : 'Play the film · 72 sec'} <span aria-hidden="true">{isPlaying ? 'Ⅱ' : '▷'}</span></button></div>
         <div className="sgs__chapters" aria-live="off">
           {STORY_CHAPTERS.map((chapter, index) => <article key={chapter.title} hidden={index !== 0} ref={(element) => { chapters.current[index] = element; }}>
             <p className="sgs__eyebrow">0{index + 1} / 04 <span>{chapter.label}</span></p>{index === 0 ? <h1>{chapter.title}</h1> : <h2>{chapter.title}</h2>}<p>{chapter.body}</p>
@@ -78,8 +108,8 @@ export function ScrollGalleryStory() {
             <i className={`sgs__swatch sgs__swatch--${floor}`} />{floor === 'concrete' ? 'Mineral' : floor === 'oak' ? 'Oak' : 'Marble'}
           </button>)}
         </div>
-        <button className="sgs__look" aria-pressed={exploring} onClick={() => { explore.current = !exploring; setExploring(!exploring); }}>{exploring ? "Back to story" : "Look around"}</button>
-        <div className="sgs__footer"><span className="sgs__scroll-hint">Scroll to make it yours <b>↓</b></span><button type="button" disabled={opening} onClick={() => void openStudio()}>{opening ? "Opening your Studio…" : "Open this Space in Studio"} <span>↗</span></button><small>Sample collection · The White Cube</small></div>
+        <button className="sgs__look" aria-pressed={exploring} onClick={() => { stopFilm(); explore.current = !exploring; setExploring(!exploring); }}>{exploring ? "Back to story" : "Look around"}</button>
+        <div className="sgs__footer"><nav className="sgs__navigation" aria-label="Space story chapters">{STORY_CHAPTERS.map((chapter, index) => <button key={chapter.label} aria-label={`Chapter ${index + 1}: ${chapter.label}`} onClick={() => goTo(index / 4 + .005)}>0{index + 1}</button>)}<button onClick={() => goTo(1.04)} aria-label="Continue below the story">Skip ↓</button></nav><button type="button" disabled={opening} onClick={() => void openStudio()}>{opening ? "Opening your Studio…" : "Open this Space in Studio"} <span>↗</span></button><small>Sample collection · The White Cube <a href="#/create">Choose a room ↗</a></small></div>
         {openError && <p className="sgs__open-error" role="alert">{openError}</p>}
         <div className="sgs__timeline" aria-hidden="true"><i /></div>
         {focus && <aside className="sgs__art-info"><button onClick={() => setFocus(null)} aria-label="Close artwork information">×</button><strong>{focus.title}</strong><p>{focus.description}</p></aside>}
