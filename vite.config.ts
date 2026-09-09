@@ -25,6 +25,13 @@ export default defineConfig(({ command }) => ({
         codeSplitting: {
           // Keep the SDK and its account adapter together for compression.
           groups: [{
+            // Keep Three and its decoders in a dependency-only chunk. Otherwise
+            // the shared scene and its lazy wrapper can form an evaluation cycle
+            // and read MeshoptDecoder before it has initialized.
+            name: 'three',
+            test: /node_modules[\\/]three[\\/]/,
+            includeDependenciesRecursively: false,
+          }, {
             // Share the scene implementation without merging it into the Three
             // renderer vendor chunk when the homepage also imports the Studio.
             name: 'studio-scene',

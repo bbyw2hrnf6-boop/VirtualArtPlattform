@@ -229,3 +229,45 @@ previews and real Studio captures. Beauty images are not installed as a substitu
 for interactive rooms, and native 4K masters are not automatically downloaded by
 the homepage. Browser quality remains dependent on device capability and dynamic
 lighting; real handset FPS and live deployment were not part of this local acceptance.
+
+### CI follow-up · 9 September 2026
+
+The owner's Verify run 34324867887 for `d1991a6` failed its separate production
+Chromium smoke check. That check still expected "Follow the work." as H1 after
+the homepage changed to "Give your work a place." as H1 and "Follow the work."
+as H2. The earlier `npm run check` and interactive browser acceptance did not
+include this separate automated smoke gate. The README now states that boundary.
+
+The smoke test now asserts the opening story's exact H1, a single visible H1 and
+the community H2, retaining Create Space, browser-error and CSP assertions. Its
+bounded timeout accommodates 3D initialization. The pinned full Chromium now
+runs in modern headless mode; the previous separate headless shell stalled during
+synchronous shader compilation on this Mac. This follows the documented
+[Playwright browser-channel option](https://playwright.dev/docs/browsers#chromium-new-headless-mode).
+No browser dependency version or production rendering setting was downgraded.
+
+The production-feature retest additionally exposed a real intermittent lazy-load
+failure: `MeshoptDecoder.useWorkers` was read before the decoder initialized. The
+manual scene chunk and its wrapper had placed Three's decoder in their evaluation
+cycle. Three and its bundled addons now occupy an independent chunk with no
+imports from application chunks. The shared scene, existing features and asset
+quality remain intact. The CSP harness also now injects the Hosting policy only
+into the main document; it must not overwrite Google's reCAPTCHA iframe policy
+or keep a remote `route.fetch` pending after the test ends.
+
+Final validation with Node 22.23.2 / npm 10.9.8:
+
+- Full `npm run check`: lint, 344 unit tests, 46 script tests, six GLBs and both
+  build variants passed. Production-feature JS gzip is 570,561 bytes against the
+  unchanged 575,000 ceiling; largest lazy JS is 175,192 against 195,000. CSS stays
+  at 52,834 against 54,000. Long-term target warnings remain unchanged.
+- Standard built artifact: both Chromium smoke tests passed without retries (7.7 s).
+- Production-feature artifact: both smoke tests repeated three times; all six
+  passed without retries (16.2 s). This uses the documented nonfunctional local
+  App Check fixture, not the private CI environment or a live deployment.
+- No room assets, materials, Blender sources, publishing/URL contracts or quality
+  settings changed. No commit, push, workflow dispatch or deployment was performed.
+
+Local logs: `artifacts/homepage-smoke-fix-final-check.log`,
+`artifacts/homepage-smoke-fix-verified-chromium.log` and
+`artifacts/homepage-smoke-fix-verified-production.log`.

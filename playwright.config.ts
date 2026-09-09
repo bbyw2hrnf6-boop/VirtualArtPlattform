@@ -23,6 +23,8 @@ export default defineConfig({
   },
   projects: [{
     name: 'chromium',
-    use: { ...devices['Desktop Chrome'] },
+    // Use the pinned full Chromium's modern headless mode. The separate legacy
+    // headless shell can stall during the homepage's real WebGL shader warm-up.
+    use: { ...devices['Desktop Chrome'], channel: 'chromium' },
   }],
 });

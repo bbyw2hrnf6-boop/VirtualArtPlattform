@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
+// The real homepage now initializes Three.js. Headless Chromium can compile its
+// shaders synchronously, delaying DOM queries even after the shell is mounted.
+test.describe.configure({ timeout: 60_000 });
+
 const firebase = JSON.parse(readFileSync(new URL('../../firebase.json', import.meta.url), 'utf8'));
 const candidatePolicy = firebase.hosting.headers
   .find((entry: { source?: string }) => entry.source === '**')?.headers
@@ -20,7 +24,10 @@ test('loads the public home and Create Space shell without browser errors', asyn
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveTitle(/LIEUVA/);
   await expect(page.locator('#main-content')).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name: 'Follow the work.' })).toBeVisible();
+  const story = page.getByRole('region', { name: 'From your collection to your own Space', exact: true });
+  await expect(story.getByRole('heading', { level: 1, name: 'Give your work a place.', exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+  await expect(page.getByRole('heading', { level: 2, name: 'Follow the work.', exact: true })).toBeVisible();
 
   await page.goto('/#/create', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveTitle(/Create a Space.*LIEUVA/);
@@ -43,7 +50,9 @@ test('candidate CSP enforces on the bundled home and Create shells without viola
     });
   });
   await page.route('**/*', async (route) => {
-    if (route.request().resourceType() !== 'document') {
+    // Enforce the Hosting policy on our document, not on App Check's external
+    // reCAPTCHA frames, which must retain Google's own response headers.
+    if (route.request().resourceType() !== 'document' || route.request().frame() !== page.mainFrame()) {
       await route.continue();
       return;
     }
@@ -57,7 +66,7 @@ test('candidate CSP enforces on the bundled home and Create shells without viola
   for (const path of ['/', '/#/create']) {
     // Firebase keeps background transports alive. Waiting for networkidle makes
     // this security smoke depend on runner/network timing and can consume the
-    // entire 30-second test budget even though the shell is already ready.
+    // entire test budget even though the shell is already ready.
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#main-content')).toBeVisible();
     await page.waitForTimeout(250);
