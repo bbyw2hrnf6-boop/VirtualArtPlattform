@@ -315,8 +315,20 @@ test('mobile artwork upload, history, recovery and publication review stay avail
   await page.getByRole('button',{name:'Edit more',exact:true}).click();
   await page.getByRole('button',{name:'Undo',exact:true}).click();
   await expect(page.locator('.artwork-list button')).toHaveCount(3);
+  await expect(page.locator('.draft-save-status')).toHaveClass(/--saved/);
+  // Observe the same DOM commit as Redo, before any deferred timer can conceal
+  // a stale Saved label. Reload is safe only after this revision finishes saving.
+  await page.locator('.studio').evaluate(root => {
+    const observer = new MutationObserver(() => {
+      if (root.querySelectorAll('.artwork-list button').length !== 4) return;
+      root.setAttribute('data-save-after-redo', root.querySelector('.draft-save-status')!.className);
+      observer.disconnect();
+    });
+    observer.observe(root, {childList:true, subtree:true});
+  });
   await page.getByRole('button',{name:'Redo',exact:true}).click();
   await expect(page.locator('.artwork-list button')).toHaveCount(4);
+  await expect(page.locator('.studio')).toHaveAttribute('data-save-after-redo', /--saving/);
   await expect(page.locator('.draft-save-status')).toHaveClass(/--saved/);
   await page.reload();
   await expect(scene).toHaveAttribute('data-arrival','ready');
@@ -332,6 +344,10 @@ test('mobile artwork upload, history, recovery and publication review stay avail
 
 
 test('20-second playback demonstrates floors and walls automatically and settles at the end', async ({page}, testInfo) => {
+  // Test the authored duration independently of the runner's GPU throughput.
+  // Every shot below still has to reach the real production WebGL renderer.
+  // Install before navigation so existing timers/RAF handles are never orphaned.
+  await page.clock.install();
   await page.goto('/');
   const story=page.locator('.sgs'),scene=story.locator('.gallery-scene');
   await expect(story).toHaveAttribute('data-arrival','ready');
@@ -339,6 +355,9 @@ test('20-second playback demonstrates floors and walls automatically and settles
   await page.getByRole('button',{name:'Preview oak floor'}).click();
   await page.getByRole('button',{name:'Chapter 1: Your space'}).click();
   await expect(scene).toHaveAttribute('data-floor','concrete');
+  await page.evaluate(() => window.scrollTo({top:0, behavior:'instant'}));
+  await expectStoryFrame(scene,0);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
   await scene.evaluate(el => {
     const seen={floor:new Set<string>(),wall:new Set<string>()};
     const events: unknown[]=[];
@@ -357,7 +376,27 @@ test('20-second playback demonstrates floors and walls automatically and settles
   try {
     await page.getByRole('button',{name:'Play the film · 20 sec'}).click();
     await expect(page.getByRole('button',{name:'Pause film'})).toHaveAttribute('aria-pressed','true');
+    let elapsed = 0;
+    for (let shot = 0; shot < 24; shot++) {
+      const time = Math.round((shot + .5) * 20_000 / 24);
+      await page.clock.fastForward(time - elapsed - 32);
+      // Two regular animation frames let the transport publish the pose and
+      // the persistent Three scene draw it. Scene/assets/rendering stay real.
+      await page.clock.runFor(32);
+      elapsed = time;
+      await expect(story).toHaveAttribute('data-shot', String(shot + 1));
+      await expect.poll(async () => Number(await scene.getAttribute('data-presentation-progress'))).toBeCloseTo(time / 20_000, 2);
+      const floor = shot < 13 ? 'concrete' : shot < 14 ? 'oak' : 'black-marble';
+      const wall = shot < 16 ? 'chalk' : shot < 17 ? 'warm' : 'travertine';
+      await expect(scene).toHaveAttribute('data-floor', floor);
+      await expect(scene).toHaveAttribute('data-wall', wall);
+      await expect(page.getByRole('button',{name:'Pause film'})).toHaveAttribute('aria-pressed','true');
+    }
+    await page.clock.fastForward(19_980 - elapsed);
+    await expect(page.getByRole('button',{name:'Pause film'})).toHaveAttribute('aria-pressed','true');
+    await page.clock.runFor(52); // The first RAF after the exact 20-second deadline.
     await expect(page.getByRole('button',{name:'Play the film · 20 sec'})).toBeVisible({timeout:30_000});
+    await page.clock.resume();
     await expectStoryFrame(scene,1);
     expect(await scene.evaluate(el => (el as HTMLElement & {finishReport:()=>unknown}).finishReport())).toEqual({floor:['concrete','oak','black-marble'],wall:['chalk','warm','travertine']});
     expect(await scene.evaluate(el => (el as HTMLElement & {reflectionBakes: number[]}).reflectionBakes)).toEqual([]);

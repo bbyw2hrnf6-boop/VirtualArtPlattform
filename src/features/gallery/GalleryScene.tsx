@@ -4144,6 +4144,8 @@ function GallerySceneRenderer({
       premiumEnvironment?.apply(active, currentDraft);
       element.dataset.cutaway = active ? "active" : "inactive";
       element.dataset.roofPreference = editorCutawayOpen ? "open" : "ceiling";
+      // The previous stationary frame no longer represents this roof state.
+      element.dataset.renderIdle = "false";
       renderer.shadowMap.needsUpdate = true;
     };
     applyCutawayMode();

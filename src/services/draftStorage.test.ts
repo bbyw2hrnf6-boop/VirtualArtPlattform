@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GalleryDraft, TemplateId } from "../features/gallery/types";
 import {
   createGalleryProjectId,
@@ -106,6 +106,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   exposeBrowser();
   await removeDatabase();
   Reflect.deleteProperty(globalThis, "window");
@@ -113,6 +114,32 @@ afterEach(async () => {
 });
 
 describe("versioned multi-project draft storage", () => {
+  it("reports a save only after its write transaction commits", async () => {
+    const events: string[] = [];
+    const transact = IDBDatabase.prototype.transaction;
+    vi.spyOn(IDBDatabase.prototype, "transaction").mockImplementation(function (this: IDBDatabase, ...args) {
+      const transaction = transact.apply(this, args);
+      if (args[1] === "readwrite")
+        transaction.addEventListener("complete", () => events.push("committed"));
+      return transaction;
+    });
+    await saveGalleryDraft("committed", draft(), 1);
+    events.push("saved");
+    expect(events).toEqual(["committed", "saved"]);
+  });
+
+  it("preserves the draft in fallback storage if a successful put is later aborted", async () => {
+    const put = IDBObjectStore.prototype.put;
+    vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (this: IDBObjectStore, ...args) {
+      const request = put.apply(this, args);
+      request.addEventListener("success", () => queueMicrotask(() => this.transaction.abort()));
+      return request;
+    });
+    const saved = await saveGalleryDraft("aborted", draft(), 3);
+    expect(JSON.parse(storage.getItem(`${FALLBACK_PREFIX}aborted`)!)).toEqual(saved);
+    expect(await loadGalleryDraft("aborted")).toEqual(saved);
+  });
+
   it("round-trips a versioned project with revision and save time", async () => {
     const saved = await saveGalleryDraft("white-one", draft(), 7);
     expect(saved).toMatchObject({

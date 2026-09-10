@@ -10,6 +10,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useReducer,
   useRef,
@@ -1194,9 +1195,12 @@ function Studio({
     };
   }, [initialProjectId, resetDraft]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!storageReady || (!canUndo && !canRedo)) return;
-    const statusTimeout = window.setTimeout(() => setSaveStatus("saving"), 0);
+    // Invalidate Saved before painting a changed draft, including Undo/Redo.
+    // The actual storage write remains debounced; only its status is synchronous.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSaveStatus("saving");
     const requestId = ++latestSaveRequest.current;
     const revision = ++saveRevision.current;
     const timeout = window.setTimeout(() => {
@@ -1209,7 +1213,6 @@ function Studio({
         });
     }, 450);
     return () => {
-      window.clearTimeout(statusTimeout);
       window.clearTimeout(timeout);
     };
   }, [draft, storageReady, canUndo, canRedo, initialProjectId]);

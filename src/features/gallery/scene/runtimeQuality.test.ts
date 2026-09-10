@@ -91,3 +91,24 @@ it('keeps loading and hidden-tab time out of the DPR measurement, while still re
   expect(renderer.setPixelRatio).toHaveBeenCalledWith(1);
   vi.unstubAllGlobals();
 });
+
+it('adapts within a short film even when a slow GPU cannot deliver 120 frames', () => {
+  vi.stubGlobal('devicePixelRatio', 2);
+  const renderer = { setPixelRatio: vi.fn() } as unknown as THREE.WebGLRenderer;
+  const downgrade = vi.fn();
+  const recover = vi.fn();
+  const quality = renderQualityForCapabilities({ coarse:false, compact:false, cores:8, memory:8, dpr:2 });
+  const adaptive = createAdaptiveDpr(renderer, quality, downgrade, recover);
+  adaptive.resetSampling(0);
+  for (let frame = 1; frame <= 4; frame++) adaptive.update(frame * 600);
+  expect(adaptive.getTier()).toBe('low');
+  expect(downgrade).toHaveBeenCalledOnce();
+  // A few fast frames must not oscillate back to the expensive tier.
+  for (let frame = 1; frame <= 120; frame++) adaptive.update(2_400 + frame * 16);
+  expect(recover).not.toHaveBeenCalled();
+  // Recovery still works after five sustained healthy sampling windows.
+  for (let frame = 121; frame <= 600; frame++) adaptive.update(2_400 + frame * 16);
+  expect(adaptive.getTier()).toBe('balanced');
+  expect(recover).toHaveBeenCalledOnce();
+  vi.unstubAllGlobals();
+});

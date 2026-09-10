@@ -221,8 +221,11 @@ export function createAdaptiveDpr(
   let healthyWindows = 0;
   const update = (now: number) => {
     frames += 1;
-    if (frames < 120) return;
-    const averageFrameMs = (now - sampleStartedAt) / frames;
+    const elapsed = now - sampleStartedAt;
+    // A slow GPU may never produce 120 frames during a short tour. Bound the
+    // active sampling window as well, without reacting to one isolated stall.
+    if (frames < 4 || (frames < 120 && elapsed < 2_000)) return;
+    const averageFrameMs = elapsed / frames;
     if (averageFrameMs > 25 && tier !== 'low') {
       tier = 'low';
       renderer.setPixelRatio(Math.min(devicePixelRatio, 1));

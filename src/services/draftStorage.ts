@@ -130,25 +130,13 @@ async function withStore<T>(
   return new Promise<T>((resolve, reject) => {
     const transaction = database.transaction(STORE_NAME, mode);
     const store = transaction.objectStore(STORE_NAME);
-    let settled = false;
-    const finish = (value: T) => {
-      if (!settled) {
-        settled = true;
-        resolve(value);
-      }
-    };
-    const fail = (error: Error) => {
-      if (!settled) {
-        settled = true;
-        reject(error);
-      }
-    };
-    transaction.onabort = () =>
-      fail(transaction.error ?? new Error("Draft storage was interrupted."));
-    transaction.onerror = () =>
-      fail(transaction.error ?? new Error("Draft storage failed."));
-    transaction.oncomplete = () => database.close();
-    operation(store, finish, fail);
+    let result: T;
+    transaction.onabort = transaction.onerror = () =>
+      reject(transaction.error ?? new Error("Draft storage failed."));
+    // Request success precedes transaction completion. Only then may
+    // the Studio report Saved or a caller safely navigate/reload.
+    transaction.oncomplete = () => resolve(result);
+    operation(store, (value) => { result = value; }, reject);
   }).finally(() => database.close());
 }
 
