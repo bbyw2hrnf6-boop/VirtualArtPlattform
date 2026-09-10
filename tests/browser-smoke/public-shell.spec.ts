@@ -23,7 +23,13 @@ test('loads the public home and Create Space shell without browser errors', asyn
   const story = page.getByRole('region', { name: 'From your collection to your own Space', exact: true });
   await expect(story.getByRole('heading', { level: 1, name: 'Give your work a place.', exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-  await expect(page.getByRole('heading', { level: 2, name: 'Follow the work.', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: /Behind every space,\s*a story\./ })).toBeVisible();
+
+  const collection=page.locator('.room-showcase');
+  await collection.scrollIntoViewIfNeeded();
+  await expect(collection.getByRole('button',{name:/with sample artwork/})).toHaveCount(3);
+  await collection.locator('summary').first().click();
+  await expect(collection.locator('details').first()).toHaveAttribute('open','');
 
   await page.goto('/#/create', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveTitle(/Create a Space.*LIEUVA/);

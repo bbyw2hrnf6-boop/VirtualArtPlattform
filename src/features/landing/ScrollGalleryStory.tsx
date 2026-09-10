@@ -1,8 +1,9 @@
 import { StoryPosterImage } from "./StoryPoster";
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { GalleryScene, type GalleryPresentation, type ArtworkFocusInfo } from '../gallery/GalleryScene';
 import { STORY_DRAFT } from './storyDraft';
-import { storyPresentation, storyScrollProgress, advanceStoryProgress, storyFloor, STORY_CHAPTERS, STORY_DURATION_MS } from './scrollStoryModel';
+import { storyPresentation, storyScrollProgress, advanceStoryProgress, storyFinishes, STORY_FINISHES, STORY_CHAPTERS, STORY_DURATION_MS } from './scrollStoryModel';
 import { saveGalleryDraft } from '../../services/draftStorage';
 import { stageStudioHandoff } from '../../services/studioHandoff';
 import './scrollGalleryStory.css';
@@ -17,9 +18,21 @@ export function ScrollGalleryStory() {
   const playing = useRef(false);
   const [isPlaying, setPlaying] = useState(false);
   const [draft, setDraft] = useState(STORY_DRAFT);
-  const manualFloor = useRef(false);
-  const demonstratedFloor = useRef(STORY_DRAFT.floor);
+  const manualStage = useRef<number | null>(null);
+  const demonstratedStage = useRef(-1);
+  const playhead = useRef(0);
+  const [finishesReady, setFinishesReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    // Decode the six demonstration images before enabling timed playback.
+    void Promise.all(Object.values(STORY_FINISHES).flat().map(([, , asset]) => {
+      const image = new Image(); image.src = `./assets/materials/${asset}`;
+      return image.decode().catch(() => undefined);
+    })).then(() => { if (active) setFinishesReady(true); });
+    return () => { active = false; };
+  }, []);
   const [shot, setShot] = useState(0);
+  const [surface, setSurface] = useState<'floor' | 'wall'>('floor');
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState('');
   const openStudio = async () => {
@@ -67,10 +80,16 @@ export function ScrollGalleryStory() {
       presentation.current.interactive = explore.current && !motion.matches && progress >= .95;
       const nextShot = motion.matches ? 23 : Math.min(23, Math.floor(progress * 24));
       setShot(current => current === nextShot ? current : nextShot);
-      const floor = storyFloor(motion.matches ? 1 : progress);
-      if (!manualFloor.current && demonstratedFloor.current !== floor) {
-        demonstratedFloor.current = floor;
-        setDraft(current => ({ ...current, floor }));
+      const finishes = storyFinishes(motion.matches ? 1 : progress);
+      if (manualStage.current !== finishes.stage && demonstratedStage.current !== finishes.stage) {
+        manualStage.current = null;
+        demonstratedStage.current = finishes.stage;
+        // Commit each demonstrated finish before the next WebGL frame. A deferred
+        // React update can otherwise be coalesced past Oak on a busy software GPU.
+        flushSync(() => {
+          setSurface(finishes.group);
+          setDraft(current => ({ ...current, floor: finishes.floor, wall: finishes.wall }));
+        });
       }
       const chapter = motion.matches ? 0 : Math.min(3, Math.floor(progress * 4));
       section.dataset.chapter = String(chapter);
@@ -90,11 +109,11 @@ export function ScrollGalleryStory() {
       const rect = section.getBoundingClientRect();
       let target = storyScrollProgress(-rect.top, 0, section.offsetHeight - innerHeight, motion.matches);
       if (playing.current && !motion.matches) {
-        target = Math.min(1, target + Math.max(0, now - last) / STORY_DURATION_MS);
+        target = playhead.current = Math.min(1, playhead.current + Math.max(0, now - last) / STORY_DURATION_MS);
         window.scrollTo({ top: scrollY + rect.top + target * (section.offsetHeight - innerHeight), behavior: 'instant' });
-        if (target === 1) { playing.current = false; setPlaying(false); }
       }
-      progress = motion.matches ? 0 : advanceStoryProgress(progress, target, now - last);
+      progress = motion.matches ? 0 : playing.current ? target : advanceStoryProgress(progress, target, now - last);
+      if (playing.current && target === 1) { playing.current = false; setPlaying(false); }
       last = now;
       publish();
       frame = requestAnimationFrame(update);
@@ -119,9 +138,9 @@ export function ScrollGalleryStory() {
       <div className="sgs__sticky">
         <div className="sgs__room"><GalleryScene draft={draft} visitor presentation={presentation} onArrivalChange={setArrival} onArtworkFocus={setFocus} /></div>
         <StoryPosterImage className="sgs__poster" />
-        <div className="sgs__masthead"><p>Immersive 3D presentation platform</p><button className="sgs__play" disabled={arrival !== 'ready'} aria-pressed={isPlaying} onClick={() => {
-          if (isPlaying) stopFilm(); else { if (Number(sectionRef.current?.style.getPropertyValue('--story-progress')) > .97) goTo(0); explore.current = false; setExploring(false); playing.current = true; setPlaying(true); }
-        }}>{isPlaying ? 'Pause film' : 'Play the film · 72 sec'} <span aria-hidden="true">{isPlaying ? 'Ⅱ' : '▷'}</span></button></div>
+        <div className="sgs__masthead"><p>Immersive 3D presentation platform</p><button className="sgs__play" disabled={arrival !== 'ready' || !finishesReady} aria-pressed={isPlaying} onClick={() => {
+          if (isPlaying) stopFilm(); else { if (Number(sectionRef.current?.style.getPropertyValue('--story-progress')) > .97) goTo(0); manualStage.current = null; demonstratedStage.current = -2; playhead.current = presentation.current.progress; explore.current = false; setExploring(false); playing.current = true; setPlaying(true); }
+        }}>{isPlaying ? 'Pause film' : 'Play the film · 20 sec'} <span aria-hidden="true">{isPlaying ? 'Ⅱ' : '▷'}</span></button></div>
         {shot >= 6 && shot < 9 && <aside className="sgs__demo" aria-label="Illustrated Studio steps">
           <small>In the Studio</small><strong>{['Upload artwork', 'Choose a wall', 'Frame & scale'][shot - 6]}</strong>
           <div>{STORY_DRAFT.artworks.map((art, index) => <img key={art.id} src={art.src} alt={art.title} className={index === shot - 6 ? 'is-selected' : ''} />)}</div>
@@ -132,10 +151,16 @@ export function ScrollGalleryStory() {
             <p className="sgs__eyebrow">0{index + 1} / 04 <span>{chapter.label}</span></p>{index === 0 ? <h1>{chapter.title}</h1> : <h2>{chapter.title}</h2>}<p>{chapter.body}</p>
           </article>)}
         </div>
-        <div className="sgs__finish" aria-label="Try a floor finish"><span>Make it yours</span>
-          {(['concrete', 'oak', 'black-marble'] as const).map((floor) => <button key={floor} aria-label={`Preview ${floor.replace('-', ' ')} floor`} aria-pressed={draft.floor === floor} onClick={() => { manualFloor.current = true; setDraft((current) => ({ ...current, floor })); }}>
-            <i className={`sgs__swatch sgs__swatch--${floor}`} />{floor === 'concrete' ? 'Mineral' : floor === 'oak' ? 'Oak' : 'Marble'}
-          </button>)}
+        <div className="sgs__finish" data-surface={surface} aria-label="Material demonstration">
+          <span>{isPlaying ? 'Auto styling' : 'Scroll to style'} · {surface === 'floor' ? 'Floor' : 'Walls'}</span>
+          <div className="sgs__finish-tabs">{(['floor','wall'] as const).map(kind => <button key={kind} aria-label={`Show ${kind} finishes`} aria-pressed={surface === kind} onClick={() => { stopFilm(); setSurface(kind); }}>{kind === 'floor' ? 'Floor' : 'Walls'}</button>)}</div>
+          {(['floor', 'wall'] as const).map(kind => <div className="sgs__finish-options" key={kind} hidden={kind !== surface}>
+            {STORY_FINISHES[kind].map(([finish, label, asset]) => <button key={finish}
+              aria-label={`Preview ${finish.replace('-', ' ')} ${kind}`} aria-pressed={draft[kind] === finish}
+              onClick={() => { stopFilm(); manualStage.current = storyFinishes(presentation.current.progress).stage; setDraft(current => ({ ...current, [kind]: finish })); }}>
+              <i className="sgs__swatch" style={{backgroundImage:`url('./assets/materials/${asset}')`}} />{label}
+            </button>)}
+          </div>)}
         </div>
         <button className="sgs__look" aria-pressed={exploring} onClick={() => { stopFilm(); if (!exploring) goTo(.965); explore.current = !exploring; setExploring(!exploring); }}>{exploring ? "Back to story" : "Look around"}</button>
         {exploring && <p className="sgs__walk-hint">Tap floor to move · Drag to look</p>}

@@ -1,10 +1,10 @@
 {
   "source": {
     "path": "src/features/landing/scrollStoryModel.ts",
-    "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
+    "sha256": "a991a6f83f7f5b723897ae8e3e4b1919deac0e56713d0c4d84b8dd26aad7df7e"
   },
-  "durationMs": 72000,
-  "fps": 24,
+  "durationMs": 20000,
+  "fps": 86.4,
   "frameStart": 1,
   "inclusiveEndpoint": true,
   "frames": [
@@ -27727,9 +27727,9 @@
   "previousSampleValidation": {
     "source": {
       "path": "src/features/landing/scrollStoryModel.ts",
-      "sha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
+      "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
     },
-    "desktopSamplesIdentical": false,
-    "proofSamplesIdentical": false
+    "desktopSamplesIdentical": true,
+    "proofSamplesIdentical": true
   }
 }

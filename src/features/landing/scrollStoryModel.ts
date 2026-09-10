@@ -16,8 +16,8 @@ export function advanceStoryProgress(current: number, target: number, elapsed: n
   // made chapter changes lag behind native scroll on software/slow renderers.
   return clamp(current + delta * (1 - Math.exp(-Math.max(0, elapsed) / 125)));
 }
-export const STORY_DURATION_MS = 72_000;
-// Twenty-four three-second shots, with holds where the work needs time to read.
+export const STORY_DURATION_MS = 20_000;
+// All twenty-four authored shots are retained; playback retimes them to 20 seconds.
 // Comparison shots share one pose; materials change without a moving baseline.
 const poses: Array<[number, number, number, number, number, number]> = [
   [0, 11, 19, 0, .7, -1], [0, 10.9, 18.9, 0, .7, -1],
@@ -42,8 +42,25 @@ export function storyReveals(progress: number) {
   return { floor: smooth((shot - 1) / 2), walls: smooth(shot - 3), light: smooth(shot - 4),
     art: [7, 8, 9].map(start => smooth((shot - start) / .85)), decor: smooth(shot - 10) };
 }
-export function storyFloor(progress: number) {
-  return progress < 14 / 24 ? 'concrete' : progress < 15 / 24 ? 'oak' : 'black-marble';
+export const STORY_FINISHES = {
+  floor: [
+    ['concrete', 'Mineral', 'premium-v3/honed-concrete.webp'],
+    ['oak', 'Oak', 'premium-v3/natural-oak.webp'],
+    ['black-marble', 'Marble', 'aura-nero-marquina-v2.webp'],
+  ],
+  wall: [
+    ['chalk', 'Plaster', 'aura-chalk-plaster-v5.webp'],
+    ['warm', 'Clay', 'aura-clay-limewash-v5.webp'],
+    ['travertine', 'Travertine', 'aura-roman-travertine-v2.webp'],
+  ],
+} as const;
+export function storyFinishes(progress: number) {
+  const shot = clamp(progress) * 24;
+  const floor = shot < 13 ? 0 : shot < 14 ? 1 : 2;
+  const wall = shot < 16 ? 0 : shot < 17 ? 1 : 2;
+  return { floor: STORY_FINISHES.floor[shot < 12 ? 0 : floor][0],
+    wall: STORY_FINISHES.wall[wall][0], group: shot < 15 ? 'floor' : 'wall',
+    stage: shot < 12 ? -1 : shot < 15 ? floor : 3 + wall } as const;
 }
 
 /** All transforms are derived from scroll, so reversing never leaves stale props. */

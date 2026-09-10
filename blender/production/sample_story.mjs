@@ -8,10 +8,10 @@ const sourcePath = 'src/features/landing/scrollStoryModel.ts';
 const sourceUrl = new URL(`../../${sourcePath}`, import.meta.url);
 const sourceBytes = await readFile(sourceUrl);
 const { storyPresentation, STORY_DURATION_MS } = await import(sourceUrl.href);
-const fps = 24;
-const intervals = STORY_DURATION_MS / 1000 * fps;
-if (STORY_DURATION_MS !== 72_000 || !Number.isInteger(intervals))
-  throw new Error('Expected the 72-second runtime story at 24 fps.');
+// Keep every original camera sample while retiming the complete story.
+const intervals = 1728;
+const fps = intervals / (STORY_DURATION_MS / 1000);
+if (STORY_DURATION_MS !== 20_000) throw new Error('Expected 20-second runtime playback.');
 
 function sample(progress, frame) {
   const { position, target, fov, cutaway } = storyPresentation(progress, false, false);

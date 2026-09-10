@@ -1,15 +1,15 @@
-# White Cube · 72-second camera study
+# White Cube · 20-second camera study
 
 Local beauty reference sampled from the actual desktop `scrollStoryModel.ts`.
-`camera-samples.json` records the source hash, 24 fps samples and exact QA poses.
+`camera-samples.json` records the source hash, 86.4 samples per second and exact QA poses.
 The packed `white-cube-story.blend` has a separate editable camera, four artwork
 controllers and one bench controller. Timeline frames 1–1729 include the exact
-72-second endpoint; a 24 fps movie excluding that duplicate endpoint has 1728 frames.
+20-second endpoint; all 1,728 original intervals are retained and play in 20 seconds.
 
 The camera follows all 24 shots from the v2 direction, holds during the three
 material comparisons and closes the front cutaway only after entering the room.
 Visibility keys are discrete. This is a camera study: browser clipping of rising
-architecture, the three finish changes and the UI are not reproduced here.
+architecture, the floor/wall finish changes and the UI are not reproduced here.
 Artwork groups arrive in sequence during shots 8–10; furniture arrives in shot 11. The source's four fictional panels
 and walnut bench differ from the current runtime draft. A neutral original ground
 plane is beauty-only. Source materials/lights remain editable and images packed.

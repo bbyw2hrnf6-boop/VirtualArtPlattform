@@ -38,19 +38,6 @@ export function PitchSections() {
         </div>
       </section>
 
-      <section className="aura-trust" aria-labelledby="aura-trust-title">
-        <div>
-          <p>Clear by design</p>
-          <h2 id="aura-trust-title">What LIEUVA<br /><em>does today.</em></h2>
-        </div>
-        <dl>
-          <div><dt>Studio</dt><dd>Browser-native spatial tools keep room selection, artwork placement, lighting, preview and publishing in one workflow.</dd></div>
-          <div><dt>Publishing</dt><dd>Building and Walk Preview need no account. Publishing and role-based access require a verified account.</dd></div>
-          <div><dt>Content</dt><dd>Published artwork and covers live in Firebase Storage; Space configuration and access live in Firestore.</dd></div>
-          <div><dt>Roadmap</dt><dd>Billing, permanent hosting, simultaneous co-editing, creator analytics, and custom domains are still in development.</dd></div>
-        </dl>
-      </section>
-
       <section className="aura-faq" id="pilot-faq" aria-labelledby="aura-faq-title">
         <div className="aura-section-heading">
           <p>Before you enter</p>

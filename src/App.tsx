@@ -20,8 +20,6 @@ import { SpaceShareMenu } from "./components/SpaceShareMenu";
 import { publicAssetUrl } from "./services/publicAssetUrl";
 import { FullscreenButton } from "./components/FullscreenButton";
 import { PRODUCT_BRAND } from "./config/brand";
-import "./features/landing/landingConversion.css";
-import "./features/landing/directoryExperience.css";
 import { TEMPLATES } from "./features/gallery/templates";
 import {
   autoCurateGallery,
@@ -380,19 +378,16 @@ function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () =>
 function BrandHero({ onExplore }: { onExplore: () => void }) {
   return (
     <section className="brand-hero brand-hero--follow" aria-labelledby="brand-hero-title">
-      <p className="eyebrow"><i aria-hidden="true" /> Live on LIEUVA</p>
-      <h2 id="brand-hero-title">Follow the work.</h2>
-      <p>Enter published Spaces. Meet the Creators behind them. Follow new rooms and studio notes as the work develops.</p>
+      <img className="brand-hero__image" src="./assets/templates/white-cube-preview.webp?v=premium-v3" alt="" loading="lazy" />
+      <p className="eyebrow"><i aria-hidden="true" /> The Creator Hub</p>
+      <h2 id="brand-hero-title">Behind every space,<br /><em>a story.</em></h2>
+      <p>Meet the creators, discover their exhibitions and follow what takes shape.</p>
       <div className="brand-hero__actions">
         <button className="button button--light" type="button" onClick={onExplore} aria-haspopup="dialog">Explore Spaces <span>↓</span></button>
         <button className="text-link" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "hero")}>{PRODUCT_BRAND.primaryCta} →</button>
         <a className="text-link brand-hero__hub" href="/creator-hub">Creator Hub ↗</a>
       </div>
-      <ol className="brand-hero__journey" aria-label="LIEUVA community journey">
-        <li><b>01</b> Spaces</li>
-        <li><b>02</b> Creators</li>
-        <li><b>03</b> Community</li>
-      </ol>
+
     </section>
   );
 }
@@ -441,11 +436,9 @@ function GlobalDirectorySearch({ open, onClose }: { open: boolean; onClose: () =
 }
 
 const LANDING_WORKFLOW = [
-  ["01", "Create", "Choose a spatial starting point."],
-  ["02", "Arrange", "Place images, objects, and surfaces."],
-  ["03", "Preview", "Walk the room before visitors do."],
-  ["04", "Publish", "Set public, unlisted, or private access."],
-  ["05", "Share", "Send one link people can explore."],
+  ["01", "Choose a space", "Three distinct rooms. Find the setting for your work."],
+  ["02", "Make it yours", "Add your collection, choose materials and preview the visit."],
+  ["03", "Share your exhibition", "Publish with your choice of access. Invite people with one link."],
 ] as const;
 
 function LandingProductProof() {
@@ -477,30 +470,7 @@ function LandingProductProof() {
 
   return (
     <section ref={sectionRef} className="landing-proof" aria-labelledby="landing-proof-title">
-      <div className="landing-proof__heading">
-        <p className="eyebrow">From work to place</p>
-        <h2 id="landing-proof-title">A spatial presentation.<br /><em>Built in your browser.</em></h2>
-        <p>Start with a room, shape the visitor experience, and publish without opening traditional 3D software.</p>
-      </div>
-      <div className="landing-proof__stage">
-        <button
-          className="landing-proof__visual"
-          type="button"
-          onClick={() => landingNavigate("/create/nocturne/demo", "landing_create_cta_clicked", "product_proof")}
-          aria-label="Open a working LIEUVA Studio Space"
-        >
-          <img
-            src="./assets/templates/nocturne-preview.webp?v=premium-v3"
-            width="965"
-            height="752"
-            loading="eager"
-            decoding="async"
-            alt="Warm Gallery captured from the interactive Studio at visitor eye level"
-          />
-          <span className="landing-proof__status"><i /> Walk preview ready</span>
-          <span className="landing-proof__open">Open working Studio <b>↗</b></span>
-          <span className="landing-proof__frame" aria-hidden="true" />
-        </button>
+      <h2 id="landing-proof-title" className="visually-hidden">From your work to an exhibition</h2>
         <ol className="landing-proof__workflow" aria-label="How LIEUVA works">
           {LANDING_WORKFLOW.map(([number, title, body]) => (
             <li key={title}>
@@ -509,7 +479,6 @@ function LandingProductProof() {
             </li>
           ))}
         </ol>
-      </div>
       <RoomShowcase embedded />
     </section>
   );
@@ -557,7 +526,6 @@ function Landing() {
     <main className="landing">
       <Header onSearch={() => setDirectoryOpen(true)} />
       <DeferredScrollStory />
-      <BrandHero onExplore={openSpaces} />
       <GlobalDirectorySearch open={directoryOpen} onClose={() => setDirectoryOpen(false)} />
       <Suspense fallback={null}>
         <ExploreSpacesMenu
@@ -567,6 +535,7 @@ function Landing() {
         />
       </Suspense>
       <LandingProductProof />
+      <BrandHero onExplore={openSpaces} />
       <PitchSections />
       <section className="closing">
         <p className="eyebrow">Your next Project starts here</p>
@@ -591,16 +560,12 @@ function RoomShowcase({ embedded = false }: { embedded?: boolean }) {
   return (
     <div className={`room-showcase ${embedded ? "room-showcase--embedded" : ""}`} aria-labelledby="room-showcase-title">
       <div className="room-showcase-heading">
-        <p className="eyebrow">Now build your own</p>
+        <p className="eyebrow">The space collection</p>
         <h2 id="room-showcase-title">
-          Choose a room.
-          <br />
-          <em>Make it yours.</em>
+          Three spaces.<br /><em>Endless possibilities.</em>
         </h2>
         <p>
-          Start with sample art, then replace it with your own work. Each
-          environment has its own architecture, material palette and light.
-          Every button opens the working browser Studio.
+          Distinct architecture. Different atmospheres. Choose a room and start with sample art, or bring your own collection.
         </p>
       </div>
       <div className="room-showcase-grid">
@@ -619,13 +584,14 @@ function RoomShowcase({ embedded = false }: { embedded?: boolean }) {
                 decoding="async"
                 alt={`${template.name} environment preview`}
               />
-              <span>Try this room ↗</span>
+              <span>Explore this space ↗</span>
             </button>
             <p>
               {template.index} · {template.label}
             </p>
             <h3>{template.name}</h3>
-            <dl>
+            <p className="room-showcase-materials">{template.materialIdentity.wall} · {template.materialIdentity.floor}</p>
+            <details><summary>Space details <span aria-hidden="true">＋</span></summary><dl>
               <div>
                 <dt>Scale</dt>
                 <dd>{template.dimensions[0]} × {template.dimensions[1]} m · {template.maxArtworks} works</dd>
@@ -638,7 +604,7 @@ function RoomShowcase({ embedded = false }: { embedded?: boolean }) {
                 <dt>Materials</dt>
                 <dd>{template.materialIdentity.wall} · {template.materialIdentity.floor}</dd>
               </div>
-            </dl>
+            </dl></details>
           </article>
         ))}
       </div>
@@ -1971,11 +1937,11 @@ function Studio({
     const coverSrc = publishCover ?? published.coverSrc;
     return (
       <main className="publish-success">
+        <header className="publish-success__header"><Logo /><span>Publication complete</span><a href="#/create">My spaces ↗</a></header>
         <section
           className="publish-success__panel"
           aria-labelledby="publish-success-title"
         >
-          <Logo />
           <div className="publish-success__copy">
             <p className="eyebrow">{wasUpdate ? "Space updated" : "Published successfully"}</p>
             <h1 id="publish-success-title" tabIndex={-1}>
@@ -1992,6 +1958,7 @@ function Studio({
                   ? `Only people with this link can find the Space. It is live until ${expiry}.`
                   : `Only the owner and invited accounts can enter. It is live until ${expiry}.`}
             </p>
+            <p className="publish-success__identity">{published.title}<small>by {published.artist} · {roomTemplate.name}</small></p>
             <SpaceShareMenu
               url={url}
               title={published.title}

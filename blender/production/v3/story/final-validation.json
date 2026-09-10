@@ -3,11 +3,11 @@
   "node": "v22.23.2",
   "currentCameraCode": {
     "path": "src/features/landing/scrollStoryModel.ts",
-    "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
+    "sha256": "a991a6f83f7f5b723897ae8e3e4b1919deac0e56713d0c4d84b8dd26aad7df7e"
   },
   "renderCameraCode": {
     "path": "src/features/landing/scrollStoryModel.ts",
-    "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
+    "sha256": "a991a6f83f7f5b723897ae8e3e4b1919deac0e56713d0c4d84b8dd26aad7df7e"
   },
   "cameraSamplesUnchanged": true,
   "desktopPoseSha256": "adf300abc9c626eda1c90bd26f41c1eaa12e8869a13144c568d2aac8ffe149ee",

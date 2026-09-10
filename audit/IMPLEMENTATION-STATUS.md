@@ -152,3 +152,18 @@ exploration. Studio now has a five-tool dock, focused sheets with pinned complet
 responsive camera framing, history, project/AI controls under More, and a responsive
 publication preview. Existing room identifiers, materials, assets and live
 publication contracts remain intact. See [implementation and evidence](./LIEUVA-EMIL-V2-MOBILE-2026-09-10.md).
+
+
+## 20-second story and desktop follow-through · 2026-09-10
+
+The latest direction replaces the 72-second film with 20 seconds while retaining
+all 24 scenes and 1,729 original camera samples. The owner-confirmed three floors
+and three walls are selected automatically in the visible palette, both in timed
+playback and reversible scrolling. Manual previews pause the film; playback
+restores the demonstration. The homepage now leads from the story into three
+clear steps and the real room collection, then a compact Creator Hub section.
+Desktop publication success pairs the room cover with a light sharing panel;
+existing link, QR, access management and editor return functions are retained.
+Final public production browser checks: 15/15 native and 15/15 Linux software GPU,
+without retries. Repeated material/idle-render regressions also pass. See
+[decisions, implementation and verification](./LIEUVA-STORY-20S-DESKTOP.md).

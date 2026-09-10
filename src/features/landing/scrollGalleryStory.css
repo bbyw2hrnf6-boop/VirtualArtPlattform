@@ -16,13 +16,13 @@
 .sgs__chapters :is(h1,h2){font:400 clamp(44px,5vw,74px)/1 Instrument,serif;letter-spacing:-.035em;margin:14px 0}
 .sgs__chapters article>p:last-child{font-size:14px;line-height:1.6;max-width:445px;color:#e5e7dd}
 .sgs__eyebrow span{margin-left:18px;opacity:.78}
-.sgs__finish{position:absolute;z-index:1;right:5%;bottom:205px;display:none;gap:6px;padding:8px;background:#11170feb}
+.sgs__finish{position:absolute;z-index:1;right:5%;bottom:205px;display:none;flex-direction:column;gap:6px;padding:8px;background:#11170feb}
 .sgs[data-chapter="2"] .sgs__finish,.sgs[data-chapter="3"] .sgs__finish{display:flex}
-.sgs__finish>span{position:absolute;bottom:100%;left:0;white-space:nowrap;font-size:12px;padding:10px 0}
+.sgs__finish>div:not([hidden]){display:flex;gap:6px}.sgs__finish .sgs__finish-tabs button{min-height:44px;flex:1;font-size:12px;border:0;border-bottom:1px solid #d8ddcd55;box-shadow:none}.sgs__finish .sgs__finish-tabs button[aria-pressed=true]{border-color:#ddff65}.sgs__finish>span{position:absolute;bottom:100%;left:0;white-space:nowrap;font-size:12px;padding:10px 0}
 .sgs__finish button{background:none;border:1px solid transparent;color:inherit;min-width:66px;min-height:66px;font-size:12px;cursor:pointer}
-.sgs__finish button[aria-pressed=true]{border-color:#ddff65}
+.sgs__finish button[aria-pressed=true]{border-color:#ddff65;background:#ddff6514;box-shadow:inset 0 -3px #ddff65}
 .sgs__swatch{display:block;width:28px;height:28px;margin:0 auto 6px;border-radius:50%;background:#c5c2b8 url('/assets/materials/premium-v3/honed-concrete.webp') center/cover}
-.sgs__swatch--oak{background-image:url('/assets/materials/premium-v3/natural-oak.webp')}.sgs__swatch--black-marble{background-image:url('/assets/materials/aura-nero-marquina-v2.webp')}
+
 .sgs__footer{position:absolute;z-index:1;bottom:32px;left:5%;right:5%;display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px 28px}
 .sgs__footer>button{background:#f1eee4;color:#151912;border:0;grid-column:2;grid-row:1/3;min-width:275px}
 .sgs__navigation{display:flex;gap:5px}.sgs__navigation button{min-width:44px;min-height:44px;border:0;border-bottom:1px solid #e8ebd966;background:none;color:inherit;font-size:12px;cursor:pointer}.sgs__navigation button:last-child{padding:0 14px}
@@ -42,7 +42,7 @@
  .sgs__masthead{position:static;flex:none;order:0;margin:0 18px;gap:10px;height:52px}.sgs__masthead p{font-size:12px;letter-spacing:.03em;max-width:165px}.sgs__play{min-height:44px;padding:8px 10px;gap:8px;font-size:12px;max-width:150px}
  .sgs__room{position:relative;inset:auto;flex:1;min-height:130px;order:1}.sgs__room::after{background:linear-gradient(0deg,#171b16,transparent 25%)}
  .sgs__chapters{position:static;order:2;width:auto;margin:4px 22px 12px}.sgs__chapters :is(h1,h2){font-size:clamp(34px,9vw,46px);margin:8px 0}.sgs__chapters article>p:last-child{font-size:12px;line-height:1.5;max-width:100%;margin:0}.sgs__eyebrow{margin:0;font-size:12px}
- .sgs__finish{position:static;order:3;align-self:flex-end;padding:0;margin:0 22px 8px;background:none}.sgs__finish>span{display:none}.sgs__finish button{display:flex;align-items:center;justify-content:center;gap:6px;min-width:74px;min-height:44px}.sgs__swatch{margin:0;width:22px;height:22px}
+ .sgs__finish{position:static;order:3;align-self:flex-end;padding:0;flex-direction:column;margin:0 22px 8px;background:none}.sgs__finish>span{position:static;padding:0 0 4px;font-size:12px}.sgs__finish button{display:flex;align-items:center;justify-content:center;gap:6px;min-width:74px;min-height:44px}.sgs__swatch{margin:0;width:22px;height:22px}
  .sgs__footer{position:static;order:4;display:flex;flex-direction:column;margin:0 22px;padding-bottom:max(12px,env(safe-area-inset-bottom));gap:4px;align-items:stretch}.sgs__footer>button{order:-1;min-width:0;width:100%;min-height:44px;padding:10px 14px}.sgs__footer small{display:none}.sgs__navigation{justify-content:space-between}
  .sgs__look{top:130px;bottom:auto;right:18px;min-width:120px;min-height:44px;padding:10px 12px}.sgs__walk-hint{top:176px;left:18px;right:18px;margin:0;text-align:center}
  .sgs__demo{top:128px;right:16px;padding:10px;width:154px}.sgs__demo div{gap:5px;margin:8px 0}.sgs__demo img{width:38px;height:46px;padding:2px}.sgs__demo strong{font-size:12px;margin:5px 0}.sgs__demo small{display:none}.sgs__demo span{font-size:12px}

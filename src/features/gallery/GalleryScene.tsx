@@ -6035,8 +6035,11 @@ function GallerySceneRenderer({
       if (arrivalReady) {
         // Stationary story/Arrange views retain their full-quality frame. Keep
         // checking inputs, but do not saturate the GPU with identical draws.
-        const cameraChanged = !camera.position.equals(renderedPosition) ||
-          !camera.quaternion.equals(renderedQuaternion) || !camera.projectionMatrix.equals(renderedProjection);
+        // OrbitControls can oscillate by floating-point roundoff after a resize.
+        // A micrometre / microradian threshold stops identical GPU draws while
+        // still accumulating movement relative to the last actually drawn pose.
+        const cameraChanged = camera.position.distanceToSquared(renderedPosition) > 1e-12 ||
+          1 - Math.abs(camera.quaternion.dot(renderedQuaternion)) > 1e-12 || !camera.projectionMatrix.equals(renderedProjection);
         const continuous = presentation ? presentation.interactive : initial.visitor || mode === "walk";
         const needsFrame = continuous || cameraChanged || cutawayChanging ||
           (presentation && presentation.progress !== lastRenderedProgress) ||

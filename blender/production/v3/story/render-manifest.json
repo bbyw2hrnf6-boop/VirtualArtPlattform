@@ -5,18 +5,18 @@
   "sourceBlendSha256": "12058412676ba20d275759fac4ac2db409918b02e01c9c1602a213609877f60d",
   "cameraSource": {
     "path": "src/features/landing/scrollStoryModel.ts",
-    "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
+    "sha256": "a991a6f83f7f5b723897ae8e3e4b1919deac0e56713d0c4d84b8dd26aad7df7e"
   },
-  "durationSeconds": 72,
-  "fps": 24,
+  "durationSeconds": 20,
+  "fps": 86.4,
   "desktopPoseSha256": "adf300abc9c626eda1c90bd26f41c1eaa12e8869a13144c568d2aac8ffe149ee",
   "previousSampleValidation": {
     "source": {
       "path": "src/features/landing/scrollStoryModel.ts",
-      "sha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
+      "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
     },
-    "desktopSamplesIdentical": false,
-    "proofSamplesIdentical": false
+    "desktopSamplesIdentical": true,
+    "proofSamplesIdentical": true
   },
   "frameStart": 1,
   "frameEnd": 1729,
@@ -62,7 +62,7 @@
       "cutaway": true,
       "path": "white-cube-story-00.png",
       "seconds": 5.22,
-      "reused": false,
+      "reused": true,
       "renderCameraSource": {
         "path": "src/features/landing/scrollStoryModel.ts",
         "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
@@ -94,7 +94,7 @@
       "cutaway": true,
       "path": "white-cube-story-50.png",
       "seconds": 7.3,
-      "reused": false,
+      "reused": true,
       "renderCameraSource": {
         "path": "src/features/landing/scrollStoryModel.ts",
         "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
@@ -126,7 +126,7 @@
       "cutaway": false,
       "path": "white-cube-story-90.png",
       "seconds": 19.24,
-      "reused": false,
+      "reused": true,
       "renderCameraSource": {
         "path": "src/features/landing/scrollStoryModel.ts",
         "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
@@ -142,7 +142,7 @@
   ],
   "editableBlend": {
     "path": "white-cube-story.blend",
-    "sha256": "c1e3c8e7ce20bb89f9343e4e487122f3cee43c158c4665e2c8efd31fb0e2fa9c"
+    "sha256": "64dcc56b033b4a8d9ab154d43405a5b1ce8e672f2a859916c655b2c1f211edc1"
   },
   "savedFileValidation": {
     "sampleCount": 1729,
@@ -151,6 +151,6 @@
     "maximumVerticalFovErrorDegrees": 2.3486732629862672e-06,
     "maximumDirectionErrorRadians": 0,
     "allOverheadVisibilitySamplesMatch": true,
-    "currentCameraCodeSha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
+    "currentCameraCodeSha256": "a991a6f83f7f5b723897ae8e3e4b1919deac0e56713d0c4d84b8dd26aad7df7e"
   }
 }

@@ -78,10 +78,10 @@ test('the film can play, pause with the keyboard and continue below the story', 
   const story = page.locator('.sgs');
   await expect(story).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
   await expectStoryFrame(story.locator('.gallery-scene'), 0);
-  await page.getByRole('button', { name: 'Play the film · 72 sec' }).click();
+  await page.getByRole('button', { name: 'Play the film · 20 sec' }).click();
   await expect(page.getByRole('button', { name: 'Pause film' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Pause film' }).press('Space');
-  await expect(page.getByRole('button', { name: 'Play the film · 72 sec' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByRole('button', { name: 'Play the film · 20 sec' })).toHaveAttribute('aria-pressed', 'false');
   await page.getByRole('button', { name: 'Continue below the story', exact: true }).click();
   await expect.poll(() => story.evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(1);
 });
@@ -104,6 +104,8 @@ test('a previewed material survives the real desktop Studio handoff', async ({ p
   await page.screenshot({ path: testInfo.outputPath('story-desktop-material.png') });
   await page.getByRole('button', { name: 'Chapter 4: Their experience', exact: true }).click();
   await expect(story).toHaveAttribute('data-chapter', '3');
+  await page.getByRole('button', { name: 'Show floor finishes' }).click();
+  await page.getByRole('button', { name: 'Preview oak floor', exact: true }).click();
   await page.getByRole('button', { name: 'Open this Space in Studio' }).click();
   await expect(page).toHaveURL(/#\/create\/white-cube\/story-/);
   await expect(page.locator('.studio .gallery-scene')).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
@@ -119,7 +121,7 @@ test('mobile reduced motion stays composed and offers a functioning Studio actio
   await expect(story).toHaveAttribute('data-motion', 'reduced');
   await expect(story.locator('.gallery-scene')).toHaveAttribute('data-cutaway', 'inactive');
   await expect(story.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Play the film · 72 sec' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Play the film · 20 sec' })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.getByRole('button', { name: 'Open this Space in Studio' })).toBeInViewport();
 });
@@ -260,17 +262,25 @@ test.describe('touch story', () => {
       await story.evaluate((el,progress) => window.scrollTo({top:scrollY+el.getBoundingClientRect().top+progress*(el.offsetHeight-innerHeight),behavior:'instant'}),shot/24);
       await expectStoryFrame(scene,shot/24);
     };
-    await seek(13.5);
+    await seek(12.5);
     await expect(scene).toHaveAttribute('data-floor','concrete');
     const camera = await scene.getAttribute('data-camera-position');
-    await seek(14.5);
+    await seek(13.5);
     await expect(scene).toHaveAttribute('data-floor','oak');
     await expect(scene).toHaveAttribute('data-camera-position',camera!);
-    await seek(15.5);
+    await seek(14.5);
     await expect(scene).toHaveAttribute('data-floor','black-marble');
     await expect(scene).toHaveAttribute('data-camera-position',camera!);
-    await page.getByRole('button',{name:'Preview oak floor',exact:true}).tap();
+    for (const [shot,wall,label] of [[15.5,'chalk','Plaster'],[16.5,'warm','Clay'],[17.5,'travertine','Travertine']] as const) {
+      await seek(shot);
+      await expect(scene).toHaveAttribute('data-wall',wall);
+      await expect(story.locator('.sgs__finish')).toHaveAttribute('data-surface','wall');
+      await expect(story.getByRole('button',{name:`Preview ${wall} wall`})).toHaveAttribute('aria-pressed','true');
+      await expect(story.getByRole('button',{name:`Preview ${wall} wall`})).toContainText(label);
+    }
     await seek(23.5);
+    await page.getByRole('button',{name:'Show floor finishes'}).tap();
+    await page.getByRole('button',{name:'Preview oak floor',exact:true}).tap();
     await expect(scene).toHaveAttribute('data-floor','oak');
     await expect(page.getByRole('button',{name:'Open this Space in Studio'})).toBeInViewport();
     await expect(page.getByRole('progressbar')).toHaveCount(0);
@@ -289,7 +299,8 @@ test.describe('touch story', () => {
     await expect(story).toHaveAttribute('data-interactive','false');
     await expect(scene.locator('canvas')).toHaveCSS('touch-action','pan-y pinch-zoom');
     await seek(6.5);
-    await expect(scene).toHaveAttribute('data-floor','oak');
+    await expect(scene).toHaveAttribute('data-floor','concrete');
+    await expect(scene).toHaveAttribute('data-wall','chalk');
   });
 });
 
@@ -317,4 +328,31 @@ test('mobile artwork upload, history, recovery and publication review stay avail
   await expect(page.getByText('Geometry valid ✓',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Back to editor',exact:true}).click();
   await expect(page.locator('.editor-modal')).toHaveCount(0);
+});
+
+
+test('20-second playback demonstrates floors and walls automatically and settles at the end', async ({page}, testInfo) => {
+  await page.goto('/');
+  const story=page.locator('.sgs'),scene=story.locator('.gallery-scene');
+  await expect(story).toHaveAttribute('data-arrival','ready');
+  await page.getByRole('button',{name:'Chapter 3: Your atmosphere'}).click();
+  await page.getByRole('button',{name:'Preview oak floor'}).click();
+  await page.getByRole('button',{name:'Chapter 1: Your space'}).click();
+  await expect(scene).toHaveAttribute('data-floor','concrete');
+  await scene.evaluate(el => {
+    const seen={floor:new Set<string>(),wall:new Set<string>()};
+    const events: unknown[]=[];
+    const record=()=>{for(const key of ['floor','wall'] as const) seen[key].add(el.getAttribute(`data-${key}`)!);events.push({time:performance.now(),progress:el.getAttribute('data-presentation-progress'),floor:el.getAttribute('data-floor'),wall:el.getAttribute('data-wall')});};
+    (el as HTMLElement & {finishEvents: unknown[]}).finishEvents=events;
+    record();const observer=new MutationObserver(record);observer.observe(el,{attributes:true,attributeFilter:['data-floor','data-wall']});
+    (el as HTMLElement & {finishReport:()=>unknown}).finishReport=()=>{observer.disconnect();return {floor:[...seen.floor],wall:[...seen.wall]};};
+  });
+  await page.getByRole('button',{name:'Play the film · 20 sec'}).click();
+  await expect(page.getByRole('button',{name:'Pause film'})).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByRole('button',{name:'Play the film · 20 sec'})).toBeVisible({timeout:30_000});
+  await expectStoryFrame(scene,1);
+  await testInfo.attach('finish-timing', {body:JSON.stringify(await scene.evaluate(el => (el as HTMLElement & {finishEvents: unknown[]}).finishEvents)),contentType:'application/json'});
+  expect(await scene.evaluate(el => (el as HTMLElement & {finishReport:()=>unknown}).finishReport())).toEqual({floor:['concrete','oak','black-marble'],wall:['chalk','warm','travertine']});
+  await expect(story).toHaveAttribute('data-shot','24');
+  await expect(page.getByRole('progressbar')).toHaveCount(0);
 });

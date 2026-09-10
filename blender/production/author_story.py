@@ -1,4 +1,4 @@
-"""Author the runtime's 72-second White Cube camera as a separate beauty study.
+"""Author the runtime's 20-second White Cube camera as a separate beauty study.
 
 First: npm exec --yes --package=node@22.23.2 -- node --experimental-strip-types
        blender/production/sample_story.mjs
@@ -41,7 +41,7 @@ def reveal(progress, start, end):
 
 score = json.loads(SAMPLES.read_text())
 assert sha256(ROOT / score["source"]["path"]) == score["source"]["sha256"], "Resample the changed runtime camera first."
-assert score["fps"] == 24 and score["durationMs"] == 72_000
+assert score["fps"] == 86.4 and score["durationMs"] == 20_000
 source_hash = sha256(SOURCE)
 previous_manifest = json.loads((OUT / "render-manifest.json").read_text()) if REUSE_PROOFS else None
 if REUSE_PROOFS:
@@ -136,7 +136,7 @@ def visibility(obj, hidden, frame):
     obj.keyframe_insert(data_path="hide_viewport", frame=frame)
 
 
-# Include exact requested proof poses, even when they fall between 24 fps samples.
+# Include exact requested proof poses, even when they fall between 86.4 samples per second.
 frames = {pose["frame"]: pose for pose in score["frames"]}
 frames.update({pose["frame"]: pose for pose in score["proofs"]})
 previous_rotation = None
@@ -190,8 +190,8 @@ for action in bpy.data.actions:
                     for key in curve.keyframe_points:
                         key.interpolation = "CONSTANT" if curve.data_path.startswith("hide_") else "LINEAR"
 
-scene.render.fps = score["fps"]
-scene.render.fps_base = 1
+scene.render.fps = round(score["fps"] * 10)
+scene.render.fps_base = 10
 scene.frame_start = score["frameStart"]
 scene.frame_end = score["frames"][-1]["frame"]
 scene.render.engine = "CYCLES"
@@ -207,12 +207,12 @@ scene.render.resolution_percentage = 100
 scene.render.image_settings.file_format = "PNG"
 scene.render.image_settings.color_depth = "16"
 scene.render.film_transparent = False
-scene["lieuva_story_seconds"] = 72
+scene["lieuva_story_seconds"] = 20
 scene["lieuva_story_source"] = score["source"]["path"]
 scene["lieuva_story_source_sha256"] = score["source"]["sha256"]
 scene["lieuva_story_desktop_pose_sha256"] = score["desktopPoseSha256"]
 scene["lieuva_story_note"] = "Actual desktop runtime camera, vertical FOV. Four source beauty artworks and one walnut bench, not the runtime draft's staged assets. Cutaway visibility uses discrete keys; preview animation only."
-for progress, label in [(0, "01 · Room"), (.25, "02 · Collection"), (.5, "03 · Atmosphere"), (.75, "04 · Interior"), (1, "End · 72 seconds")]:
+for progress, label in [(0, "01 · Room"), (.25, "02 · Collection"), (.5, "03 · Atmosphere"), (.75, "04 · Interior"), (1, "End · 20 seconds")]:
     scene.timeline_markers.new(label, frame=round(1 + progress * (scene.frame_end - 1)))
 for image in bpy.data.images:
     if image.source == "FILE" and not image.packed_file:
@@ -230,7 +230,7 @@ for screen in bpy.data.screens:
 manifest = {
     "status": "rendering", "blender": bpy.app.version_string,
     "sourceBlend": str(SOURCE.relative_to(ROOT)), "sourceBlendSha256": source_hash,
-    "cameraSource": score["source"], "durationSeconds": 72, "fps": 24,
+    "cameraSource": score["source"], "durationSeconds": 20, "fps": score["fps"],
     "desktopPoseSha256": score["desktopPoseSha256"],
     "previousSampleValidation": score.get("previousSampleValidation"),
     "frameStart": scene.frame_start, "frameEnd": scene.frame_end, "inclusiveEndpoint": True,
@@ -238,18 +238,18 @@ manifest = {
     "staging": {"artworkGroups": art_names, "decorObjects": [o.name for o in decor_objects], "beautyOnlyBackdrop": ground.name},
     "proofs": [],
 }
-notice = """# White Cube · 72-second camera study
+notice = """# White Cube · 20-second camera study
 
 Local beauty reference sampled from the actual desktop `scrollStoryModel.ts`.
-`camera-samples.json` records the source hash, 24 fps samples and exact QA poses.
+`camera-samples.json` records the source hash, 86.4 samples per second and exact QA poses.
 The packed `white-cube-story.blend` has a separate editable camera, four artwork
 controllers and one bench controller. Timeline frames 1–1729 include the exact
-72-second endpoint; a 24 fps movie excluding that duplicate endpoint has 1728 frames.
+20-second endpoint; all 1,728 original intervals are retained and play in 20 seconds.
 
 The camera follows all 24 shots from the v2 direction, holds during the three
 material comparisons and closes the front cutaway only after entering the room.
 Visibility keys are discrete. This is a camera study: browser clipping of rising
-architecture, the three finish changes and the UI are not reproduced here.
+architecture, the floor/wall finish changes and the UI are not reproduced here.
 Artwork groups arrive in sequence during shots 8–10; furniture arrives in shot 11. The source's four fictional panels
 and walnut bench differ from the current runtime draft. A neutral original ground
 plane is beauty-only. Source materials/lights remain editable and images packed.
