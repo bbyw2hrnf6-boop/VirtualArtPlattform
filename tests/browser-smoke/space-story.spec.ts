@@ -27,8 +27,6 @@ async function expectStationaryScene(scene: Locator) {
   expect(frames.after).toBe(frames.before);
 }
 
-test.describe.configure({ timeout: 60_000 });
-
 test.beforeEach(async ({ page }) => {
   const rate = Number(process.env.LIEUVA_BROWSER_SMOKE_CPU_RATE ?? 1);
   if (rate > 1) {
@@ -46,7 +44,7 @@ test('quiet preparation and reversible chapters', async ({ page }, testInfo) => 
   const story = page.locator('.sgs');
   try {
     // The quiet poster precedes a deferred JS chunk. Software-rendered CI can
-    // take longer than the default assertion timeout to mount that chunk.
+    // take time to mount that chunk; keep the preparation wait bounded.
     await expect(story).toHaveAttribute('data-arrival', 'loading', { timeout: 30_000 });
     await expect(story.locator('.sgs__poster')).toBeVisible();
     await expect(page.getByRole('progressbar')).toHaveCount(0);
@@ -89,8 +87,6 @@ test('the film can play, pause with the keyboard and continue below the story', 
 });
 
 test('a previewed material survives the real desktop Studio handoff', async ({ page }, testInfo) => {
-  // This focused journey still prepares two real scenes; each arrival is bounded.
-  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
   const story = page.locator('.sgs');

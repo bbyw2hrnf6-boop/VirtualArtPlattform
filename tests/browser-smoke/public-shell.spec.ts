@@ -1,10 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
-// The real homepage now initializes Three.js. Headless Chromium can compile its
-// shaders synchronously, delaying DOM queries even after the shell is mounted.
-test.describe.configure({ timeout: 60_000 });
-
 const firebase = JSON.parse(readFileSync(new URL('../../firebase.json', import.meta.url), 'utf8'));
 const candidatePolicy = firebase.hosting.headers
   .find((entry: { source?: string }) => entry.source === '**')?.headers

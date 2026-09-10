@@ -1,5 +1,7 @@
 # LIEUVA — Screenshot review and production notes, 9 September 2026
 
+> Latest CI follow-up: [10 September Linux reproduction and browser timing correction](./LIEUVA-CI-SMOKE-2026-09-10.md) supersedes this document's earlier unchanged-timeout notes. All twelve browser checks now pass in the local Linux verification; remote deployment success is not implied.
+
 ## Before implementation
 
 Reviewed all eleven supplied concepts against the running homepage and the actual
