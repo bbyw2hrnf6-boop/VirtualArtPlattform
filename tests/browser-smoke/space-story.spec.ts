@@ -180,7 +180,8 @@ test('mobile materials remain clear of the real Studio handoff', async ({ page }
   // An invalid room reflection used to black out lit surfaces on SwiftShader
   // while every DOM assertion still passed. Sample a clear area of the pale
   // right partition at this authored camera pose, outside artwork and controls.
-  const wall = await page.screenshot({ clip: { x: 310, y: 250, width: 24, height: 24 }, scale: 'css' });
+  const room = await story.locator('.sgs__room').boundingBox();
+  const wall = await page.screenshot({ clip: { x: room!.x + room!.width * .52, y: room!.y + room!.height * .36, width: 24, height: 24 }, scale: 'css' });
   const wallLuminance = await page.evaluate(async encoded => {
     const image = new Image(); image.src = `data:image/png;base64,${encoded}`;
     await image.decode();
@@ -204,9 +205,11 @@ test('mobile Studio materials can be applied, dismissed and undone', async ({ pa
   const scene = page.locator('.studio .gallery-scene');
   await expect(scene).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
   await expect(scene).toHaveAttribute('data-render-idle', 'true', { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Editor tools are peek. Change panel size' }).click();
+  const canvas = scene.locator('canvas');
+  await canvas.evaluate(el => { el.dataset.testIdentity = 'persistent'; });
+  await page.getByRole('button', { name: 'Edit floor', exact: true }).click();
+  await expect(page.getByRole('button', {name:/^Done · Back to room/})).toBeInViewport();
   await page.getByRole('button', { name: 'Editor tools are half. Change panel size' }).click();
-  await page.locator('summary').filter({ hasText: '03 · Floor' }).click();
   // Hold the actual material image, not just the UI swatch. Completion must
   // redraw even after the earlier geometry/material update has been submitted.
   let release!: () => void;
@@ -229,11 +232,89 @@ test('mobile Studio materials can be applied, dismissed and undone', async ({ pa
   expect(Number(await scene.getAttribute('data-render-frames'))).toBeGreaterThan(pendingFrames);
   await page.screenshot({ path: testInfo.outputPath('studio-mobile-materials.png') });
   await page.getByRole('button', { name: /^Done · Back to room/ }).click();
-  await expect(page.getByRole('button', { name: 'Editor tools are peek. Change panel size' })).toBeFocused();
-  await page.getByRole('button', { name: 'Editor tools are peek. Change panel size' }).click();
+  await expect(page.getByRole('button', { name: 'Edit floor', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Edit more', exact: true }).click();
   const beforeUndo = Number(await scene.getAttribute('data-render-frames'));
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(scene).toHaveAttribute('data-floor', 'concrete');
   await expectStationaryScene(scene);
   expect(Number(await scene.getAttribute('data-render-frames'))).toBeGreaterThan(beforeUndo);
+  await expect(canvas).toHaveAttribute('data-test-identity', 'persistent');
+  await page.getByRole('button', { name: 'Ceiling', exact: true }).click();
+  await expect(page.locator('.tool-panel')).toHaveAttribute('data-mobile-tool', 'ceiling');
+  await page.getByRole('button', { name: 'Close tools', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Edit more', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Walk preview', exact: true }).click();
+  await expect(page.getByRole('navigation', { name: 'Studio tools' })).toBeHidden();
+  await page.getByRole('button', { name: 'Arrange', exact: true }).click();
+  await expect(page.getByRole('navigation', { name: 'Studio tools' })).toBeVisible();
+});
+
+test.describe('touch story', () => {
+  test.use({ viewport: {width:320,height:667}, hasTouch:true, isMobile:true });
+  test('material demonstration, manual choice and explicit touch exploration', async ({page}) => {
+    await page.goto('/');
+    const story = page.locator('.sgs'), scene = story.locator('.gallery-scene');
+    await expect(story).toHaveAttribute('data-arrival','ready');
+    const seek = async (shot: number) => {
+      await story.evaluate((el,progress) => window.scrollTo({top:scrollY+el.getBoundingClientRect().top+progress*(el.offsetHeight-innerHeight),behavior:'instant'}),shot/24);
+      await expectStoryFrame(scene,shot/24);
+    };
+    await seek(13.5);
+    await expect(scene).toHaveAttribute('data-floor','concrete');
+    const camera = await scene.getAttribute('data-camera-position');
+    await seek(14.5);
+    await expect(scene).toHaveAttribute('data-floor','oak');
+    await expect(scene).toHaveAttribute('data-camera-position',camera!);
+    await seek(15.5);
+    await expect(scene).toHaveAttribute('data-floor','black-marble');
+    await expect(scene).toHaveAttribute('data-camera-position',camera!);
+    await page.getByRole('button',{name:'Preview oak floor',exact:true}).tap();
+    await seek(23.5);
+    await expect(scene).toHaveAttribute('data-floor','oak');
+    await expect(page.getByRole('button',{name:'Open this Space in Studio'})).toBeInViewport();
+    await expect(page.getByRole('progressbar')).toHaveCount(0);
+    await page.getByRole('button',{name:'Look around',exact:true}).tap();
+    await expect(story).toHaveAttribute('data-interactive','true');
+    await expect(scene.locator('canvas')).toHaveCSS('touch-action','none');
+    const before = await scene.getAttribute('data-camera-yaw');
+    const bounds = await scene.locator('canvas').boundingBox();
+    const cdp = await page.context().newCDPSession(page);
+    const x=bounds!.x+bounds!.width*.5,y=bounds!.y+bounds!.height*.6;
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+    for(let n=1;n<=5;n++) await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+n*12,y}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await expect(scene).not.toHaveAttribute('data-camera-yaw',before!);
+    await page.getByRole('button',{name:'Back to story',exact:true}).tap();
+    await expect(story).toHaveAttribute('data-interactive','false');
+    await expect(scene.locator('canvas')).toHaveCSS('touch-action','pan-y pinch-zoom');
+    await seek(6.5);
+    await expect(scene).toHaveAttribute('data-floor','oak');
+  });
+});
+
+test('mobile artwork upload, history, recovery and publication review stay available', async ({page}) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/#/create/white-cube/demo');
+  const scene=page.locator('.studio .gallery-scene');
+  await expect(scene).toHaveAttribute('data-arrival','ready');
+  await page.getByRole('button',{name:'Edit artwork',exact:true}).click();
+  await page.locator('.upload input[type=file]').setInputFiles('public/assets/artworks/aura-cliffs-study.webp');
+  await expect(page.locator('.artwork-list button')).toHaveCount(4);
+  await page.getByRole('button',{name:'Edit more',exact:true}).click();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await expect(page.locator('.artwork-list button')).toHaveCount(3);
+  await page.getByRole('button',{name:'Redo',exact:true}).click();
+  await expect(page.locator('.artwork-list button')).toHaveCount(4);
+  await expect(page.locator('.draft-save-status')).toHaveClass(/--saved/);
+  await page.reload();
+  await expect(scene).toHaveAttribute('data-arrival','ready');
+  await expect(page.getByRole('heading',{name:'Continue where you left off?'})).toBeVisible();
+  await page.getByRole('button',{name:'Recover draft',exact:true}).click();
+  await expect(page.locator('.artwork-list button')).toHaveCount(4);
+  await page.getByRole('button',{name:/Review & publish/}).click();
+  await expect(page.getByRole('heading',{name:'Check the visitor experience.'})).toBeVisible();
+  await expect(page.getByText('Geometry valid ✓',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Back to editor',exact:true}).click();
+  await expect(page.locator('.editor-modal')).toHaveCount(0);
 });

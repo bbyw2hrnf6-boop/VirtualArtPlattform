@@ -140,3 +140,15 @@ Lokale Erweiterung auf 16 Wandoptionen, 15 Bodenmaterialien und 13 unterschiedli
 ## Production artifact correction · 2026-09-08
 
 The subsequent GitHub production artifact exceeded the JS ceiling when App Check and Functions telemetry were both enabled. The local correction preserves all room assets, shader instructions and quality settings, adds safe build compression, and makes the production-feature budget check part of `npm run check`. See [production budget fix](./LIEUVA-PRODUCTION-BUDGET-FIX-2026-09-08.md) for updated measurements and verification scope. Commit/Publish remains the same user workflow; no automatic release was triggered.
+
+
+## Emil direction v2 and mobile Studio · 2026-09-10
+
+The supplied direction and four 24-shot boards now drive the local scroll score.
+Room surfaces reveal without stretching UVs, works arrive separately, the three
+finish shots share a camera/light baseline, and manual finish choices survive
+Studio handoff. Mobile uses its own composition, native scroll and explicit touch
+exploration. Studio now has a five-tool dock, focused sheets with pinned completion,
+responsive camera framing, history, project/AI controls under More, and a responsive
+publication preview. Existing room identifiers, materials, assets and live
+publication contracts remain intact. See [implementation and evidence](./LIEUVA-EMIL-V2-MOBILE-2026-09-10.md).

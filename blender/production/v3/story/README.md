@@ -6,9 +6,11 @@ The packed `white-cube-story.blend` has a separate editable camera, four artwork
 controllers and one bench controller. Timeline frames 1–1729 include the exact
 72-second endpoint; a 24 fps movie excluding that duplicate endpoint has 1728 frames.
 
-Roof/near-facing walls cut away before .62 and close for the interior. Visibility
-keys are discrete; this does not claim identical browser opacity interpolation.
-Art reveals .25–.43; furniture reveals .43–.52. The source's four fictional panels
+The camera follows all 24 shots from the v2 direction, holds during the three
+material comparisons and closes the front cutaway only after entering the room.
+Visibility keys are discrete. This is a camera study: browser clipping of rising
+architecture, the three finish changes and the UI are not reproduced here.
+Artwork groups arrive in sequence during shots 8–10; furniture arrives in shot 11. The source's four fictional panels
 and walnut bench differ from the current runtime draft. A neutral original ground
 plane is beauty-only. Source materials/lights remain editable and images packed.
 

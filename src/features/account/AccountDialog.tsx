@@ -1103,6 +1103,7 @@ export function AccountButton({
           }
           setOpen(true);
         }}
+        aria-label={signedIn ? `Account: ${accountLabel}` : "Open account"}
         title={signedIn ? `Signed in as ${session?.email || accountLabel}` : "Open account"}
       >
         {signedIn && (

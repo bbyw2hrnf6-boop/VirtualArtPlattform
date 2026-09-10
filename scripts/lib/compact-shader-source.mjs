@@ -29,9 +29,19 @@ export function compactShaderSource(source) {
   return output.join('\n');
 }
 
+// Only installed, known GLSL chunks use comment stripping. Keep quoted
+// directives and line-number-sensitive shaders untouched. A comment becomes
+// whitespace, so adjacent tokens cannot accidentally merge.
+export function compactInstalledShader(source) {
+  if (/__LINE__|["']/.test(source)) return source;
+  const uncommented = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,
+    comment => ' ' + (comment.match(/\n/g) ?? []).join(''));
+  return compactShaderSource(uncommented);
+}
+
 export function compactThreeShaderStrings(code) {
   for (const shader of new Set(Object.values(ShaderChunk))) {
-    code = code.replaceAll(JSON.stringify(shader), JSON.stringify(compactShaderSource(shader)));
+    code = code.replaceAll(JSON.stringify(shader), JSON.stringify(compactInstalledShader(shader)));
   }
   return code;
 }

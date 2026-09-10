@@ -1,3 +1,6 @@
+import { fitArrangeCamera } from "./scene/arrangeCamera";
+import { createStoryArchitecture } from "./scene/storyArchitecture";
+import { storyReveals } from "../landing/scrollStoryModel";
 import { cameraTourTiming, cameraTourFrame, dollyProgress, type TourTiming } from "./scene/cameraMotion";
 import roomIntroductions from "./scene/roomIntroductions.json";
 import { loadSceneTexture, sceneTextures, waitForSceneTextures } from "./scene/sceneReadiness";
@@ -3885,7 +3888,7 @@ function GallerySceneRenderer({
     controls.touches.ONE = THREE.TOUCH.ROTATE;
     controls.touches.TWO = initial.visitor
       ? THREE.TOUCH.DOLLY_PAN
-      : THREE.TOUCH.ROTATE;
+      : THREE.TOUCH.DOLLY_ROTATE;
     controls.autoRotate = false;
     if (
       !initial.visitor &&
@@ -3916,6 +3919,7 @@ function GallerySceneRenderer({
       editorOpenTop,
       quality.tier,
     );
+    const storyArchitecture = initial.presentation ? createStoryArchitecture(scene, renderer, floorMesh, [...exteriorWalls, architecture], w, d, h) : undefined;
     let premiumEnvironment: PremiumEnvironmentHandle | undefined;
     const isCutawayActive = () =>
       latest.current.presentation ? Boolean(latest.current.presentation.current.cutaway) : initial.visitor
@@ -3990,6 +3994,14 @@ function GallerySceneRenderer({
       probe.lookAt(target);
       return probe.quaternion.clone();
     };
+    const fitMobileArrange = () => {
+      if (element.clientWidth > 900 || initial.visitor) return;
+      const pose = fitArrangeCamera(templateW, templateD, h, element.clientWidth / Math.max(1, element.clientHeight));
+      camera.position.copy(pose.position); controls.target.copy(pose.target);
+      controls.maxDistance = Math.max(controls.maxDistance, pose.distance * 1.5);
+      camera.far = Math.max(160, pose.distance + largestDimension * 2);
+    };
+    if (!cameraState.current) fitMobileArrange();
     const arrangeState = {
       position: camera.position.clone(),
       quaternion: cameraQuaternionFor(camera.position, controls.target),
@@ -4487,6 +4499,9 @@ function GallerySceneRenderer({
       if (mode === "arrange") {
         arrangeState.position.set(...template.camera);
         arrangeState.target.set(0, 1.6, -1.5);
+        camera.position.copy(arrangeState.position); controls.target.copy(arrangeState.target);
+        fitMobileArrange();
+        arrangeState.position.copy(camera.position); arrangeState.target.copy(controls.target);
         arrangeState.quaternion.copy(
           cameraQuaternionFor(arrangeState.position, arrangeState.target),
         );
@@ -5217,6 +5232,7 @@ function GallerySceneRenderer({
         !initial.visitor && mode === "arrange" ? "enabled" : "disabled";
       element.dataset.dollhouse = mode === "overview" ? "active" : "inactive";
       element.dataset.cutaway = isCutawayActive() ? "active" : "inactive";
+      storyArchitecture?.bind();
       element.dataset.roomDimensions = `${w} × ${d} × ${h}`;
       element.dataset.visitorEyeHeight = String(VISITOR_EYE_HEIGHT);
       element.dataset.architecture =
@@ -5249,6 +5265,7 @@ function GallerySceneRenderer({
         )
         .join("|");
     };
+    storyArchitecture?.bind();
     syncDraft(currentDraft, currentSelectedId, currentSelectedDecorId);
     rebuildCollision();
     if (premiumEnvironmentRequested(window.location.search)) {
@@ -5274,6 +5291,7 @@ function GallerySceneRenderer({
           if (currentDraft.floor !== defaults.floor || premiumFloorTiles[currentDraft.floor]) updateRoomSurface(scene, currentDraft, w, d, "floor");
           disposeAndRemove(scene, lighting.rig);
           lighting = addLighting(scene, currentDraft, w, d, h, isCutawayActive(), quality.shadowMapSize, quality.tier, true);
+          storyArchitecture?.bind();
           rebuildCollision(); applyCutawayMode();
           scheduleRoomReflection();
           renderer.shadowMap.needsUpdate = true;
@@ -5631,12 +5649,23 @@ function GallerySceneRenderer({
       return changed;
     };
     let frame = 0;
+    let previousAspect = 0;
     const resize = () => {
       sceneRevision += 1;
       const width = element.clientWidth;
       const height = element.clientHeight;
       renderer.setSize(width, height, false);
-      camera.aspect = width / Math.max(height, 1);
+      const aspect = width / Math.max(height, 1);
+      if (!initial.visitor && mode === "arrange" && width <= 900 && previousAspect && aspect !== previousAspect) {
+        const direction = camera.position.clone().sub(controls.target);
+        const before = fitArrangeCamera(w, d, h, previousAspect, direction);
+        const after = fitArrangeCamera(w, d, h, aspect, direction);
+        camera.position.copy(direction.multiplyScalar(after.distance / before.distance).add(controls.target));
+        arrangeState.position.copy(camera.position);
+        arrangeState.quaternion.copy(camera.quaternion);
+      }
+      previousAspect = aspect;
+      camera.aspect = aspect;
       camera.updateProjectionMatrix();
     };
     const observer = new ResizeObserver(resize);
@@ -5962,31 +5991,36 @@ function GallerySceneRenderer({
       if (presentation) {
         const nextCutaway = presentation.cutaway ? "active" : "inactive";
         if (element.dataset.cutaway !== nextCutaway) applyCutawayMode();
-        const reveal = (start: number, end: number) => {
-          const value = THREE.MathUtils.clamp((presentation.progress - start) / (end - start), 0, 1);
-          return value * value * (3 - 2 * value);
-        };
-        const artReveal = reveal(.25, .43), decorReveal = reveal(.43, .52);
-        for (const object of artworkObjects) {
-          object.visible = artReveal > .001;
-          object.scale.setScalar(.92 + .08 * artReveal);
-          object.position.y = (artworkById.get(object.userData.artworkId)?.y ?? 1.75) - (1 - artReveal) * .2;
-        }
+        const revealed = storyReveals(presentation.progress);
+        storyArchitecture?.update(revealed.floor, revealed.walls, revealed.light);
+        lighting.installations.forEach(installation => {
+          if (!installation.artworkId) return;
+          const index = currentDraft.artworks.findIndex(art => art.id === installation.artworkId);
+          const spot = installation.spot;
+          spot.userData.storyIntensity ??= spot.intensity;
+          spot.intensity = spot.userData.storyIntensity * (revealed.art[index] ?? 1);
+        });
+        artworkObjects.forEach((object, index) => {
+          const value = revealed.art[index] ?? 1;
+          object.visible = value > .001;
+          object.scale.setScalar(.96 + .04 * value);
+          object.position.y = (artworkById.get(object.userData.artworkId)?.y ?? 1.75) - (1 - value) * .12;
+        });
         for (const item of currentDraft.decor) {
           const object = decorById.get(item.id);
-          if (object) { object.visible = decorReveal > .001; object.scale.setScalar(item.scale * decorReveal); }
+          if (object) { object.visible = revealed.decor > .001; object.scale.setScalar(item.scale * revealed.decor); }
         }
-        const visibilityState = `${artReveal > .001}:${decorReveal > .001}`;
-        const shadowState = `${visibilityState}:${artReveal.toFixed(2)}:${decorReveal.toFixed(2)}`;
+        const shadowState = [revealed.floor, revealed.walls, ...revealed.art, revealed.decor].map(v => v.toFixed(2)).join(':');
         if (shadowState !== lastPresentationShadow) {
           renderer.shadowMap.needsUpdate = true;
           lastPresentationShadow = shadowState;
         }
-        const reflectionState = `${visibilityState}:${artReveal === 1}:${decorReveal === 1}`;
+        const reflectionState = [revealed.floor, revealed.walls, ...revealed.art, revealed.decor].map(v => v === 1).join(':');
         if (reflectionState !== lastPresentationReflection) {
           scheduleRoomReflection();
           lastPresentationReflection = reflectionState;
         }
+        renderer.domElement.style.touchAction = presentation.interactive ? "none" : "pan-y pinch-zoom";
         if (!presentation.interactive) {
           navigation.setEnabled(false);
           camera.position.set(...presentation.position);

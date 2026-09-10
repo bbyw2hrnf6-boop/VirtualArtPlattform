@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { ShaderChunk } from 'three';
-import { compactShaderSource, compactThreeShaderStrings } from './lib/compact-shader-source.mjs';
+import { compactShaderSource, compactInstalledShader, compactThreeShaderStrings } from './lib/compact-shader-source.mjs';
 
 // Independent lexer: compare actual GLSL tokens, including multi-character
 // operators and complete numeric literals, rather than whitespace alone.
@@ -38,5 +38,15 @@ test('the build transform changes only recognized shader string literals', () =>
     return code;
   };
   assert.ok(compact.length < source.length);
-  assert.equal(mask(compact, compactShaderSource), mask(source, (value) => value));
+  assert.equal(mask(compact, compactInstalledShader), mask(source, (value) => value));
+});
+
+// Tokenize comments as complete lexemes independently from the compactor.
+const glslTokens = source => (source.match(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|0[xX][\da-fA-F]+[uU]?|(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?[uUfF]?|[A-Za-z_]\w*|<<=|>>=|\+\+|--|&&|\|\||\^\^|==|!=|<=|>=|<<|>>|[+*/%&|^=-]=|[^\s]/g) ?? []).filter(token => !token.startsWith('//') && !token.startsWith('/*'));
+test('installed shader compaction preserves every executable GLSL token', () => {
+  for (const [name, shader] of Object.entries(ShaderChunk)) {
+    assert.deepEqual(glslTokens(compactInstalledShader(shader)), glslTokens(shader), name);
+  }
+  for (const source of ['float/**/x = 1.; // note\nx = x + +x;', '#define FOO(x) \\\n ((x) /* note */ + 1.)\nfloat a = 2.;'])
+    assert.deepEqual(glslTokens(compactInstalledShader(source)), glslTokens(source));
 });

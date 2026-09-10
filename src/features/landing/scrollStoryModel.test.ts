@@ -1,7 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { advanceStoryProgress, storyPresentation, storyScrollProgress, STORY_DURATION_MS } from './scrollStoryModel';
+import { advanceStoryProgress, storyPresentation, storyScrollProgress, STORY_DURATION_MS, storyReveals, storyFloor } from './scrollStoryModel';
 
 describe('Product story motion', () => {
+  it('builds before collecting and reveals works one at a time in either direction', () => {
+    expect(storyReveals(0)).toEqual({floor:0,walls:0,light:0,art:[0,0,0],decor:0});
+    expect(storyReveals(6/24)).toEqual({floor:1,walls:1,light:1,art:[0,0,0],decor:0});
+    for (const [time, art] of [[8, [1,0,0]], [9, [1,1,0]], [10, [1,1,1]], [9, [1,1,0]], [8, [1,0,0]]] as const)
+      expect(storyReveals(time/24).art).toEqual(art);
+    expect(storyReveals(12/24).decor).toBe(1);
+  });
+  it('compares three finishes without moving the camera, lights or collection', () => {
+    for (const compact of [false,true]) {
+      const reference = storyPresentation(13.5/24, compact);
+      for (const [time, floor] of [[13.5,'concrete'],[14.5,'oak'],[15.5,'black-marble']] as const) {
+        const pose = storyPresentation(time/24, compact);
+        expect(pose.position).toEqual(reference.position);
+        expect(pose.target).toEqual(reference.target);
+        expect(pose.fov).toBe(reference.fov);
+        expect(storyFloor(time/24)).toBe(floor);
+        expect(storyReveals(time/24)).toEqual(storyReveals(13.5/24));
+      }
+    }
+  });
   it('follows native scroll in either direction without delaying a wheel burst', () => {
     expect(storyScrollProgress(500, 100, 800)).toBe(.5);
     let progress = 0;

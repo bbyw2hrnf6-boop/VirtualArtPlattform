@@ -3,17 +3,17 @@
   "node": "v22.23.2",
   "currentCameraCode": {
     "path": "src/features/landing/scrollStoryModel.ts",
-    "sha256": "d73c854decd53c442af18d373eb205861a74d3067ee5411d7b15845e48575b1d"
+    "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
   },
   "renderCameraCode": {
     "path": "src/features/landing/scrollStoryModel.ts",
-    "sha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
+    "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
   },
   "cameraSamplesUnchanged": true,
-  "desktopPoseSha256": "7b8fae98ce4e701cd791d589ff6ae56b7ed861001071d7cb2cd1674708da8d86",
+  "desktopPoseSha256": "adf300abc9c626eda1c90bd26f41c1eaa12e8869a13144c568d2aac8ffe149ee",
   "desktopFrames": 1729,
   "artifactAndOriginalHashesMatch": true,
-  "runtimeDetailSourceSha256": "9e4dc34f94ac15b19877e5dd30a87b9b1bd0bf91ce3d3c7219822083cbaff920",
+  "runtimeDetailSourceSha256": "06f22e7f7c522444852840b5ced22601f60effabeea4b4d1cb9155f59395b7cd",
   "runtimeDetailFunctionSha256": "5088dfd6adcccb2e8ccd439e69e585bc8bcbb3e6dc24bffb895ad6f85e089310",
   "materialDetailByteExactMatches": [
     "concrete",

@@ -21,6 +21,8 @@ SOURCE = OUT.parent / "white-cube.blend"
 SAMPLES = OUT / "camera-samples.json"
 OUTPUT = OUT / "white-cube-story.blend"
 REUSE_PROOFS = "--reuse-story-proofs" in sys.argv
+CAMERA_ONLY = "--camera-only" in sys.argv
+old_readme = (OUT / "README.md").read_text() if (OUT / "README.md").exists() else ""
 
 
 def sha256(path):
@@ -158,8 +160,9 @@ for frame, pose in sorted(frames.items()):
     for side, obj in shells.items():
         visibility(obj, pose["cutaway"] and not inside and normals[side].dot(direction) > .42, frame)
 
-    art = reveal(progress, .25, .43)
-    for parent, children, anchor in art_groups:
+    art = reveal(progress, 7/24, 10/24)
+    for index, (parent, children, anchor) in enumerate(art_groups):
+        art = reveal(progress, (7 + min(index, 2))/24, (7.85 + min(index, 2))/24)
         parent.location = anchor + Vector((0, 0, -(1 - art) * .2))
         parent.scale = (1, 1, 1)
         parent.scale *= .92 + .08 * art
@@ -170,7 +173,7 @@ for frame, pose in sorted(frames.items()):
     for light, energy in art_lights:
         light.data.energy = energy * art
         light.data.keyframe_insert(data_path="energy", frame=frame)
-    amount = reveal(progress, .43, .52)
+    amount = reveal(progress, 10/24, 11/24)
     parent, children, _ = decor
     parent.scale = (amount, amount, amount)
     parent.keyframe_insert(data_path="scale", frame=frame)
@@ -209,7 +212,7 @@ scene["lieuva_story_source"] = score["source"]["path"]
 scene["lieuva_story_source_sha256"] = score["source"]["sha256"]
 scene["lieuva_story_desktop_pose_sha256"] = score["desktopPoseSha256"]
 scene["lieuva_story_note"] = "Actual desktop runtime camera, vertical FOV. Four source beauty artworks and one walnut bench, not the runtime draft's staged assets. Cutaway visibility uses discrete keys; preview animation only."
-for progress, label in [(0, "01 · Room"), (.25, "02 · Collection"), (.43, "03 · Atmosphere"), (.62, "04 · Interior"), (1, "End · 72 seconds")]:
+for progress, label in [(0, "01 · Room"), (.25, "02 · Collection"), (.5, "03 · Atmosphere"), (.75, "04 · Interior"), (1, "End · 72 seconds")]:
     scene.timeline_markers.new(label, frame=round(1 + progress * (scene.frame_end - 1)))
 for image in bpy.data.images:
     if image.source == "FILE" and not image.packed_file:
@@ -243,9 +246,11 @@ The packed `white-cube-story.blend` has a separate editable camera, four artwork
 controllers and one bench controller. Timeline frames 1–1729 include the exact
 72-second endpoint; a 24 fps movie excluding that duplicate endpoint has 1728 frames.
 
-Roof/near-facing walls cut away before .62 and close for the interior. Visibility
-keys are discrete; this does not claim identical browser opacity interpolation.
-Art reveals .25–.43; furniture reveals .43–.52. The source's four fictional panels
+The camera follows all 24 shots from the v2 direction, holds during the three
+material comparisons and closes the front cutaway only after entering the room.
+Visibility keys are discrete. This is a camera study: browser clipping of rising
+architecture, the three finish changes and the UI are not reproduced here.
+Artwork groups arrive in sequence during shots 8–10; furniture arrives in shot 11. The source's four fictional panels
 and walnut bench differ from the current runtime draft. A neutral original ground
 plane is beauty-only. Source materials/lights remain editable and images packed.
 
@@ -260,7 +265,8 @@ Append `-- --reuse-story-proofs` to preserve existing stills only when the sourc
 blend and every desktop camera/proof sample remain unchanged. This still rebuilds
 the editable story and refreshes its source hash; material proofs render separately.
 """
-(OUT / "README.md").write_text(notice)
+material_notes = old_readme[old_readme.index("`material-library-closeup.blend`"):] if "`material-library-closeup.blend`" in old_readme else ""
+(OUT / "README.md").write_text(notice + "\n" + material_notes)
 text = bpy.data.texts.new("STORY_README")
 text.write(notice)
 bpy.ops.wm.save_as_mainfile(filepath=str(OUTPUT), compress=True)
@@ -332,6 +338,10 @@ manifest["savedFileValidation"] = {
 }
 assert manifest["savedFileValidation"]["currentCameraCodeSha256"] == score["source"]["sha256"]
 write_manifest()
+
+if CAMERA_ONLY:
+    print("STORY_CAMERA_ONLY_COMPLETE", flush=True)
+    sys.exit(0)
 
 # Companion studies retain the library's metric UV planes and generated albedos.
 # Independent grayscale relief mirrors createSurfaceDetailMaps, never color height.

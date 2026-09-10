@@ -5,18 +5,18 @@
   "sourceBlendSha256": "12058412676ba20d275759fac4ac2db409918b02e01c9c1602a213609877f60d",
   "cameraSource": {
     "path": "src/features/landing/scrollStoryModel.ts",
-    "sha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
+    "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
   },
   "durationSeconds": 72,
   "fps": 24,
-  "desktopPoseSha256": "7b8fae98ce4e701cd791d589ff6ae56b7ed861001071d7cb2cd1674708da8d86",
+  "desktopPoseSha256": "adf300abc9c626eda1c90bd26f41c1eaa12e8869a13144c568d2aac8ffe149ee",
   "previousSampleValidation": {
     "source": {
       "path": "src/features/landing/scrollStoryModel.ts",
-      "sha256": "a1fc5b05a9ef599707ba8b8c811476a3bea6a90de3eea3f116d97abf169f488b"
+      "sha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
     },
-    "desktopSamplesIdentical": true,
-    "proofSamplesIdentical": true
+    "desktopSamplesIdentical": false,
+    "proofSamplesIdentical": false
   },
   "frameStart": 1,
   "frameEnd": 1729,
@@ -49,32 +49,31 @@
       "frame": 1,
       "progress": 0,
       "position": [
-        -9,
-        12,
-        18
+        0,
+        11,
+        19
       ],
       "target": [
         0,
-        0.5,
+        0.7,
         -1
       ],
-      "fov": 51,
+      "fov": 55,
       "cutaway": true,
       "path": "white-cube-story-00.png",
-      "seconds": 5.13,
-      "reused": true,
+      "seconds": 5.22,
+      "reused": false,
       "renderCameraSource": {
         "path": "src/features/landing/scrollStoryModel.ts",
-        "sha256": "a1fc5b05a9ef599707ba8b8c811476a3bea6a90de3eea3f116d97abf169f488b"
+        "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
       },
-      "sha256": "0a01090736a68d66b9df823dbaafffc757b01ecde275fbfee18647945e0c6e2d",
-      "bytes": 2058978,
+      "sha256": "86ee460f04280db4fa6cff038f52b3c897fc6c115805613ea114f453aac9917f",
+      "bytes": 1932059,
       "positionErrorMetres": 0.0,
-      "verticalFovDegrees": 50.999999344243484,
+      "verticalFovDegrees": 54.99999816946207,
       "directionErrorRadians": 0.0,
       "hiddenShells": [
-        "south",
-        "west"
+        "south"
       ],
       "overheadHidden": true
     },
@@ -82,28 +81,28 @@
       "frame": 865,
       "progress": 0.5,
       "position": [
-        3.1836734693877546,
-        7.367346938775509,
-        12.073469387755102
+        0,
+        7.5,
+        12.5
       ],
       "target": [
         0,
-        1.5110787172011662,
-        -3.1329446064139943
+        1,
+        -1
       ],
-      "fov": 51.60932944606414,
+      "fov": 55,
       "cutaway": true,
       "path": "white-cube-story-50.png",
-      "seconds": 7.34,
-      "reused": true,
+      "seconds": 7.3,
+      "reused": false,
       "renderCameraSource": {
         "path": "src/features/landing/scrollStoryModel.ts",
-        "sha256": "a1fc5b05a9ef599707ba8b8c811476a3bea6a90de3eea3f116d97abf169f488b"
+        "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
       },
-      "sha256": "c5387a222fe98cdf6fe6a5692f873290f6e23019ad3d5b6e68f7eaf4886ddce2",
-      "bytes": 2334716,
+      "sha256": "ae661a32369832649a3bc320fb0b00216ef4b55087cb7723bba62e4329e8fa28",
+      "bytes": 2447902,
       "positionErrorMetres": 0.0,
-      "verticalFovDegrees": 51.60933023794684,
+      "verticalFovDegrees": 54.99999816946207,
       "directionErrorRadians": 0.0,
       "hiddenShells": [
         "south"
@@ -114,28 +113,28 @@
       "frame": 1556.2,
       "progress": 0.9,
       "position": [
-        -2.0500000000000007,
-        1.825,
-        3.3000000000000007
+        -0.19440000000000046,
+        1.75,
+        5.3176
       ],
       "target": [
-        0.6999999999999991,
-        1.7000000000000002,
-        -4.900000000000001
+        -0.25920000000000065,
+        1.75,
+        -5
       ],
-      "fov": 60,
+      "fov": 62,
       "cutaway": false,
       "path": "white-cube-story-90.png",
-      "seconds": 19.77,
-      "reused": true,
+      "seconds": 19.24,
+      "reused": false,
       "renderCameraSource": {
         "path": "src/features/landing/scrollStoryModel.ts",
-        "sha256": "a1fc5b05a9ef599707ba8b8c811476a3bea6a90de3eea3f116d97abf169f488b"
+        "sha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
       },
-      "sha256": "f734502e7dce5b1b5f8c772e4d19065b63390ec5d2e4f142e85b6563ae876954",
-      "bytes": 2787126,
+      "sha256": "45b74dc9e6d7649fc6d2e43b46756fc947a5134fca9c0e02f7c4f3020d135f00",
+      "bytes": 2759302,
       "positionErrorMetres": 0.0,
-      "verticalFovDegrees": 60.000002028949005,
+      "verticalFovDegrees": 62.00000065182001,
       "directionErrorRadians": 0.0,
       "hiddenShells": [],
       "overheadHidden": false
@@ -143,15 +142,15 @@
   ],
   "editableBlend": {
     "path": "white-cube-story.blend",
-    "sha256": "1fde42359f7f7534bc4e7a8d035368d799fb220481b2dc27be0a3c99d8a8f7cc"
+    "sha256": "c1e3c8e7ce20bb89f9343e4e487122f3cee43c158c4665e2c8efd31fb0e2fa9c"
   },
   "savedFileValidation": {
     "sampleCount": 1729,
     "additionalExactProofPoses": 3,
     "maximumPositionErrorMetres": 0,
-    "maximumVerticalFovErrorDegrees": 2.3728470921469125e-06,
+    "maximumVerticalFovErrorDegrees": 2.3486732629862672e-06,
     "maximumDirectionErrorRadians": 0,
     "allOverheadVisibilitySamplesMatch": true,
-    "currentCameraCodeSha256": "5753220cc0c581d85cea93b1de7152cffbdacfeca341c947ba4d029c8f2ca150"
+    "currentCameraCodeSha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
   }
 }

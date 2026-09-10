@@ -85,3 +85,15 @@ from copyrighted photographs or copied from albedo brightness. The directory's
 manifests record source/output hashes and the source-vs-runtime staging boundary.
 Existing project provenance applies; no additional standalone reuse license is
 granted. The eleven concept screenshots remain art-direction references only.
+
+
+### Emil direction v2 · 10 September 2026
+
+The four newly supplied storyboard boards and the direction document are references,
+not embedded website assets. The new floor-plan lines and mobile dock glyphs are
+original code geometry. Opening posters were recaptured from the actual prepared
+runtime at the first shot; their manifest records current hashes and WebP encoding.
+The separate Blender camera study and three QA stills were regenerated against all
+1,729 runtime camera samples. Its retained beauty staging differs from the editable
+three-work browser draft; the README makes that boundary explicit. Existing 4K
+masters, runtime GLBs, PBR images and material closeups were not replaced.

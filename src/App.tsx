@@ -1,6 +1,8 @@
 import { SpaceLoading } from "./components/SpaceLoading";
 import { StoryPoster } from "./features/landing/StoryPoster";
 import { consumeStudioHandoff } from './services/studioHandoff';
+import { MobileStudioTools } from './features/gallery/editor/MobileStudioTools';
+import { STUDIO_TOOL_LABELS, type StudioTool } from './features/gallery/editor/mobileStudioToolsModel';
 import { catalogObject, DECOR_CATALOG, FLOOR_OPTIONS, WALL_OPTIONS } from "./features/gallery/designCatalog";
 import {
   lazy,
@@ -1077,9 +1079,21 @@ function Studio({
     usesCompactInteractionLayout() ? "peek" : "half",
   );
   const toolSheetHandle = useRef<HTMLButtonElement>(null);
+  const [mobileTool, setMobileTool] = useState<StudioTool | null>(null);
+  const toolDockButtons = useRef<Partial<Record<StudioTool, HTMLButtonElement | null>>>({});
+  const lastTool = useRef<StudioTool>('artwork');
+  const toolPanel = useRef<HTMLElement>(null);
   const finishMaterialEditing = () => {
     setToolSheet("peek");
-    toolSheetHandle.current?.focus();
+    setMobileTool(null);
+    toolDockButtons.current[lastTool.current]?.focus();
+  };
+  const chooseMobileTool = (tool: StudioTool) => {
+    if (mobileTool === tool && toolSheet !== 'peek') { finishMaterialEditing(); return; }
+    lastTool.current = tool === 'objects' || tool === 'ceiling' ? 'more' : tool;
+    setMobileTool(tool);
+    setToolSheet('half');
+    toolPanel.current?.scrollTo({ top: 0 });
   };
   const [editorDirectoryOpen, setEditorDirectoryOpen] = useState(false);
   const wallFocusToken = useRef(0);
@@ -1271,6 +1285,7 @@ function Studio({
     setSelectedDecorId(undefined);
     setPlacementNotice(undefined);
     setToolSheet("half");
+    setMobileTool('artwork'); lastTool.current = 'artwork';
   }, []);
   const openArtwork = (id: string) => {
     const artwork = draft.artworks.find((item) => item.id === id);
@@ -1283,6 +1298,7 @@ function Studio({
     setSelectedId(undefined);
     setPlacementNotice(undefined);
     setToolSheet("half");
+    setMobileTool('objects'); lastTool.current = 'more';
   }, []);
   const closeSelectionInspector = useCallback(() => {
     setSelectedId(undefined);
@@ -1290,6 +1306,7 @@ function Studio({
     setPlacementNotice(undefined);
     setPlacementError(undefined);
     if (usesCompactInteractionLayout()) setToolSheet("peek");
+    setMobileTool(null);
   }, []);
   const update = <K extends keyof GalleryDraft>(
     key: K,
@@ -2042,7 +2059,7 @@ function Studio({
       current === "peek" ? "half" : current === "half" ? "full" : "peek",
     );
   return (
-    <main className="studio">
+    <main className="studio" data-mobile-tool={toolSheet === 'peek' ? '' : mobileTool ?? ''}>
       <h1 className="visually-hidden">LIEUVA Studio — {draft.title || "Untitled Project"}</h1>
       <header className="studio-header">
         <Logo />
@@ -2165,7 +2182,9 @@ function Studio({
         </div>
       )}
       <div className="studio-body">
-        <aside className={`tool-panel tool-panel--${toolSheet}`}>
+        <aside ref={toolPanel} id="studio-tool-panel" className={`tool-panel tool-panel--${toolSheet}`} data-mobile-tool={mobileTool ?? ''}
+          onKeyDown={event => { if (event.key === 'Escape' && usesCompactInteractionLayout()) { event.preventDefault(); finishMaterialEditing(); } }}>
+          <div className="mobile-tool-heading">
           <button
             ref={toolSheetHandle}
             className="tool-sheet-handle"
@@ -2176,7 +2195,7 @@ function Studio({
           >
             <i aria-hidden="true" />
             <span>
-              {selected
+              {mobileTool ? STUDIO_TOOL_LABELS[mobileTool] : selected
                 ? `Artwork · ${selected.title}`
                 : selectedDecor
                   ? `Object · ${decorName(selectedDecor.type)}`
@@ -2190,7 +2209,13 @@ function Studio({
                   : "Minimize"}
             </b>
           </button>
-          <section className="mobile-exhibition">
+          <button type="button" className="mobile-tool-close" aria-label="Close tools" onClick={finishMaterialEditing}>×</button>
+          </div>
+          <section className="mobile-tool-more" data-studio-tool="more" aria-label="More Studio tools">
+            <button type="button" onClick={() => chooseMobileTool('ceiling')}>Ceiling <span aria-hidden="true">↗</span></button>
+            <button type="button" onClick={() => chooseMobileTool('objects')}>Objects <span aria-hidden="true">↗</span></button>
+          </section>
+          <section className="mobile-exhibition" data-studio-tool="more">
             <p className="tool-label">Project details</p>
             <label>
               Project title
@@ -2209,7 +2234,7 @@ function Studio({
               />
             </label>
           </section>
-          <section className="studio-mobile-actions" aria-label="Studio actions">
+          <section className="studio-mobile-actions" data-studio-tool="more" aria-label="Studio actions">
             <div className="studio-mobile-actions__history" role="group" aria-label="Draft history">
               <button type="button" onClick={undoDraft} disabled={!canUndo}>
                 Undo
@@ -2228,7 +2253,7 @@ function Studio({
               {curating ? "Curating…" : "Curate with AI"}
             </button>
           </section>
-          <Accordion title="Design direction">
+          <Accordion title="Design direction" tool="more" mobileActive={mobileTool === 'more'}>
             <div className="placement">
               <label>Style
                 <select aria-label="Curation style" value={curationStyle} onChange={(event) => setCurationStyle(event.target.value as CurationStyle)}>
@@ -2251,7 +2276,7 @@ function Studio({
               {curating ? "Curating…" : "Generate variation"}
             </button>
           </Accordion>
-          <section>
+          <section data-studio-tool="artwork">
             <p className="tool-label">01 · Artwork</p>
             <label
               className={`upload ${uploading ? "is-uploading" : ""}`}
@@ -2626,7 +2651,7 @@ function Studio({
               </div>
             )}
           </section>
-          <Accordion title="02 · Walls">
+          <Accordion title="02 · Walls" tool="walls" mobileActive={mobileTool === 'walls'}>
             <p className="object-help">
               Choose a wall colour or an architectural material. Changes appear
               immediately in the room.
@@ -2640,7 +2665,7 @@ function Studio({
               }
             />
           </Accordion>
-          <Accordion title="03 · Floor">
+          <Accordion title="03 · Floor" tool="floor" mobileActive={mobileTool === 'floor'}>
             <p className="object-help">
               Stone, timber, tile or cork. Choose a finish and compare it
               directly in the room; Undo takes you back.
@@ -2654,7 +2679,7 @@ function Studio({
               }
             />
           </Accordion>
-          <Accordion title="04 · Ceiling design">
+          <Accordion title="04 · Ceiling design" tool="ceiling" mobileActive={mobileTool === 'ceiling'}>
             <p className="object-help">
               The roof follows the wall finish automatically. Choose one
               considered interior ceiling system.
@@ -2694,7 +2719,7 @@ function Studio({
               }
             />
           </Accordion>
-          <Accordion title="05 · Lighting">
+          <Accordion title="05 · Lighting" tool="lighting" mobileActive={mobileTool === 'lighting'}>
             <p className="object-help">
               Ceiling ambience is installed automatically. Every spotlight
               follows an artwork when you reposition it.
@@ -2707,7 +2732,7 @@ function Studio({
               }
             />
           </Accordion>
-          <Accordion title="06 · Objects">
+          <Accordion title="06 · Objects" tool="objects" mobileActive={mobileTool === 'objects'}>
             <p className="object-help">
               Add an object, then drag it directly in the room or click an empty
               floor position. Selecting a card already in the room opens that object,
@@ -2849,6 +2874,7 @@ function Studio({
             )}
           </Accordion>
         </aside>
+        <MobileStudioTools active={toolSheet === 'peek' ? null : mobileTool} onChoose={chooseMobileTool} buttons={toolDockButtons} />
         <section className="canvas-wrap">
           <GalleryScene
             draft={draft}
@@ -3370,12 +3396,16 @@ function Range({
 function Accordion({
   title,
   children,
+  tool,
+  mobileActive,
 }: {
   title: string;
   children: React.ReactNode;
+  tool?: StudioTool;
+  mobileActive?: boolean;
 }) {
   return (
-    <details>
+    <details data-studio-tool={tool} open={mobileActive || undefined}>
       <summary>
         {title}
         <span>＋</span>

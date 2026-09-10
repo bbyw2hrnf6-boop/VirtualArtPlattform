@@ -1,6 +1,6 @@
 # LIEUVA — Immersive 3D presentation platform
 
-Current local visual/runtime production: [Editorial story, materials and sharing](./audit/LIEUVA-EDITORIAL-STORY-2026-09-09.md). The 72-second optional White Cube film uses the real Studio renderer, with native scroll, chapter controls, quiet readiness posters, mobile material sheets and direct publication sharing. Premium-v3 GLBs and existing 4K beauty masters remain separate. No automatic release is implied.
+Current local visual/runtime production: [Emil direction v2 and mobile Studio](./audit/LIEUVA-EMIL-V2-MOBILE-2026-09-10.md). The White Cube story follows 24 shots over an optional 72-second film: room construction, sequential artwork placement, a stationary material comparison, then a slow entrance and held interior view. Native scroll stays reversible. The mobile Studio uses a five-tool dock and focused material sheets with a visible room preview; all controls reuse the existing editor. Premium-v3 GLBs and existing 4K beauty masters remain separate. No automatic release is implied.
 
 The homepage and stationary Studio Arrange view pause unchanged GPU frames and
 redraw for camera, material and texture changes. Walk and guided tours remain

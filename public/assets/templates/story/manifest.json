@@ -1,21 +1,22 @@
 {
-  "source": "Actual GalleryScene capture; STORY_DRAFT; storyPresentation(0), separate desktop/mobile framing",
-  "date": "2026-09-09",
-  "encoding": "cwebp quality 86; no enlargement",
+  "source": "Actual settled GalleryScene capture at storyPresentation(0); v2 floor-plan reveal; UI hidden; responsive desktop/mobile composition",
+  "date": "2026-09-10",
+  "encoding": "Chromium canvas WebP quality 0.9; original pixel dimensions; no enlargement",
   "assets": [
     {
       "file": "opening-desktop.webp",
       "width": 1440,
       "height": 1000,
-      "bytes": 24516,
-      "sha256": "bfd98cb15805a95bfb989dc57cf7b4ab2603a1a0c3e7226d0a08e7198d0d5342"
+      "bytes": 8256,
+      "sha256": "b7a97128311e0a4bad787ce19cae6c1a44c8f3eddb0a2e99b17f194fca102723"
     },
     {
       "file": "opening-mobile.webp",
       "width": 390,
       "height": 844,
-      "bytes": 5714,
-      "sha256": "57a79cf35139d712420b6034eaa4a6aedbdb2b11871fd7a1f5cb73552ac0dcff"
+      "bytes": 2508,
+      "sha256": "d635837d727b96196d9cf1b6c9fe8775a217580532e4c50631df6fe1ff895c3d"
     }
-  ]
+  ],
+  "cameraSourceSha256": "5e6cb9cc85a4a7ca57ad6c83df3581ea24561cba2f790853f9d24fb94b35a101"
 }

@@ -2,7 +2,7 @@ import { StoryPosterImage } from "./StoryPoster";
 import { useEffect, useRef, useState } from 'react';
 import { GalleryScene, type GalleryPresentation, type ArtworkFocusInfo } from '../gallery/GalleryScene';
 import { STORY_DRAFT } from './storyDraft';
-import { storyPresentation, storyScrollProgress, advanceStoryProgress, STORY_CHAPTERS, STORY_DURATION_MS } from './scrollStoryModel';
+import { storyPresentation, storyScrollProgress, advanceStoryProgress, storyFloor, STORY_CHAPTERS, STORY_DURATION_MS } from './scrollStoryModel';
 import { saveGalleryDraft } from '../../services/draftStorage';
 import { stageStudioHandoff } from '../../services/studioHandoff';
 import './scrollGalleryStory.css';
@@ -17,6 +17,9 @@ export function ScrollGalleryStory() {
   const playing = useRef(false);
   const [isPlaying, setPlaying] = useState(false);
   const [draft, setDraft] = useState(STORY_DRAFT);
+  const manualFloor = useRef(false);
+  const demonstratedFloor = useRef(STORY_DRAFT.floor);
+  const [shot, setShot] = useState(0);
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState('');
   const openStudio = async () => {
@@ -61,7 +64,14 @@ export function ScrollGalleryStory() {
     let frame = 0, progress = 0, last = performance.now(), visible = true;
     const publish = () => {
       presentation.current = storyPresentation(progress, innerWidth < 700, motion.matches);
-      presentation.current.interactive = explore.current && !motion.matches && progress >= .75;
+      presentation.current.interactive = explore.current && !motion.matches && progress >= .95;
+      const nextShot = motion.matches ? 23 : Math.min(23, Math.floor(progress * 24));
+      setShot(current => current === nextShot ? current : nextShot);
+      const floor = storyFloor(motion.matches ? 1 : progress);
+      if (!manualFloor.current && demonstratedFloor.current !== floor) {
+        demonstratedFloor.current = floor;
+        setDraft(current => ({ ...current, floor }));
+      }
       const chapter = motion.matches ? 0 : Math.min(3, Math.floor(progress * 4));
       section.dataset.chapter = String(chapter);
       section.dataset.interactive = String(presentation.current.interactive);
@@ -105,24 +115,30 @@ export function ScrollGalleryStory() {
     };
   }, []);
   return (
-    <section className="sgs" data-arrival={arrival} ref={sectionRef} aria-label="From your collection to your own Space">
+    <section className="sgs" data-arrival={arrival} data-shot={shot + 1} ref={sectionRef} aria-label="From your collection to your own Space">
       <div className="sgs__sticky">
         <div className="sgs__room"><GalleryScene draft={draft} visitor presentation={presentation} onArrivalChange={setArrival} onArtworkFocus={setFocus} /></div>
         <StoryPosterImage className="sgs__poster" />
         <div className="sgs__masthead"><p>Immersive 3D presentation platform</p><button className="sgs__play" disabled={arrival !== 'ready'} aria-pressed={isPlaying} onClick={() => {
           if (isPlaying) stopFilm(); else { if (Number(sectionRef.current?.style.getPropertyValue('--story-progress')) > .97) goTo(0); explore.current = false; setExploring(false); playing.current = true; setPlaying(true); }
         }}>{isPlaying ? 'Pause film' : 'Play the film · 72 sec'} <span aria-hidden="true">{isPlaying ? 'Ⅱ' : '▷'}</span></button></div>
+        {shot >= 6 && shot < 9 && <aside className="sgs__demo" aria-label="Illustrated Studio steps">
+          <small>In the Studio</small><strong>{['Upload artwork', 'Choose a wall', 'Frame & scale'][shot - 6]}</strong>
+          <div>{STORY_DRAFT.artworks.map((art, index) => <img key={art.id} src={art.src} alt={art.title} className={index === shot - 6 ? 'is-selected' : ''} />)}</div>
+          <span>{['Three works. One collection.', 'Back wall · eye level 1.75 m', 'Thin black frame · no mat'][shot - 6]}</span>
+        </aside>}
         <div className="sgs__chapters" aria-live="off">
           {STORY_CHAPTERS.map((chapter, index) => <article key={chapter.title} hidden={index !== 0} ref={(element) => { chapters.current[index] = element; }}>
             <p className="sgs__eyebrow">0{index + 1} / 04 <span>{chapter.label}</span></p>{index === 0 ? <h1>{chapter.title}</h1> : <h2>{chapter.title}</h2>}<p>{chapter.body}</p>
           </article>)}
         </div>
         <div className="sgs__finish" aria-label="Try a floor finish"><span>Make it yours</span>
-          {(['concrete', 'oak', 'black-marble'] as const).map((floor) => <button key={floor} aria-label={`Preview ${floor.replace('-', ' ')} floor`} aria-pressed={draft.floor === floor} onClick={() => setDraft((current) => ({ ...current, floor }))}>
+          {(['concrete', 'oak', 'black-marble'] as const).map((floor) => <button key={floor} aria-label={`Preview ${floor.replace('-', ' ')} floor`} aria-pressed={draft.floor === floor} onClick={() => { manualFloor.current = true; setDraft((current) => ({ ...current, floor })); }}>
             <i className={`sgs__swatch sgs__swatch--${floor}`} />{floor === 'concrete' ? 'Mineral' : floor === 'oak' ? 'Oak' : 'Marble'}
           </button>)}
         </div>
-        <button className="sgs__look" aria-pressed={exploring} onClick={() => { stopFilm(); explore.current = !exploring; setExploring(!exploring); }}>{exploring ? "Back to story" : "Look around"}</button>
+        <button className="sgs__look" aria-pressed={exploring} onClick={() => { stopFilm(); if (!exploring) goTo(.965); explore.current = !exploring; setExploring(!exploring); }}>{exploring ? "Back to story" : "Look around"}</button>
+        {exploring && <p className="sgs__walk-hint">Tap floor to move · Drag to look</p>}
         <div className="sgs__footer"><nav className="sgs__navigation" aria-label="Space story chapters">{STORY_CHAPTERS.map((chapter, index) => <button key={chapter.label} aria-label={`Chapter ${index + 1}: ${chapter.label}`} onClick={() => goTo(index / 4 + .005)}>0{index + 1}</button>)}<button onClick={() => goTo(1.04)} aria-label="Continue below the story">Skip ↓</button></nav><button type="button" disabled={opening} onClick={() => void openStudio()}>{opening ? "Opening your Studio…" : "Open this Space in Studio"} <span>↗</span></button><small>Sample collection · The White Cube <a href="#/create">Choose a room ↗</a></small></div>
         {openError && <p className="sgs__open-error" role="alert">{openError}</p>}
         <div className="sgs__timeline" aria-hidden="true"><i /></div>
