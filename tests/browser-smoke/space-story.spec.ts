@@ -342,17 +342,33 @@ test('20-second playback demonstrates floors and walls automatically and settles
   await scene.evaluate(el => {
     const seen={floor:new Set<string>(),wall:new Set<string>()};
     const events: unknown[]=[];
+    const reflectionBakes: number[]=[];
+    new MutationObserver(() => {
+      if (el.getAttribute('data-reflections') === 'room-probe' &&
+        document.querySelector('.sgs__play')?.getAttribute('aria-pressed') === 'true')
+        reflectionBakes.push(performance.now());
+    }).observe(el,{attributes:true,attributeFilter:['data-reflections']});
+    (el as HTMLElement & {reflectionBakes: number[]}).reflectionBakes=reflectionBakes;
     const record=()=>{for(const key of ['floor','wall'] as const) seen[key].add(el.getAttribute(`data-${key}`)!);events.push({time:performance.now(),progress:el.getAttribute('data-presentation-progress'),floor:el.getAttribute('data-floor'),wall:el.getAttribute('data-wall')});};
     (el as HTMLElement & {finishEvents: unknown[]}).finishEvents=events;
     record();const observer=new MutationObserver(record);observer.observe(el,{attributes:true,attributeFilter:['data-floor','data-wall']});
     (el as HTMLElement & {finishReport:()=>unknown}).finishReport=()=>{observer.disconnect();return {floor:[...seen.floor],wall:[...seen.wall]};};
   });
-  await page.getByRole('button',{name:'Play the film · 20 sec'}).click();
-  await expect(page.getByRole('button',{name:'Pause film'})).toHaveAttribute('aria-pressed','true');
-  await expect(page.getByRole('button',{name:'Play the film · 20 sec'})).toBeVisible({timeout:30_000});
-  await expectStoryFrame(scene,1);
-  await testInfo.attach('finish-timing', {body:JSON.stringify(await scene.evaluate(el => (el as HTMLElement & {finishEvents: unknown[]}).finishEvents)),contentType:'application/json'});
-  expect(await scene.evaluate(el => (el as HTMLElement & {finishReport:()=>unknown}).finishReport())).toEqual({floor:['concrete','oak','black-marble'],wall:['chalk','warm','travertine']});
-  await expect(story).toHaveAttribute('data-shot','24');
-  await expect(page.getByRole('progressbar')).toHaveCount(0);
+  try {
+    await page.getByRole('button',{name:'Play the film · 20 sec'}).click();
+    await expect(page.getByRole('button',{name:'Pause film'})).toHaveAttribute('aria-pressed','true');
+    await expect(page.getByRole('button',{name:'Play the film · 20 sec'})).toBeVisible({timeout:30_000});
+    await expectStoryFrame(scene,1);
+    expect(await scene.evaluate(el => (el as HTMLElement & {finishReport:()=>unknown}).finishReport())).toEqual({floor:['concrete','oak','black-marble'],wall:['chalk','warm','travertine']});
+    expect(await scene.evaluate(el => (el as HTMLElement & {reflectionBakes: number[]}).reflectionBakes)).toEqual([]);
+    await expect(story).toHaveAttribute('data-shot','24');
+    await expect(page.getByRole('progressbar')).toHaveCount(0);
+  } finally {
+    const diagnostics = await scene.evaluate(el => {
+      const surface = el as HTMLElement & {finishEvents: unknown[]; reflectionBakes: number[]};
+      return {scene: {...surface.dataset}, events: surface.finishEvents, reflectionBakes: surface.reflectionBakes,
+        transport: document.querySelector('.sgs__play')?.textContent};
+    });
+    await testInfo.attach('film-diagnostics', {body: JSON.stringify(diagnostics), contentType:'application/json'});
+  }
 });

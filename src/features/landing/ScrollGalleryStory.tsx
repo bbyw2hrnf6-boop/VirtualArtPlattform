@@ -77,9 +77,10 @@ export function ScrollGalleryStory() {
     let frame = 0, progress = 0, last = performance.now(), visible = true;
     const publish = () => {
       presentation.current = storyPresentation(progress, innerWidth < 700, motion.matches);
+      presentation.current.playing = playing;
       presentation.current.interactive = explore.current && !motion.matches && progress >= .95;
       const nextShot = motion.matches ? 23 : Math.min(23, Math.floor(progress * 24));
-      setShot(current => current === nextShot ? current : nextShot);
+      setShot(nextShot);
       const finishes = storyFinishes(motion.matches ? 1 : progress);
       if (manualStage.current !== finishes.stage && demonstratedStage.current !== finishes.stage) {
         manualStage.current = null;

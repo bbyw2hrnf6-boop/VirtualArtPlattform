@@ -3203,6 +3203,7 @@ export type GallerySceneCapture = (
 ) => Promise<GallerySceneCaptureResult>;
 
 export interface GalleryPresentation {
+  playing?: RefObject<boolean>;
   cutaway?: boolean;
   fov?: number;
   progress: number;
@@ -4170,8 +4171,12 @@ function GallerySceneRenderer({
     const bakeRoomReflection = () => {
       reflectionFrame = 0;
       if (disposed || quality.tier === "low") return;
+      // A delayed probe callback can run before the next presentation RAF. Its
+      // progress is then unchanged even though playback is active. Check the
+      // explicit transport state too, so slow frames cannot admit a probe bake.
       if (arrivalReady && latest.current.presentation &&
-        reflectionProgress !== latest.current.presentation.current.progress) {
+        (latest.current.presentation.current.playing?.current ||
+        reflectionProgress !== latest.current.presentation.current.progress)) {
         scheduleRoomReflection();
         return;
       }
