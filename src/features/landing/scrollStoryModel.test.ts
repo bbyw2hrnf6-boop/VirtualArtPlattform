@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { advanceStoryProgress, storyPresentation, storyScrollProgress, STORY_DURATION_MS, storyReveals, storyFinishes } from './scrollStoryModel';
+import { advanceStoryProgress, filmProgress, storyPresentation, storyScrollProgress, STORY_DURATION_MS, storyReveals, storyFinishes } from './scrollStoryModel';
 
 describe('Product story motion', () => {
+  it('shows every finish when a blocked renderer resumes beyond the comparison shots', () => {
+    let progress = .49;
+    const floors = new Set<string>(), walls = new Set<string>();
+    for (let frame = 0; frame < 8; frame++) {
+      progress = filmProgress(progress, 1);
+      const finish = storyFinishes(progress);
+      floors.add(finish.floor); walls.add(finish.wall);
+    }
+    expect([...floors]).toEqual(['concrete', 'oak', 'black-marble']);
+    expect([...walls]).toEqual(['chalk', 'warm', 'travertine']);
+    expect(progress).toBe(1);
+    expect(filmProgress(.1, .101)).toBe(.101);
+  });
   it('builds before collecting and reveals works one at a time in either direction', () => {
     expect(storyReveals(0)).toEqual({floor:0,walls:0,light:0,art:[0,0,0],decor:0});
     expect(storyReveals(6/24)).toEqual({floor:1,walls:1,light:1,art:[0,0,0],decor:0});

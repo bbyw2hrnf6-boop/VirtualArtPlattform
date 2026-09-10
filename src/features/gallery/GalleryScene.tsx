@@ -4150,6 +4150,7 @@ function GallerySceneRenderer({
     let reflectionTimer = 0;
     let reflectionFrame = 0;
     let reflectionIdle = 0;
+    let reflectionProgress = initial.presentation?.current.progress;
     const idleWindow = window as Window & {
       requestIdleCallback?: (
         callback: IdleRequestCallback,
@@ -4169,6 +4170,11 @@ function GallerySceneRenderer({
     const bakeRoomReflection = () => {
       reflectionFrame = 0;
       if (disposed || quality.tier === "low") return;
+      if (arrivalReady && latest.current.presentation &&
+        reflectionProgress !== latest.current.presentation.current.progress) {
+        scheduleRoomReflection();
+        return;
+      }
       const visibility = new Map<THREE.Object3D, boolean>();
       const materialStates = new Map<
         THREE.Material,
@@ -4264,6 +4270,7 @@ function GallerySceneRenderer({
         return;
       }
       cancelScheduledRoomReflection();
+      reflectionProgress = latest.current.presentation?.current.progress;
       element.dataset.reflections = "room-probe-pending";
       reflectionTimer = window.setTimeout(() => {
         reflectionTimer = 0;
@@ -5989,6 +5996,11 @@ function GallerySceneRenderer({
       }
       const presentation = latest.current.presentation?.current;
       if (presentation) {
+        // A six-face probe is expensive on software GPUs. Retain the prepared
+        // reflection while moving; bake the unchanged-quality replacement once
+        // the shot rests. This also keeps manual material previews up to date.
+        if (presentation.progress !== reflectionProgress && (reflectionTimer || reflectionIdle || reflectionFrame))
+          scheduleRoomReflection();
         const nextCutaway = presentation.cutaway ? "active" : "inactive";
         if (element.dataset.cutaway !== nextCutaway) applyCutawayMode();
         const revealed = storyReveals(presentation.progress);

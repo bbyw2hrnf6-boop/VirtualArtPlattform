@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { GalleryScene, type GalleryPresentation, type ArtworkFocusInfo } from '../gallery/GalleryScene';
 import { STORY_DRAFT } from './storyDraft';
-import { storyPresentation, storyScrollProgress, advanceStoryProgress, storyFinishes, STORY_FINISHES, STORY_CHAPTERS, STORY_DURATION_MS } from './scrollStoryModel';
+import { storyPresentation, storyScrollProgress, advanceStoryProgress, filmProgress, storyFinishes, STORY_FINISHES, STORY_CHAPTERS, STORY_DURATION_MS } from './scrollStoryModel';
 import { saveGalleryDraft } from '../../services/draftStorage';
 import { stageStudioHandoff } from '../../services/studioHandoff';
 import './scrollGalleryStory.css';
@@ -20,7 +20,7 @@ export function ScrollGalleryStory() {
   const [draft, setDraft] = useState(STORY_DRAFT);
   const manualStage = useRef<number | null>(null);
   const demonstratedStage = useRef(-1);
-  const playhead = useRef(0);
+  const playStart = useRef(0);
   const [finishesReady, setFinishesReady] = useState(false);
   useEffect(() => {
     let active = true;
@@ -109,7 +109,9 @@ export function ScrollGalleryStory() {
       const rect = section.getBoundingClientRect();
       let target = storyScrollProgress(-rect.top, 0, section.offsetHeight - innerHeight, motion.matches);
       if (playing.current && !motion.matches) {
-        target = playhead.current = Math.min(1, playhead.current + Math.max(0, now - last) / STORY_DURATION_MS);
+        // Use a monotonic deadline, independent of stale RAF timestamps or scroll
+        // observer callbacks. Material stops survive a temporarily blocked GPU.
+        target = filmProgress(progress, (performance.now() - playStart.current) / STORY_DURATION_MS);
         window.scrollTo({ top: scrollY + rect.top + target * (section.offsetHeight - innerHeight), behavior: 'instant' });
       }
       progress = motion.matches ? 0 : playing.current ? target : advanceStoryProgress(progress, target, now - last);
@@ -139,7 +141,7 @@ export function ScrollGalleryStory() {
         <div className="sgs__room"><GalleryScene draft={draft} visitor presentation={presentation} onArrivalChange={setArrival} onArtworkFocus={setFocus} /></div>
         <StoryPosterImage className="sgs__poster" />
         <div className="sgs__masthead"><p>Immersive 3D presentation platform</p><button className="sgs__play" disabled={arrival !== 'ready' || !finishesReady} aria-pressed={isPlaying} onClick={() => {
-          if (isPlaying) stopFilm(); else { if (Number(sectionRef.current?.style.getPropertyValue('--story-progress')) > .97) goTo(0); manualStage.current = null; demonstratedStage.current = -2; playhead.current = presentation.current.progress; explore.current = false; setExploring(false); playing.current = true; setPlaying(true); }
+          if (isPlaying) stopFilm(); else { if (Number(sectionRef.current?.style.getPropertyValue('--story-progress')) > .97) goTo(0); manualStage.current = null; demonstratedStage.current = -2; playStart.current = performance.now() - presentation.current.progress * STORY_DURATION_MS; explore.current = false; setExploring(false); playing.current = true; setPlaying(true); }
         }}>{isPlaying ? 'Pause film' : 'Play the film · 20 sec'} <span aria-hidden="true">{isPlaying ? 'Ⅱ' : '▷'}</span></button></div>
         {shot >= 6 && shot < 9 && <aside className="sgs__demo" aria-label="Illustrated Studio steps">
           <small>In the Studio</small><strong>{['Upload artwork', 'Choose a wall', 'Frame & scale'][shot - 6]}</strong>

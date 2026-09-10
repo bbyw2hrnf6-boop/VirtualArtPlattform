@@ -2,7 +2,7 @@
 
 `danny-gallery.glb` is the full authored exhibition. `danny-gallery-mobile.glb` is its compact/mobile delivery derivative; the homepage scroll story selects it for compact interaction layouts, while the gallery runtime also uses it for its low quality tier.
 
-The `danny-emil-finale-v2` desktop and mobile captures are loading and WebGL-failure posters only. They show the corrected material contract: matte plaster walls and marble only on the floor. Once the model is ready, the complete blueprint-to-walk sequence stays inside the live GLB. Superseded non-v2 captures were removed.
+The `danny-emil-finale-v2` desktop and mobile captures serve as loading and WebGL-failure posters. The desktop capture also illustrates Threshold in the homepage’s Follow the work section, linking to the same reference exhibition. They show the corrected material contract: matte plaster walls and marble only on the floor. Once the model is ready, the complete blueprint-to-walk sequence stays inside the live GLB. Superseded non-v2 captures were removed.
 
 The mobile derivative keeps all 191 nodes, 179 node metadata records, 84 meshes, 31 materials, 12 animations, 27 colliders, 16 view anchors, seven artwork hotspots, and eight route waypoints. Geometry was simplified to roughly half the triangles. Material textures are at most 512 px, artwork textures are at most 768 px, and embedded WebP images use quality 72. Meshopt compression remains enabled and decoding uses up to two Web Workers.
 

@@ -377,17 +377,32 @@ function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () =>
 
 function BrandHero({ onExplore }: { onExplore: () => void }) {
   return (
-    <section className="brand-hero brand-hero--follow" aria-labelledby="brand-hero-title">
-      <img className="brand-hero__image" src="./assets/templates/white-cube-preview.webp?v=premium-v3" alt="" loading="lazy" />
-      <p className="eyebrow"><i aria-hidden="true" /> The Creator Hub</p>
-      <h2 id="brand-hero-title">Behind every space,<br /><em>a story.</em></h2>
-      <p>Meet the creators, discover their exhibitions and follow what takes shape.</p>
-      <div className="brand-hero__actions">
-        <button className="button button--light" type="button" onClick={onExplore} aria-haspopup="dialog">Explore Spaces <span>↓</span></button>
-        <button className="text-link" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "hero")}>{PRODUCT_BRAND.primaryCta} →</button>
-        <a className="text-link brand-hero__hub" href="/creator-hub">Creator Hub ↗</a>
+    <section className="follow-work" aria-labelledby="brand-hero-title">
+      <div className="follow-work__intro">
+        <p className="eyebrow">Discover LIEUVA</p>
+        <h2 id="brand-hero-title">Follow<br />the work.</h2>
+        <p>Enter Spaces. Meet creators. Follow new work and studio notes.</p>
+        <div className="follow-work__actions">
+          <button className="button button--light" type="button" onClick={onExplore} aria-haspopup="dialog">Explore Spaces <span>↗</span></button>
+          <button className="text-link" onClick={() => landingNavigate("/create", "landing_create_cta_clicked", "hero")}>{PRODUCT_BRAND.primaryCta} ↗</button>
+          <a className="text-link" href="/creator-hub">Creator Hub ↗</a>
+        </div>
       </div>
-
+      <article className="follow-work__exhibition">
+        <a className="follow-work__cover" href="#/demo">
+          <img src="./assets/demo/danny-emil-finale-v2.webp" width="1586" height="992" alt="Enter Threshold" loading="lazy" />
+          <span>Reference exhibition</span>
+        </a>
+        <div className="follow-work__credit">
+          <h3>Threshold</h3>
+          <a className="text-link" href="#/demo">Enter Space ↗</a>
+          <a className="follow-work__artist" href="https://www.dannyhirscharts.com/" target="_blank" rel="noreferrer">Danny Hirsch Arts · Artist ↗</a>
+        </div>
+        <details className="follow-work__note">
+          <summary><span className="follow-work__note-image" aria-hidden="true" /><span><small>Studio notes · LIEUVA</small><strong>Material. Movement. Atmosphere.</strong><u>Read exhibition note <b>↗</b></u></span></summary>
+          <p>Paintings, plaster, marble. Experience the work in context.</p>
+        </details>
+      </article>
     </section>
   );
 }

@@ -18,7 +18,7 @@ export default defineConfig(({ command }) => ({
     terserOptions: {
       ecma: 2020,
       safari10: false,
-      compress: { passes: 2 },
+      compress: { passes: 4 },
     },
     rolldownOptions: {
       output: {
@@ -33,7 +33,7 @@ export default defineConfig(({ command }) => ({
             includeDependenciesRecursively: false,
           }, {
             name: 'firebase',
-            test: /node_modules[\\/](?:@firebase|firebase)[\\/]|src[\\/]services[\\/](?:firebase|accountService)\.ts$/,
+            test: /node_modules[\\/](?:@firebase|firebase)[\\/]|src[\\/]services[\\/](?:firebase|accountService|telemetryTransport)\.ts$/,
           }],
         },
       },

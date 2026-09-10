@@ -17,6 +17,11 @@ export function advanceStoryProgress(current: number, target: number, elapsed: n
   return clamp(current + delta * (1 - Math.exp(-Math.max(0, elapsed) / 125)));
 }
 export const STORY_DURATION_MS = 20_000;
+/** Catch up after a long frame without skipping an authored material comparison. */
+export function filmProgress(current: number, target: number) {
+  const next = Math.max(12, Math.floor(current * 24) + 1);
+  return clamp(next <= 17 ? Math.min(target, (next + .01) / 24) : target);
+}
 // All twenty-four authored shots are retained; playback retimes them to 20 seconds.
 // Comparison shots share one pose; materials change without a moving baseline.
 const poses: Array<[number, number, number, number, number, number]> = [
