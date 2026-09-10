@@ -33,3 +33,10 @@ against its authoring manifest, and records current and render-time code hashes
 separately. It does not relabel an existing Blender source or image as a new render.
 
 Provenance refresh: the runtime now restricts the new directional grain to oak. Revalidation confirms unchanged concrete, limestone and oak detail buffers; existing images and blends are preserved. The material manifest retains its render-time source hash and records the current runtime validation separately.
+
+
+10 September CI follow-up: stationary Studio rendering and test scheduling changed;
+no camera pose, material formula, source blend, image or GLB was replaced. Running
+`--validate` refreshed `final-validation.json` against the current runtime source
+and confirmed the original camera samples, asset hashes and detail buffers. This
+is validation of the existing renders, not an additional Blender render round.

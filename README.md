@@ -2,8 +2,9 @@
 
 Current local visual/runtime production: [Editorial story, materials and sharing](./audit/LIEUVA-EDITORIAL-STORY-2026-09-09.md). The 72-second optional White Cube film uses the real Studio renderer, with native scroll, chapter controls, quiet readiness posters, mobile material sheets and direct publication sharing. Premium-v3 GLBs and existing 4K beauty masters remain separate. No automatic release is implied.
 
-The homepage pauses unchanged GPU frames and redraws for camera, material and
-texture changes. Room reflection captures repair invalid HDR samples before
+The homepage and stationary Studio Arrange view pause unchanged GPU frames and
+redraw for camera, material and texture changes. Walk and guided tours remain
+continuous. Room reflection captures repair invalid HDR samples before
 filtering, preventing black interiors on software GPUs without removing reflections
 or lowering room/material resolution. Current CI follow-up evidence is recorded in
 the editorial acceptance document above.
@@ -92,7 +93,7 @@ npm run preview
 | `npm run build` | Type-check the app, create `dist/`, and prepare the generated HTML shell used by privacy-aware Space delivery. |
 | `npm run preview` | Serve `dist/` locally for production verification. |
 | `npm run check` | Run lint, tests, GLB checks, type-checking, the standard build and a separate production-feature budget build. |
-| `npm run test:browser-smoke` | Run Chromium checks against the built `dist/`: public shell/CSP, quiet story preparation, chapter navigation, Studio handoff, all three room arrivals and mobile material editing/undo. Run after `npm run build`; install the locked browser with `npm run test:browser-smoke:install` if needed. Set `LIEUVA_BROWSER_SMOKE_SOFTWARE_GL=1` and optionally `LIEUVA_BROWSER_SMOKE_CPU_RATE=6` to reproduce slow CI rendering locally. This is a separate CI gate, not part of `npm run check`. Failed CI runs retain traces/screenshots for seven days. |
+| `npm run test:browser-smoke` | Run Chromium checks against the built `dist/`: public shell/CSP, quiet story preparation, chapter navigation, Studio handoff, all three room arrivals and mobile material editing/undo. Run after `npm run build`; install the locked browser with `npm run test:browser-smoke:install` if needed. Set `LIEUVA_BROWSER_SMOKE_SOFTWARE_GL=1` and optionally `LIEUVA_BROWSER_SMOKE_CPU_RATE=6` to exercise slow rendering locally (this does not reproduce the Linux runner exactly). This is a separate CI gate, not part of `npm run check`. Failed CI runs retain traces/screenshots for seven days. |
 | `npm run check:production-build` | Check the App Check + Functions telemetry code paths with a nonfunctional public key fixture in `artifacts/production-budget-check/`; does not replace `dist/` or the Functions HTML shell. CI builds the deployable artifact with the real production variables. |
 | `npm run check:functions` | Test and type-check the trusted branded-email/newsletter Functions. |
 | `npm run review:public-content -- --kind spaces\|posts` | Read a bounded, read-only page for Space review or post moderation. Creator profiles are not reviewed. |

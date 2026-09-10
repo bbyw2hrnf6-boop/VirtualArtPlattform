@@ -245,3 +245,80 @@ Final logs: ignored `artifacts/ci-final-check.log`, `ci-final-browser.log`,
 `ci-final-blender-validation.log`. The GPU diagnostic readback is confined to an
 ignored comparison build; no debugging globals or readback code enter production.
 No commit, push, workflow rerun, publishing action or live Firebase write occurred.
+
+
+## CI trace correction after revision `5b2846e` · 10 September 2026
+
+Inspected [GitHub run 34410049211](https://github.com/bbyw2hrnf6-boop/VirtualArtPlattform/actions/runs/34410049211),
+production job `102662590679`, and downloaded its retained Chromium traces and
+screenshots. Local HEAD matched the failed revision. Quality and policy jobs,
+production configuration, Functions compilation and the production build passed.
+Six browser tests passed; two long journeys exhausted their overall test budgets.
+The release steps were correctly blocked. This was not the earlier heading or
+material-selector failure.
+
+The traces distinguish a missing control from exhausted test time:
+
+- Desktop reached the correct Studio URL after the homepage loading, chapters,
+  material edit, film playback/pause and skip checks. Only 12.1 seconds remained
+  in the 90-second test on the first attempt, and about 4.7 seconds on retry.
+  The Studio's 30-second arrival assertion never received its full allowance.
+- Mobile successfully rendered the lit final chapter, passed the wall-luminance
+  check, and entered Studio in 18.7 / 19.2 seconds. Two sheet-expansion clicks
+  then took about 11–12 seconds each. The full panel and Floor control were
+  present in the failure screenshot; the 60-second journey budget had expired.
+- Unlike the stationary homepage, Arrange still submitted identical frames
+  continuously. These draws competed with UI/compositor work on the software GPU.
+
+Implemented in this follow-up:
+
+- The editor's stationary Arrange view now retains its full-quality frame. The
+  animation/input loop remains active and redraws on camera/projection changes,
+  draft/selection edits, drag updates and rollback, shadows, reflections, resize,
+  late texture completion, visibility return and WebGL context restoration.
+  Walk, tours, interactive homepage navigation and public visitor rendering stay
+  continuous. Adaptive-DPR sampling excludes idle time.
+- Editor cutaway opacity now settles by elapsed time to an exact endpoint,
+  allowing a resting room to stop drawing even on low-FPS hardware. Existing
+  opacity targets, materials, shadow/probe sizes and asset resolutions remain.
+- Split independent homepage film, chapter, material-handoff and mobile-editing
+  concerns into focused browser tests with fresh contexts. Real desktop/mobile
+  Studio handoffs remain covered; desktop still verifies the selected oak floor
+  survives. No force-clicks, skipped tests, disabled WebGL, release-gate bypass or
+  increase of existing 60/90-second journey and 30-second arrival budgets.
+- Added assertions for stationary rendering in all three rooms, camera/roof
+  redraw, Walk/Arrange transitions, and an intentionally delayed oak image that
+  must redraw after completion. Mobile Done/focus restoration and Undo remain
+  covered; every story/Studio test now checks uncaught browser errors.
+
+The room GLBs, Blender source/beauty assets, camera score, material images and
+independent relief maps are unchanged. The story validator refreshes only the
+current runtime source hash: all 1,729 authored camera samples, source/output
+hashes and concrete/limestone/oak detail buffers still match.
+
+Final verification (Node 22.23.2 / npm 10.9.8):
+
+- `npm run check`: passed; 345 unit tests, 46 script tests, six premium GLBs,
+  lint/type checks, standard build and production-feature budget build.
+- Final Chromium suite: 12/12 passed in 40.2 seconds, retries disabled.
+- Final production build with the public App Check key from the failing job and
+  functions/production telemetry: 12/12 passed in 4.9 minutes under SwiftShader
+  and 6× CDP CPU throttling, retries disabled; successful traces retained locally.
+- Three additional local room checks passed in 13.6 seconds: Arrange and Walk
+  captures for White Cube, Warm Gallery and Grand Forum, plus a deliberate
+  WebGL context loss/restoration while White Cube was idle. The restored canvas
+  redraws; room screenshots and the desktop/mobile smoke captures were reviewed.
+- Authored camera/material validator passed again: 1,729 identical camera samples,
+  matching asset hashes and byte-exact concrete/limestone/oak detail maps.
+- Final production gzip: JS 573,561 / 575,000 bytes; CSS 52,806 / 54,000;
+  largest lazy JS 175,202 / 195,000; entry JS 302,195 / 305,000;
+  entry CSS 31,790 / 32,500. Every existing enforced ceiling passes; lower
+  aspirational targets remain open.
+
+Evidence: ignored `artifacts/ci-run-34410049211/` contains the original runner
+traces/screenshots; `artifacts/ci-344100-final-{check,native,software,public-build}.log`,
+`ci-344100-camera-validation.log`, `ci-344100-room-qa.log`, and their screenshot/
+trace directories contain local results. macOS software rendering is a useful
+stress check, not an exact Linux runner or physical-mobile benchmark. The next
+owner-triggered GitHub run must still confirm remote success.
+No commit, push, remote workflow rerun, deployment or live Firebase write occurred.

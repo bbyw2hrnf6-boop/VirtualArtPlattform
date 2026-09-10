@@ -1,10 +1,30 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test as base, type Locator } from '@playwright/test';
+
+const test = base.extend({
+  page: async ({ page }, runTest) => {
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await runTest(page);
+    expect(errors).toEqual([]);
+  },
+});
 
 async function expectStoryFrame(scene: Locator, progress: number) {
   // DOM chapter state changes immediately; shader/reflection work settles later.
   await expect.poll(async () => Number(await scene.getAttribute('data-presentation-progress')),
     { timeout: 30_000 }).toBeCloseTo(progress, 3);
   await expect(scene).toHaveAttribute('data-presentation-idle', 'true', { timeout: 30_000 });
+}
+
+async function expectStationaryScene(scene: Locator) {
+  await expect(scene).toHaveAttribute('data-render-idle', 'true', { timeout: 30_000 });
+  const frames = await scene.evaluate(async element => {
+    const before = (element as HTMLElement).dataset.renderFrames;
+    for (let i = 0; i < 4; i++) await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    return { before, after: (element as HTMLElement).dataset.renderFrames };
+  });
+  expect(Number(frames.before)).toBeGreaterThan(0);
+  expect(frames.after).toBe(frames.before);
 }
 
 test.describe.configure({ timeout: 60_000 });
@@ -17,12 +37,8 @@ test.beforeEach(async ({ page }) => {
   }
 });
 
-test('quiet preparation, reversible chapters and the real Studio handoff', async ({ page }, testInfo) => {
-  // This journey prepares two real WebGL scenes, with separate bounded waits.
-  test.setTimeout(90_000);
+test('quiet preparation and reversible chapters', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
-  const errors: string[] = [];
-  page.on('pageerror', error => errors.push(error.message));
   let release!: () => void;
   const held = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/premium-v3/*.glb*', async route => { await held; await route.continue(); });
@@ -51,6 +67,38 @@ test('quiet preparation, reversible chapters and the real Studio handoff', async
   await page.getByRole('button', { name: 'Chapter 3: Your atmosphere', exact: true }).click();
   await expect(story).toHaveAttribute('data-chapter', '2');
   await expectStoryFrame(scene, .505);
+  await page.getByRole('button', { name: 'Chapter 1: Your space', exact: true }).click();
+  await expect(story).toHaveAttribute('data-chapter', '0');
+  await expectStoryFrame(scene, .005);
+});
+
+// Each independent journey gets its own browser context and time budget. CI's
+// software GPU must not spend the Studio's arrival allowance on earlier film QA.
+test('the film can play, pause with the keyboard and continue below the story', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  const story = page.locator('.sgs');
+  await expect(story).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
+  await expectStoryFrame(story.locator('.gallery-scene'), 0);
+  await page.getByRole('button', { name: 'Play the film · 72 sec' }).click();
+  await expect(page.getByRole('button', { name: 'Pause film' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Pause film' }).press('Space');
+  await expect(page.getByRole('button', { name: 'Play the film · 72 sec' })).toHaveAttribute('aria-pressed', 'false');
+  await page.getByRole('button', { name: 'Continue below the story', exact: true }).click();
+  await expect.poll(() => story.evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(1);
+});
+
+test('a previewed material survives the real desktop Studio handoff', async ({ page }, testInfo) => {
+  // This focused journey still prepares two real scenes; each arrival is bounded.
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  const story = page.locator('.sgs');
+  await expect(story).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
+  const scene = story.locator('.gallery-scene');
+  await page.getByRole('button', { name: 'Chapter 3: Your atmosphere', exact: true }).click();
+  await expect(story).toHaveAttribute('data-chapter', '2');
+  await expectStoryFrame(scene, .505);
   const beforeFinish = Number(await scene.getAttribute('data-presentation-frames'));
   await page.getByRole('button', { name: 'Preview oak floor', exact: true }).click();
   await expect(story.locator('.gallery-scene')).toHaveAttribute('data-floor', 'oak');
@@ -58,21 +106,12 @@ test('quiet preparation, reversible chapters and the real Studio handoff', async
   expect(Number(await scene.getAttribute('data-presentation-frames'))).toBeGreaterThan(beforeFinish);
   await expect.poll(() => story.evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--story-progress')))).toBeGreaterThan(.504);
   await page.screenshot({ path: testInfo.outputPath('story-desktop-material.png') });
-  await page.getByRole('button', { name: 'Chapter 1: Your space', exact: true }).click();
-  await expect(story).toHaveAttribute('data-chapter', '0');
-  await page.getByRole('button', { name: 'Play the film · 72 sec' }).click();
-  await expect(page.getByRole('button', { name: 'Pause film' })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Pause film' }).press('Space');
-  await expect(page.getByRole('button', { name: 'Play the film · 72 sec' })).toHaveAttribute('aria-pressed', 'false');
-  await page.getByRole('button', { name: 'Continue below the story', exact: true }).click();
-  await expect.poll(() => story.evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(1);
   await page.getByRole('button', { name: 'Chapter 4: Their experience', exact: true }).click();
   await expect(story).toHaveAttribute('data-chapter', '3');
   await page.getByRole('button', { name: 'Open this Space in Studio' }).click();
   await expect(page).toHaveURL(/#\/create\/white-cube\/story-/);
   await expect(page.locator('.studio .gallery-scene')).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
   await expect(page.locator('.studio .gallery-scene')).toHaveAttribute('data-floor', 'oak');
-  expect(errors).toEqual([]);
 });
 
 test('mobile reduced motion stays composed and offers a functioning Studio action', async ({ page }) => {
@@ -96,13 +135,39 @@ for (const room of ['white-cube', 'nocturne', 'pavilion']) {
     await expect(scene).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
     await expect(scene).toHaveAttribute('data-environment', 'premium-v3');
     await expect(scene).toHaveAttribute('data-capture-ready', 'true');
+    await expectStationaryScene(scene);
     await expect(page.locator('.space-entry-loading,.demo-loading-poster')).toHaveCount(0);
     await expect(page.getByRole('progressbar')).toHaveCount(0);
   });
 }
 
+test('Arrange redraws camera and roof changes and resumes Walk preview', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/#/create/white-cube/demo');
+  const scene = page.locator('.studio .gallery-scene');
+  await expect(scene).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
+  await expectStationaryScene(scene);
+  const frames = Number(await scene.getAttribute('data-render-frames'));
+  const position = await scene.getAttribute('data-camera-position');
+  await page.getByRole('button', { name: 'Rotate room 45 degrees right', exact: true }).click();
+  await expect(scene).not.toHaveAttribute('data-camera-position', position!);
+  await expect.poll(async () => Number(await scene.getAttribute('data-render-frames'))).toBeGreaterThan(frames);
+  await expectStationaryScene(scene);
+  await page.getByRole('button', { name: 'Preview ceiling', exact: true }).click();
+  await expect(scene).toHaveAttribute('data-cutaway', 'inactive');
+  await expectStationaryScene(scene);
+  await page.getByRole('button', { name: 'Walk preview', exact: true }).click();
+  await expect(scene).toHaveAttribute('data-editor-mode', 'walk-preview');
+  await expect(scene).toHaveAttribute('data-render-idle', 'false');
+  const walkFrames = Number(await scene.getAttribute('data-render-frames'));
+  await expect.poll(async () => Number(await scene.getAttribute('data-render-frames'))).toBeGreaterThan(walkFrames);
+  await page.getByRole('button', { name: 'Arrange', exact: true }).click();
+  await expect(scene).toHaveAttribute('data-editor-mode', 'arrange');
+  await expectStationaryScene(scene);
+});
 
-test('mobile materials remain clear of the Studio action and can be undone', async ({ page }, testInfo) => {
+
+test('mobile materials remain clear of the real Studio handoff', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   const story = page.locator('.sgs');
@@ -134,15 +199,45 @@ test('mobile materials remain clear of the Studio action and can be undone', asy
   await studioAction.click();
   const scene = page.locator('.studio .gallery-scene');
   await expect(scene).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
+  await expect(scene).toHaveAttribute('data-capture-ready', 'true');
+});
+
+test('mobile Studio materials can be applied, dismissed and undone', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/#/create/white-cube/demo');
+  const scene = page.locator('.studio .gallery-scene');
+  await expect(scene).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
+  await expect(scene).toHaveAttribute('data-render-idle', 'true', { timeout: 30_000 });
   await page.getByRole('button', { name: 'Editor tools are peek. Change panel size' }).click();
   await page.getByRole('button', { name: 'Editor tools are half. Change panel size' }).click();
   await page.locator('summary').filter({ hasText: '03 · Floor' }).click();
-  await page.getByRole('button', { name: 'natural oak', exact: true }).click();
-  await expect(scene).toHaveAttribute('data-floor', 'oak');
+  // Hold the actual material image, not just the UI swatch. Completion must
+  // redraw even after the earlier geometry/material update has been submitted.
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  let requested = false;
+  await page.route('**/premium-v3/natural-oak.webp', async route => {
+    requested = true;
+    await held;
+    await route.continue();
+  });
+  let pendingFrames: number;
+  try {
+    await page.getByRole('button', { name: 'natural oak', exact: true }).click();
+    await expect(scene).toHaveAttribute('data-floor', 'oak');
+    await expect.poll(() => requested).toBe(true);
+    await expect(scene).toHaveAttribute('data-render-idle', 'false');
+    pendingFrames = Number(await scene.getAttribute('data-render-frames'));
+  } finally { release(); }
+  await expectStationaryScene(scene);
+  expect(Number(await scene.getAttribute('data-render-frames'))).toBeGreaterThan(pendingFrames);
   await page.screenshot({ path: testInfo.outputPath('studio-mobile-materials.png') });
   await page.getByRole('button', { name: /^Done · Back to room/ }).click();
   await expect(page.getByRole('button', { name: 'Editor tools are peek. Change panel size' })).toBeFocused();
   await page.getByRole('button', { name: 'Editor tools are peek. Change panel size' }).click();
+  const beforeUndo = Number(await scene.getAttribute('data-render-frames'));
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(scene).toHaveAttribute('data-floor', 'concrete');
+  await expectStationaryScene(scene);
+  expect(Number(await scene.getAttribute('data-render-frames'))).toBeGreaterThan(beforeUndo);
 });

@@ -3753,9 +3753,9 @@ function GallerySceneRenderer({
     const sceneStartedAt = performance.now();
     const initial = latest.current;
     let currentDraft = initial.draft;
-    let presentationRevision = 0;
-    let presentationTextureRequest = 0;
-    let presentationTexturesPending = false;
+    let sceneRevision = 0;
+    let sceneTextureRequest = 0;
+    let sceneTexturesPending = false;
     let currentSelectedId = initial.selectedId;
     let currentSelectedDecorId = initial.selectedDecorId;
     let mode: GallerySceneMode = initial.visitor
@@ -3791,8 +3791,11 @@ function GallerySceneRenderer({
       event.preventDefault();
       trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "context_lost" });
     };
-    const handleContextRestored = () =>
+    const handleContextRestored = () => {
+      sceneRevision += 1;
+      renderer.shadowMap.needsUpdate = true;
       trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "context_restored" });
+    };
     renderer.domElement.addEventListener("webglcontextlost", handleContextLost);
     renderer.domElement.addEventListener("webglcontextrestored", handleContextRestored);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -4237,7 +4240,7 @@ function GallerySceneRenderer({
       const previous = reflectionEnvironmentTarget;
       reflectionEnvironmentTarget = nextTarget;
       scene.environment = nextTarget.texture;
-      presentationRevision += 1;
+      sceneRevision += 1;
       previous?.dispose();
       renderer.shadowMap.needsUpdate = true;
       element.dataset.reflections = "room-probe";
@@ -4948,6 +4951,7 @@ function GallerySceneRenderer({
       draggedArtwork = null;
       draggedArtworkPlacement = null;
       dragPointerId = -1;
+      renderer.shadowMap.needsUpdate = true;
       suppressSceneClick = pointerTravel > 2;
     };
     const handlePointer = (event: PointerEvent) => {
@@ -5173,20 +5177,21 @@ function GallerySceneRenderer({
       } else if (previousLayoutKey !== nextLayoutKey)
         updateLightingLayout(lighting, next, w, d, h);
       currentDraft = next;
-      presentationRevision += 1;
+      sceneRevision += 1;
+      element.dataset.renderIdle = "false";
       if (initial.presentation) element.dataset.presentationIdle = "false";
       arrivalRevision += 1;
       if (!arrivalReady) { preparationAbort.abort(); preparationAbort = new AbortController(); }
-      if (initial.presentation) {
-        // A late material image must refresh a stationary story as well.
-        const request = ++presentationTextureRequest;
-        presentationTexturesPending = true;
+      if (initial.presentation || !initial.visitor) {
+        // Late images must redraw stationary story and Arrange views as well.
+        const request = ++sceneTextureRequest;
+        sceneTexturesPending = true;
         void waitForSceneTextures(scene, preparationAbort.signal)
           .catch(() => { /* Existing texture fallbacks/readiness own failures. */ })
           .finally(() => {
-            if (!disposed && request === presentationTextureRequest) {
-              presentationTexturesPending = false;
-              presentationRevision += 1;
+            if (!disposed && request === sceneTextureRequest) {
+              sceneTexturesPending = false;
+              sceneRevision += 1;
             }
           });
       }
@@ -5595,7 +5600,7 @@ function GallerySceneRenderer({
     };
     let lastCutawayAt = performance.now();
     const updateCutaway = (now: number) => {
-      const amount = initial.presentation ? 1 - Math.exp(-Math.max(0, now - lastCutawayAt) / 100) : .16;
+      const amount = 1 - Math.exp(-Math.max(0, now - lastCutawayAt) / 100);
       lastCutawayAt = now;
       if (!isCutawayActive()) return false;
       let changed = false;
@@ -5618,7 +5623,7 @@ function GallerySceneRenderer({
               : mode === "overview"
                 ? 0.9
                 : 0.78;
-        const nextOpacity = initial.presentation && Math.abs(material.opacity - targetOpacity) < .001
+        const nextOpacity = Math.abs(material.opacity - targetOpacity) < .001
           ? targetOpacity : THREE.MathUtils.lerp(material.opacity, targetOpacity, amount);
         changed ||= nextOpacity !== material.opacity;
         material.opacity = nextOpacity;
@@ -5627,7 +5632,7 @@ function GallerySceneRenderer({
     };
     let frame = 0;
     const resize = () => {
-      presentationRevision += 1;
+      sceneRevision += 1;
       const width = element.clientWidth;
       const height = element.clientHeight;
       renderer.setSize(width, height, false);
@@ -5672,7 +5677,10 @@ function GallerySceneRenderer({
     let lastPresentationReflection = "";
     let lastRenderedProgress = Number.NaN;
     let lastRenderedRevision = -1;
-    let presentationFrames = 0;
+    let renderedFrames = 0;
+    const renderedPosition = new THREE.Vector3();
+    const renderedQuaternion = new THREE.Quaternion();
+    const renderedProjection = new THREE.Matrix4();
     let renderRunning = false;
     const renderActivity: ReturnType<typeof observeRenderActivity> = {
       active: () => true,
@@ -5991,23 +5999,31 @@ function GallerySceneRenderer({
         element.dataset.presentation = presentation.interactive ? "interactive" : "story";
       }
       if (arrivalReady) {
-        // A paused homepage is a still image. Re-submitting it every RAF can
-        // saturate a software GPU and block otherwise independent DOM controls.
-        const needsFrame = !presentation || presentation.interactive || cutawayChanging ||
-          presentation.progress !== lastRenderedProgress || presentationRevision !== lastRenderedRevision ||
-          renderer.shadowMap.needsUpdate;
+        // Stationary story/Arrange views retain their full-quality frame. Keep
+        // checking inputs, but do not saturate the GPU with identical draws.
+        const cameraChanged = !camera.position.equals(renderedPosition) ||
+          !camera.quaternion.equals(renderedQuaternion) || !camera.projectionMatrix.equals(renderedProjection);
+        const continuous = presentation ? presentation.interactive : initial.visitor || mode === "walk";
+        const needsFrame = continuous || cameraChanged || cutawayChanging ||
+          (presentation && presentation.progress !== lastRenderedProgress) ||
+          sceneRevision !== lastRenderedRevision || renderer.shadowMap.needsUpdate;
         if (needsFrame) {
           adaptiveDpr.update(now);
           renderer.render(scene, camera);
           lastRenderedProgress = presentation?.interactive ? Number.NaN : presentation?.progress ?? Number.NaN;
-          lastRenderedRevision = presentationRevision;
+          lastRenderedRevision = sceneRevision;
+          renderedPosition.copy(camera.position);
+          renderedQuaternion.copy(camera.quaternion);
+          renderedProjection.copy(camera.projectionMatrix);
+          element.dataset.renderFrames = String(++renderedFrames);
           if (presentation) {
-            element.dataset.presentationFrames = String(++presentationFrames);
+            element.dataset.presentationFrames = String(renderedFrames);
             element.dataset.presentationProgress = String(presentation.progress);
           }
         } else adaptiveDpr.resetSampling(now);
-        if (presentation) element.dataset.presentationIdle = String(!needsFrame &&
-          !presentationTexturesPending && !reflectionTimer && !reflectionIdle && !reflectionFrame);
+        element.dataset.renderIdle = String(!needsFrame &&
+          !sceneTexturesPending && !reflectionTimer && !reflectionIdle && !reflectionFrame);
+        if (presentation) element.dataset.presentationIdle = element.dataset.renderIdle;
       }
       frame = requestAnimationFrame(animate);
     };
@@ -6018,6 +6034,7 @@ function GallerySceneRenderer({
         cancelAnimationFrame(frame);
         renderRunning = false;
       } else {
+        sceneRevision += 1;
         if (inactiveAt !== undefined && activeGuidedTour && activeGuidedTour.pausedAt === undefined)
           activeGuidedTour.startedAt += performance.now() - inactiveAt;
         if (inactiveAt !== undefined) adaptiveDpr.resetSampling();
