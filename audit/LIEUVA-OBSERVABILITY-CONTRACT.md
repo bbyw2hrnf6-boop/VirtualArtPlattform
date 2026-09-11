@@ -1,5 +1,7 @@
 # LIEUVA Observability Contract
 
+> Normative telemetry contract. Implementation status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md); generated evidence belongs in ignored `artifacts/`.
+
 Status: implemented contract for WP6, 2026-08-24. This document is normative for product telemetry. Existing AURA technical identifiers remain compatibility-sensitive.
 
 ## 1. Purpose and boundary
@@ -98,4 +100,3 @@ SEO delivery Functions (`spaceDocument`, `spaceCard`, `spaceSitemap`) use struct
 Pilot recommendation: retain observability logs for 30 days, restrict access to project operators, and export no raw telemetry to advertising systems. Product analytics must not be joined to Auth/profile data. Any future vendor requires a privacy review, EU-region/processing decision, retention setting, deletion procedure, and an adapter behind the same boundary.
 
 Dashboard owner: product/engineering owner. Incident owner: Firebase project owner. Review consent wording and retention before public analytics activation.
-

@@ -48,7 +48,7 @@ describe('privacy-safe telemetry boundary', () => {
     vi.unstubAllEnvs();
   });
 
-  it('sends the production batch through the lazy Functions transport', async () => {
+  it('sends the production batch through the Functions transport', async () => {
     __setTelemetryTransportForTests(null);
     vi.stubEnv('VITE_TELEMETRY_MODE', 'functions');
     trackTelemetry('publish_failed', { error_class: 'network' });

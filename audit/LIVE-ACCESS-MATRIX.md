@@ -1,4 +1,6 @@
-# AURA live access and lifecycle matrix
+# LIEUVA live access and lifecycle matrix
+
+> Customer-facing naming is LIEUVA; AURA/gallery identifiers inside the procedure remain compatibility contracts. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
 
 Run this only with disposable test content after the trusted room Functions,
 App Check key, Firestore rules, and Storage rules are live. Never use a real

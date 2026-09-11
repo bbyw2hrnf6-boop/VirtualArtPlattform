@@ -5,9 +5,9 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage'] },
+  { ignores: ['dist', 'coverage', 'artifacts', '.firebase', 'functions/lib', 'functions/generated'] },
   {
-    files: ['scripts/**/*.mjs', 'functions/scripts/**/*.mjs', 'firebase-cli/**/*.mjs'],
+    files: ['scripts/**/*.mjs', 'functions/scripts/**/*.mjs', 'firebase-cli/**/*.mjs', 'blender/**/*.mjs', 'audit/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

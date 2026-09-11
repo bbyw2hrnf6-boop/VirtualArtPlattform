@@ -1,6 +1,5 @@
 .aura-section-heading > p,
-.aura-pilot > div:first-child > p,
-.aura-trust > div:first-child > p {
+.aura-pilot > div:first-child > p {
   margin: 0;
   color: var(--acid, #d9ff43);
   font-size: 12px;
@@ -38,7 +37,6 @@
 }
 
 .aura-pilot,
-.aura-trust,
 .aura-faq {
   padding: clamp(88px, 13vh, 150px) clamp(24px, 8vw, 128px);
 }
@@ -56,8 +54,7 @@
 }
 
 .aura-section-heading h2,
-.aura-pilot h2,
-.aura-trust h2 {
+.aura-pilot h2 {
   margin: 22px 0 0;
   color: #1a1b18;
   font: 400 clamp(52px, 7vw, 102px)/.87 Instrument, Georgia, serif;
@@ -65,8 +62,7 @@
 }
 
 .aura-section-heading h2 em,
-.aura-pilot h2 em,
-.aura-trust h2 em {
+.aura-pilot h2 em {
   color: #777870;
   font-weight: 400;
 }
@@ -179,43 +175,6 @@
   color: #d9ff43;
 }
 
-.aura-trust {
-  display: grid;
-  grid-template-columns: minmax(300px, .8fr) minmax(460px, 1.2fr);
-  gap: 10vw;
-  background: #d8d5cc;
-}
-
-.aura-trust > div:first-child > p { color: #61655a; }
-.aura-trust h2 { font-size: clamp(52px, 6vw, 88px); }
-
-.aura-trust dl {
-  margin: 0;
-  border-top: 1px solid #a5a49d;
-}
-
-.aura-trust dl > div {
-  display: grid;
-  grid-template-columns: minmax(105px, .34fr) minmax(0, .66fr);
-  gap: 28px;
-  padding: 25px 0;
-  border-bottom: 1px solid #a5a49d;
-}
-
-.aura-trust dt {
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: .15em;
-  text-transform: uppercase;
-}
-
-.aura-trust dd {
-  margin: 0;
-  color: #5d5f59;
-  font-size: 12px;
-  line-height: 1.75;
-}
-
 .aura-faq {
   display: grid;
   grid-template-columns: minmax(280px, .8fr) minmax(480px, 1.2fr);
@@ -284,16 +243,13 @@
 
 @media (max-width: 1000px) {
   .aura-pilot,
-  .aura-trust,
   .aura-faq { grid-template-columns: 1fr; }
   .aura-pilot-options { margin-top: 12px; }
-  .aura-trust dl,
   .aura-faq-list { margin-top: 28px; }
 }
 
 @media (max-width: 720px) {
   .aura-pilot,
-  .aura-trust,
   .aura-faq { padding: 88px 22px; }
 
   .aura-section-heading {
@@ -303,16 +259,11 @@
 
   .aura-section-heading h2,
   .aura-pilot h2,
-  .aura-trust h2,
   .aura-faq .aura-section-heading h2 { font-size: clamp(49px, 15vw, 72px); }
   .aura-section-heading > span { font-size: 12px; }
   .aura-pilot-options { grid-template-columns: 1fr; }
   .aura-pilot-options article { min-height: 330px; }
   .aura-pilot-options a { min-height: 50px; }
-  .aura-trust dl > div {
-    grid-template-columns: 1fr;
-    gap: 9px;
-  }
   .aura-faq summary { min-height: 72px; }
   .aura-faq details > p { margin-right: 12px; }
 }

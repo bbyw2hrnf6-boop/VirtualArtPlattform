@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build && node scripts/prepare-space-delivery.mjs && node scripts/check-performance-budgets.mjs",
     "preview": "vite preview",
     "validate:glb": "node scripts/validate-glb-contract.mjs",
+    "clean:generated": "node scripts/clean-generated.mjs",
     "test": "vitest run",
     "test:operator-tools": "node --test scripts/operator-tools.node-test.mjs",
     "test:scripts": "node --test scripts/*.node-test.mjs firebase-cli/*.node-test.mjs && node firebase-cli/validate-lock.mjs",
@@ -18,7 +19,7 @@
     "lint": "eslint .",
     "check": "npm run lint && npm test && npm run test:scripts && npm run validate:premium && npm run build && npm run check:production-build",
     "check:functions": "npm --prefix functions run check",
-    "check:ci": "npm run check && npm run check:functions && npm run test:browser-smoke",
+    "check:ci": "npm run check && npm run test:firebase-rules && npm run check:functions && npm run test:browser-smoke",
     "check:production-build": "node scripts/check-production-build.mjs",
     "check:performance": "node scripts/check-performance-budgets.mjs",
     "preflight:production": "node scripts/wp2-release-preflight.mjs",
@@ -27,11 +28,13 @@
     "review:public-content:decision": "node scripts/public-content-decision.mjs",
     "moderation:queue": "node scripts/moderation-queue.mjs",
     "moderation:action": "node scripts/moderation-action.mjs",
-    "validate:premium": "node scripts/validate-premium-glb.mjs"
+    "validate:premium": "node scripts/validate-premium-glb.mjs",
+    "validate:premium:update": "node scripts/validate-premium-glb.mjs --write-report"
   },
   "engines": {
     "node": "22.23.2"
   },
+  "packageManager": "npm@10.9.8",
   "dependencies": {
     "firebase": "^12.16.0",
     "qrcode-generator": "^2.0.4",

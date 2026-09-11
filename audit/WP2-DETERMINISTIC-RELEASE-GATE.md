@@ -1,5 +1,7 @@
 # WP2 — Deterministic Release Gate
 
+> Durable release contract matching active `wp2-*` scripts. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
+
 Date: 2026-09-03
 
 Local repository implementation: **complete**

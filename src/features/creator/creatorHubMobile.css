@@ -10,7 +10,6 @@
   .creator-hub__notifications { grid-column: 1 / -1; }
   .creator-hub__social-grid { grid-template-columns: 1fr; }
   .creator-hub__rail { position: static; }
-  .creator-hub__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 761px) and (max-width: 860px) {
@@ -58,7 +57,6 @@
   .creator-hub__hero,
   .creator-hub__work,
   .creator-hub__social,
-  .creator-hub__directory,
   #creator-spaces,
   #creator-profile,
   #creator-activity { scroll-margin-top: var(--hub-scroll-offset); }
@@ -80,8 +78,7 @@
   .creator-hub__pulse div:nth-child(-n+2) { border-bottom: 1px solid #d1cec6; }
   .creator-hub__pulse dd { overflow: hidden; font-size: 20px; text-overflow: ellipsis; white-space: nowrap; }
   .creator-hub__work,
-  .creator-hub__social,
-  .creator-hub__directory { padding: 58px 20px; }
+  .creator-hub__social { padding: 58px 20px; }
   .creator-hub__compact-heading,
   .creator-hub__section-heading { align-items: start; flex-direction: column; gap: 0; }
   .creator-hub__compact-heading h2 { font-size: 47px; }
@@ -117,11 +114,6 @@
   .creator-post__discussion form button { min-height: 44px; }
   .creator-post__comments li.is-reply { margin-left: 16px; }
   .creator-hub__rail { padding: 22px; }
-  .creator-hub__search { grid-template-columns: 24px minmax(0, 1fr) 44px; }
-  .creator-hub__search input { font-size: 27px; }
-  .creator-hub__search-results { grid-template-columns: 1fr; }
-  .creator-hub__grid { grid-template-columns: 1fr; }
-  .creator-hub__grid > a { min-height: 260px; }
   .creator-hub__hero-visual nav a,
   .creator-hub__composer button,
   .creator-hub__composer-action,
@@ -133,8 +125,6 @@
   .creator-post__discussion form button,
   .creator-hub__rail > a,
   .creator-hub__empty :is(a, button) { min-height: 44px; font-size: 11px; }
-  .creator-hub__search > span,
-  .creator-hub__search-results > p,
   .creator-hub__notifications > :is(a, button) { font-size: 11px; }
 }
 
@@ -143,8 +133,6 @@
   .creator-hub__hero-visual { min-height: 292px; }
   .creator-hub__pulse div { grid-template-columns: 28px minmax(0, 1fr); }
   .creator-hub__pulse dd { grid-column: 2; }
-  .creator-hub__search input { font-size: 24px; }
-  .creator-hub__search-results > a { grid-template-columns: 44px minmax(0, 1fr) 18px; }
 }
 
 @media (max-width: 340px) {

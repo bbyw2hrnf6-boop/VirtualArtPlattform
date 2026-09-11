@@ -20,7 +20,6 @@ Material-specific requests:
 - `aura-smoked-oak-v2.webp`: smoked European oak, dark warm brown, long straight grain, occasional narrow rays, refined gallery finish.
 - `aura-black-slate-v3.webp`: charcoal-black natural cleft stone, subtle mineral layering and sparse fine fissures.
 - `aura-light-oak-slats-v3.webp`: narrow vertical pale-oak battens, dark acoustic gaps and restrained architectural grain.
-- `aura-natural-oak-v3.webp`: pale honey European-oak floorboards with restrained knots and joints.
 - `aura-light-terrazzo-v3.webp`: warm-grey terrazzo with small muted mineral chips.
 - `aura-black-oak-slats-v3.webp`: charcoal-black stained-oak battens with deep acoustic gaps.
 - `aura-calacatta-marble-v4.webp`: white Calacatta marble with broad cool-grey and lightly taupe-edged veins that stay legible from the gallery camera, matching the visual confidence of the black marble without copying its pattern.
@@ -41,7 +40,6 @@ c24ed25deaa38f109a92a0689108e10f48a2e00e9f76e920f5a665c08dbb09e9  aura-american-
 1e9fb7d26038b5d0bbc91d511ee283fc08ffefc8a3b06e8cda3b26b2e5c89ff2  aura-smoked-oak-v2.webp
 a3ea1507cc19f476ec4650a01a4ab4624e45a125d9ccfebfd61944e56fe0ea7f  aura-black-slate-v3.webp
 56bab7787a26f3301f98d1fd133c463dc346f4653e8bc04573adf8eb2eb48314  aura-light-oak-slats-v3.webp
-aba6d64fac70a47dbe4a3b672cc502aafae46f7ee5f06c2313834560191056a6  aura-natural-oak-v3.webp
 f1b95526700675a1baab5f250215da97c43c8e7ced3a9de0d459da248f0e544b  aura-light-terrazzo-v3.webp
 16fb5295d4fa36931ab37c0df2eb0b3bbf93c03a06b7e1b2d52ea19a07611585  aura-black-oak-slats-v3.webp
 2cef1f9a634df683a43293f436e9ee9dfeeaf8d23a32dbb1f4b6062f317102c2  aura-calacatta-marble-v4.webp
@@ -61,7 +59,7 @@ d6984d80c3f8410d6b57ba95e5b795d94eb7cd5d280d624ab9ab4263286ced85  aura-greige-mi
 
 The new surfaces are produced on demand by code in `GalleryScene.tsx`, using a deterministic seed per material. Albedo canvases use 512 × 512 sRGB; separate 256 × 256 scalar height and roughness canvases use linear data. Fine cork aggregate, tile grout, light chips in dark terrazzo and alternating wood grain distinguish the floors. At this resolution, an active procedural surface uses roughly 2 MiB for RGBA textures including mipmaps; the catalogue is not preloaded as a set of textures. Replacing a surface disposes replaced texture objects while preserving the imported AO map. No raster files, external textures or extra image-generation assets were added for this pass. Native Blender beauty renders and source files are separate deliverables.
 
-Provenance and rights: see `ASSET_LICENSES.md`. All four new wall colours and floor patterns were inspected in the actual Studio. Terracotta/parquet variation, parquet joints and dark terrazzo aggregate were softened after browser review. Desktop/mobile viewport and recovery checks are recorded in `audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md`; these checks do not establish photorealism or physical-phone performance.
+Provenance and rights: see `ASSET_LICENSES.md`. All four new wall colours and floor patterns were inspected in the actual Studio. Terracotta/parquet variation, parquet joints and dark terrazzo aggregate were softened after browser review. These checks do not establish photorealism or physical-phone performance.
 
 ## Premium-v3 material studies · 8–9 September 2026
 
@@ -96,8 +94,8 @@ approved overhead finishes, retain their previous behavior. Microcement, dark
 concrete, slate and terrazzo also use explicit metric floor repeats. Black marble
 keeps its existing shader profile. These are artistic shader parameters, not scans.
 
-The picker displays eleven existing raster inputs and four procedural previews;
-no duplicate material IDs are added. `blender/production/v3/story/` contains packed,
+Raster inputs load on demand and procedural previews do not add duplicate material
+IDs. `blender/production/v3/story/` contains packed,
 editable material closeups with byte-validated independent detail maps. Refer to
 its manifests for dimensions, hashes and the differences between Blender and
 Three.js. The original albedos and prior license records remain unchanged.

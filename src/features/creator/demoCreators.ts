@@ -80,10 +80,6 @@ export const DEMO_CREATORS: DemoCreator[] = [
   ),
 ];
 
-export const DEMO_CREATOR_POSTS = DEMO_CREATORS
-  .flatMap((creator) => creator.posts)
-  .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-
 export function isDemoCreatorHandle(handle: string) {
   return DEMO_CREATORS.some((creator) => creator.handle === handle.toLowerCase());
 }

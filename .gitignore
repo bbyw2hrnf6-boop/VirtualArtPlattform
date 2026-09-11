@@ -4,12 +4,24 @@ functions/lib/
 functions/generated/app-shell.html
 functions/functions.yaml
 artifacts/
+audit/final/
+audit/screenshots/
+audit/evidence/
+audit/lieuva-evidence/
+audit/*-qa.json
+audit/*-qa.mjs
+audit/browser-report.json
+audit/lighthouse-*.json
+GPT generated example pictures/
 *.tsbuildinfo
 .env
 .env.*
 .firebase/
 .DS_Store
 firebase-debug.log*
+firestore-debug.log*
+database-debug.log*
+ui-debug.log*
 service-account*.json
 *-service-account.json
 *firebase-adminsdk*.json
@@ -19,3 +31,7 @@ gha-creds-*.json
 blender/production/__pycache__/
 blender/production/**/*.log
 blender/production/**/*.blend1
+blender/production/v1/*-r*-*.png
+!blender/production/v1/*-r3-3840.png
+blender/production/v3/*-r*-*.png
+!blender/production/v3/*-r5-3840.png

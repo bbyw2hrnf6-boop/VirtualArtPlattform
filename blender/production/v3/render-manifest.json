@@ -24,22 +24,6 @@
     "sha256": "1380286a05d434dea22ab7c0f50f9f3eeadd499ded69c2b93bd586d6912e6e82"
   },
   {
-    "file": "nocturne-r4-1280.png",
-    "width": 1280,
-    "height": 720,
-    "bitDepth": 16,
-    "bytes": 4756982,
-    "sha256": "c41c25e251fcb17ad50ed50e337ebe50b92a73f972790923f5ceba3f577cf02c"
-  },
-  {
-    "file": "nocturne-r5-1280.png",
-    "width": 1280,
-    "height": 720,
-    "bitDepth": 16,
-    "bytes": 4855887,
-    "sha256": "67c5ccf5840d77dc5b3af3c9924956b0e059da5226a2ff696f14b05747001817"
-  },
-  {
     "file": "nocturne-r5-3840.png",
     "width": 3840,
     "height": 2160,
@@ -72,22 +56,6 @@
     "sha256": "fd09b470a5c7db66e173e92f380b6098a080aaa014907a2d6cc756ba4c185e4c"
   },
   {
-    "file": "pavilion-r4-1280.png",
-    "width": 1280,
-    "height": 720,
-    "bitDepth": 16,
-    "bytes": 5050431,
-    "sha256": "b697224f67619050c8f7b6bb0b856b235464d52e64b5371b6a6dfd7b0effec29"
-  },
-  {
-    "file": "pavilion-r5-1280.png",
-    "width": 1280,
-    "height": 720,
-    "bitDepth": 16,
-    "bytes": 5055570,
-    "sha256": "a75c75331073f12c57a89b911426bcb98d634cc21e821805ce4d655e1abe97a3"
-  },
-  {
     "file": "pavilion-r5-3840.png",
     "width": 3840,
     "height": 2160,
@@ -118,22 +86,6 @@
     "bitDepth": 16,
     "bytes": 2776630,
     "sha256": "32c5b964040c8bde9d8b10191ded21cc198eda1137299565f29b1a5d3bd8e2fd"
-  },
-  {
-    "file": "white-cube-r4-1280.png",
-    "width": 1280,
-    "height": 720,
-    "bitDepth": 16,
-    "bytes": 4994798,
-    "sha256": "a8e2c2e3a17402f5ddba6a0e8180769f2d460a478d3c068d74cdd4860b72f339"
-  },
-  {
-    "file": "white-cube-r5-1280.png",
-    "width": 1280,
-    "height": 720,
-    "bitDepth": 16,
-    "bytes": 4998860,
-    "sha256": "291937eefdcafa6f6433463cdb2d85b6c1e5a504a64bec9a4fad606026b8a2e1"
   },
   {
     "file": "white-cube-r5-3840.png",

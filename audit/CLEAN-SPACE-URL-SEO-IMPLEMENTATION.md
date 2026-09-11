@@ -1,5 +1,7 @@
 # WP5 — Clean Space URL & SEO implementation evidence
 
+> Durable delivery specification with dated evidence. For current status and test coverage, use [`CURRENT-STATE.md`](./CURRENT-STATE.md) and run the repository gates.
+
 **Date:** 2026-08-24  
 **Verdict:** **PASS WITH CONDITIONS**  
 **Deployment:** none  
@@ -14,8 +16,6 @@ WP5 uses Firebase Hosting plus three public, privacy-aware HTTP Functions on the
 - `spaceSitemap` emits the homepage and eligible public Spaces only.
 
 The React application keeps its existing lightweight router. Only published-Space delivery gains a clean pathname. Studio, Account, Auth, DannyHirschArts and the other hash routes are preserved.
-
-The complete pre-implementation decision is in `audit/SPACE-URL-SEO-ARCHITECTURE.md`.
 
 ## 2. Alternatives rejected
 

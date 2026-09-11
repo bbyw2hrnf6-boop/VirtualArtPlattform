@@ -1,5 +1,7 @@
 # LIEUVA WP1 — legal inputs and moderation operations design
 
+> Durable owner-decision and operations record, not a current roadmap. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
+
 **Date:** 2026-09-02
 
 **Status:** engineering containment and bounded pilot tooling implemented and

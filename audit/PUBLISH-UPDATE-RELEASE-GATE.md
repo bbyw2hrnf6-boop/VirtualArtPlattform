@@ -1,5 +1,7 @@
 # Publish / Update / Access Release Gate
 
+> Durable acceptance matrix with dated evidence. For current status and test coverage, use [`CURRENT-STATE.md`](./CURRENT-STATE.md) and run the repository gates.
+
 **Date:** 23 August 2026  
 **Scope:** Work Package 1 only  
 **Verdict:** **PASS WITH CONDITIONS**  
@@ -201,4 +203,3 @@ Cleanup must be performed only in the authorized test environment and only from 
 ## 9. Final decision
 
 **PASS WITH CONDITIONS.** All locally executable Work Package 1 scenarios pass, the only reproduced code defect was fixed with regression coverage, and failure paths preserve recoverable work and live identity. The repository implementation is ready to proceed to Work Package 2, but public-launch confidence remains conditional on the exact external Firebase/App Check/browser matrix above.
-

@@ -1,8 +1,8 @@
 # LIEUVA template environments and runtime previews
 
-Updated 2026-09-09. White Cube, Warm Gallery (internal `nocturne`) and Grand Forum load `premium-v3` by default in Studio and the shared visitor renderer. `premium-v1` and `premium-v2` are archived review/previous runtime assets. Sources and reproducible Blender commands: [production README](../../../blender/production/README.md).
+White Cube, Warm Gallery (internal `nocturne`) and Grand Forum load the six `premium-v3` assets in Studio and the shared visitor renderer. Older runtime exports were removed from `public/`; their editable Blender sources and Git history remain. Sources and reproducible commands: [production README](../../../blender/production/README.md).
 
-The three preview images below were captured by the real Studio capture function from each default sample collection in the shared visitor renderer, using Reset view at eye height in a local QA fixture. PNG captures were encoded as WebP at quality 88. No publication was submitted. They are actual browser renderings, not Cycles beauty images or generated UI concepts. Display URLs include `?v=premium-v3` to refresh browser caches. Native 4K Cycles masters remain separate in `blender/production/v3/`; earlier masters are archived in `v1/`.
+The three preview images below were captured by the real Studio capture function from each default sample collection in the shared visitor renderer, using Reset view at eye height in a local QA fixture. PNG captures were encoded as WebP at quality 88. No publication was submitted. They are actual browser renderings, not Cycles beauty images or generated UI concepts. Display URLs include `?v=premium-v3` to refresh browser caches. Native 4K Cycles masters remain separate in `blender/production/v3/`; the v1 masters remain as provenance/history.
 
 | Preview | Pixels | Bytes | SHA-256 |
 | --- | --- | --- | --- |
@@ -14,7 +14,7 @@ The three preview images below were captured by the real Studio capture function
 
 Six self-contained GLBs ship under `premium-v3/`. Maximum texture dimensions are 1024 px desktop / 512 px mobile. Each retains exact template dimensions, 4/4/14 placement IDs, hidden colliders, navmesh, start/look and artwork/view anchors. Cosmetic meshes are batched separately from functional geometry. Geometry-only AO is in UV channel 1; editable albedo/detail uses metric UV channel 0. The current controller consumes colliders and canonical Studio surfaces, while exported navmesh/anchors remain contract evidence.
 
-Run `npm run validate:premium` for exact current measurements in `audit/premium-glb-measurements.json`. File size is distinct from decoded texture memory. See [licenses](../../../ASSET_LICENSES.md) for project-generated geometry, existing albedo derivatives and fictional demo artwork.
+Run `npm run validate:premium` to validate the six current files. Use `npm run validate:premium:update` only when intentionally refreshing `audit/premium-glb-measurements.json`. File size is distinct from decoded texture memory. See [licenses](../../../ASSET_LICENSES.md) for project-generated geometry, existing albedo derivatives and fictional demo artwork.
 
 ## Editorial opening posters · 9 September 2026
 

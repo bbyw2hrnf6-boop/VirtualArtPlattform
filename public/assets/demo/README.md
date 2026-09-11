@@ -2,7 +2,7 @@
 
 `danny-gallery.glb` is the full authored exhibition. `danny-gallery-mobile.glb` is its compact/mobile delivery derivative; the homepage scroll story selects it for compact interaction layouts, while the gallery runtime also uses it for its low quality tier.
 
-The `danny-emil-finale-v2` desktop and mobile captures serve as loading and WebGL-failure posters. The desktop capture also illustrates Threshold in the homepage’s Follow the work section, linking to the same reference exhibition. They show the corrected material contract: matte plaster walls and marble only on the floor. Once the model is ready, the complete blueprint-to-walk sequence stays inside the live GLB. Superseded non-v2 captures were removed.
+`danny-emil-finale-v2.webp` serves as the loading/WebGL-failure poster and illustrates Threshold in the homepage’s Follow the work section. It shows the corrected material contract: matte plaster walls and marble only on the floor. Once the model is ready, the complete blueprint-to-walk sequence stays inside the live GLB.
 
 The mobile derivative keeps all 191 nodes, 179 node metadata records, 84 meshes, 31 materials, 12 animations, 27 colliders, 16 view anchors, seven artwork hotspots, and eight route waypoints. Geometry was simplified to roughly half the triangles. Material textures are at most 512 px, artwork textures are at most 768 px, and embedded WebP images use quality 72. Meshopt compression remains enabled and decoding uses up to two Web Workers.
 
@@ -14,6 +14,5 @@ SHA-256:
 - Mobile GLB: `8421fb83e0e74737d5be24d6d096623126cfc9e7f4faf891aa9722b3e465a4cf`
 - Cover: `ed9d32cb2fcef6f3d5b39119ab3955f0222b3b3b37a02b68b2b16db8356b5c1d`
 - Emil finale, desktop: `8f7f9464464856bbf344443f74e03388f68511b0c2e5a27c9ff60b4c9274e8e3`
-- Emil finale, mobile: `566c54195fd088d172503647addd96e2cb02da1d01181586456d443e6bc5963c`
 
 The project-specific rights restrictions in [`ASSET_LICENSES.md`](../../../ASSET_LICENSES.md) apply to both GLBs and the derived stills.

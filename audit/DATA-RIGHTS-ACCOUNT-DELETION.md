@@ -1,5 +1,7 @@
 # Data Rights, Account Export & Account Deletion
 
+> Durable lifecycle specification with dated evidence. For current status and test coverage, use [`CURRENT-STATE.md`](./CURRENT-STATE.md) and run the repository gates.
+
 Date: 2026-09-04
 Work packages: WP2 export; WP3 resumable deletion
 Verdict: **LOCAL PASS WITH EXTERNAL AND LEGAL CONDITIONS**

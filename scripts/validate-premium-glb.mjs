@@ -156,6 +156,9 @@ export async function inspectPremiumGlb(path) {
   return { file: basename(path), id, bytes: bytes.length, visibleTriangles: visible, totalTriangles: total, navTriangles: nav, materialBatches: batches, aoMaterials, estimatedTextureBytes, images, roles };
 }
 const results = [];
-const paths = process.argv.length > 2 ? process.argv.slice(2) : ids.flatMap(id => ['desktop', 'mobile'].map(tier => `public/assets/templates/premium-v3/${id}-${tier}.glb`));
+const args = process.argv.slice(2);
+const writeReport = args.includes('--write-report');
+const requestedPaths = args.filter(arg => arg !== '--write-report');
+const paths = requestedPaths.length ? requestedPaths : ids.flatMap(id => ['desktop', 'mobile'].map(tier => `public/assets/templates/premium-v3/${id}-${tier}.glb`));
 for (const path of paths) { const result = await inspectPremiumGlb(path); results.push(result); console.log(JSON.stringify(result)); }
-if (results.length) await writeFile('audit/premium-glb-measurements.json', JSON.stringify(results, null, 2) + '\n');
+if (writeReport && results.length) await writeFile('audit/premium-glb-measurements.json', JSON.stringify(results, null, 2) + '\n');

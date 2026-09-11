@@ -33,7 +33,7 @@ export default defineConfig(({ command }) => ({
             includeDependenciesRecursively: false,
           }, {
             name: 'firebase',
-            test: /node_modules[\\/](?:@firebase|firebase)[\\/]|src[\\/]services[\\/](?:firebase|accountService|telemetryTransport)\.ts$/,
+            test: /node_modules[\\/](?:@firebase|firebase)[\\/]|src[\\/]services[\\/](?:firebase|accountService)\.ts$/,
           }],
         },
       },

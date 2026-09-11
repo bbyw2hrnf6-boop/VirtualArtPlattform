@@ -11,13 +11,11 @@ The three template environments now use `premium-v3` by default in the shared St
 | Runtime GLBs | `../../public/assets/templates/premium-v3/*.glb` | Six desktop/mobile assets with optimized architecture and validated placement/collision contracts; excludes beauty staging/lights/cameras. |
 | Studio integration | `src/features/gallery/GalleryScene.tsx` and `scene/premiumEnvironment.ts` | Shared real-time rendering in Arrange, Walk Preview, homepage and published viewer; arrival readiness, editable materials and navigation. |
 
-The archived v1/v2 sources and renders remain available. Round 4 introduces
-new concrete/limestone albedos and fixes the Forum's overlapping pier/wall ends.
-Round 5 refines daylight direction, framing and bronze highlights. Both rounds
-have three completed 1280 × 720 proofs. All three native 4K round-5 masters are
-complete and visually inspected. Dimensions, bit depth, byte sizes and SHA-256
-hashes are recorded in `v3/render-manifest.json`; acceptance is documented in
-[the current audit](../../audit/LIEUVA-ARRIVAL-MATERIAL-STORY-2026-09-08.md).
+Historical v1/v2 `.blend` sources and the v1 4K masters remain available. Generated
+preview rounds, backups and logs were removed; Git history retains them. Round 5
+refines daylight direction, framing and bronze highlights. All three native 4K
+round-5 masters are retained. Dimensions, bit depth, byte sizes and SHA-256 hashes
+are recorded in `v3/render-manifest.json`.
 CPU Cycles uses 96 maximum
 samples, a 0.006 adaptive threshold, denoising, 10 maximum bounces and AgX.
 Metal compatibility probes stalled on this installation; no GPU speedup is claimed.
@@ -59,7 +57,7 @@ Architecture is batched by material/overhead policy. Functional nodes stay separ
 - Room lighting and reflection probes are rebuilt after attachment. The Forum probe sits in a free aisle rather than inside its central divider.
 - Artwork remains separate, color managed and editable; the same renderer/camera survives view and material changes. Preview capture waits for the room asset and scene textures. The visible arrival overlay also waits for collection hydration, reflections, shader compilation and two rendered frames before the camera introduction begins.
 
-See `../../audit/LIEUVA-BLENDER-PRODUCTION-2026-09-08.md` and `../../audit/premium-glb-measurements.json` for evidence and limits. Existing project asset provenance applies; see `../../ASSET_LICENSES.md`. The supplied reference screenshots guide art direction, not product functionality or reproduction rights.
+See `../../audit/premium-glb-measurements.json` for current runtime measurements and limits. Existing project asset provenance applies; see `../../ASSET_LICENSES.md`. The supplied reference screenshots guide art direction, not product functionality or reproduction rights.
 
 The separate `blender/production/v3/material-library.blend` packs all three new material studies, including natural oak, with editable Principled shaders, independent procedural microstructure and metric sample planes. Rebuild with `blender/production/build_material_library.py`; it does not replace any room source or claim a measured PBR scan.
 

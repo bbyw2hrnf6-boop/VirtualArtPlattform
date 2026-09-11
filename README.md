@@ -1,312 +1,132 @@
-# LIEUVA — Immersive 3D presentation platform
+# LIEUVA
 
-Current local visual/runtime production: [20-second story and desktop follow-through](./audit/LIEUVA-STORY-20S-DESKTOP.md). The White Cube story retains all 24 shots in an optional 20-second film: room construction, artwork placement, automatic comparison of three floors and three walls, then an entrance and held interior view. Native scroll follows the same reversible sequence. Homepage room previews and desktop publication sharing have been refined from the supplied boards. The mobile Studio retains its five-tool dock and focused sheets; all controls reuse the existing editor. Premium-v3 GLBs and existing 4K beauty masters remain separate. No automatic release is implied.
-
-The homepage and stationary Studio Arrange view pause unchanged GPU frames and
-redraw for camera, material and texture changes. Walk and guided tours remain
-continuous. Room reflection captures repair invalid HDR samples before
-filtering, preventing black interiors on software GPUs without removing reflections
-or lowering room/material resolution. Current CI follow-up evidence is recorded in
-the editorial acceptance document above.
-
-LIEUVA lets people create, publish and explore immersive 3D spaces for art, design and ideas — directly in the browser. This repository contains the current production-pilot product: LIEUVA Studio, three Space templates, a visitor experience, Discover, Creator identity and community, account access, and a Firebase publishing lifecycle.
-
-> **Compatibility firewall:** LIEUVA is the visible brand. Existing AURA/gallery identifiers in Firebase, Storage, callable Functions, local persistence, `.aura.json`, routes and GLB metadata are intentional compatibility contracts and must not be casually renamed.
+LIEUVA is a browser-based platform for building, publishing and exploring walkable 3D exhibitions. The product includes LIEUVA Studio, three authored room templates, public and protected Space delivery, Discover, Creator profiles and a Firebase-backed publishing lifecycle.
 
 Live product: [lieuva.com](https://lieuva.com/)
 
-> **Launch status:** LIEUVA is a production-pilot candidate, not yet an unrestricted public-upload marketplace. The launch verdict and open owner actions live in `audit/LIEUVA-LAUNCH-READINESS-WP16.md`. Read [Security, privacy, and current limitations](#security-privacy-and-current-limitations) before inviting public uploads.
+> **Compatibility firewall:** LIEUVA is the customer-facing brand. Existing AURA/gallery identifiers in Firebase, Storage, callable Functions, local persistence, `.aura.json`, routes and GLB `aura_*` metadata are active compatibility contracts. Do not rename them without a migration plan and regression coverage.
 
-## What the production-pilot product includes
+## Current state
 
-- A cinematic White Cube product story, a separate Danny Hirsch reference exhibition, and public Space discovery.
-- A Creator Hub with self-service public/private profiles, profile and cover images,
-  three controlled profile type styles, six accessible profile color moods, Creator
-  search, follows, studio notes, persistent comment discussions and replies,
-  appreciations, alerts, and per-Space Hub placement. Curated emoji pickers are
-  available in freeform bio, studio-note, and comment fields; identifiers and URLs
-  remain plain text so routing and validation stay stable. Creator profiles become
-  public immediately when their owner enables visibility; no profile review is required.
-- Exactly three selectable gallery spaces:
+- Three templates: White Cube, Warm Gallery (technical ID `nocturne`) and Grand Forum (`pavilion`).
+- Arrange and Walk Preview share one Three.js scene and camera session.
+- Artwork upload, placement, framing, transforms, undo/redo, versioned local recovery and publish review are active.
+- The homepage contains the reversible 20-second room sequence with three floor and three wall comparisons, plus reduced-motion and mobile behavior.
+- `public/assets/templates/premium-v3/` is the only shipping template-runtime generation. Older exports remain recoverable from Git; editable `.blend` sources and 4K masters remain in `blender/production/`.
+- The Danny Hirsch exhibition remains the visitor-quality and metadata reference.
+- The repository is suitable for a controlled production pilot, not unrestricted public uploads. External launch conditions are listed in [current state](./audit/CURRENT-STATE.md).
 
-  | Space | Character | Artwork capacity |
-  | --- | --- | ---: |
-  | The White Cube | Luminous, minimal hall | 8 |
-  | Nocturne | Intimate, dramatic chamber | 8 |
-  | The Grand Forum | 40 × 60 m, five connected galleries | 14 |
+## Toolchain and setup
 
-- Browser uploads for JPG, PNG, WebP, and browser-decodable HEIC/HEIF images.
-- An instant White Cube sandbox with three documented fictional demo artworks, no upload or account required.
-- Visual wall selection, automatic free-slot placement, click-to-place, direct dragging, precision sliders, exact displayed dimensions, framing, lock/hide, left/centre/right alignment, and even spacing across one wall.
-- Persistent local autosave and refresh recovery, undo/redo, transactional placement validation, and a pre-publish geometry review.
-- Separate **Arrange** and **Walk Preview** modes, plus open-roof and finished-ceiling inspection without rebuilding the WebGL renderer.
-- Reset View restores a dependable composition; entering Walk Preview starts in front of the selected visible artwork when one is selected.
-- The Grand Forum includes a five-zone floor-plan navigator for its central axis and four connected galleries.
-- Sixteen wall colours/finishes, fifteen floor finishes, five ceiling systems, and three lighting presets.
-- Thirteen distinct catalogue objects, with up to eight placements. Selecting an existing object opens its inspector instead of adding a duplicate; legacy Ficus/bench variants remain readable.
-- Object dragging preserves the pointer’s grab position. Compact Curator actions reveal the proposed room and keep variation/undo controls above the collapsed tool panel.
-- A local **AI Curator** with fresh, palette-aware variations, three design directions plus Surprise me, and scopes for surfaces/objects, artwork layout, or objects alone. It works in empty rooms, reserves circulation space, preserves locked/hidden artwork and applies each proposal as one undo step. It does not send artwork to an external AI API.
-- Cinematic gallery introductions, 1.75 m visitor eye height, walk and overview modes, artwork information cards, an accessible text-first artwork directory, and click-to-walk navigation.
-- The Danny Hirsch reference offers an optional 45-second guided tour, authored Smart Views, Reset View, exact GLB artwork metadata, and an automatic artwork-directory fallback when WebGL is unavailable.
-- Discover keeps the Danny reference exhibition visible when the live community feed is empty or unavailable.
-- Account-free building and Walk Preview; publishing uses verified Email/Password or Google accounts with public, unlisted, or private account-preview rooms.
-- Owner, Editor, and Viewer ACL records. Owners and Editors can update room content under the existing share URL; only Owners manage access and deletion.
-- A separate optional LIEUVA Preview Letter opt-in for Email and Google accounts, with one welcome edition, account-level withdrawal, and one-click unsubscribe. Branded verification/newsletter delivery requires the documented Cloud Functions and SMTP extension setup.
-- Clear **LIEUVA Light Preview** status throughout account, picker, publishing, and plan surfaces; future paid professional tools remain visibly planned and inactive.
+Use the pinned versions from `.nvmrc`, `package.json` and CI:
 
-## Requirements
-
-- [Node.js](https://nodejs.org/) 22.13 or newer
-- npm
-- A current desktop or mobile browser with WebGL and hardware acceleration enabled
-- A Firebase project only when testing publication and Discover
-- Blender only when inspecting or regenerating the non-runtime concept files
-
-## Quick start
+- Node.js `22.23.2`
+- npm `10.9.8`
+- Java `21.0.12+101` only for Firebase rule-emulator tests
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite, normally `http://localhost:5173/`.
+Vite prints the local URL, normally `http://localhost:5173/`. Do not open `index.html` through `file://`.
 
-Do **not** double-click `index.html` or open it with a `file://` URL. A Vite application must be served by the development server or from a production build.
-
-To verify a production build locally:
+Install the other locked workspaces only when needed:
 
 ```bash
-npm run lint
-npm run build
-npm run preview
+npm ci --prefix functions
+npm ci --prefix firebase-cli --ignore-scripts --no-audit --no-fund
 ```
 
-`npm run preview` normally serves the built application at `http://localhost:4173/`.
-
-## Available scripts
+## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start the Vite development server with hot reload. |
-| `npm run lint` | Run ESLint across the project. |
-| `npm test` | Run the editor, placement, review, storage, and runtime-quality tests. |
-| `npm run build` | Type-check the app, create `dist/`, and prepare the generated HTML shell used by privacy-aware Space delivery. |
-| `npm run preview` | Serve `dist/` locally for production verification. |
-| `npm run check` | Run lint, tests, GLB checks, type-checking, the standard build and a separate production-feature budget build. |
-| `npm run test:browser-smoke` | Run Chromium checks against the built `dist/`: public shell/CSP, quiet story preparation, chapter navigation, Studio handoff, all three room arrivals and mobile material editing/undo. Run after `npm run build`; install the locked browser with `npm run test:browser-smoke:install` if needed. CI uses pinned Chromium with SwiftShader; locally set `LIEUVA_BROWSER_SMOKE_SOFTWARE_GL=1` to select the same backend and optionally `LIEUVA_BROWSER_SMOKE_CPU_RATE=6` to add CPU throttling. Central functional-test budgets allow 30 seconds per assertion/action and 180 seconds per journey; existing scene-arrival limits remain 30 seconds. These are not device-speed benchmarks. This is a separate CI gate, not part of `npm run check`. Failed CI runs retain full traces/screenshots for seven days. See [Linux reproduction and timing evidence](audit/LIEUVA-CI-SMOKE-2026-09-10.md). |
-| `npm run check:production-build` | Check the App Check + Functions telemetry code paths with a nonfunctional public key fixture in `artifacts/production-budget-check/`; does not replace `dist/` or the Functions HTML shell. CI builds the deployable artifact with the real production variables. |
-| `npm run check:functions` | Test and type-check the trusted branded-email/newsletter Functions. |
-| `npm run review:public-content -- --kind spaces\|posts` | Read a bounded, read-only page for Space review or post moderation. Creator profiles are not reviewed. |
-| `npm run review:public-content:decision -- --kind space …` | Dry-run or execute one exact Space discovery decision with the documented guards. |
-| `npm run validate:glb -- path/to/template.glb` | Validate a future template export against the documented legacy `aura_*` GLB contract. |
+| `npm run dev` | Start Vite. |
+| `npm run check` | Lint, unit tests, script tests, premium-GLB validation, production build and performance budgets. |
+| `npm run check:functions` | Test, type-check and build Firebase Functions. |
+| `npm run test:firebase-rules` | Run Firestore and Storage authorization matrices in emulators. |
+| `npm run build` | Type-check and build `dist/`, then prepare the generated Functions app shell. |
+| `npm run test:browser-smoke` | Test the built public shell, story, Studio handoff, all rooms and mobile editing in Chromium. |
+| `npm run check:ci` | Run the complete local CI-equivalent gate; requires Functions/Firebase dependencies, Java and Chromium. |
+| `npm run validate:glb -- path/to/file.glb` | Validate the generic Blender/legacy metadata contract. |
+| `npm run validate:premium` | Validate all six shipping premium-v3 GLBs without changing tracked files. |
+| `npm run validate:premium:update` | Intentionally refresh the tracked GLB measurement report. |
+| `npm run clean:generated` | Remove builds, diagnostics, caches and Blender backups; keeps dependencies, `.env` files, sources and assets. |
 
-## Documentation maintenance
+Run `npm run build` before an isolated browser-smoke run. Install Chromium once with `npm run test:browser-smoke:install`.
 
-`README.md` describes the current product and developer workflow;
-`FIREBASE_SETUP.md` is the operational source of truth for Firebase and
-deployment; `audit/` retains dated decisions and historical evidence. Product,
-schema, security, deployment, routing, or operator-workflow changes must update
-the relevant Markdown source in the same change. Historical audit records stay
-dated and receive a superseding note instead of being silently rewritten.
-
-The production target is Firebase Hosting plus the scoped Functions exported by
-`functions/src/index.ts`. The existing GitHub Pages workflow remains available
-as a reviewed rollback/legacy-host path and is not the clean-URL production architecture.
-
-## Editor workflow
-
-The intended creation flow is:
-
-**Choose gallery → Upload artwork → Place or auto-curate → Customize → Publish → Share**
-
-1. Choose one of the three spaces.
-2. Upload one or more artwork images.
-3. Select an artwork in the left panel.
-4. Choose a wall; the camera moves to it and LIEUVA Studio finds an available position.
-5. Click the wall for an exact location, drag the artwork directly, or use the fine-placement sliders.
-6. Use the translucent side arrows to rotate around the room, or use the numeric metre controls, 3 cm placement grid, exact centimetre readout, framing, lock/hide, alignment, 1.75 m eye-line, and **Space this wall** actions.
-7. Use **Reset view** whenever orientation is lost. In the Grand Forum, use the five-zone floor-plan navigator to jump between the central axis and four side galleries.
-8. Keep **Arrange** and **Open roof** enabled while editing, then enter **Walk Preview** and **Preview ceiling** to inspect the visitor experience. The same canvas and camera session stay alive; a selected visible artwork becomes the Walk Preview start focus.
-9. Add and position objects by dragging them or clicking an empty floor location.
-10. Use **Design direction** to choose a style and scope, then **Generate variation** or the header **AI Curator**. The default changes surfaces and objects while retaining artwork positions and the authored ceiling. **Another variation** generates a fresh arrangement; **Undo AI curation** restores the preceding design. Local image analysis and architectural rules drive the proposals, with no external model call.
-11. Open **Review & publish**. LIEUVA validates every visible work and object, shows the captured share cover, blocks invalid geometry, and publishes only after the review passes.
-
-Drafts autosave per template in IndexedDB. Direct template routes survive refresh and offer recovery before editing continues.
-
-## Visitor controls
-
-| Context | Controls |
-| --- | --- |
-| Walk mode | `W`, `A`, `S`, `D` or arrow keys to move and turn; drag to look; click the floor to walk automatically. |
-| Artwork | Click an artwork to open its information card; it closes when the visitor turns away. |
-| Overview | Orbit the room, zoom with the mouse wheel or a supported pinch gesture, and use the fading cutaway walls to inspect the interior. |
-| Cinematic intro | Allow the room-specific camera path to finish or use the on-screen skip control. |
-| Danny guided tour | Start or skip the optional 45-second authored tour; use **Focus view** to cycle exhibition anchors and **Reset view** to return to the authored start. |
-| Accessible directory | Open **Artworks** for images, metadata, and descriptions without navigating the canvas. It opens automatically if WebGL fails. |
-
-Touch behavior depends on the browser and device. If a HEIC/HEIF image cannot be decoded, convert it to JPG, PNG, or WebP and upload it again.
-
-## Routing and clean-Space delivery
-
-Published Spaces use one durable customer URL backed by their existing publication ID:
-
-- `/spaces/{gallery-id}` — canonical published Space URL
-
-All new share and Discover links use the canonical `https://lieuva.com/spaces/{gallery-id}` form. Title, Creator and revision changes keep the same URL. Firebase Hosting rewrites direct requests to a privacy-aware HTTP Function, which returns route-specific initial metadata and then boots the normal React visitor application.
-
-The homepage, protected routes, Creator directory, and any public Creator or Space without its own cover use `public/assets/social/lieuva-social-preview-v2.jpg` as the 1200 × 630 Open Graph fallback. Public Spaces and Creator profiles keep their own cover-first share previews. The versioned filename is intentional so social clients can refresh cached preview media safely.
-
-Existing product areas keep their compatibility hash routes:
-
-- `#/` — landing page and Discover
-- `#/create` — gallery picker and editor
-- `#/create/{white-cube|nocturne|pavilion}` — persistent editor route for one template
-- `#/create/{white-cube|nocturne|pavilion}/demo` — instant sandbox preloaded with three fictional demo artworks
-- `#/demo` — Danny Hirsch live demo
-- `#/g/{gallery-id}` — legacy published-Space entry; resolves the same ID and replaces it with the clean canonical URL
-- `#/data` — factual MVP data and rights notice
-- `?mode={verifyEmail|resetPassword}&oobCode=…` — Firebase account action handler; query parameters precede the hash route
-
-The default production build uses root-relative assets for Firebase Hosting and direct clean-route refreshes. Setting `LEGACY_GITHUB_PAGES=true` creates the relative-base rollback bundle used by the retained Pages workflow.
-
-## Architecture
+## Repository map
 
 ```text
 src/
-├── App.tsx                         Routes, landing page, editor, publishing UI
-├── components/AppErrorBoundary.tsx Global crash recovery for lazy/3D failures
-├── components/Logo.tsx            Shared brand mark
-├── features/gallery/
-│   ├── GalleryScene.tsx            Three.js rooms, editor interaction, visitor controls
-│   ├── autoCurator.ts              Local palette analysis and automatic curation
-│   ├── editor/                      Draft defaults/history, placement and publish review
-│   ├── scene/                       Adaptive quality and shared collision runtime
-│   ├── templates.ts                Runtime room metadata and capacities
-│   └── types.ts                    Gallery domain types
-├── services/
-│   ├── draftStorage.ts             Versioned IndexedDB autosave and recovery
-│   ├── firebaseGalleryRepository.ts Lazy-loaded Firebase implementation
-│   ├── galleryRepository.ts        Lightweight persistence boundary
-│   └── galleryValidation.ts        Runtime validation for public Firestore data
-└── styles/global.css               Application and responsive styling
-
+  App.tsx                         app shell, lightweight routing, Studio orchestration
+  features/gallery/              Three.js scene, editor, placement and visitor runtime
+  features/landing/              homepage story and discovery entry points
+  features/creator/              Creator Hub, directory and public profiles
+  features/account/              authentication, account and access management
+  services/                      drafts, Firebase boundary, publishing and telemetry
+  styles/                        shared, mobile and visitor styles
 functions/
-├── src/index.ts                    Trusted product APIs plus Space HTML/card/sitemap delivery
-├── src/creatorIdentity.ts          Creator visibility, profile, social and SEO contracts
-├── src/spaceSeo.ts                 Privacy-aware metadata, cache and sitemap policy
-└── src/emailTemplates.ts           Responsive LIEUVA transactional and welcome emails
-
-public/assets/                      Runtime demo and material assets
-blender/templates/                  Editable concept/reference Blender files
-blender/EXPORT_CONTRACT.md          Blender-to-GLB node and metadata contract
-scripts/cleanup-expired.mjs         Scheduled physical Firestore cleanup
-scripts/validate-glb-contract.mjs   Template-export contract validator
-.github/workflows/                  Pages deployment and expiry cleanup
+  src/index.ts                   exported callable/HTTP Functions
+  src/                           publication, identity, rights, policy, SEO and observability modules
+tests/
+  browser-smoke/                 portable Playwright journeys
+  firebase-rules/                emulator authorization matrices
+public/assets/                    files copied into the deployed web root
+blender/production/v3/           current editable room sources, maps and retained masters
+blender/production/v1,v2/        retained historical editable sources and v1 masters
+scripts/                          build, validation, release and operator tools
+audit/                            current state and durable operational specifications only
 ```
 
-White Cube, Warm Gallery (`nocturne`) and Grand Forum now load authored `premium-v3` Blender GLBs by default in the shared Studio and visitor renderer. The existing procedural builder remains the loading/error fallback and explicit `?environment=procedural` rollback. Editable artwork, placement, camera, history and publication contracts remain owned by Studio. Desktop/mobile files, AO maps, editable sources and the separate 4K Cycles masters are documented in [`blender/production/README.md`](./blender/production/README.md). `npm run validate:premium` checks all six exports and is included in `npm run check`. Danny retains its separate authored runtime.
+The largest implementation files are `src/App.tsx`, `src/features/gallery/GalleryScene.tsx` and `functions/src/index.ts`. Extract from them incrementally behind existing behavior tests; do not rewrite the renderer or change exported Function names as a cleanup shortcut.
 
-The Danny demo ships a full desktop GLB and a metadata-equivalent mobile derivative with reduced geometry and texture sizes. Runtime quality detection selects the derivative on low-tier devices and Meshopt decoding uses Web Workers. See [`public/assets/demo/README.md`](./public/assets/demo/README.md).
+## Product and data contracts
 
-The repository boundary in `galleryRepository.ts` keeps persistence separate from the editor, so authentication, storage, accounts, or another backend can be introduced without coupling them to the Three.js renderer.
+- Drafts are local and account-free. Publishing requires a verified Email/Password or Google account.
+- Public, unlisted and private Spaces use the existing `galleries/{galleryId}` identity. Owner/Editor/Viewer access is stored separately.
+- Published media uses immutable owner/revision-scoped Storage paths. Updates preserve the Space ID and share URL.
+- New records use the current schema; schema-v1/v2 records remain readable.
+- The same placement validator must govern click, drag, sliders, curation, restore and publish.
+- Invalid transforms must fail transactionally: mesh, React state and persisted state may not diverge.
+- Renderer, controls, PMREM environment and full scene must survive selection, transform and mode-only changes.
+- Adaptive DPR, progressive loading, reduced motion, keyboard scope, WebGL fallbacks and non-WebGL artwork access are first-class behavior.
 
-## Publishing and data flow
+Canonical public delivery is `/spaces/{galleryId}`. Compatibility entry points and technical IDs remain active:
 
-1. Artwork is decoded in the browser, resized to at most 1200 px on its longest side, converted to WebP, and compressed until its data URL is below the configured 780,000-character limit.
-   Same-origin artwork bundled with the fast sandbox is embedded before publication as well.
-2. Draft building and Walk Preview remain local and account-free. Publishing restores a verified Email/Password or Google account.
-3. A trusted callable Function issues a short-lived, quota-checked publication permit. Artwork images and the room cover are then uploaded to immutable owner-scoped Firebase Storage objects. In-place edits create a new asset revision and atomically update the same schema-v3 gallery document, preserving its share URL. Existing schema-v1/v2 rooms remain readable.
-   Hidden works and editor-only lock state are omitted from the public record; visitor-facing frame choices are preserved.
-4. New verified-account rooms currently receive a 365-day account-preview window. Billing and permanent hosting are not active; older guest rooms retain their original expiry for compatibility.
-5. Firestore and Storage rules enforce expiry and visibility. Discover queries only public rooms; unlisted rooms require the link; private rooms require the owner or an invited verified email.
-6. ACL documents store editor/viewer membership separately from the public gallery record. Archive hides a room without deleting it; Trash provides seven days to restore. The scheduled cleanup Action removes expired or purge-ready assets, ACL records, and documents.
-7. Trusted Cloud Functions generate verification action links, persist optional newsletter consent, and queue branded messages into the official Trigger Email extension's protected `mail` collection. The welcome edition is idempotent per account; users may withdraw in Account settings or through a one-click link.
+- `#/create` and `#/create/{white-cube|nocturne|pavilion}`
+- `#/create/{template}/demo`
+- `#/demo` for the Danny reference
+- `#/g/{galleryId}` as the legacy Space entry
+- `#/data` for data/right notices
+- Firebase Auth action query parameters such as `?mode=verifyEmail&oobCode=…`
 
-Firebase Storage requires Blaze as of February 2026, although no-cost quotas still apply. See [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) for bucket, rules, CORS, email delivery, Functions, consent, cleanup, quotas, and verification.
+Clean customer URLs do not authorize renaming `galleries`, `galleryId`, Storage paths, callable names, local draft keys or GLB `aura_*` fields.
 
-### Firebase web configuration
+## Assets and Blender
 
-The Firebase web-client configuration currently lives in `src/services/firebase.ts` and targets the `virtualartplattform` project. Firebase web API keys and project identifiers identify the client application; they are not service-account credentials and are expected to be visible in a browser bundle.
+- Runtime assets belong in `public/assets/`; every file there is copied into builds and deployments, so it must have a real runtime reference.
+- Original/provenance files belong in `blender/`; current exports are rebuilt with `blender/production/build_premium.py` and validated with `npm run validate:premium`.
+- Keep primary `.blend` files, source material studies, current runtime maps and retained 4K masters. Do not commit `.blend1`, logs, caches, exploratory renders or duplicate old GLBs.
+- Record source and license changes in [ASSET_LICENSES.md](./ASSET_LICENSES.md). The Danny assets have project-specific permission, not a general redistribution license.
+- See [Blender export contract](./blender/EXPORT_CONTRACT.md) and [production instructions](./blender/production/README.md).
 
-To use another Firebase project, replace that web configuration and the default project in `.firebaserc`, then deploy the repository's rules and indexes to the new project. Never place a service-account JSON or private key in source code.
+## Firebase and release safety
 
-## Deploy the clean-URL architecture
+The production target is Firebase Hosting plus the scoped Functions exported by `functions/src/index.ts`. `.github/workflows/deploy.yml` is the production workflow. Firestore rules, Storage rules and indexes require their separate reviewed policy release.
 
-Do not cut production DNS before the preview checks in [`FIREBASE_SETUP.md`](./FIREBASE_SETUP.md) pass. The reviewed deployment unit is the built site plus the exact scoped Functions manifest in the same Firebase project:
+Do not deploy, publish fixtures, mutate production data or alter rules while doing local verification unless the user explicitly requests it. Deployment order, required variables, preview checks, rollback and operator procedures are in [FIREBASE_SETUP.md](./FIREBASE_SETUP.md).
 
-```bash
-npm run check
-npm run check:functions
-```
+## Documentation sources of truth
 
-During the separately approved external preview window, deploy the three new Functions first, then create the Hosting preview channel that rewrites to them. Exact commands/order, raw-HTTP checks, DNS handoff and rollback are documented in `FIREBASE_SETUP.md` and `audit/CLEAN-SPACE-URL-SEO-IMPLEMENTATION.md`.
+- [AGENTS.md](./AGENTS.md): default rules for future Codex work.
+- [audit/CURRENT-STATE.md](./audit/CURRENT-STATE.md): current product boundary, open risks and maintenance priorities.
+- [audit/README.md](./audit/README.md): retained audit/operations index and evidence policy.
+- [FIREBASE_SETUP.md](./FIREBASE_SETUP.md): Firebase setup, deployment and rollback.
+- [ASSET_LICENSES.md](./ASSET_LICENSES.md): asset provenance and rights.
+- [blender/EXPORT_CONTRACT.md](./blender/EXPORT_CONTRACT.md): Blender-to-GLB contract.
 
-Clean customer URLs do not imply renamed Firebase/data identifiers. `galleries`, `galleryId`, Storage paths, callable names, `.aura.json`, local draft keys and GLB `aura_*` metadata remain compatibility contracts.
+Update these sources in the same change when behavior, architecture, schemas, release steps or assets change. Test output, screenshots and temporary reports belong in ignored `artifacts/`, not in permanent project documentation.
 
-## Production deployment and rollback
-
-`.github/workflows/deploy.yml` is the authoritative production workflow. A push to `main` (or an explicit manual dispatch) installs locked dependencies, runs both repository gates, builds with production telemetry/App Check configuration, and deploys Firebase Hosting plus Functions. It does **not** deploy Firestore rules, Storage rules, or indexes; those require a separately approved rules release using the exact repository files and the steps in [`FIREBASE_SETUP.md`](./FIREBASE_SETUP.md).
-
-Before accepting a deployment, confirm that the successful workflow `head_sha` equals `origin/main`, Firebase Hosting shows the same release time, and the raw homepage/Space/Creator endpoints return the expected status, canonical metadata, and cache policy.
-
-Before presenting a deployment, verify:
-
-```bash
-npm run lint
-npm run build
-```
-
-Then run the isolated production smoke matrix in `audit/PUBLISH-UPDATE-RELEASE-GATE.md`: landing, all three room editors, Danny, one prefixed Public/Unlisted/Private fixture, owner/editor/viewer access, update-in-place, recovery, private-window share links, Discover, and exact fixture cleanup.
-
-For rollback, restore a known-good Firebase Hosting release from Hosting release history or redeploy a reviewed known-good commit with the same workflow. Roll back Functions from the same known-good source if the incident involves server delivery or callables. Never roll back by deleting Firestore documents, Storage objects, IDs, revisions, or ACL. A relative `LEGACY_GITHUB_PAGES=true` build remains a compatibility artifact, but there is no active Pages deployment workflow in this repository and it must not be described as the current production rollback mechanism.
-
-## Troubleshooting
-
-### The page is white on GitHub Pages
-
-- Confirm Pages uses **GitHub Actions**, not `main / (root)`.
-- Open the latest deployment in the Actions tab and confirm the build and deploy jobs succeeded.
-- Use `https://lieuva.com/` for the production site. The legacy GitHub Pages repository URL may still include `/VirtualArtPlattform/`.
-- Hard-refresh after a deployment and inspect the browser console/network panel for missing JavaScript or asset files.
-
-### `localhost:5173` is not running
-
-Run `npm ci` once, then keep `npm run dev` running in the terminal. Opening `index.html` directly cannot start Vite.
-
-### Publishing reports `permission-denied`
-
-- The room itself is still autosaved locally. This error concerns Firestore publication, not the IndexedDB draft.
-- Enable Anonymous, Email/Password, and Google Authentication.
-- Add the current hostname to Firebase Authorized domains.
-- Publish the repository's `firestore.rules` and `firestore.indexes.json`.
-- Confirm the web configuration points to the same project in which the rules were deployed.
-- Update Firestore rules manually in Firebase Console; the GitHub Pages workflow intentionally deploys only the website.
-
-### Discover is empty or a shared gallery cannot be opened
-
-- Confirm the gallery has not reached its configured expiry.
-- Confirm the Firestore rules and indexes are deployed.
-- Check the browser console for Firebase errors rather than treating all missing records as network failures.
-
-### The 3D scene is unavailable
-
-Use a current browser, enable hardware acceleration, and verify WebGL is available. Older devices or privacy tools that disable canvas/WebGL cannot render the galleries.
-
-## Security, privacy, and current limitations
-
-- Guests can build and Walk Preview locally, but publishing requires a verified account. Account rooms may be public, unlisted, or private; private preview access is not yet a contractual confidential-data service.
-- Published gallery identity, ownership, visibility, and expiry remain stable. Owners and Editors can revision content under the same link; concurrent stale edits are rejected without deleting the local draft.
-- New publications use a trusted permit Function and are limited to 20 new rooms per verified account per UTC day. App Check is wired into the client and trusted room Functions, but must be registered and enforced in the Firebase Console before public launch.
-- Firestore and Storage rules require the server permit for new immutable upload paths. They remain one layer of defense; moderation and image malware scanning are still production gates.
-- Artwork and covers use Firebase Storage; room data, lifecycle state, permits, and ACL records use Firestore. Physical deletion runs in the trusted cleanup worker after expiry or the Trash recovery window.
-- The local AI Curator is heuristic assistance, not a generative model or professional curatorial guarantee.
-- Simultaneous co-editing, a user-facing revision history, multiplayer, chat, analytics, payments, sales, events, marketplace features, and community moderation are intentionally outside this MVP.
-- This repository currently has no general code license. Do not infer permission for downstream reuse from public repository access.
-
-Review [ASSET_LICENSES.md](./ASSET_LICENSES.md) before reusing artwork, models, textures, fonts, or Blender files outside this LIEUVA deployment.
-
-## Asset notice
-
-The project owner has confirmed permission to display and distribute the Danny Hirsch artwork and gallery assets as part of the LIEUVA demo. That project-specific permission does not automatically grant third parties a reusable asset license. See [ASSET_LICENSES.md](./ASSET_LICENSES.md) for the current notice and items that still require formal provenance records.
-
-Earlier Studio catalogue and curation production record (8 September): [`audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md`](./audit/LIEUVA-STUDIO-DESIGN-2026-09-08.md).
+This repository has no general code license. Do not infer reuse rights from repository access.

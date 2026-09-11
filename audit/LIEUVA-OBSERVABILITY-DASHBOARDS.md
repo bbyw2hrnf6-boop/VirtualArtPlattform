@@ -1,5 +1,7 @@
 # LIEUVA Observability Dashboards and Alerts
 
+> Operational specification. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
+
 Status: provider-neutral production specification. Data source today is Google Cloud Logging through the App Check protected telemetry callable and structured Firebase Function logs.
 
 ## 1. Product funnel dashboard
@@ -64,4 +66,3 @@ Alert owner: engineering/product owner. Each alert links to release hash, affect
 5. Reproduce with an isolated test Space; never modify user data.
 6. Roll back only the affected release when evidence supports it.
 7. Verify recovery and record cause, fix and regression test.
-
