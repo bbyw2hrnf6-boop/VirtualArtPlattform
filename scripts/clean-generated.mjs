@@ -7,6 +7,7 @@ const generatedTargets = [
   '../dist/',
   '../.firebase/',
   '../functions/lib/',
+  '../functions/functions.yaml',
   '../functions/generated/app-shell.html',
   '../tsconfig.app.tsbuildinfo',
   '../.DS_Store',

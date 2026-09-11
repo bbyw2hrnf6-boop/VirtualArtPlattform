@@ -8,6 +8,6 @@
   },
   "packageManager": "npm@10.9.8",
   "dependencies": {
-    "firebase-tools": "15.28.2"
+    "firebase-tools": "15.30.0"
   }
 }

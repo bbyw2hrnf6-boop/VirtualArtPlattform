@@ -13,6 +13,19 @@ export default defineConfig({
       '**/coverage/**',
       '**/artifacts/**',
       'functions/**'
-    ]
+    ],
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: 'artifacts/coverage',
+      reporter: ['text-summary', 'json-summary'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/**/*.spec.{ts,tsx}'],
+      thresholds: {
+        statements: 27,
+        branches: 30,
+        functions: 35,
+        lines: 27,
+      },
+    },
   }
 });

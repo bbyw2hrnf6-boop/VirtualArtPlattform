@@ -86,7 +86,7 @@ checks, a preview build, and Chromium smoke. A successful push to
    discovery binary and validate its exact reviewed endpoints and parameters;
 5. build Hosting with the production App Check and telemetry configuration;
 6. browser-smoke those exact built bytes;
-7. validate the dedicated Firebase CLI lock, install CLI `15.28.2` with
+7. validate the dedicated Firebase CLI lock, install CLI `15.30.0` with
    lifecycle scripts disabled, and verify its binary;
 8. assemble and verify `artifacts/wp2-release/`;
 9. upload `lieuva-production-{SHA}-{VERIFY_RUN_ID}` for 30 days and record its
@@ -199,7 +199,7 @@ The deploy and cleanup service-account emails belong in their respective
 protected environments. A common WIF provider can be shared at repository or
 organization scope, or the same variable name can be configured separately in
 both environments. Workflow constants fix project `virtualartplattform`, Node
-`22.23.2`, npm `10.9.8`, Firebase CLI `15.28.2`, telemetry mode `functions`,
+`22.23.2`, npm `10.9.8`, Firebase CLI `15.30.0`, telemetry mode `functions`,
 telemetry environment `production`, and production origin
 `https://lieuva.com`.
 
@@ -222,10 +222,10 @@ CSS.
 
 | Metric | Product target | Enforced release ceiling |
 | --- | ---: | ---: |
-| Total JavaScript | 560,000 | 575,000 |
-| Total CSS | 43,000 | 54,000 |
+| Total JavaScript | 560,000 | 595,000 |
+| Total CSS | 43,000 | 54,500 |
 | Largest lazy JavaScript chunk | 195,000 | 195,000 |
-| Entry JavaScript | 115,000 | 305,000 |
+| Entry JavaScript | 115,000 | 123,000 |
 | Entry CSS | 32,500 | 32,500 |
 
 Crossing a release ceiling always fails the build. Missing a stricter product
@@ -249,13 +249,15 @@ complete.
 
 ## Dependency watch
 
-The dedicated `firebase-tools` `15.28.2` lock currently audits at zero high or
-critical advisories and eight moderate transitive advisories. It is an
+The dedicated `firebase-tools` `15.30.0` lock currently audits at zero high or
+critical findings and nine moderate dependency findings after the compatible
+`body-parser` `1.20.8` lock update. It is an
 ephemeral, lifecycle-script-disabled deployment CLI rather than application or
 server runtime code; that bounded exposure is accepted for WP2. Monitor normal
 upstream releases and upgrade the pinned lock deliberately. Do not use npm's
-downgrade-style force fix. Known moderate transitive advisories in the Functions
-dependency tree remain tracked for WP3.
+downgrade-style force fix or incompatible transitive overrides; the remaining
+findings are blocked by `firebase-tools` dependency ranges. The root and
+Functions dependency trees currently audit with zero findings.
 
 ## Traceability and rollback
 

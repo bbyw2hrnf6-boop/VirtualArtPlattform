@@ -139,6 +139,34 @@ for (const room of ['white-cube', 'nocturne', 'pavilion']) {
   });
 }
 
+test('Danny reference route keeps its metadata and accessible artwork directory', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/#/demo');
+  const viewer = page.locator('main.viewer');
+  const scene = viewer.locator('.gallery-scene');
+  await expect(scene).toHaveAttribute('data-load-progress', '100', { timeout: 30_000 });
+  await expect(scene).toHaveAttribute('data-artwork-hotspots', '7');
+  await expect(scene.locator('canvas[data-scene-canvas="danny"]')).toBeVisible();
+  await expect(viewer.getByText('Danny Hirsch Arts', { exact: true })).toBeVisible();
+  await expect(viewer.getByText('Threshold · 2026', { exact: true })).toBeVisible();
+  await expect(viewer.getByRole('heading', { level: 1, name: 'Threshold' })).toBeVisible();
+
+  const directoryButton = viewer.getByRole('button', {
+    name: 'Open artwork list, 7 works',
+  });
+  await directoryButton.click();
+  const directory = page.getByRole('dialog', { name: /Threshold.*Artwork directory/ });
+  await expect(directory).toBeVisible();
+  await expect(directory.locator('.artwork-directory-list > li')).toHaveCount(7);
+  await expect(directory.getByRole('heading', { name: 'Yellow Field, Veined' })).toBeVisible();
+  await expect(directory.getByRole('heading', { name: 'wARTrobe · Front' })).toBeVisible();
+  await expect(directory.getByRole('img', {
+    name: 'Magnified surface detail of Yellow Field, Veined by Danny Hirsch',
+  })).toBeVisible({ timeout: 30_000 });
+  await directory.getByRole('button', { name: 'Close artwork directory' }).click();
+  await expect(directoryButton).toBeFocused();
+});
+
 test('Arrange redraws camera and roof changes and resumes Walk preview', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/#/create/white-cube/demo');

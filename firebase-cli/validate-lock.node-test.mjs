@@ -51,7 +51,7 @@ test('accepts the exact CLI package and SHA-512 registry lock', () => {
 
 test('rejects version drift and extra dependency classes', () => {
   const versionDrift = fixture();
-  versionDrift.packageJson.dependencies['firebase-tools'] = '^15.28.2';
+  versionDrift.packageJson.dependencies['firebase-tools'] = '^15.30.0';
   assert.throws(
     () => validateFirebaseCliLock(versionDrift.packageJson, versionDrift.lock),
     /root dependencies does not match/,

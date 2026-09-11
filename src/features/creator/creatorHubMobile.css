@@ -95,7 +95,7 @@
   .creator-hub__notifications > :is(a, button) small,
   .creator-hub__notifications time { color: #aaa9a2; }
   .creator-hub__notifications > div:first-child button { min-height: 44px; border-color: #ffffff35; color: #f1eee6; font-size: 9px; }
-  .creator-hub__notifications > :is(a, button) { grid-template-columns: minmax(0,1fr) auto; min-height: 58px; border-color: #ffffff24; color: #f1eee6; font-size: 11px; }
+  .creator-hub__notifications > :is(a, button) { grid-template-columns: minmax(0,1fr) auto; min-height: 58px; border-color: #ffffff24; color: #f1eee6; }
   .creator-hub__notifications > :is(a, button).is-unread::before { background: var(--hub-acid); }
   .creator-hub__notifications > :is(a, button).is-unread strong::after { color: var(--hub-acid); }
   .creator-hub__notifications > :is(a, button) strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

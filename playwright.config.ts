@@ -6,6 +6,9 @@ const softwareRendering = Boolean(process.env.CI) || process.env.LIEUVA_BROWSER_
 export default defineConfig({
   testDir: './tests/browser-smoke',
   outputDir: './artifacts/playwright-results',
+  // Pixel baselines are platform-specific even with pinned Chromium,
+  // SwiftShader and bundled fonts. Never compare macOS goldens on Linux CI.
+  snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}-{platform}{ext}',
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
@@ -30,17 +33,34 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
-  projects: [{
-    name: 'chromium',
-    // Use the pinned full Chromium's modern headless mode. The separate legacy
-    // headless shell can stall during the homepage's real WebGL shader warm-up.
-    use: {
-      ...devices['Desktop Chrome'], channel: 'chromium',
-      // Pin CI's software backend; the same path is available locally. This
-      // changes the test renderer, not the scene's assets or quality settings.
-      ...(softwareRendering ? { launchOptions: {
-        args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
-      } } : {}),
+  projects: [
+    {
+      name: 'chromium',
+      testIgnore: /visual-regression\.spec\.ts/,
+      // Use the pinned full Chromium's modern headless mode. The separate legacy
+      // headless shell can stall during the homepage's real WebGL shader warm-up.
+      use: {
+        ...devices['Desktop Chrome'], channel: 'chromium',
+        // Pin CI's software backend; the same path is available locally. This
+        // changes the test renderer, not the scene's assets or quality settings.
+        ...(softwareRendering ? { launchOptions: {
+          args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+        } } : {}),
+      },
     },
-  }],
+    {
+      name: 'chromium-visual',
+      testMatch: /visual-regression\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chromium',
+        colorScheme: 'dark',
+        deviceScaleFactor: 1,
+        reducedMotion: 'reduce',
+        launchOptions: {
+          args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+        },
+      },
+    },
+  ],
 });

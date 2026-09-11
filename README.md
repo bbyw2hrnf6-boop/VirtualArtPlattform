@@ -44,10 +44,12 @@ npm ci --prefix firebase-cli --ignore-scripts --no-audit --no-fund
 | --- | --- |
 | `npm run dev` | Start Vite. |
 | `npm run check` | Lint, unit tests, script tests, premium-GLB validation, production build and performance budgets. |
-| `npm run check:functions` | Test, type-check and build Firebase Functions. |
+| `npm run test:coverage` | Run the client suite with the enforced repository-wide coverage floor; reports stay in ignored `artifacts/coverage/`. |
+| `npm run check:functions` | Run Functions coverage, script tests, type-check, build and real release-manifest validation. |
 | `npm run test:firebase-rules` | Run Firestore and Storage authorization matrices in emulators. |
 | `npm run build` | Type-check and build `dist/`, then prepare the generated Functions app shell. |
 | `npm run test:browser-smoke` | Test the built public shell, story, Studio handoff, all rooms and mobile editing in Chromium. |
+| `npm run test:browser-visual` | Compare platform-specific landing, White Cube, Account and Creator Hub baselines at 1440 × 1000 and 390 × 844. |
 | `npm run check:ci` | Run the complete local CI-equivalent gate; requires Functions/Firebase dependencies, Java and Chromium. |
 | `npm run validate:glb -- path/to/file.glb` | Validate the generic Blender/legacy metadata contract. |
 | `npm run validate:premium` | Validate all six shipping premium-v3 GLBs without changing tracked files. |
@@ -64,6 +66,7 @@ Release validation checks both direct Functions endpoint declarations and explic
 ```text
 src/
   App.tsx                         app shell, lightweight routing, Studio orchestration
+  features/demo/                 lazy Danny reference exhibition and embedded artwork metadata
   features/gallery/              Three.js scene, editor, placement and visitor runtime
   features/landing/              homepage story and discovery entry points
   features/creator/              Creator Hub, directory and public profiles
@@ -71,7 +74,8 @@ src/
   services/                      drafts, Firebase boundary, publishing and telemetry
   styles/                        shared, mobile and visitor styles
 functions/
-  src/index.ts                   exported callable/HTTP Functions
+  src/index.ts                   core callable Functions and explicit endpoint re-exports
+  src/publicDelivery.ts          public HTML, JSON, image and sitemap delivery
   src/                           publication, identity, rights, policy, SEO and observability modules
 tests/
   browser-smoke/                 portable Playwright journeys

@@ -1,8 +1,7 @@
-import { httpsCallable } from "firebase/functions";
-import { firebaseFunctions } from "./firebase";
 import { creatorCanonicalUrl } from "./spaceRoutes";
 import { prepareProfileCover, prepareProfileImage } from "./profileImage";
 import type { AccountSession } from "./accountTypes";
+import { callFirebaseFunction } from "./lazyFirebaseFunctions";
 
 const DEMO_CREATOR_HANDLES = new Set([
   "mira-vale",
@@ -177,13 +176,12 @@ export async function loadCreatorAttribution(spaceId: string, signal?: AbortSign
 }
 
 async function requestMyCreatorProfile(includeMedia: boolean): Promise<MyCreatorProfilePayload> {
-  const result = await creatorCallableWithRetry(() =>
-    httpsCallable<{ includeMedia?: boolean }, MyCreatorProfilePayload>(
-      firebaseFunctions,
+  return creatorCallableWithRetry(() =>
+    callFirebaseFunction<{ includeMedia?: boolean }, MyCreatorProfilePayload>(
       "getMyLieuvaCreatorProfile",
-    )({ ...(includeMedia ? { includeMedia: true } : {}) }),
+      { ...(includeMedia ? { includeMedia: true } : {}) },
+    ),
   );
-  return result.data;
 }
 
 export async function loadMyCreatorProfileBundle() {
@@ -195,23 +193,21 @@ export async function loadMyCreatorProfile() {
 }
 
 export async function checkCreatorHandle(handle: string) {
-  const result = await creatorCallableWithRetry(() =>
-    httpsCallable<{ handle: string }, { handle: string; available: boolean }>(
-      firebaseFunctions,
+  return creatorCallableWithRetry(() =>
+    callFirebaseFunction<{ handle: string }, { handle: string; available: boolean }>(
       "checkLieuvaCreatorHandle",
-    )({ handle }),
+      { handle },
+    ),
   );
-  return result.data;
 }
 
 export async function saveCreatorProfile(profile: CreatorProfile) {
-  const result = await creatorCallableWithRetry(() =>
-    httpsCallable<CreatorProfile, { profile: CreatorProfile; publicUrl: string }>(
-      firebaseFunctions,
+  return creatorCallableWithRetry(() =>
+    callFirebaseFunction<CreatorProfile, { profile: CreatorProfile; publicUrl: string }>(
       "saveLieuvaCreatorProfile",
-    )(profile),
+      profile,
+    ),
   );
-  return result.data;
 }
 
 export function creatorImageUrl(handle: string) {
@@ -236,20 +232,26 @@ export async function saveCreatorProfileImage(file?: File, remove = false) {
   if (file) {
     base64 = await blobBase64(await prepareProfileImage(file));
   }
-  const result = await httpsCallable<{ base64?: string; remove?: boolean }, { imagePresent: boolean }>(
-    firebaseFunctions,
+  const result = await callFirebaseFunction<
+    { base64?: string; remove?: boolean },
+    { imagePresent: boolean }
+  >(
     "setLieuvaCreatorProfileImage",
-  )({ ...(base64 ? { base64 } : {}), ...(remove ? { remove: true } : {}) });
-  return result.data.imagePresent;
+    { ...(base64 ? { base64 } : {}), ...(remove ? { remove: true } : {}) },
+  );
+  return result.imagePresent;
 }
 
 export async function saveCreatorProfileCover(file?: File, remove = false) {
   const base64 = file ? await blobBase64(await prepareProfileCover(file)) : undefined;
-  const result = await httpsCallable<{ base64?: string; remove?: boolean }, { coverPresent: boolean }>(
-    firebaseFunctions,
+  const result = await callFirebaseFunction<
+    { base64?: string; remove?: boolean },
+    { coverPresent: boolean }
+  >(
     "setLieuvaCreatorProfileCover",
-  )({ ...(base64 ? { base64 } : {}), ...(remove ? { remove: true } : {}) });
-  return result.data.coverPresent;
+    { ...(base64 ? { base64 } : {}), ...(remove ? { remove: true } : {}) },
+  );
+  return result.coverPresent;
 }
 
 export type CreatorFollowState = {
@@ -331,38 +333,37 @@ export type CreatorComment = {
 };
 
 export async function loadCreatorPostComments(handle: string, postId: string) {
-  const result = await creatorCallableWithRetry(() => httpsCallable<
-    { handle: string; postId: string },
-    { comments: CreatorComment[] }
-  >(firebaseFunctions, "getLieuvaCreatorPostComments")({ handle, postId }));
-  return result.data.comments;
+  const result = await creatorCallableWithRetry(() => callFirebaseFunction<
+      { handle: string; postId: string },
+      { comments: CreatorComment[] }
+    >("getLieuvaCreatorPostComments", { handle, postId }));
+  return result.comments;
 }
 
 export async function loadCreatorHome(includeViewerState = true) {
-  const result = await httpsCallable<{ includeViewerState: boolean }, CreatorHomePayload>(
-    firebaseFunctions,
+  return callFirebaseFunction<{ includeViewerState: boolean }, CreatorHomePayload>(
     "getMyLieuvaCreatorHome",
-  )({ includeViewerState });
-  return result.data;
+    { includeViewerState },
+  );
 }
 
 export async function markCreatorNotificationsRead(notificationIds: readonly string[] | "all") {
   const input: { all?: true; notificationIds?: string[] } = notificationIds === "all"
     ? { all: true }
     : { notificationIds: [...new Set(notificationIds)].slice(0, 20) };
-  const result = await creatorCallableWithRetry(() => httpsCallable<
+  const result = await creatorCallableWithRetry(() => callFirebaseFunction<
       { all?: true; notificationIds?: string[] },
       { marked: number }
-    >(firebaseFunctions, "markMyLieuvaCreatorNotificationsRead")(input));
-  return result.data;
+    >("markMyLieuvaCreatorNotificationsRead", input));
+  return result;
 }
 
 export async function createCreatorPost(body: string) {
-  const result = await httpsCallable<{ body: string }, { post: CreatorPost }>(
-    firebaseFunctions,
+  const result = await callFirebaseFunction<{ body: string }, { post: CreatorPost }>(
     "createLieuvaCreatorPost",
-  )({ body });
-  return result.data.post;
+    { body },
+  );
+  return result.post;
 }
 
 export async function interactCreatorPost(
@@ -370,25 +371,22 @@ export async function interactCreatorPost(
   postId: string,
   input: { action: "react" | "unreact" } | { action: "comment"; body: string; parentCommentId?: string } | { action: "report"; reason: "spam" | "harassment" | "rights" | "unsafe" | "other" },
 ) {
-  const result = await httpsCallable<
+  return callFirebaseFunction<
     { handle: string; postId: string } & typeof input,
     { reacted?: boolean; reactionCount?: number; comment?: CreatorComment; reported?: boolean; receiptId?: string }
-  >(firebaseFunctions, "manageLieuvaCreatorPostInteraction")({ handle, postId, ...input });
-  return result.data;
+  >("manageLieuvaCreatorPostInteraction", { handle, postId, ...input });
 }
 
 export async function manageCreatorBlock(handle: string, action: "block" | "unblock") {
-  const result = await httpsCallable<{ handle: string; action: "block" | "unblock" }, { blocked: boolean }>(
-    firebaseFunctions,
+  return callFirebaseFunction<{ handle: string; action: "block" | "unblock" }, { blocked: boolean }>(
     "manageLieuvaCreatorBlock",
-  )({ handle, action });
-  return result.data;
+    { handle, action },
+  );
 }
 
 export async function manageCreatorFollow(handle: string, action: "status" | "follow" | "unfollow") {
-  const result = await httpsCallable<
+  return callFirebaseFunction<
     { handle: string; action: "status" | "follow" | "unfollow" },
     CreatorFollowState
-  >(firebaseFunctions, "manageLieuvaCreatorFollow")({ handle, action });
-  return result.data;
+  >("manageLieuvaCreatorFollow", { handle, action });
 }

@@ -29,7 +29,7 @@ const environment = {
 const options = {
   commitSha: "a".repeat(40),
   nodeVersion: "22.23.2",
-  firebaseCliVersion: "15.28.2",
+  firebaseCliVersion: "15.30.0",
   firebaseProjectId: "virtualartplattform",
   productionOrigin: "https://lieuva.com",
   environment,
@@ -47,7 +47,7 @@ async function fixture() {
       private: true,
       engines: { node: "22.23.2" },
       packageManager: "npm@10.9.8",
-      dependencies: { "firebase-tools": "15.28.2" },
+      dependencies: { "firebase-tools": "15.30.0" },
     }),
     "firebase-cli/package-lock.json": JSON.stringify({
       name: "@lieuva/firebase-cli-toolchain",
@@ -59,12 +59,12 @@ async function fixture() {
           name: "@lieuva/firebase-cli-toolchain",
           version: "1.0.0",
           engines: { node: "22.23.2" },
-          dependencies: { "firebase-tools": "15.28.2" },
+          dependencies: { "firebase-tools": "15.30.0" },
         },
         "node_modules/firebase-tools": {
-          version: "15.28.2",
+          version: "15.30.0",
           resolved:
-            "https://registry.npmjs.org/firebase-tools/-/firebase-tools-15.28.2.tgz",
+            "https://registry.npmjs.org/firebase-tools/-/firebase-tools-15.30.0.tgz",
           integrity: `sha512-${Buffer.alloc(64).toString("base64")}`,
         },
       },
@@ -131,7 +131,7 @@ test("assembles a production-only bundle and verifies every digest", async () =>
   const releaseRoot = join(root, RELEASE_DIRECTORY);
   const manifest = await assembleReleaseBundle(root, releaseRoot, options);
   assert.equal(manifest.commitSha, options.commitSha);
-  assert.equal(manifest.firebaseCliVersion, "15.28.2");
+  assert.equal(manifest.firebaseCliVersion, "15.30.0");
   assert.equal(manifest.mailMode, "required");
   assert.ok(
     manifest.files.some((entry) => entry.path === "functions/lib/index.js"),
@@ -175,15 +175,29 @@ test("assembles a fail-closed mail-disabled production bundle", async () => {
   await verifyReleaseBundle(releaseRoot, disabledOptions);
 });
 
-test("assembles the explicit admin re-exports without executing artifact code", async () => {
+test("assembles explicit endpoint-module re-exports without executing artifact code", async () => {
   const root = await fixture();
   const adminNames = ["getLieuvaAdminSession", "getLieuvaAdminDashboard", "runLieuvaAdminChecks", "manageLieuvaAdminAccess"];
+  const publicDeliveryNames = [
+    "creatorAttribution",
+    "creatorCover",
+    "creatorDirectoryData",
+    "creatorDocument",
+    "creatorImage",
+    "creatorProfileData",
+    "spaceCard",
+    "spaceDocument",
+    "spaceSitemap",
+  ];
   await writeFile(join(root, "functions/lib/index.js"), [
     `export {\n ${adminNames.join(",\n ")},\n} from "./adminConsole.js";`,
-    ...EXPECTED_RELEASE_ENDPOINTS.filter((name) => !adminNames.includes(name))
+    `export {\n ${publicDeliveryNames.join(",\n ")},\n} from "./publicDelivery.js";`,
+    ...EXPECTED_RELEASE_ENDPOINTS.filter((name) =>
+      !adminNames.includes(name) && !publicDeliveryNames.includes(name))
       .map((name) => `export const ${name} = true;`),
   ].join("\n"));
   await writeFile(join(root, "functions/lib/adminConsole.js"), 'throw new Error("Artifact code must not execute during verification");');
+  await writeFile(join(root, "functions/lib/publicDelivery.js"), 'throw new Error("Artifact code must not execute during verification");');
   const releaseRoot = join(root, RELEASE_DIRECTORY);
   await assembleReleaseBundle(root, releaseRoot, options);
   await verifyReleaseBundle(releaseRoot, options);

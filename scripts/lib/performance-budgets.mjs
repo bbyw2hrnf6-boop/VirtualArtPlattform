@@ -6,22 +6,40 @@ export const PERFORMANCE_TARGETS = Object.freeze({
   entryCssGzip: 32_500,
 });
 
-// The admin console deliberately adds a bounded, lazy-only surface (+13KB JS,
-// +1KB CSS aggregate ceiling), plus 5KB JS headroom for the lazy operations
-// dashboard and check evidence (measured +5.4KB production JS, no dependencies). CSS stays
-// at the existing 55KB ceiling. Public entry and largest-chunk ceilings remain
-// frozen; assertAdminLazyBoundary verifies the console never enters that graph.
-// Guest publication adds ~2.2KB production JS for the guarded publish flow,
-// seven-day filtering/paging and explanatory copy: +2KB aggregate allowance.
-// Public entry, lazy chunks and CSS ceilings are unchanged. No new dependencies.
-// WP4 still owns lowering the public baseline to the product targets above.
+// The Firebase/account boundary removes the SDK from the public dependency
+// graph and lowers the entry ceiling from 305KB against a 121.3KB production
+// baseline. The product target remains intentionally tighter. Proven-dead CSS
+// and fully shadowed declarations were removed at a 53,995-byte production
+// baseline, so the aggregate CSS ceiling is tightened without changing styles.
+// Lazy admin and guest-publication additions retain their existing allowances.
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
   jsGzip: 595_000,
-  cssGzip: 55_000,
+  cssGzip: 54_500,
   largestLazyGzip: 195_000,
-  entryGzip: 305_000,
+  entryGzip: 123_000,
   entryCssGzip: 32_500,
 });
+
+export function assertPublicEntryLazyBoundary(manifest) {
+  if (!manifest?.['index.html']?.isEntry)
+    throw new Error('The public entry is missing from the build manifest.');
+  const visited = new Set();
+  function visit(key) {
+    if (visited.has(key)) return;
+    visited.add(key);
+    const chunk = manifest[key];
+    if (!chunk) throw new Error(`Missing manifest dependency: ${key}`);
+    const file = chunk.file ?? '';
+    if (
+      chunk.name === 'firebase'
+      || /(?:^|\/)firebase(?:-[^/]+)?\.js$/i.test(file)
+      || /(?:^|\/)accountService(?:-[^/]+)?\.js$/i.test(file)
+      || /src[\\/]services[\\/](?:firebase|accountService)\.ts$/.test(key)
+    ) throw new Error('Firebase or account services entered the public initial dependency graph.');
+    for (const dependency of chunk.imports ?? []) visit(dependency);
+  }
+  visit('index.html');
+}
 
 export function assertAdminLazyBoundary(manifest) {
   const adminKey = 'src/features/admin/AdminConsole.tsx';

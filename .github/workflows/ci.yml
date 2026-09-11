@@ -24,7 +24,7 @@ jobs:
       NPM_VERSION: 10.9.8
       # setup-java matches Adoptium's catalog SemVer, not java.runtime.version.
       JAVA_VERSION: 21.0.12+101.0.LTS
-      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_CLI_VERSION: 15.30.0
       FIREBASE_PROJECT_ID: virtualartplattform
       LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
     steps:
@@ -72,8 +72,8 @@ jobs:
       - name: Lint repository sources
         run: npm run lint
 
-      - name: Run repository tests
-        run: npm test
+      - name: Run repository tests with coverage floors
+        run: npm run test:coverage
 
       - name: Run repository script tests
         run: npm run test:scripts
@@ -126,7 +126,7 @@ jobs:
     env:
       NODE_VERSION: 22.23.2
       NPM_VERSION: 10.9.8
-      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_CLI_VERSION: 15.30.0
       FIREBASE_PROJECT_ID: virtualartplattform
       FIREBASE_STORAGE_BUCKET: virtualartplattform.firebasestorage.app
     steps:
@@ -210,7 +210,7 @@ jobs:
       CI: "true"
       NODE_VERSION: 22.23.2
       NPM_VERSION: 10.9.8
-      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_CLI_VERSION: 15.30.0
       FIREBASE_PROJECT_ID: virtualartplattform
       LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
       WP2_MAIL_MODE: disabled

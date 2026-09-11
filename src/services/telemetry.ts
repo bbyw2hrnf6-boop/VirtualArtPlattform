@@ -1,5 +1,4 @@
-import { httpsCallable } from 'firebase/functions';
-import { firebaseFunctions } from './firebase';
+import { callFirebaseFunction } from './lazyFirebaseFunctions';
 
 export type TelemetryConsent = 'denied' | 'granted';
 export type TelemetryEnvironment = 'development' | 'test' | 'staging' | 'production';
@@ -160,7 +159,7 @@ export function isTelemetryEvent(value: unknown): value is TelemetryEvent {
 
 async function firebaseTransport(events: readonly TelemetryEvent[]) {
   if (import.meta.env.VITE_TELEMETRY_MODE !== 'functions') return;
-  await httpsCallable(firebaseFunctions, 'recordLieuvaTelemetry')({ events });
+  await callFirebaseFunction('recordLieuvaTelemetry', { events });
 }
 
 async function flush() {

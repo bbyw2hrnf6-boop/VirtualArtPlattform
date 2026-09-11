@@ -50,7 +50,7 @@ verify the sending domain, and create a real sender address such as
 1. Install the official **Trigger Email from Firestore** extension:
 
    ```bash
-   npx firebase-tools@15.28.2 ext:install firebase/firestore-send-email \
+   npx firebase-tools@15.30.0 ext:install firebase/firestore-send-email \
      --project virtualartplattform
    ```
 
@@ -264,7 +264,7 @@ deployment. `firestore.rules`, `storage.rules`, and
    change/incident/rollback reference.
 4. Inspect the unprivileged artifact/provenance result, then approve the
    protected `firebase-policy-production` environment.
-5. The protected job installs only Firebase CLI `15.28.2` from its verified
+5. The protected job installs only Firebase CLI `15.30.0` from its verified
    lock, authenticates through WIF, adds required indexes without `--force`,
    and waits for every repository index/override to report `READY` before it
    promotes Firestore and Storage rules.
@@ -635,7 +635,7 @@ artifacts.
 Within the production release, only the protected deploy job receives
 `id-token: write`; it deploys Functions and Hosting together without checkout,
 application dependency installation, predeploy hooks, or a rebuild. It installs
-only Firebase CLI `15.28.2` from its verified dedicated lock with lifecycle
+only Firebase CLI `15.30.0` from its verified dedicated lock with lifecycle
 scripts disabled. The Functions environment file is created with mode `0600`;
 because artifact transport resets file modes, the privileged verifier restores
 `0600` after download. A separate job then smokes production without a cloud

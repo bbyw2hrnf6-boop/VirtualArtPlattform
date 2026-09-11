@@ -34,7 +34,7 @@ jobs:
     env:
       NODE_VERSION: 22.23.2
       NPM_VERSION: 10.9.8
-      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_CLI_VERSION: 15.30.0
       FIREBASE_PROJECT_ID: virtualartplattform
       FIREBASE_STORAGE_BUCKET: virtualartplattform.firebasestorage.app
       REQUESTED_SHA: ${{ inputs.commit_sha }}
@@ -220,7 +220,7 @@ jobs:
     env:
       NODE_VERSION: 22.23.2
       NPM_VERSION: 10.9.8
-      FIREBASE_CLI_VERSION: 15.28.2
+      FIREBASE_CLI_VERSION: 15.30.0
       FIREBASE_PROJECT_ID: virtualartplattform
       FIREBASE_STORAGE_BUCKET: virtualartplattform.firebasestorage.app
       DEPLOY_SHA: ${{ needs.resolve-policy.outputs.deploy_sha }}

@@ -10,9 +10,9 @@ const HELP = `Create or verify the immutable WP2 Firebase release artifact.
 
 Usage:
   node scripts/wp2-release-artifact.mjs create --commit-sha SHA \\
-    --node-version 22.23.2 --firebase-cli-version 15.28.2
+    --node-version 22.23.2 --firebase-cli-version 15.30.0
   node scripts/wp2-release-artifact.mjs verify --commit-sha SHA \\
-    --node-version 22.23.2 --firebase-cli-version 15.28.2
+    --node-version 22.23.2 --firebase-cli-version 15.30.0
 
 Both commands use ./artifacts/wp2-release and require the production configuration
 environment validated by wp2-release-preflight.mjs.

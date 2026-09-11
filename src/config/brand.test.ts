@@ -5,6 +5,11 @@ import errorBoundarySource from "../components/AppErrorBoundary.tsx?raw";
 import accountSource from "../features/account/AccountDialog.tsx?raw";
 import authActionSource from "../features/account/AuthActionPage.tsx?raw";
 import accessSource from "../features/account/GalleryAccessManager.tsx?raw";
+import dannyDemoSource from "../features/demo/DannyDemoPage.tsx?raw";
+import {
+  DANNY_ARTWORKS,
+  DANNY_DEMO_METADATA,
+} from "../features/demo/dannyReference";
 import visitorControlsSource from "../features/gallery/VisitorControls.tsx?raw";
 import gallerySceneSource from "../features/gallery/GalleryScene.tsx?raw";
 import demoCollectionSource from "../features/gallery/editor/demoCollection.ts?raw";
@@ -17,6 +22,7 @@ import draftStorageSource from "../services/draftStorage.ts?raw";
 import storagePathsSource from "../services/galleryStoragePaths.ts?raw";
 import emailSource from "../../functions/src/emailTemplates.ts?raw";
 import functionsSource from "../../functions/src/index.ts?raw";
+import publicDeliverySource from "../../functions/src/publicDelivery.ts?raw";
 import htmlSource from "../../index.html?raw";
 import manifestSource from "../../public/site.webmanifest?raw";
 import faviconSource from "../../public/favicon.svg?raw";
@@ -29,6 +35,11 @@ const visibleSources = {
   "src/features/account/AccountDialog.tsx": accountSource,
   "src/features/account/AuthActionPage.tsx": authActionSource,
   "src/features/account/GalleryAccessManager.tsx": accessSource,
+  "src/features/demo/DannyDemoPage.tsx": dannyDemoSource,
+  "src/features/demo/dannyReference.ts": JSON.stringify({
+    artworks: DANNY_ARTWORKS,
+    metadata: DANNY_DEMO_METADATA,
+  }),
   "src/features/gallery/VisitorControls.tsx": visitorControlsSource,
   "src/features/gallery/GalleryScene.tsx": gallerySceneSource,
   "src/features/gallery/editor/demoCollection.ts": demoCollectionSource,
@@ -39,6 +50,7 @@ const visibleSources = {
   "src/services/galleryPublishingError.ts": publishingErrorsSource,
   "functions/src/emailTemplates.ts": emailSource,
   "functions/src/index.ts": functionsSource,
+  "functions/src/publicDelivery.ts": publicDeliverySource,
   "index.html": htmlSource,
   "public/site.webmanifest": manifestSource,
   "public/favicon.svg": faviconSource,
@@ -110,7 +122,6 @@ describe("LIEUVA visible-brand and compatibility contract", () => {
         '"galleryArtworks"',
       ]],
       ["functions/src/index.ts", functionsSource, [
-        '"AURA_PUBLIC_APP_URL"',
         '"AURA_REPLY_TO"',
         '"AURA_LEGAL_FOOTER"',
         "export const beginAuraGalleryPublication",
@@ -120,6 +131,12 @@ describe("LIEUVA visible-brand and compatibility contract", () => {
         "export const deleteAuraAccount",
         "export const resumeAuraAccountDeletions",
         "export const lieuvaCspReport",
+      ]],
+      ["functions/src/publicDelivery.ts", publicDeliverySource, [
+        '"AURA_PUBLIC_APP_URL"',
+        "export const spaceDocument",
+        "export const creatorDocument",
+        "export const spaceSitemap",
       ]],
       ["src/services/galleryStoragePaths.ts", storagePathsSource, ["published/"]],
     ];

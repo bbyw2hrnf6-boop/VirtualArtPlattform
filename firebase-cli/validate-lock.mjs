@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 export const EXPECTED_NODE_VERSION = '22.23.2';
 export const EXPECTED_NPM_VERSION = '10.9.8';
-export const EXPECTED_FIREBASE_CLI_VERSION = '15.28.2';
+export const EXPECTED_FIREBASE_CLI_VERSION = '15.30.0';
 
 const EXPECTED_PACKAGE_NAME = '@lieuva/firebase-cli-toolchain';
 const EXPECTED_PACKAGE_VERSION = '1.0.0';

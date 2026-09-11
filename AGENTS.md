@@ -8,8 +8,9 @@
 
 1. Read `README.md` and `audit/CURRENT-STATE.md`.
 2. Read the relevant operational source: `FIREBASE_SETUP.md`, `ASSET_LICENSES.md`, `blender/EXPORT_CONTRACT.md` or the indexed specifications in `audit/README.md`.
-3. Check `git status`; preserve user-owned and unrelated changes.
-4. Use Node `22.23.2` and npm `10.9.8` for authoritative checks.
+3. Designate one checkout as canonical for the task. Confirm it with `git rev-parse --show-toplevel` and `git status --short --branch`; treat similarly named clones as stale until their HEAD and upstream are verified, and do not split implementation and authoritative checks across clones.
+4. Preserve user-owned and unrelated changes.
+5. Use Node `22.23.2` and npm `10.9.8` for authoritative checks.
 
 ## Sources of truth
 
@@ -67,6 +68,7 @@ Do not treat a dated Git-history audit, screenshot or generated report as curren
 - Put temporary screenshots, traces and measurements in ignored `artifacts/`; run `npm run clean:generated` when done.
 - Add durable audit text only when it records an ongoing contract or unresolved decision. Index it in `audit/README.md`.
 - New asset provenance belongs in `ASSET_LICENSES.md`.
+- Use descriptive commit and pull-request summaries that name the behavior or contract changed; one-character or placeholder messages are not acceptable release history.
 
 ## Verification
 
@@ -74,6 +76,7 @@ Do not treat a dated Git-history audit, screenshot or generated report as curren
 - Run `npm run check:functions` for Functions changes.
 - Run `npm run test:firebase-rules` for schema, rule, Storage or access changes.
 - Run the Playwright smoke suite for UI, route, scene, asset or build changes; verify 1440 × 1000 and 390 × 844 when visuals change.
+- Review visual diffs before refreshing approved baselines; never update snapshots merely to make a failing check pass.
 - Run `git diff --check` and check for broken Markdown links before handoff.
 - Record intentional performance/accessibility regressions; never silently raise budgets.
 

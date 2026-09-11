@@ -21,8 +21,9 @@ export function compactShaderSource(source) {
   for (const line of source.split('\n')) {
     if (/^\s*#/.test(line) || continued) {
       flush();
-      output.push(line);
-      continued = line.trimEnd().endsWith('\\');
+      const directive = line.trim();
+      output.push(directive);
+      continued = directive.endsWith('\\');
     } else block.push(line.trim());
   }
   flush();

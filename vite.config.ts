@@ -19,7 +19,9 @@ export default defineConfig(({ command }) => ({
     terserOptions: {
       ecma: 2020,
       safari10: false,
-      compress: { passes: 4 },
+      // Avoid two raw-size rewrites that regress the measured gzip total for
+      // this multi-chunk build; all ordinary safe compression stays enabled.
+      compress: { passes: 4, reduce_funcs: false, lhs_constants: false },
     },
     rolldownOptions: {
       output: {
@@ -35,6 +37,9 @@ export default defineConfig(({ command }) => ({
           }, {
             name: 'firebase',
             test: /node_modules[\\/](?:@firebase|firebase)[\\/]|src[\\/]services[\\/](?:firebase|accountService)\.ts$/,
+            // Shared public helpers imported by accountService must stay in the
+            // entry chunk; recursively claiming them makes Firebase a preload.
+            includeDependenciesRecursively: false,
           }],
         },
       },

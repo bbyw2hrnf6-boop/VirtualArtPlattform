@@ -8,10 +8,10 @@ Status: implemented in the repository; production promotion has not been run.
 
 `npm run test:firebase-rules` starts only the Firestore and Storage emulators for
 the demo project `demo-lieuva-rules`. It never receives cloud credentials. The
-suite uses exact `@firebase/rules-unit-testing@5.0.2`, Firebase CLI `15.28.2`,
+suite uses exact `@firebase/rules-unit-testing@5.0.2`, Firebase CLI `15.30.0`,
 Node `22.23.2`, and Java `21.0.12.1+1` in CI.
 
-The 27-test matrix covers signed-out, anonymous-provider, unverified, verified
+The emulator matrix covers signed-out, anonymous-provider, unverified, verified
 owner, editor, viewer, revoked-member, and outsider contexts. It exercises
 public/unlisted/private and active/expired/archived/legacy reads; bounded list
 queries; trusted-only gallery manifests and internal collections; profile and

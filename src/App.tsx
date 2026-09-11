@@ -128,17 +128,22 @@ import {
 } from "./services/pageMetadata";
 import { guestExploreDeadline, isDiscoverEligible, isPublicSpaceIndexEligible } from "./services/discoverEligibility";
 import { adminNavigationPath, matchAdminRoute, type AdminView } from "./services/adminRoutes";
+import {
+  ArtworkDirectory,
+  ArtworkInfoCard,
+  MovementHint,
+  type ArtworkFocus,
+  type DirectoryArtwork,
+  type ViewMode,
+} from "./features/gallery/ViewerExperience";
+import { useViewerSceneUnavailable } from "./features/gallery/useViewerSceneUnavailable";
 
 const GalleryScene = lazy(() =>
   import("./features/gallery/GalleryScene").then((module) => ({
     default: module.GalleryScene,
   })),
 );
-const DannyDemoScene = lazy(() =>
-  import("./features/gallery/GalleryScene").then((module) => ({
-    default: module.DannyDemoScene,
-  })),
-);
+const DannyDemoPage = lazy(() => import("./features/demo/DannyDemoPage"));
 const ScrollGalleryStory = lazy(() =>
   import("./features/landing/ScrollGalleryStory").then((module) => ({
     default: module.ScrollGalleryStory,
@@ -165,20 +170,6 @@ type Route = {
   hubView?: "home" | "settings";
   adminView?: AdminView;
 };
-type ViewMode = "walk" | "overview";
-type ArtworkFocus = {
-  id: string;
-  title: string;
-  artist: string;
-  description?: string;
-  year?: string;
-  image?: string;
-  medium?: string;
-  dimensions?: string;
-  availability?: string;
-  imageAlt?: string;
-};
-type DirectoryArtwork = ArtworkFocus & { imageKey?: string };
 type GalleryLoadState =
   | { status: "loading" }
   | { status: "ready"; gallery: GalleryRecord }
@@ -189,103 +180,6 @@ const MAX_DECOR_OBJECTS = 8;
 const decorName = (id: DecorId) =>
   DECOR_CATALOG.find((item) => item.id === id)?.name ?? id.replaceAll("-", " ");
 
-// Copied from the delivered HOTSPOT_* extras in both Danny GLBs. The runtime
-// image loader below reads the matching, embedded WebP sources by asset key.
-const DANNY_ARTWORKS: DirectoryArtwork[] = [
-  {
-    id: "artwork-01",
-    imageKey: "artwork-01",
-    title: "Yellow Field, Veined",
-    artist: "Danny Hirsch",
-    year: "2026",
-    medium: "Mixed Media on Canvas",
-    dimensions: "40 × 50 cm",
-    availability: "Available",
-    description:
-      "A charged botanical trace held inside a saturated field of light.",
-    imageAlt:
-      "Magnified surface detail of Yellow Field, Veined by Danny Hirsch",
-  },
-  {
-    id: "artwork-02",
-    imageKey: "artwork-02",
-    title: "Black Current",
-    artist: "Danny Hirsch",
-    year: "2026",
-    medium: "Acrylic on Canvas",
-    dimensions: "40 × 50 cm",
-    availability: "Available",
-    description:
-      "Dark movement breaks into mineral gold, fluid and deliberate.",
-    imageAlt: "Magnified surface detail of Black Current by Danny Hirsch",
-  },
-  {
-    id: "artwork-03",
-    imageKey: "artwork-03",
-    title: "Soft Terrain",
-    artist: "Danny Hirsch",
-    year: "2026",
-    medium: "Mixed Media on Canvas",
-    dimensions: "40 × 50 cm",
-    availability: "Available",
-    description:
-      "Color drifts across the surface like atmosphere settling into matter.",
-    imageAlt: "Magnified surface detail of Soft Terrain by Danny Hirsch",
-  },
-  {
-    id: "artwork-04",
-    imageKey: "artwork-04",
-    title: "Oxide Drift",
-    artist: "Danny Hirsch",
-    year: "2026",
-    medium: "Acrylic and Mineral Pigment on Canvas",
-    dimensions: "40 × 50 cm",
-    availability: "Available",
-    description:
-      "A low, metallic landscape shaped by pressure, reflection, and restraint.",
-    imageAlt: "Magnified surface detail of Oxide Drift by Danny Hirsch",
-  },
-  {
-    id: "artwork-05",
-    imageKey: "artwork-05",
-    title: "Blue Aperture",
-    artist: "Danny Hirsch",
-    year: "2026",
-    medium: "Acrylic on Canvas",
-    dimensions: "40 × 50 cm",
-    availability: "Available",
-    description:
-      "Cool blues and silver tones open into a deep, architectural field.",
-    imageAlt: "Magnified surface detail of Blue Aperture by Danny Hirsch",
-  },
-  {
-    id: "artwork-06",
-    imageKey: "artwork-06",
-    title: "Nocturne Relic",
-    artist: "Danny Hirsch",
-    year: "2026",
-    medium: "Mixed Media Assemblage",
-    dimensions: "40 × 50 cm",
-    availability: "Available",
-    description:
-      "Raw material interrupts a luminous ground with sculptural tension.",
-    imageAlt: "Magnified surface detail of Nocturne Relic by Danny Hirsch",
-  },
-  {
-    id: "wartrobe-front",
-    imageKey: "gallery-04",
-    title: "wARTrobe · Front",
-    artist: "Danny Hirsch",
-    year: "One-of-one object",
-    medium: "Painted wardrobe installation",
-    dimensions: "Details on request",
-    availability: "Private inquiry",
-    description:
-      "A painted object where storage, memory, and surface become one architectural presence.",
-    imageAlt:
-      "Complete front view of the painted wARTrobe installation by Danny Hirsch",
-  },
-];
 const routeFromLocation = (): Route => {
   const adminRoute = matchAdminRoute(location.pathname);
   if (adminRoute) return "view" in adminRoute
@@ -3513,540 +3407,8 @@ function Choice({
   );
 }
 
-interface GlbDirectoryDocument {
-  images?: Array<{ name?: string; mimeType?: string; bufferView?: number }>;
-  bufferViews?: Array<{ byteOffset?: number; byteLength: number }>;
-}
-
-async function loadDannyArtworkImages(
-  signal: AbortSignal,
-): Promise<Record<string, string>> {
-  const response = await fetch("./assets/demo/danny-gallery-mobile.glb", {
-    signal,
-  });
-  if (!response.ok)
-    throw new Error(`Artwork source returned ${response.status}.`);
-  const buffer = await response.arrayBuffer();
-  const view = new DataView(buffer);
-  if (view.byteLength < 20 || view.getUint32(0, true) !== 0x46546c67)
-    throw new Error("Artwork source is not a valid GLB.");
-  let offset = 12;
-  let document: GlbDirectoryDocument | undefined;
-  let binaryOffset = -1;
-  while (offset + 8 <= view.byteLength) {
-    const length = view.getUint32(offset, true);
-    const type = view.getUint32(offset + 4, true);
-    const start = offset + 8;
-    if (start + length > view.byteLength)
-      throw new Error("Artwork source has an invalid chunk length.");
-    if (type === 0x4e4f534a) {
-      const source = new TextDecoder()
-        .decode(new Uint8Array(buffer, start, length))
-        .replace(/\0+$/u, "")
-        .trim();
-      document = JSON.parse(source) as GlbDirectoryDocument;
-    } else if (type === 0x004e4942) binaryOffset = start;
-    offset = start + length;
-  }
-  if (!document?.images || !document.bufferViews || binaryOffset < 0)
-    throw new Error("Artwork images are missing from the GLB.");
-  const urls: Record<string, string> = {};
-  for (const artwork of DANNY_ARTWORKS) {
-    if (!artwork.imageKey) continue;
-    const image = document.images.find(
-      (candidate) => candidate.name === artwork.imageKey,
-    );
-    if (image?.bufferView === undefined) continue;
-    const source = document.bufferViews[image.bufferView];
-    if (!source) continue;
-    const start = binaryOffset + (source.byteOffset ?? 0);
-    const end = start + source.byteLength;
-    if (start < binaryOffset || end > buffer.byteLength) continue;
-    urls[artwork.imageKey] = URL.createObjectURL(
-      new Blob([buffer.slice(start, end)], {
-        type: image.mimeType ?? "image/webp",
-      }),
-    );
-  }
-  return urls;
-}
-
-function useDannyArtworkImages(active: boolean) {
-  const [images, setImages] = useState<Record<string, string>>({});
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    "idle",
-  );
-  const started = useRef(false);
-  const controller = useRef<AbortController | null>(null);
-  const objectUrls = useRef<string[]>([]);
-  useEffect(() => {
-    if (!active || started.current) return;
-    started.current = true;
-    controller.current = new AbortController();
-    void loadDannyArtworkImages(controller.current.signal)
-      .then((loaded) => {
-        objectUrls.current = Object.values(loaded);
-        if (controller.current?.signal.aborted) {
-          objectUrls.current.forEach((url) => URL.revokeObjectURL(url));
-          objectUrls.current = [];
-          return;
-        }
-        setImages(loaded);
-        setStatus("ready");
-      })
-      .catch((error) => {
-        if (controller.current?.signal.aborted) return;
-        console.warn("Accessible Danny artwork images unavailable", error);
-        setStatus("error");
-      });
-  }, [active]);
-  useEffect(
-    () => () => {
-      controller.current?.abort();
-      objectUrls.current.forEach((url) => URL.revokeObjectURL(url));
-      objectUrls.current = [];
-      started.current = false;
-    },
-    [],
-  );
-  return {
-    images,
-    status: active && status === "idle" ? ("loading" as const) : status,
-  };
-}
-
-function useViewerSceneUnavailable(
-  host: React.RefObject<HTMLElement | null>,
-  active = true,
-  onUnavailable?: () => void,
-) {
-  const [unavailable, setUnavailable] = useState(false);
-  useEffect(() => {
-    const element = host.current;
-    if (!active || !element) return undefined;
-    let reported = false;
-    const inspect = () => {
-      if (element.querySelector(".scene-error")) {
-        setUnavailable(true);
-        if (!reported) {
-          reported = true;
-          onUnavailable?.();
-        }
-      } else if (element.querySelector(".gallery-scene canvas")) {
-        reported = false;
-        setUnavailable(false);
-      }
-    };
-    const observer = new MutationObserver(inspect);
-    const onContextLost = (event: Event) => {
-      if (
-        !(event.target instanceof HTMLCanvasElement) ||
-        !element.contains(event.target)
-      )
-        return;
-      setUnavailable(true);
-      if (!reported) {
-        reported = true;
-        onUnavailable?.();
-      }
-    };
-    const onContextRestored = () => inspect();
-    observer.observe(element, { childList: true, subtree: true });
-    element.addEventListener("webglcontextlost", onContextLost, true);
-    element.addEventListener("webglcontextrestored", onContextRestored, true);
-    queueMicrotask(inspect);
-    return () => {
-      observer.disconnect();
-      element.removeEventListener("webglcontextlost", onContextLost, true);
-      element.removeEventListener(
-        "webglcontextrestored",
-        onContextRestored,
-        true,
-      );
-    };
-  }, [active, host, onUnavailable]);
-  return unavailable;
-}
-
-function DirectoryArtworkImage({
-  artwork,
-  loading,
-}: {
-  artwork: DirectoryArtwork;
-  loading?: boolean;
-}) {
-  const [failedSource, setFailedSource] = useState<string>();
-  if (artwork.image && failedSource !== artwork.image)
-    return (
-      <img
-        src={artwork.image}
-        alt={artwork.imageAlt ?? `${artwork.title} by ${artwork.artist}`}
-        loading="lazy"
-        decoding="async"
-        onError={() => setFailedSource(artwork.image)}
-      />
-    );
-  return (
-    <div
-      className="artwork-directory-placeholder"
-      role="img"
-      aria-label={`A separate image for ${artwork.title} is ${loading ? "loading" : "not available"}.`}
-    >
-      <span>{loading ? "Loading image…" : "Image unavailable"}</span>
-    </div>
-  );
-}
-
-function ArtworkDirectory({
-  exhibitionTitle,
-  artist,
-  artworks,
-  sourceNote,
-  unavailable,
-  imagesLoading,
-  returnFocus,
-  onViewArtwork,
-  onClose,
-}: {
-  exhibitionTitle: string;
-  artist: string;
-  artworks: DirectoryArtwork[];
-  sourceNote: string;
-  unavailable: boolean;
-  imagesLoading?: boolean;
-  returnFocus: React.RefObject<HTMLElement | null>;
-  onViewArtwork?: (id: string) => void;
-  onClose: () => void;
-}) {
-  const dialog = useRef<HTMLElement>(null);
-  const titleId = useId();
-  const summaryId = useId();
-  useDialogFocus(dialog, onClose, returnFocus);
-  return (
-    <div
-      className="artwork-directory-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section
-        id="artwork-directory"
-        ref={dialog}
-        className="artwork-directory"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={summaryId}
-        tabIndex={-1}
-      >
-        <header className="artwork-directory-header">
-          <div>
-            <p className="eyebrow">
-              {unavailable
-                ? "3D unavailable · text-first exhibition"
-                : "Text-first exhibition"}
-            </p>
-            <h2 id={titleId}>
-              {exhibitionTitle}
-              <br />
-              <em>Artwork directory.</em>
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close artwork directory"
-          >
-            ×
-          </button>
-        </header>
-        <div className="artwork-directory-summary" id={summaryId}>
-          <p>
-            <strong>
-              {artworks.length} work{artworks.length === 1 ? "" : "s"}
-            </strong>{" "}
-            by {artist}. {sourceNote}
-          </p>
-          {unavailable && (
-            <p role="status">
-              The 3D view could not start. Every available artwork and
-              description remains below.
-            </p>
-          )}
-        </div>
-        {artworks.length ? (
-          <ol className="artwork-directory-list">
-            {artworks.map((artwork, index) => (
-              <li key={artwork.id}>
-                <article>
-                  <DirectoryArtworkImage
-                    artwork={artwork}
-                    loading={imagesLoading}
-                  />
-                  <div className="artwork-directory-copy">
-                    <p className="artwork-directory-index">
-                      {String(index + 1).padStart(2, "0")}
-                    </p>
-                    <h3>{artwork.title}</h3>
-                    <p className="artwork-directory-artist">{artwork.artist}</p>
-                    {(artwork.year ||
-                      artwork.medium ||
-                      artwork.dimensions ||
-                      artwork.availability) && (
-                      <dl>
-                        {artwork.year && (
-                          <div>
-                            <dt>Year / edition</dt>
-                            <dd>{artwork.year}</dd>
-                          </div>
-                        )}
-                        {artwork.medium && (
-                          <div>
-                            <dt>Medium</dt>
-                            <dd>{artwork.medium}</dd>
-                          </div>
-                        )}
-                        {artwork.dimensions && (
-                          <div>
-                            <dt>Dimensions</dt>
-                            <dd>{artwork.dimensions}</dd>
-                          </div>
-                        )}
-                        {artwork.availability && (
-                          <div>
-                            <dt>Availability</dt>
-                            <dd>{artwork.availability}</dd>
-                          </div>
-                        )}
-                      </dl>
-                    )}
-                    <p className="artwork-directory-description">
-                      {artwork.description ||
-                        "No artwork note was provided for this exhibition."}
-                    </p>
-                    {onViewArtwork && !unavailable && (
-                      <button
-                        className="text-link"
-                        type="button"
-                        onClick={() => onViewArtwork(artwork.id)}
-                      >
-                        View in Space →
-                      </button>
-                    )}
-                  </div>
-                </article>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="artwork-directory-empty">
-            This exhibition does not contain any listed artworks.
-          </p>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function ArtworkInfoCard({
-  artwork,
-  onClose,
-}: {
-  artwork: ArtworkFocus;
-  onClose: () => void;
-}) {
-  const dialog = useRef<HTMLElement>(null);
-  useDialogFocus(dialog, onClose);
-  const titleId = `artwork-info-${artwork.id}`;
-  return (
-    <aside
-      ref={dialog}
-      className="artwork-info"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      tabIndex={-1}
-    >
-      {artwork.image && (
-        <img
-          src={artwork.image}
-          alt={artwork.imageAlt ?? `${artwork.title} by ${artwork.artist}`}
-        />
-      )}
-      <div>
-        <p className="eyebrow">Selected artwork</p>
-        <button onClick={onClose} aria-label="Close artwork information">
-          ×
-        </button>
-        <h2 id={titleId}>{artwork.title}</h2>
-        <span>
-          {artwork.artist}
-          {artwork.year ? ` · ${artwork.year}` : ""}
-        </span>
-        {(artwork.medium || artwork.dimensions || artwork.availability) && (
-          <dl>
-            {artwork.medium && (
-              <div>
-                <dt>Medium</dt>
-                <dd>{artwork.medium}</dd>
-              </div>
-            )}
-            {artwork.dimensions && (
-              <div>
-                <dt>Dimensions</dt>
-                <dd>{artwork.dimensions}</dd>
-              </div>
-            )}
-            {artwork.availability && (
-              <div>
-                <dt>Availability</dt>
-                <dd>{artwork.availability}</dd>
-              </div>
-            )}
-          </dl>
-        )}
-        <p>
-          {artwork.description ||
-            "Presented as part of this virtual exhibition."}
-        </p>
-      </div>
-    </aside>
-  );
-}
-
-function MovementHint({ viewMode }: { viewMode: ViewMode }) {
-  if (viewMode === "walk") return null;
-  return (
-    <div className="movement-hint" role="note">
-      <span className="movement-hint__desktop">
-        Drag to orbit · Scroll to zoom
-      </span>
-      <span className="movement-hint__mobile">
-        Drag to orbit · Pinch to zoom
-      </span>
-    </div>
-  );
-}
-
-function DemoLoadingPoster({
-  progress = 0,
-  ready = false,
-}: {
-  progress?: number;
-  ready?: boolean;
-}) {
-  return <SpaceLoading title="Threshold" detail="Preparing the exhibition…" progress={progress || undefined} ready={ready} />;
-}
-
 function SpaceLoadingPoster() {
   return <SpaceLoading detail="Loading the room and collection…" />;
-}
-
-function Demo() {
-  const viewer = useRef<HTMLElement>(null);
-  const directoryButton = useRef<HTMLButtonElement>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("walk");
-  const [artworkFocus, setArtworkFocus] = useState<ArtworkFocus | null>(null);
-  const [loadProgress, setLoadProgress] = useState(0);
-  const [directoryOpen, setDirectoryOpen] = useState(false);
-  const openFallbackDirectory = useCallback(() => {
-    setArtworkFocus(null);
-    setDirectoryOpen(true);
-  }, []);
-  const sceneUnavailable = useViewerSceneUnavailable(
-    viewer,
-    true,
-    openFallbackDirectory,
-  );
-  const { images: dannyImages, status: imageStatus } =
-    useDannyArtworkImages(directoryOpen);
-  const directoryArtworks = useMemo(
-    () =>
-      DANNY_ARTWORKS.map((artwork) => ({
-        ...artwork,
-        image: artwork.imageKey ? dannyImages[artwork.imageKey] : undefined,
-      })),
-    [dannyImages],
-  );
-  const changeView = (value: ViewMode) => {
-    setArtworkFocus(null);
-    setViewMode(value);
-  };
-  return (
-    <main ref={viewer} className="viewer">
-      <header className="viewer-header">
-        <Logo />
-        <div className="viewer-header__identity">
-          <p>Danny Hirsch Arts</p>
-          <span>Threshold · 2026</span>
-        </div>
-        <div className="viewer-header__actions">
-          <SpaceShareMenu
-            compact
-            url={hashApplicationUrl("/demo", window.location.href)}
-            title="Threshold"
-            creator="Danny Hirsch Arts"
-            visibility="public"
-            source="reference_demo"
-          />
-          <FullscreenButton target={viewer} />
-          <button onClick={() => navigate("/create")}>Create a Space ↗</button>
-        </div>
-      </header>
-      <div className="viewer-scene-layer">
-        <Suspense fallback={<DemoLoadingPoster />}>
-          <DannyDemoScene
-            viewMode={viewMode}
-            playIntro
-            onArtworkFocus={setArtworkFocus}
-            onLoadProgress={setLoadProgress}
-            onViewModeChange={changeView}
-            artworkCount={directoryArtworks.length}
-            artworkDirectoryExpanded={directoryOpen}
-            artworkDirectoryUnavailable={sceneUnavailable}
-            artworkButtonRef={directoryButton}
-            onOpenArtworkDirectory={() => {
-              setArtworkFocus(null);
-              setDirectoryOpen(true);
-            }}
-          />
-          <DemoLoadingPoster
-            progress={loadProgress}
-            ready={loadProgress >= 100}
-          />
-        </Suspense>
-      </div>
-      {sceneUnavailable && (
-        <span className="visually-hidden" role="status">
-          3D view unavailable. The artwork directory has opened.
-        </span>
-      )}
-      {artworkFocus && (
-        <ArtworkInfoCard
-          artwork={artworkFocus}
-          onClose={() => setArtworkFocus(null)}
-        />
-      )}
-      <div className="viewer-caption">
-        <p className="eyebrow">Public demo gallery</p>
-        <h1>Threshold</h1>
-        <p>Material, movement, and atmosphere by Danny Hirsch.</p>
-      </div>
-      <MovementHint viewMode={viewMode} />
-      {directoryOpen && (
-        <ArtworkDirectory
-          exhibitionTitle="Threshold"
-          artist="Danny Hirsch"
-          artworks={directoryArtworks}
-          sourceNote="Metadata comes from the delivered exhibition model. Six images are magnified surface studies; wARTrobe is a complete front view."
-          unavailable={sceneUnavailable}
-          imagesLoading={imageStatus === "loading"}
-          returnFocus={directoryButton}
-          onClose={() => setDirectoryOpen(false)}
-        />
-      )}
-    </main>
-  );
 }
 
 function PublishedGallery({ id }: { id: string }) {
@@ -4388,7 +3750,7 @@ export default function App() {
           }
         />
       );
-    if (route.page === "demo") return <Demo />;
+    if (route.page === "demo") return <DannyDemoPage onNavigate={navigate} />;
     if (route.page === "data") return <MvpDataNotice />;
     if (route.page === "account") return <AccountPage />;
     if (route.page === "admin") return <AdminConsole view={route.adminView ?? "overview"} onNavigate={navigate} />;
@@ -4427,7 +3789,18 @@ export default function App() {
       <div id="main-content" tabIndex={-1}>
         <Suspense
           key={routeKey}
-          fallback={route.page === "home" ? <StoryPoster /> : <SpaceLoading />}
+          fallback={
+            route.page === "home" ? (
+              <StoryPoster />
+            ) : route.page === "demo" ? (
+              <SpaceLoading
+                title="Threshold"
+                detail="Preparing the exhibition…"
+              />
+            ) : (
+              <SpaceLoading />
+            )
+          }
         >
           {page}
         </Suspense>

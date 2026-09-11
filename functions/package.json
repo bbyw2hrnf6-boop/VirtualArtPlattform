@@ -13,9 +13,10 @@
     "manifest:release": "node scripts/generate-manifest.mjs --project-id virtualartplattform",
     "maintenance:storage-policy": "node scripts/migrate-storage-policy.mjs",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:scripts": "node --test scripts/*.node-test.mjs",
     "typecheck:test": "tsc -p tsconfig.test.json",
-    "check": "npm run test && npm run test:scripts && npm run typecheck:test && npm run build"
+    "check": "npm run test:coverage && npm run test:scripts && npm run typecheck:test && npm run build && npm run manifest:release"
   },
   "dependencies": {
     "firebase-admin": "14.3.0",
@@ -28,7 +29,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }
