@@ -68,7 +68,7 @@ const OPTIONAL_EVENTS = new Set<TelemetryEventName>([
 const ALLOWED_PROPERTIES = new Set([
   'template', 'visibility', 'role', 'stage', 'outcome', 'error_class',
   'mode', 'metric', 'value', 'rating', 'duration_ms', 'count', 'quality',
-  'runtime', 'reason', 'operation', 'source', 'is_update', 'online',
+  'runtime', 'reason', 'operation', 'source', 'is_update', 'online', 'viewport',
 ]);
 const FORBIDDEN_KEY = /(id|title|name|email|url|path|src|text|description|artist|token|uid)/i;
 const SAFE_VALUE = /^[a-z0-9_.:-]{1,64}$/i;

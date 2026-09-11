@@ -94,6 +94,19 @@ describe('privacy-safe telemetry boundary', () => {
     });
   });
 
+  it('reports consented scene preparation measurements without room identifiers', async () => {
+    setTelemetryConsent('granted');
+    trackTelemetry('three_milestone', {
+      runtime: 'published_viewer', stage: 'interactive', metric: 'scene_setup',
+      duration_ms: 2048, viewport: 'mobile', template: 'white-cube', galleryId: 'secret-space',
+    });
+    await __flushTelemetryForTests();
+    expect(received[0].properties).toEqual({
+      runtime: 'published_viewer', stage: 'interactive', metric: 'scene_setup',
+      duration_ms: 2048, viewport: 'mobile', template: 'white-cube',
+    });
+  });
+
   it('records the privacy-safe landing conversion sequence after consent', async () => {
     setTelemetryConsent('granted');
     trackTelemetry('landing_product_proof_engaged', { source: 'workflow' });

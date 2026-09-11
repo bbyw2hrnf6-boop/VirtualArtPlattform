@@ -149,3 +149,22 @@
 @media(max-width:420px){
   .account-page-content{padding-right:14px;padding-left:14px}.account-page-heading h1{font-size:43px}.account-security__identity{padding:15px}.account-security__identity .account-profile__avatar strong{font-size:23px}
 }
+.account-admin-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 24px 0;
+  padding: 22px;
+  border: 1px solid #d1d2c8;
+  border-radius: 8px;
+  background: #f5f5ef;
+  color: #151811;
+  text-decoration: none;
+}
+.account-admin-entry strong, .account-admin-entry small { display: block; }
+.account-admin-entry strong { font-family: Instrument, Georgia, serif; font-size: 28px; font-weight: 400; }
+.account-admin-entry small { margin-top: 6px; color: #545b4d; }
+.account-admin-entry b { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; padding: 10px 16px; border-radius: 5px; background: #cbf348; color: #151811; font-size: 13px; }
+.account-admin-entry:focus-visible { outline: 3px solid #5e7717; outline-offset: 3px; }

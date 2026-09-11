@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+export { getLieuvaAdminSession, getLieuvaAdminDashboard, runLieuvaAdminChecks, manageLieuvaAdminAccess } from "./adminConsole.js";
 import { readFileSync } from "node:fs";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
@@ -57,6 +58,7 @@ import {
   accountDeletionLeaseAvailable,
   accountMediaUploadLeaseDisposition,
   accountDeletionPublicStatus,
+  accountDeletionSiteAdminDisposition,
   aggregateAfterRelationRemoval,
   assertAccountDeletionJobState,
   drainAccountDeletionPage,
@@ -64,6 +66,7 @@ import {
   galleryManifestReferencesPrefix,
   nextAccountDeletionPhase,
   parsePersistedGalleryDocumentId,
+  siteAdminCheckRateDocumentId,
   type AccountDeletionJobState,
 } from "./accountDeletionJobs.js";
 import {
@@ -309,6 +312,35 @@ function requireSignedIn(auth: { uid: string; token: Record<string, unknown> } |
 
 function accountDeletionJobReference(uid: string) {
   return db.collection("accountDeletionJobs").doc(uid);
+}
+
+function accountDeletionSiteAdminReference(uid: string) {
+  return db.collection("siteAdmins").doc(uid);
+}
+
+function accountDeletionSiteAdminCheckRateReference(uid: string) {
+  return db.collection("siteAdminControl").doc(siteAdminCheckRateDocumentId(uid));
+}
+
+function assertAccountDeletionSiteAdminInactive(value: unknown, uid: string) {
+  let disposition: "absent" | "active" | "inactive";
+  try {
+    disposition = accountDeletionSiteAdminDisposition(value, uid);
+  } catch {
+    throw new HttpsError(
+      "failed-precondition",
+      "Administrator access must be reconciled before deleting this account.",
+      { reason: "invalid-site-admin-membership" },
+    );
+  }
+  if (disposition === "active") {
+    throw new HttpsError(
+      "failed-precondition",
+      "Revoke administrator access before deleting this account. Assign another owner first if this is the last owner.",
+      { reason: "active-site-admin-membership" },
+    );
+  }
+  return disposition;
 }
 
 const ACCOUNT_MEDIA_UPLOAD_LEASE_MS = 60_000;

@@ -11,6 +11,7 @@ export default defineConfig(({ command }) => ({
       ? './'
       : '/',
   build: {
+    manifest: true,
     target: 'es2020',
     // Minify for the existing browser target; keep all rendering features and
     // avoid unsafe arithmetic/property transformations.

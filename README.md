@@ -53,6 +53,7 @@ npm ci --prefix firebase-cli --ignore-scripts --no-audit --no-fund
 | `npm run validate:premium` | Validate all six shipping premium-v3 GLBs without changing tracked files. |
 | `npm run validate:premium:update` | Intentionally refresh the tracked GLB measurement report. |
 | `npm run clean:generated` | Remove builds, diagnostics, caches and Blender backups; keeps dependencies, `.env` files, sources and assets. |
+| `npm run admin:bootstrap -- --project PROJECT --email EMAIL` | Resolve and dry-run the guarded one-time first-owner registry bootstrap. |
 
 Run `npm run build` before an isolated browser-smoke run. Install Chromium once with `npm run test:browser-smoke:install`.
 
@@ -92,6 +93,9 @@ The largest implementation files are `src/App.tsx`, `src/features/gallery/Galler
 - Invalid transforms must fail transactionally: mesh, React state and persisted state may not diverge.
 - Renderer, controls, PMREM environment and full scene must survive selection, transform and mode-only changes.
 - Adaptive DPR, progressive loading, reduced motion, keyboard scope, WebGL fallbacks and non-WebGL artwork access are first-class behavior.
+- Site-wide administrator authority comes only from the server-owned `siteAdmins/{uid}` registry. It is not stored in Firebase custom claims or inferred from an email address.
+- The lazy `/admin/overview` console links from Account Settings only after server-confirmed access. It exposes bounded content metadata, GitHub Verify/Deploy history, the last 60 minutes / maximum 50 telemetry observations, live HTTP checks, diagnostics export, and owner-only access management. Scene setup timings are consent-dependent and client-reported (runtime initialization → interactive); they are not full-page load, FPS, unique visitor or billing measurements. Unknown sources stay explicitly unavailable. Admin HTML is uncached and noindex before JavaScript runs; the public entry performance ceilings remain unchanged.
+- The first active owner must be an existing enabled, verified Email/Password or Google account and is created only through the guarded dry-run-first operator command documented in `FIREBASE_SETUP.md`.
 
 Canonical public delivery is `/spaces/{galleryId}`. Compatibility entry points and technical IDs remain active:
 

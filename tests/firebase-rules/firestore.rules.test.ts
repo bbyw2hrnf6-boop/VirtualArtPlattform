@@ -676,12 +676,34 @@ describe("Firestore authorization matrix", () => {
       "accountDeletionJobs/blocked",
       "accountExportJobs/blocked",
       "accountExportJobs/blocked/accountExportChunks/00000000",
+      "siteAdmins/blocked",
+      "siteAdmins/blocked/history/event",
+      "siteAdminControl/bootstrap",
+      "siteAdminControl/bootstrap/history/event",
+      "siteAdminAuditEvents/blocked",
+      "siteAdminAuditEvents/blocked/details/event",
+      "siteAdminCheckRuns/blocked",
+      "siteAdminCheckRuns/blocked/details/event",
     ] as const;
     const { owner } = authContexts(environment);
 
     for (const path of trustedPaths) {
       await assertFails(getDoc(doc(owner.firestore(), path)));
       await assertFails(setDoc(doc(owner.firestore(), path), { forged: true }));
+    }
+  });
+
+  it("denies every client list of site-admin authority and operational ledgers", async () => {
+    const { owner } = authContexts(environment);
+    for (const collectionPath of [
+      "siteAdmins",
+      "siteAdminControl",
+      "siteAdminAuditEvents",
+      "siteAdminCheckRuns",
+    ] as const) {
+      await assertFails(
+        getDocs(query(collection(owner.firestore(), collectionPath), limit(1))),
+      );
     }
   });
 

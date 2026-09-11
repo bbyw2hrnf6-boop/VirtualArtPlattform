@@ -127,6 +127,7 @@ import {
   publishedSpaceMetadataPolicy,
 } from "./services/pageMetadata";
 import { isPublicSpaceIndexEligible } from "./services/discoverEligibility";
+import { adminNavigationPath, matchAdminRoute, type AdminView } from "./services/adminRoutes";
 
 const GalleryScene = lazy(() =>
   import("./features/gallery/GalleryScene").then((module) => ({
@@ -151,9 +152,10 @@ const PitchSections = lazy(() =>
 const ExploreSpacesMenu = lazy(() => import("./features/landing/ExploreSpacesMenu"));
 const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
 const CreatorHubPage = lazy(() => import("./features/creator/CreatorHubPage"));
+const AdminConsole = lazy(() => import("./features/admin/AdminConsole"));
 
 type Route = {
-  page: "home" | "create" | "demo" | "gallery" | "creator" | "creators" | "creator-hub" | "data" | "auth-action" | "account" | "space-not-found";
+  page: "home" | "create" | "demo" | "gallery" | "creator" | "creators" | "creator-hub" | "data" | "auth-action" | "account" | "admin" | "space-not-found";
   id?: string;
   handle?: string;
   template?: TemplateId;
@@ -161,6 +163,7 @@ type Route = {
   projectId?: string;
   legacySpace?: boolean;
   hubView?: "home" | "settings";
+  adminView?: AdminView;
 };
 type ViewMode = "walk" | "overview";
 type ArtworkFocus = {
@@ -284,6 +287,10 @@ const DANNY_ARTWORKS: DirectoryArtwork[] = [
   },
 ];
 const routeFromLocation = (): Route => {
+  const adminRoute = matchAdminRoute(location.pathname);
+  if (adminRoute) return "view" in adminRoute
+    ? { page: "admin", adminView: adminRoute.view }
+    : { page: "space-not-found" };
   const actionMode = new URLSearchParams(location.search).get("mode");
   if (actionMode) return { page: "auth-action" };
   const spaceRoute = matchSpaceRoute(location.pathname, location.hash);
@@ -327,12 +334,15 @@ const routeFromLocation = (): Route => {
   return { page: "home" };
 };
 const navigate = (path: string) => {
+  const adminTarget = adminNavigationPath(path, location.href);
   const creatorTarget = creatorExperienceNavigationPath(path, location.href);
   if (path.startsWith("/spaces/")) {
     const id = path.slice("/spaces/".length);
     const target = spaceCanonicalUrl(id, location.href);
     location.assign(target);
     return;
+  } else if (adminTarget) {
+    history.pushState(null, "", adminTarget);
   } else if (creatorTarget) {
     history.pushState(null, "", creatorTarget);
   } else {
@@ -4281,7 +4291,7 @@ function PublishedGallery({ id }: { id: string }) {
 
 export default function App() {
   const [route, setRoute] = useState(routeFromLocation);
-  const routeKey = `${route.page}:${route.id ?? route.handle ?? route.projectId ?? route.template ?? route.hubView ?? ""}:${route.demoArt ? "demo-art" : ""}`;
+  const routeKey = `${route.page}:${route.id ?? route.handle ?? route.projectId ?? route.template ?? route.hubView ?? route.adminView ?? ""}:${route.demoArt ? "demo-art" : ""}`;
   const previousRoute = useRef(routeKey);
   useEffect(() => {
     const redirectPath = legacyCreatorHubRedirectPath(location.pathname, location.hash);
@@ -4350,6 +4360,7 @@ export default function App() {
     if (route.page === "demo") return <Demo />;
     if (route.page === "data") return <MvpDataNotice />;
     if (route.page === "account") return <AccountPage />;
+    if (route.page === "admin") return <AdminConsole view={route.adminView ?? "overview"} onNavigate={navigate} />;
     if (route.page === "creator" && route.handle)
       return <CreatorHubPage view={{ kind: "profile", handle: route.handle }} onNavigate={navigate} />;
     if (route.page === "creators")

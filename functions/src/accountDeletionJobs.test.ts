@@ -11,6 +11,7 @@ import {
   accountDeletionPseudonymousReportId,
   accountDeletionPermitAuthority,
   accountDeletionPublicStatus,
+  accountDeletionSiteAdminDisposition,
   aggregateAfterRelationRemoval,
   assertAccountDeletionJobState,
   drainAccountDeletionPage,
@@ -18,6 +19,7 @@ import {
   galleryManifestReferencesPrefix,
   nextAccountDeletionPhase,
   parsePersistedGalleryDocumentId,
+  siteAdminCheckRateDocumentId,
 } from "./accountDeletionJobs.js";
 
 describe("account deletion jobs", () => {
@@ -144,6 +146,37 @@ describe("account deletion jobs", () => {
       uid: "account-a", deletionId: "b".repeat(32), status: "complete", phase: "complete",
     }, "account-a"))).toEqual({ status: "complete", phase: "complete" });
     expect(ACCOUNT_DELETION_TOMBSTONE_TTL_MS).toBe(24 * 60 * 60_000);
+  });
+
+  it("blocks active or malformed administrator authority and identifies safe cleanup", () => {
+    const membership = {
+      schemaVersion: 1,
+      uid: "account-a",
+      email: "owner@example.test",
+      role: "owner",
+      active: true,
+    };
+    expect(accountDeletionSiteAdminDisposition(undefined, "account-a")).toBe("absent");
+    expect(accountDeletionSiteAdminDisposition(membership, "account-a")).toBe("active");
+    expect(accountDeletionSiteAdminDisposition({ ...membership, active: false }, "account-a"))
+      .toBe("inactive");
+    for (const malformed of [
+      null,
+      { ...membership, schemaVersion: 2 },
+      { ...membership, uid: "another-account" },
+      { ...membership, email: "invalid" },
+      { ...membership, role: "viewer" },
+      { ...membership, active: "false" },
+    ]) expect(() => accountDeletionSiteAdminDisposition(malformed, "account-a"))
+      .toThrow("deletion-site-admin-state-invalid");
+  });
+
+  it("derives the exact non-UID admin check-rate document ID", () => {
+    expect(siteAdminCheckRateDocumentId("account-a")).toBe(
+      "checkRate-37f21325d59449edee1a8ae152776c3145fc53854fb5410aaa20f42343752282",
+    );
+    expect(() => siteAdminCheckRateDocumentId("nested/account"))
+      .toThrow("deletion-site-admin-state-invalid");
   });
 
   it("protects another owner's committed revision prefix", () => {

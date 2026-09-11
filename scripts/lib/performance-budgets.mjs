@@ -6,15 +6,36 @@ export const PERFORMANCE_TARGETS = Object.freeze({
   entryCssGzip: 32_500,
 });
 
-// WP2 freezes the shipped baseline so performance cannot silently regress.
-// WP4 owns lowering these ceilings to the product targets above.
+// The admin console deliberately adds a bounded, lazy-only surface (+13KB JS,
+// +1KB CSS aggregate ceiling). Public entry and largest-chunk ceilings remain
+// frozen; assertAdminLazyBoundary verifies the console never enters that graph.
+// WP4 still owns lowering the public baseline to the product targets above.
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
-  jsGzip: 575_000,
-  cssGzip: 54_000,
+  jsGzip: 588_000,
+  cssGzip: 55_000,
   largestLazyGzip: 195_000,
   entryGzip: 305_000,
   entryCssGzip: 32_500,
 });
+
+export function assertAdminLazyBoundary(manifest) {
+  const adminKey = 'src/features/admin/AdminConsole.tsx';
+  const admin = manifest?.[adminKey];
+  if (!manifest?.['index.html']?.isEntry || !admin?.isDynamicEntry)
+    throw new Error('The admin console must remain a separately loaded dynamic entry.');
+  const visited = new Set();
+  function visit(key) {
+    if (visited.has(key)) return;
+    visited.add(key);
+    const chunk = manifest[key];
+    if (!chunk) throw new Error(`Missing manifest dependency: ${key}`);
+    if (key === adminKey || /(?:AdminConsole|adminConsoleService)/.test(chunk.file))
+      throw new Error('Admin code entered the public initial dependency graph.');
+    for (const dependency of chunk.imports ?? []) visit(dependency);
+  }
+  visit('index.html');
+  return { js: admin.file, css: admin.css ?? [] };
+}
 
 function attributes(tag) {
   return Object.fromEntries(

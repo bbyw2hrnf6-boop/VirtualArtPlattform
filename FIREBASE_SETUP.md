@@ -108,6 +108,71 @@ Live email acceptance test:
 6. Repeat opt-in once through Google sign-in and check mobile rendering, spam
    placement, sender alignment (SPF/DKIM/DMARC), and reply handling.
 
+### Bootstrap the first site owner
+
+Site-wide admin authority lives in the server-owned `siteAdmins/{uid}` registry.
+Do not add a Firebase custom claim, hard-code an email, or use the Auth user's
+email as a Firestore document ID. The bootstrap accepts only an existing,
+enabled, email-verified Email/Password or Google account. Creating or verifying
+the account remains a normal user-controlled Auth flow.
+
+The one-time operator command uses the active named `gcloud` account. It checks
+that the active gcloud project exactly matches the explicit `--project`, captures
+a short-lived OAuth token in memory, and never prints or persists that token.
+The operator identity needs `firebaseauth.users.get` plus least-privilege
+Firestore document get/list/create transaction access; do not grant Owner and
+do not create a service-account key. An authenticated gcloud identity is the
+audited operator, not an implicit choice of which product user becomes owner.
+
+First resolve the exact user and inspect the read-only plan. Either email or UID
+may be used for lookup; supplying both makes them an additional exact-match
+guard. Set `GCLOUD_BIN` only if `gcloud` is not on `PATH`.
+
+```bash
+gcloud auth login
+gcloud config set project virtualartplattform
+npm run admin:bootstrap -- \
+  --project virtualartplattform \
+  --email 'APPROVED_EXISTING_USER_EMAIL'
+```
+
+Dry-run performs Auth and Firestore reads but starts no Firestore transaction
+and sends no write. It reports the normalized email, resolved UID, sign-in
+provider IDs, active gcloud actor, and the three guarded document paths. Review
+that output with the approved user identity. Execute only by repeating both
+resolved identity values and all three confirmations:
+
+```bash
+npm run admin:bootstrap -- \
+  --project virtualartplattform \
+  --uid 'EXACT_UID_FROM_DRY_RUN' \
+  --email 'EXACT_EMAIL_FROM_DRY_RUN' \
+  --execute \
+  --confirm-project virtualartplattform \
+  --confirm-uid 'EXACT_UID_FROM_DRY_RUN' \
+  --confirm-email 'EXACT_EMAIL_FROM_DRY_RUN'
+```
+
+Execution reads the registry inside one Firestore transaction, requires the
+registry and `siteAdminControl/bootstrap` guard to be empty, and creates exactly:
+
+- `siteAdmins/{uid}` with the UID, normalized email, `role: owner`,
+  `active: true`, audit actor/timestamps, and `schemaVersion: 1`;
+- `siteAdminControl/bootstrap`, the global one-shot first-owner guard;
+- `siteAdminAuditEvents/{eventId}`, an immutable bootstrap event containing no
+  OAuth token, password material, provider payload, or custom claim.
+
+Every write has an `exists: false` precondition. A concurrent bootstrap, an
+existing owner/admin record, or an existing control document aborts instead of
+updating or replacing authority. Do not delete the control document to rerun the
+tool. Create, deactivate, or change later `owner|admin` records only through the
+audited admin Functions. `siteAdminCheckRuns/{runId}` stores server-side check
+history; `siteAdminControl/checkRate-{sha256(uid)}` stores the per-actor live-check
+cooldown without exposing the UID in its document ID. Firestore's existing
+default-deny boundary keeps all four collection families inaccessible to
+web/mobile clients, and the emulator matrix locks that behavior without a rules
+change.
+
 ## 3. Blaze and Storage bucket
 
 1. Open **Usage and billing → Details & settings**.

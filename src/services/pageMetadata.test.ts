@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import { pageMetadataPolicy, publicCreatorMetadataPolicy, publishedSpaceMetadataPolicy } from "./pageMetadata";
 
 describe("page metadata policy", () => {
+  it("keeps admin routes out of indexing and archives", () => {
+    expect(pageMetadataPolicy("admin")).toMatchObject({
+      title: "Admin Console | LIEUVA",
+      canonical: "https://lieuva.com/admin/overview",
+      robots: "noindex,nofollow,noarchive",
+    });
+  });
   it("indexes only the public marketing surface by default", () => {
     expect(pageMetadataPolicy("home")).toMatchObject({
       canonical: "https://lieuva.com/",

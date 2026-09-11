@@ -28,6 +28,7 @@
     "review:public-content:decision": "node scripts/public-content-decision.mjs",
     "moderation:queue": "node scripts/moderation-queue.mjs",
     "moderation:action": "node scripts/moderation-action.mjs",
+    "admin:bootstrap": "node scripts/bootstrap-site-admin.mjs",
     "validate:premium": "node scripts/validate-premium-glb.mjs",
     "validate:premium:update": "node scripts/validate-premium-glb.mjs --write-report"
   },

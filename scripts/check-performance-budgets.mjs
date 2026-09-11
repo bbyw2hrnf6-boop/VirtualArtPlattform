@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   PERFORMANCE_RELEASE_CEILINGS,
   PERFORMANCE_TARGETS,
+  assertAdminLazyBoundary,
   initialAssetReferences,
   performanceBudgetOverages,
 } from './lib/performance-budgets.mjs';
@@ -38,6 +39,11 @@ const initialAssets = (paths, kind) => paths.map((path) => {
 const initialJs = initialAssets(initial.js, 'JavaScript');
 const initialCss = initialAssets(initial.css, 'CSS');
 const initialJsPaths = new Set(initial.js);
+const adminAssets = assertAdminLazyBoundary(JSON.parse(readFileSync(join(root, '.vite/manifest.json'), 'utf8')));
+const adminJsGzip = assetByPath.get(adminAssets.js)?.gzip;
+const adminCssGzip = adminAssets.css.reduce((sum, path) => sum + (assetByPath.get(path)?.gzip ?? Number.NaN), 0);
+if (!Number.isFinite(adminJsGzip) || !Number.isFinite(adminCssGzip) || adminJsGzip > 12_000 || adminCssGzip > 5_000)
+  throw new Error('Lazy admin console exceeds its explicit 12KB JS / 5KB CSS gzip budget.');
 const totals = {
   jsGzip: js.reduce((sum, asset) => sum + asset.gzip, 0),
   cssGzip: css.reduce((sum, asset) => sum + asset.gzip, 0),
@@ -48,7 +54,7 @@ const totals = {
 const releaseFailures = performanceBudgetOverages(totals, PERFORMANCE_RELEASE_CEILINGS);
 const targetMisses = performanceBudgetOverages(totals, PERFORMANCE_TARGETS);
 
-console.log('LIEUVA performance budget (WP2 enforced release ceilings)');
+console.log('LIEUVA performance budget (public entry frozen; bounded lazy admin addition)');
 console.table({
   'total JS gzip': { bytes: totals.jsGzip, ceiling: PERFORMANCE_RELEASE_CEILINGS.jsGzip, target: PERFORMANCE_TARGETS.jsGzip },
   'total CSS gzip': { bytes: totals.cssGzip, ceiling: PERFORMANCE_RELEASE_CEILINGS.cssGzip, target: PERFORMANCE_TARGETS.cssGzip },

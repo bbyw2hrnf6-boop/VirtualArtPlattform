@@ -86,6 +86,31 @@ const safeDocumentPath = (value: unknown): value is string =>
 const safeStoragePrefix = (value: unknown): value is string =>
   typeof value === "string" && value.length <= 1_024 && value.startsWith("published/") && value.endsWith("/");
 
+/** Classify the server-owned administrator registry record before destructive
+ * account work. An existing record is accepted as inactive only when its
+ * authority-bearing fields satisfy the same schema used by the admin backend;
+ * malformed records fail closed instead of being silently erased. */
+export function accountDeletionSiteAdminDisposition(value: unknown, uid: string) {
+  if (!safeUid(uid)) throw new Error("deletion-site-admin-state-invalid");
+  if (value === undefined) return "absent" as const;
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("deletion-site-admin-state-invalid");
+  const data = value as Record<string, unknown>;
+  if (
+    data.schemaVersion !== 1 || data.uid !== uid || !safeEmail(data.email) ||
+    (data.role !== "owner" && data.role !== "admin") || typeof data.active !== "boolean"
+  ) throw new Error("deletion-site-admin-state-invalid");
+  return data.active ? "active" as const : "inactive" as const;
+}
+
+/** The live-check rate document uses the full UID digest in its ID. Keeping
+ * this derivation shared and validated lets deletion remove it without ever
+ * storing or querying a raw UID field in the control document. */
+export function siteAdminCheckRateDocumentId(uid: string) {
+  if (!safeUid(uid)) throw new Error("deletion-site-admin-state-invalid");
+  return `checkRate-${createHash("sha256").update(uid).digest("hex")}`;
+}
+
 /** Resolve an existing invitation recipient for the transactional deletion
  * fence. A genuinely absent Auth user has no account to fence; all other Auth
  * failures remain fail-closed. */

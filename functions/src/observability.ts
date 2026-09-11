@@ -74,7 +74,7 @@ const CLIENT_EVENTS = new Set([
 const CLIENT_PROPERTIES = new Set([
   "template", "visibility", "role", "stage", "outcome", "error_class", "mode",
   "metric", "value", "rating", "duration_ms", "count", "quality", "runtime",
-  "reason", "operation", "source", "is_update", "online",
+  "reason", "operation", "source", "is_update", "online", "viewport",
 ]);
 const FORBIDDEN = /(id|title|name|email|url|path|src|text|description|artist|token|uid)/i;
 

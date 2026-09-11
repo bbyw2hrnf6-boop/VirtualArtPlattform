@@ -57,6 +57,10 @@
     ],
     "rewrites": [
       {
+        "source": "/admin{,/**}",
+        "destination": "/admin/index.html"
+      },
+      {
         "source": "/creator-hub{,/**}",
         "function": {
           "functionId": "creatorDocument",
@@ -137,6 +141,13 @@
       }
     ],
     "headers": [
+      {
+        "source": "/admin{,/**}",
+        "headers": [
+          { "key": "Cache-Control", "value": "private,no-store,max-age=0" },
+          { "key": "X-Robots-Tag", "value": "noindex,nofollow,noarchive" }
+        ]
+      },
       {
         "source": "/",
         "headers": [

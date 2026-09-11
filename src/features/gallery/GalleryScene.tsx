@@ -3755,6 +3755,7 @@ function GallerySceneRenderer({
     if (!host.current) return;
     const element = host.current;
     const sceneStartedAt = performance.now();
+    let sceneSetupReported = false;
     const initial = latest.current;
     let currentDraft = initial.draft;
     let sceneRevision = 0;
@@ -5616,12 +5617,6 @@ function GallerySceneRenderer({
       setTouchMovement: navigation.setTouchMovement,
       capture,
     };
-    trackTelemetry("three_milestone", {
-      runtime: initial.visitor ? "published_viewer" : "studio",
-      stage: "interactive",
-      template: currentDraft.templateId,
-      quality: quality.tier,
-    });
     const overviewCenter = new THREE.Vector3(0, h * 0.34, 0);
     const overviewDirection = new THREE.Vector3();
     const wallNormals: Record<string, THREE.Vector3> = {
@@ -5782,6 +5777,18 @@ function GallerySceneRenderer({
             latest.current.onArrivalChange?.("ready");
             element.dataset.captureReady = "true";
             element.dataset.sceneReadyMs = String(Math.round(performance.now() - sceneStartedAt));
+            if (!sceneSetupReported) {
+              sceneSetupReported = true;
+              trackTelemetry("three_milestone", {
+                runtime: initial.visitor ? "published_viewer" : "studio",
+                stage: "interactive",
+                metric: "scene_setup",
+                duration_ms: performance.now() - sceneStartedAt,
+                template: currentDraft.templateId,
+                quality: quality.tier,
+                viewport: window.matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop",
+              });
+            }
             status.ready();
             arrival.remove();
             navigation.setEnabled(mode === "walk");
@@ -6521,6 +6528,7 @@ export function DannyDemoScene({
     if (!host.current) return;
     const element = host.current;
     const initial = latest.current;
+    const sceneStartedAt = performance.now();
     let mode = initial.viewMode;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#0e100e");
@@ -7771,7 +7779,11 @@ export function DannyDemoScene({
         }
         status.ready("Danny Hirsch exhibition ready");
         setSceneReady(true);
-        trackTelemetry("three_milestone", { runtime: "danny", stage: "interactive", quality: quality.tier });
+        trackTelemetry("three_milestone", {
+          runtime: "danny", stage: "interactive", quality: quality.tier,
+          metric: "scene_setup", duration_ms: performance.now() - sceneStartedAt,
+          viewport: window.matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop",
+        });
         latest.current.onLoadProgress?.(100);
         })().catch(() => {
           if (destroyed) return;

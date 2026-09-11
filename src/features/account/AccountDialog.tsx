@@ -30,6 +30,7 @@ import {
 import "./accountDialog.css";
 
 type AccountModule = typeof import("../../services/accountService");
+const AdminEntry = lazy(() => import("../admin/AdminEntry"));
 const CreatorProfileSettings = lazy(() => import("./CreatorProfileSettings").then((module) => ({
   default: module.CreatorProfileSettings,
 })));
@@ -850,6 +851,9 @@ export function AccountDialog({
               Open Creator Hub <span aria-hidden="true">→</span>
             </a>}
             {account.emailVerified && section === "rooms" && <AccountRooms session={account} />}
+            {account.emailVerified && (section === "rooms" || section === "account") && (
+              <Suspense fallback={null}><AdminEntry key={account.uid} /></Suspense>
+            )}
             {account.emailVerified && section === "creator" && (
               <Suspense fallback={<p className="account-section-loading" role="status">Loading public profile editor…</p>}>
                 <CreatorProfileSettings account={account} />

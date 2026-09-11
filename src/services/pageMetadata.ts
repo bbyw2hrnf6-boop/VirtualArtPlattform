@@ -24,7 +24,7 @@ const NON_INDEXED_DESCRIPTION =
   "Create, manage and share immersive 3D presentations with LIEUVA.";
 
 export function pageMetadataPolicy(
-  page: "home" | "creators" | "creator-hub" | "create" | "demo" | "data" | "account" | "auth-action" | "space-not-found" | "other",
+  page: "home" | "creators" | "creator-hub" | "create" | "demo" | "data" | "account" | "admin" | "auth-action" | "space-not-found" | "other",
 ): PageMetadataPolicy {
   if (page === "home") return {
     title: productTitle(),
@@ -54,7 +54,13 @@ export function pageMetadataPolicy(
     robots: "noindex,nofollow",
     image: `${HOME_CANONICAL}assets/demo/danny-cover.webp`,
   };
-  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "creators" | "creator-hub" | "demo">, string> = {
+  if (page === "admin") return {
+    title: productTitle("Admin Console"),
+    description: "Restricted LIEUVA administration. Sign in with an authorized administrator account.",
+    canonical: `${HOME_CANONICAL}admin/overview`,
+    robots: "noindex,nofollow,noarchive",
+  };
+  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "creators" | "creator-hub" | "demo" | "admin">, string> = {
     create: "Create a Space",
     data: "Data and rights",
     account: "Your Projects and account",

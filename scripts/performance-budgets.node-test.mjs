@@ -3,9 +3,22 @@ import test from 'node:test';
 import {
   PERFORMANCE_RELEASE_CEILINGS,
   PERFORMANCE_TARGETS,
+  assertAdminLazyBoundary,
   initialAssetReferences,
   performanceBudgetOverages,
 } from './lib/performance-budgets.mjs';
+
+test('admin code is a bounded dynamic entry, never a public static dependency', () => {
+  const adminKey = 'src/features/admin/AdminConsole.tsx';
+  const manifest = {
+    'index.html': { isEntry: true, imports: ['_firebase.js'], dynamicImports: [adminKey], file: 'assets/index.js' },
+    '_firebase.js': { file: 'assets/firebase.js' },
+    [adminKey]: { isDynamicEntry: true, file: 'assets/AdminConsole.js', css: ['assets/AdminConsole.css'] },
+  };
+  assert.deepEqual(assertAdminLazyBoundary(manifest), { js: 'assets/AdminConsole.js', css: ['assets/AdminConsole.css'] });
+  assert.throws(() => assertAdminLazyBoundary({}), /separately loaded/);
+  assert.throws(() => assertAdminLazyBoundary({ ...manifest, 'index.html': { ...manifest['index.html'], imports: [adminKey] } }), /initial dependency graph/);
+});
 
 test('initial assets come from the HTML dependency graph and are de-duplicated', () => {
   assert.deepEqual(initialAssetReferences(`
