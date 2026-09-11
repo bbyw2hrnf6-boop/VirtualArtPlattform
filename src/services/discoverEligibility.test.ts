@@ -55,4 +55,16 @@ describe("Discover eligibility", () => {
     expect(isDiscoverEligible({ ...base, exploreListed: false }, 0)).toBe(false);
     expect(isPublicSpaceIndexEligible({ ...base, exploreListed: false }, 0)).toBe(true);
   });
+
+  it("ends guest Explore placement exactly after seven days without expiring its direct URL", () => {
+    const guest = { ...base, guestPublication: true, publishedAt: new Date(now).toISOString() };
+    const deadline = now + 7 * 86_400_000;
+    expect(isDiscoverEligible(guest, deadline - 1)).toBe(true);
+    expect(discoverEligibility(guest, deadline).reason).toBe("guest-window-ended");
+    const updated = { ...guest, updatedAt: new Date(deadline).toISOString() };
+    expect(isDiscoverEligible(updated, deadline + 1)).toBe(false);
+    expect(isPublicSpaceIndexEligible(guest, deadline + 1)).toBe(true);
+    expect(isDiscoverEligible({ ...guest, publishedAt: "invalid" }, now)).toBe(false);
+    expect(isDiscoverEligible({ ...guest, guestPublication: undefined }, deadline)).toBe(true);
+  });
 });

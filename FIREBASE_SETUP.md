@@ -392,11 +392,39 @@ lifecycle Functions require a valid App Check token.
    `VITE_FIREBASE_APPCHECK_DEBUG_TOKEN=...`. Never put a debug token in GitHub
    variables or a production bundle.
 
-Publication now starts with a 20-minute server permit. Publishing requires a
-verified Email/Password or Google account; each account can start at most 20 new
-publications per UTC day. Storage paths are immutable and bounded to one cover
+Publication starts with a 20-minute server permit. Initial public publication accepts
+Firebase anonymous guests or verified Email/Password/Google accounts. Unverified
+nonanonymous accounts must verify and are never silently replaced with guests.
+Guests can start three new publications per UTC day and keep at most three active
+Spaces; the commit and guest restore transactions recheck the active cap under a
+per-owner quota lock. Verified accounts can start 20 new publications per UTC day.
+Storage paths are immutable and bounded to one cover
 plus the template artwork limit. Repeated revisions still require a current
-Owner/Editor ACL and App Check.
+verified Owner/Editor ACL and App Check.
+
+Guest initial permits and final manifests carry server-authored `guestPublication:
+true`. Guests may only initially publish public visibility with
+`creatorProfileListed: false`; profile creation, admin and team access retain their
+verified-account gates. The guest origin remains immutable through revisions,
+UID-preserving account creation, placement toggles and lifecycle actions. Guest
+Spaces are also excluded defensively from Creator profile projections and the
+public attribution endpoint, even if their owner later creates a profile.
+
+Explore uses the original trusted `publishedAt` plus exactly seven 24-hour days,
+never `updatedAt`. Directory clients filter this deadline and re-evaluate mounted
+cards at expiry/focus/reopen; Firestore public list reads remain possible after
+this deadline because the room intentionally remains public. Bounded pagination
+continues past ended placements (maximum 300 records per modern/legacy query).
+The separate physical hosting lifetime remains the existing 365-day preview
+(`retention: account-preview`), including its normal `expiresAt` cleanup. No new
+TTL is introduced and legacy `guest-10-days` records are not migrated.
+
+Release Functions and Hosting together before advertising guest publication.
+Anonymous Auth must remain enabled and App Check enforced. No gallery or media
+client-write permission is added; existing deployed rules/indexes remain valid.
+Per-UID quotas are not per-person abuse protection: resetting an anonymous identity
+can evade them, so the controlled-pilot/App Check/abuse-response launch conditions
+still apply. Verify signup linking before promising cross-device ownership.
 
 ### WP3 trusted media rollout and legacy metadata scrub
 
@@ -473,8 +501,8 @@ Safe promotion order:
 - Storage objects remain immutable. Live edits create a new asset revision and atomically move the existing gallery manifest to it.
 - Covers are below 1 MiB; artworks below 2 MiB.
 - Only supported image MIME types are accepted.
-- Guests can build, autosave locally, and use Walk Preview without an account.
-- Only verified accounts can create public, unlisted, or private account-preview rooms.
+- Guests can build, autosave locally, use Walk Preview and publish public Spaces without an account or public profile. Explore placement is limited to seven days from first publication, not a seven-day hosting/deletion promise.
+- Only verified accounts can create unlisted/private Spaces, revise live Spaces, use Creator profiles and manage team access. Guest initial publishing does not relax those gates.
 - Unlisted rooms are readable by direct link but omitted from Discover.
 - Private room metadata and images require the owner or an invited verified email.
 - Owner, editor, and viewer roles are stored in a gallery member subcollection; the owner is implicit.

@@ -10,7 +10,7 @@ describe('gallery publishing errors', () => {
     ['storage/unauthorized', 'configuration', 'storage.rules'],
     ['storage/bucket-not-found', 'configuration', 'Storage bucket'],
     ['failed-precondition', 'configuration', 'Firestore indexes'],
-    ['auth/operation-not-allowed', 'authentication-disabled', 'Email/Password and Google Authentication'],
+    ['auth/operation-not-allowed', 'authentication-disabled', 'Anonymous Authentication for guest publishing'],
     ['auth/configuration-not-found', 'authentication-disabled', 'Email/Password and Google Authentication'],
     ['auth/unauthorized-domain', 'unauthorized-domain', 'Authorized domains'],
     ['functions/unauthenticated', 'app-check', 'verify this publishing request'],

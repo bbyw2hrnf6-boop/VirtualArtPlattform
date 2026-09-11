@@ -126,7 +126,7 @@ import {
   pageMetadataPolicy,
   publishedSpaceMetadataPolicy,
 } from "./services/pageMetadata";
-import { isPublicSpaceIndexEligible } from "./services/discoverEligibility";
+import { guestExploreDeadline, isDiscoverEligible, isPublicSpaceIndexEligible } from "./services/discoverEligibility";
 import { adminNavigationPath, matchAdminRoute, type AdminView } from "./services/adminRoutes";
 
 const GalleryScene = lazy(() =>
@@ -688,9 +688,13 @@ function MvpDataNotice() {
           <p>
             Space metadata and access roles are stored in Cloud Firestore;
             compressed artwork and covers are stored in Firebase Storage.
-            Building and Walk Preview work without an account. Publishing
-            requires a verified email or Google account, which can choose
-            public, unlisted, or private access during the account preview.
+            You can publish a public Space as a guest using a browser-bound
+            Firebase anonymous identity. No public profile is created. Guest
+            Spaces can appear in Explore for seven days from first publication;
+            the direct link remains available until the displayed hosting expiry
+            (currently a 365-day preview). Create and verify an account in the same
+            browser to keep control before signing out or clearing site data.
+            Verified accounts can also choose unlisted or private access.
           </p>
         </section>
         <section>
@@ -698,9 +702,11 @@ function MvpDataNotice() {
           <p>
             Only upload artwork and text you are allowed to share. Private
             access reduces discoverability but is not yet a contractual
-            confidential-data service. New or revised public Spaces and Creator
-            profiles stay out of search, discovery, feeds and follows until an
-            operator approves the exact revision. Community reporting creates a
+            confidential-data service. Eligible public Spaces can appear in
+            Explore after publication checks, subject to your placement choices
+            and the guest time limit. Public profile visibility is a separate
+            account choice. Safety moderation can remove content from discovery.
+            Community reporting creates a
             private receipt and auditable case record; blocking is also available.
             Named moderation ownership and guaranteed response times still require
             the pilot operator agreement.
@@ -1722,7 +1728,8 @@ function Studio({
   };
   const publish = async () => {
     if (publishAttemptInFlight.current) return;
-    if (!isVerifiedAccount(accountSession)) {
+    const guestPublishing = !editTarget && (!accountSession || accountSession.isAnonymous);
+    if (!isVerifiedAccount(accountSession) && !guestPublishing) {
       trackTelemetry("account_gate_opened", { source: "publish" });
       resumePublishAfterAccount.current = true;
       setPublishReviewOpen(false);
@@ -1773,9 +1780,9 @@ function Studio({
             finalDraft,
             roomCoverSource,
             {
-              visibility: publishVisibility,
+              visibility: guestPublishing ? "public" : publishVisibility,
               exploreListed: publishExploreListed,
-              creatorProfileListed: publishCreatorProfileListed,
+              creatorProfileListed: guestPublishing ? false : publishCreatorProfileListed,
             },
           );
       const editingAccountUid = await galleryRepository.currentUserId();
@@ -1785,6 +1792,7 @@ function Studio({
         ...(editingAccountUid ? { accountUid: editingAccountUid } : {}),
         publishedAt: publishedGallery.publishedAt,
         expiresAt: publishedGallery.expiresAt,
+        guestPublication: publishedGallery.guestPublication,
         visibility: publishedGallery.visibility,
         retention: publishedGallery.retention,
         accessVersion: publishedGallery.accessVersion,
@@ -1978,7 +1986,10 @@ function Studio({
               <em>{wasUpdate ? "now live." : "ready to share."}</em>
             </h1>
             <p>
-              {published.visibility === "public" && published.exploreListed
+              {published.guestPublication
+                ? `Published as a guest, without a public profile. ${published.exploreListed
+                  ? `Explore deadline: ${new Date(guestExploreDeadline(published.publishedAt)).toLocaleString()}. ` : "Not listed in Explore. "}Your direct link stays live until ${expiry}.`
+                : published.visibility === "public" && published.exploreListed
                 ? `Your Space is shown in Explore Spaces and live until ${expiry}.`
                 : published.visibility === "public"
                   ? `Your Space is public by direct link and live until ${expiry}.`
@@ -1995,8 +2006,11 @@ function Studio({
               source="publish_success"
             />
             <p className="publish-access-label">
-              {PRODUCT_BRAND.previewLabel} · {visibilityLabel[published.visibility]} · Account preview
+              {PRODUCT_BRAND.previewLabel} · {visibilityLabel[published.visibility]} · {published.guestPublication ? "Guest publication" : "Account preview"}
             </p>
+            {published.guestPublication && !isVerifiedAccount(accountSession) && <p>
+              Keep this browser’s site data. Create and verify an account here before signing out to keep control and update this Space. Signing into an existing account does not transfer guest Spaces.
+            </p>}
             {isVerifiedAccount(accountSession) && editTarget?.role === "owner" && (
               <GalleryAccessManager
                 galleryId={published.id}
@@ -2008,7 +2022,7 @@ function Studio({
               <a className="button button--light" href={url}>
                 Open Space <span aria-hidden="true">↗</span>
               </a>
-              {published.visibility === "public" && published.exploreListed && (
+              {isDiscoverEligible(published) && (
                 <a
                   className="text-link"
                   href={exploreSpacesUrl(published.id, window.location.href)}
@@ -2993,6 +3007,7 @@ function Studio({
           creatorProfileListed={publishCreatorProfileListed}
           editing={editTarget}
           accountEligible={isVerifiedAccount(accountSession)}
+          guestEligible={!editTarget && (!accountSession || accountSession.isAnonymous)}
           onVisibilityChange={setPublishVisibility}
           onExploreListedChange={setPublishExploreListed}
           onCreatorProfileListedChange={setPublishCreatorProfileListed}
@@ -3073,6 +3088,7 @@ function PublishReviewDialog({
   creatorProfileListed,
   editing,
   accountEligible,
+  guestEligible,
   returnFocus,
   onClose,
   onPublish,
@@ -3093,6 +3109,7 @@ function PublishReviewDialog({
   creatorProfileListed: boolean;
   editing?: GalleryEditTarget;
   accountEligible: boolean;
+  guestEligible: boolean;
   returnFocus: React.RefObject<HTMLElement | null>;
   onClose: () => void;
   onPublish: () => void;
@@ -3111,7 +3128,7 @@ function PublishReviewDialog({
     <div className="editor-modal-backdrop">
       <section
         ref={dialog}
-        className="editor-modal publish-review"
+        className={`editor-modal publish-review${guestEligible ? " publish-review--guest" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="publish-review-title"
@@ -3153,7 +3170,9 @@ function PublishReviewDialog({
           )}
           <p>
             <strong>Space preview image</strong>Captured from this Studio view.
-            Used for Explore Spaces, your Creator Hub profile and direct-link previews according to your placement choices.
+            {guestEligible || editing?.guestPublication
+              ? " Used for Explore Spaces and direct-link previews. Guest Spaces have no Creator profile."
+              : " Used for Explore Spaces, your Creator Hub profile and direct-link previews according to your placement choices."}
           </p>
         </div>
         {issues.length > 0 && (
@@ -3172,12 +3191,22 @@ function PublishReviewDialog({
             ))}
           </ul>
         )}
-        {!accountEligible ? (
+        {guestEligible ? (
+          <div className="publish-account-gate">
+            <span aria-hidden="true">7</span>
+            <div>
+              <strong>Publish as a guest. No signup needed.</strong>
+              <p>No profile. Up to 7 days in Explore from your first publication. Your link stays live during the 365-day hosting preview.</p>
+              <p>Create an account in this browser to keep control and make updates. Signing into an existing account does not transfer this Space.</p>
+              <button type="button" className="text-link" onClick={onOpenAccount}>Create an account instead →</button>
+            </div>
+          </div>
+        ) : !accountEligible ? (
           <div className="publish-account-gate">
             <span aria-hidden="true">L</span>
             <div>
-              <strong>Sign in to publish.</strong>
-              <p>Build and Walk Preview stay available without an account. Use Google or create and verify a {PRODUCT_BRAND.name} account when you are ready to publish.</p>
+              <strong>{editing ? "Create an account to update this Space." : "Verify your account to publish."}</strong>
+              <p>Keep your existing Project and identity. Use Google or verify your {PRODUCT_BRAND.name} account to continue.</p>
             </div>
           </div>
         ) : editing ? (
@@ -3212,7 +3241,7 @@ function PublishReviewDialog({
           <small>Billing is not active. Account Spaces use an extended preview period for now.</small>
         </fieldset>}
         {!editing && (
-          <fieldset className="publish-visibility publish-placement" disabled={visibility !== "public"}>
+          <fieldset className="publish-visibility publish-placement" disabled={!guestEligible && visibility !== "public"}>
             <legend>Where this Space appears</legend>
             <label>
               <input
@@ -3222,10 +3251,10 @@ function PublishReviewDialog({
               />
               <span>
                 <strong>Show in Explore Spaces (Main homepage)</strong>
-                Shows this public Space in the homepage Explore menu.
+                {guestEligible ? "Visible for up to 7 days from first publication. Quality and safety checks still apply." : "Shows this public Space in the homepage Explore menu."}
               </span>
             </label>
-            <label>
+            {!guestEligible && <label>
               <input
                 type="checkbox"
                 checked={creatorProfileListed}
@@ -3235,8 +3264,8 @@ function PublishReviewDialog({
                 <strong>Show in Creator Hub</strong>
                 Shows this public Space on your Creator Hub profile and in follower surfaces.
               </span>
-            </label>
-            {visibility !== "public" && (
+            </label>}
+            {!guestEligible && visibility !== "public" && (
               <small>Placement becomes available when visibility is Public.</small>
             )}
             {visibility === "public" && (
@@ -3252,19 +3281,20 @@ function PublishReviewDialog({
         <div className="editor-modal-actions">
           <button
             className="publish-button"
-            onClick={accountEligible ? onPublish : onOpenAccount}
-            disabled={publishing || (accountEligible && blockers > 0)}
+            onClick={accountEligible || guestEligible ? onPublish : onOpenAccount}
+            disabled={publishing || ((accountEligible || guestEligible) && blockers > 0)}
           >
             {publishStatus === "preparing"
               ? "Preparing Space preview image…"
               : publishStatus === "publishing"
                 ? "Publishing…"
-                : !accountEligible
+                : !accountEligible && !guestEligible
                   ? "Sign in to publish"
                 : publishStatus === "error"
                   ? "Retry publishing"
                   : editing
                     ? "Update live Space"
+                    : guestEligible ? "Publish as guest"
                     : `Publish ${visibilityLabel[visibility].toLowerCase()} Space`}
           </button>
           <button className="text-link" onClick={onClose} disabled={publishing}>
@@ -4209,7 +4239,8 @@ function PublishedGallery({ id }: { id: string }) {
         <Logo />
         <div className="viewer-header__identity">
           <p>{gallery.title}</p>
-          <CreatorAttributionLink spaceId={gallery.id} fallback={gallery.artist} />
+          {gallery.guestPublication ? <span>{gallery.artist} · Guest Space</span>
+            : <CreatorAttributionLink spaceId={gallery.id} fallback={gallery.artist} />}
         </div>
         <div className="viewer-header__actions">
           <SpaceShareMenu

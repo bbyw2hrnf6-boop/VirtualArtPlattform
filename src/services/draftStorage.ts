@@ -36,6 +36,7 @@ function isGalleryEditTarget(value: unknown): value is GalleryEditTarget {
     (target.accountUid === undefined || typeof target.accountUid === "string") &&
     typeof target.publishedAt === "string" &&
     typeof target.expiresAt === "string" &&
+    (target.guestPublication === undefined || typeof target.guestPublication === "boolean") &&
     (target.visibility === "public" || target.visibility === "unlisted" || target.visibility === "private") &&
     (target.retention === "guest-10-days" || target.retention === "account-preview") &&
     target.accessVersion === 1 &&

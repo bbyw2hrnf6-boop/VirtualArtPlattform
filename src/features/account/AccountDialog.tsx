@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import type { AccountSession } from "../../services/accountTypes";
 import { galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
 import { galleryShareUrl } from "../../services/galleryShareUrl";
+import { isDiscoverEligible } from "../../services/discoverEligibility";
 import { hashApplicationUrl } from "../../services/spaceRoutes";
 import { visibilityLabel } from "../../services/galleryAccess";
 import type { GalleryInvite } from "../../services/galleryAccess";
@@ -231,7 +232,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
     (room) => room.lifecycleStatus === "active" && new Date(room.expiresAt).getTime() > currentTime,
   );
   const exploreRooms = activeRooms.filter(
-    (room) => room.visibility === "public" && room.discoverEligible === true && room.exploreListed,
+    (room) => isDiscoverEligible(room, currentTime),
   );
   const hubRooms = activeRooms.filter(
     (room) => (
@@ -420,13 +421,16 @@ function AccountRooms({ session }: { session: AccountSession }) {
                       <input
                         type="checkbox"
                         checked={room.creatorProfileListed}
+                        disabled={room.guestPublication === true}
                         onChange={(event) => void updateRoomDistribution(room, "creatorProfileListed", event.target.checked)}
                       />
                       <span>Show in Creator Hub</span>
                     </label>
                   </fieldset>
                   <small className="account-room-placement__note">
-                    {room.visibility === "public" && room.discoverEligible !== true
+                    {room.guestPublication
+                      ? "Guest Space: no Creator profile placement. Explore ends 7 days after first publication; updates do not restart that window."
+                      : room.visibility === "public" && room.discoverEligible !== true
                       ? "Save either placement choice once to restore this older Space to public listings."
                       : room.visibility === "public"
                         ? "Choose whether this Space appears in Explore Spaces on the main homepage and/or in your Creator Hub profile. Changes apply automatically."
@@ -958,7 +962,7 @@ export function AccountDialog({
           <>
             <p className="eyebrow">LIEUVA account</p>
             <h2 id="account-dialog-title">Keep control<br /><em>of your Spaces.</em></h2>
-            <p className="account-lead">Build and Walk Preview freely. Sign in with Google or create and verify an account only when you are ready to publish.</p>
+            <p className="account-lead">Publish a public guest Space without signing up: no profile and up to 7 days in Explore. Create an account for live updates, private access and Creator features.</p>
             <div className="account-tabs" role="tablist" aria-label="Account action">
               <button role="tab" aria-selected={mode === "create"} onClick={() => setMode("create")}>Create account</button>
               <button role="tab" aria-selected={mode === "signin"} onClick={() => setMode("signin")}>Sign in</button>
@@ -1024,7 +1028,7 @@ export function AccountDialog({
                 setMessage("Password reset email sent.");
               })}>Forgot password?</button>
             )}
-            <p className="account-note">Your local Project stays on this device while you sign in. A verified account is required to publish and manage live Spaces. <a href="#/data">Read the preview data &amp; rights notice.</a></p>
+            <p className="account-note">Your local Project stays on this device. Creating a new account here preserves your guest identity; signing into an existing account does not transfer guest Spaces. Verified accounts can manage live Spaces. <a href="#/data">Read the preview data &amp; rights notice.</a></p>
           </>
         )}
         {(message || error) && <p className={error ? "account-message is-error" : "account-message"} role={error ? "alert" : "status"}>{error || message}</p>}

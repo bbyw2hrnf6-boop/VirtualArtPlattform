@@ -11,9 +11,12 @@ export const PERFORMANCE_TARGETS = Object.freeze({
 // dashboard and check evidence (measured +5.4KB production JS, no dependencies). CSS stays
 // at the existing 55KB ceiling. Public entry and largest-chunk ceilings remain
 // frozen; assertAdminLazyBoundary verifies the console never enters that graph.
+// Guest publication adds ~2.2KB production JS for the guarded publish flow,
+// seven-day filtering/paging and explanatory copy: +2KB aggregate allowance.
+// Public entry, lazy chunks and CSS ceilings are unchanged. No new dependencies.
 // WP4 still owns lowering the public baseline to the product targets above.
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
-  jsGzip: 593_000,
+  jsGzip: 595_000,
   cssGzip: 55_000,
   largestLazyGzip: 195_000,
   entryGzip: 305_000,

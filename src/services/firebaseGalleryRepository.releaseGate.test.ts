@@ -13,7 +13,7 @@ type MockUser = {
 };
 
 type MockReference = { path: string };
-type QueryClause = { kind: "where" | "orderBy" | "limit"; field?: string; op?: string; value?: unknown };
+type QueryClause = { kind: "where" | "orderBy" | "limit" | "startAfter"; field?: string; op?: string; value?: unknown };
 type MockQuery = { path: string; group?: string; clauses: QueryClause[] };
 
 const mock = vi.hoisted(() => {
@@ -41,7 +41,7 @@ const mock = vi.hoisted(() => {
     deletedObjects: [] as string[],
     abortedGalleryIds: [] as string[],
     abortedRevisions: [] as Array<{ galleryId: string; revisionId: string }>,
-    publicationPermits: new Map<string, { ownerId: string; visibility: string; expiresAt: string }>(),
+    publicationPermits: new Map<string, { ownerId: string; visibility: string; expiresAt: string; guestPublication: boolean }>(),
     revisionPermits: new Map<string, { ownerId: string; uploaderId: string; expiresAt: string }>(),
     clock: new Date("2026-08-23T10:00:00.000Z"),
   };
@@ -109,6 +109,8 @@ function queryDocuments(input: MockQuery) {
     });
   }
   const maximum = input.clauses.find((clause) => clause.kind === "limit")?.value;
+  const cursor = input.clauses.find((clause) => clause.kind === "startAfter")?.value;
+  if (typeof cursor === "string") entries = entries.slice(entries.findIndex(([path]) => path === cursor) + 1);
   if (typeof maximum === "number") entries = entries.slice(0, maximum);
   return entries.map(([path, data]) => snapshot(path, data));
 }
@@ -130,7 +132,8 @@ vi.mock("firebase/firestore", () => ({
   where: (field: string, op: string, value: unknown) => ({ kind: "where", field, op, value }),
   orderBy: (field: string) => ({ kind: "orderBy", field }),
   limit: (value: number) => ({ kind: "limit", value }),
-  query: (base: MockQuery, ...clauses: QueryClause[]) => ({ ...base, clauses }),
+  startAfter: (value: ReturnType<typeof snapshot>) => ({ kind: "startAfter", value: value.ref.path }),
+  query: (base: MockQuery, ...clauses: QueryClause[]) => ({ ...base, clauses: [...base.clauses, ...clauses] }),
   serverTimestamp: () => mock.Timestamp.fromDate(mock.state.clock),
   getDoc: vi.fn(async (reference: MockReference) => {
     const data = mock.state.documents.get(reference.path);
@@ -199,15 +202,16 @@ vi.mock("firebase/functions", () => ({
     if (mock.state.callableFailure) throw mock.state.callableFailure;
     const user = mock.state.currentUser;
     if (name === "beginAuraGalleryPublication") {
-      if (!user || user.isAnonymous || !user.emailVerified)
+      if (!user || (!user.isAnonymous && !user.emailVerified) || (user.isAnonymous && visibility !== "public"))
         throw firebaseError("functions/unauthenticated", "Verified account required");
       const expiresAt = "2027-08-23T10:00:00.000Z";
       mock.state.publicationPermits.set(String(galleryId), {
         ownerId: user.uid,
         visibility: String(visibility),
         expiresAt,
+        guestPublication: user.isAnonymous,
       });
-      return { data: { expiresAt, retention: "account-preview" } };
+      return { data: { expiresAt, retention: "account-preview", guestPublication: user.isAnonymous } };
     }
     if (name === "uploadAuraGalleryAsset") {
       mock.state.assetUploadRequestIds.push(String(payload.requestId));
@@ -261,6 +265,7 @@ vi.mock("firebase/functions", () => ({
           expiresAt: expiresAt.toDate().toISOString(),
           updatedAt: updatedAt.toDate().toISOString(),
           revision: 1,
+          guestPublication: existing.guestPublication,
         } };
         if (mock.state.initialFinalizeResponseLosses > 0) {
           mock.state.initialFinalizeResponseLosses -= 1;
@@ -274,6 +279,8 @@ vi.mock("firebase/functions", () => ({
       const expiresAt = mock.Timestamp.fromDate(new Date(permit.expiresAt));
       const draft = payload.draft as GalleryDraft;
       const distribution = payload.distribution as { exploreListed: boolean; creatorProfileListed: boolean };
+      if (permit.guestPublication && distribution.creatorProfileListed)
+        throw firebaseError("functions/invalid-argument", "Guest profile placement denied");
       mock.state.documents.set(`galleries/${id}`, {
         ...draft,
         coverPath: `published/${permit.ownerId}/${id}/cover.webp`,
@@ -285,6 +292,7 @@ vi.mock("firebase/functions", () => ({
         retention: "account-preview",
         accessVersion: 1,
         ...distribution,
+        guestPublication: permit.guestPublication,
         discoverEligible: permit.visibility === "public",
         revision: 1,
         updatedAt: publishedAt,
@@ -300,6 +308,7 @@ vi.mock("firebase/functions", () => ({
         expiresAt: expiresAt.toDate().toISOString(),
         updatedAt: publishedAt.toDate().toISOString(),
         revision: 1,
+        guestPublication: permit.guestPublication,
       } };
     }
     if (name === "abortAuraGalleryPublication") {
@@ -372,6 +381,7 @@ vi.mock("firebase/functions", () => ({
         accessVersion: current.accessVersion,
         exploreListed: current.exploreListed,
         creatorProfileListed: current.creatorProfileListed,
+        guestPublication: current.guestPublication,
         discoverEligible: current.visibility === "public",
         revision: Number(expectedRevision) + 1,
         updatedAt,
@@ -583,6 +593,71 @@ afterEach(() => {
 });
 
 describe("publish → visit → edit → update release gate", () => {
+  it("publishes without signup, preserves guest origin on response replay, and ends only Explore after seven days", async () => {
+    mock.state.currentUser = null;
+    mock.state.initialFinalizeResponseLosses = 2;
+    const repository = new FirebaseGalleryRepository();
+    const published = await repository.publish(draft(), media.webp, { visibility: "public", creatorProfileListed: true });
+    expect(published).toMatchObject({ guestPublication: true, visibility: "public", creatorProfileListed: false });
+    expect([...mock.state.documents.keys()].every((path) => path.startsWith("galleries/"))).toBe(true);
+    const deadline = new Date(published.publishedAt).getTime() + 7 * 86_400_000;
+    vi.setSystemTime(deadline - 1);
+    expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
+    vi.setSystemTime(deadline);
+    mock.state.clock = new Date(deadline);
+    mock.state.currentUser = null;
+    expect((await repository.discover()).map((record) => record.id)).not.toContain(published.id);
+    expect((await repository.find(published.id))?.artworks.every((artwork) => artwork.src.startsWith("blob:"))).toBe(true);
+  });
+
+  it("rejects guest restricted visibility and unverified accounts before uploads", async () => {
+    const repository = new FirebaseGalleryRepository();
+    mock.state.currentUser = makeUser("guest-a", null, "anonymous", false);
+    await expect(repository.publish(draft(), media.webp, { visibility: "private" })).rejects.toThrow(/Guest Spaces must be public/);
+    await expect(repository.publish(draft(), media.webp, { visibility: "unlisted" })).rejects.toThrow(/Guest Spaces must be public/);
+    mock.state.currentUser = makeUser("unverified-a", "pending@example.test", "password", false);
+    await expect(repository.publish(draft(), media.webp, { visibility: "public" })).rejects.toThrow(/verify/);
+    expect(mock.state.uploadCount).toBe(0);
+  });
+
+  it("preserves guest origin and the original Explore clock when the same UID upgrades and updates", async () => {
+    mock.state.currentUser = null;
+    const repository = new FirebaseGalleryRepository();
+    const published = await repository.publish(draft(), media.webp);
+    mock.state.currentUser = makeUser(published.ownerId!, "new-owner@example.test");
+    mock.state.clock = new Date(new Date(published.publishedAt).getTime() + 8 * 86_400_000);
+    vi.setSystemTime(mock.state.clock);
+    mock.state.revisionFinalizeResponseLosses = 2;
+    const updated = await repository.updatePublished(target(published), { ...draft(), title: "Updated Guest Study" }, media.webp);
+    expect(updated).toMatchObject({ guestPublication: true, publishedAt: published.publishedAt, creatorProfileListed: false, revision: 2 });
+    expect((await repository.findManifest(updated.id))?.guestPublication).toBe(true);
+    expect((await repository.discover()).map((record) => record.id)).not.toContain(updated.id);
+  });
+
+  it("never downgrades a broken nonanonymous session to a guest", async () => {
+    const user = makeUser("owner-broken", "owner@example.test");
+    user.getIdToken = async () => { throw firebaseError("auth/user-token-expired"); };
+    mock.state.currentUser = user;
+    await expect(new FirebaseGalleryRepository().publish(draft(), media.webp)).rejects.toThrow();
+    expect(mock.state.currentUser).toBe(user);
+    expect(mock.state.uploadCount).toBe(0);
+  });
+
+  it("continues past a page of ended guest placements to find current Spaces", async () => {
+    const repository = new FirebaseGalleryRepository();
+    const published = await repository.publish(draft(), media.webp);
+    const data = mock.state.documents.get(`galleries/${published.id}`)!;
+    mock.state.documents.clear();
+    for (let index = 0; index < 35; index += 1) {
+      mock.state.documents.set(`galleries/old-guest-${index}`, {
+        ...data, guestPublication: true,
+        publishedAt: mock.Timestamp.fromDate(new Date(mock.state.clock.getTime() - 8 * 86_400_000)),
+      });
+    }
+    mock.state.documents.set(`galleries/${published.id}`, data);
+    expect((await repository.discover()).map((record) => record.id)).toEqual([published.id]);
+  });
+
   it("publishes and hydrates public JPG, PNG, and WebP media", async () => {
     const repository = new FirebaseGalleryRepository();
     const published = await repository.publish(draft(), media.webp, { visibility: "public" });

@@ -21,8 +21,10 @@ describe("server-owned gallery upload integration", () => {
     const upload = exportedBlock("uploadAuraGalleryAsset", "finalizeAuraGalleryPublication");
     for (const invariant of [
       "enforceAppCheck: true",
-      "requireAccount(request.auth)",
+      "requirePublisher(request.auth)",
       "verifiedAccount(request.auth)",
+      "upload.revisionId !== undefined && !verifiedAccount(request.auth)",
+      "isGuestPublisher(request.auth) && permitData?.guestPublication !== true",
       "assertAccountMutationAllowed(uid)",
       "assertAccountMutationAllowedInTransaction",
       "initialPermitFrom",

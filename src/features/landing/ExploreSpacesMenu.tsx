@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
+import { guestExploreDeadline, isDiscoverEligible } from "../../services/discoverEligibility";
 import {
   hashApplicationUrl,
   spaceCanonicalUrl,
@@ -38,6 +39,7 @@ export default function ExploreSpacesMenu({ open, onClose, focusSpaceId }: Explo
   const search = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [spaces, setSpaces] = useState<GalleryRecord[]>([]);
+  const [now, setNow] = useState(() => Date.now());
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const close = useCallback(() => {
     setQuery("");
@@ -52,24 +54,42 @@ export default function ExploreSpacesMenu({ open, onClose, focusSpaceId }: Explo
       .discover()
       .then((publicSpaces) => {
         setSpaces(publicSpaces);
+        setNow(Date.now());
         setStatus("ready");
       })
       .catch(() => setStatus("error"));
   }, []);
 
   useEffect(() => {
-    if (!open || status !== "idle") return;
+    if (!open) return;
     const frame = requestAnimationFrame(load);
     return () => cancelAnimationFrame(frame);
-  }, [load, open, status]);
+  }, [load, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const refreshClock = () => setNow(Date.now());
+    const deadlines = spaces.flatMap((space) => [new Date(space.expiresAt).getTime(),
+      ...(space.guestPublication ? [guestExploreDeadline(space.publishedAt)] : [])])
+      .filter((deadline) => Number.isFinite(deadline) && deadline > now);
+    const next = Math.min(...deadlines);
+    const timer = Number.isFinite(next)
+      ? window.setTimeout(refreshClock, Math.max(1, Math.min(next - Date.now(), 2_147_483_647))) : undefined;
+    window.addEventListener("focus", refreshClock);
+    document.addEventListener("visibilitychange", refreshClock);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", refreshClock);
+      document.removeEventListener("visibilitychange", refreshClock);
+    };
+  }, [now, open, spaces]);
 
   const visibleSpaces = useMemo(() => {
     const term = normalized(query);
-    if (!term) return spaces;
-    return spaces.filter((space) =>
-      normalized(`${space.title} ${space.artist}`).includes(term),
+    return spaces.filter((space) => isDiscoverEligible(space, now) &&
+      (!term || normalized(`${space.title} ${space.artist}`).includes(term)),
     );
-  }, [query, spaces]);
+  }, [query, spaces, now]);
   const orderedSpaces = useMemo(() => {
     if (!focusSpaceId) return visibleSpaces;
     const focused = visibleSpaces.find((space) => space.id === focusSpaceId);
@@ -147,7 +167,7 @@ export default function ExploreSpacesMenu({ open, onClose, focusSpaceId }: Explo
             >
               <div className="space-menu-card__visual">
                 <SpaceCover space={space} />
-                <span>{space.id === focusSpaceId ? "Just published" : "Live Space"}</span>
+                <span>{space.guestPublication ? "Guest · 7-day exhibition" : space.id === focusSpaceId ? "Just published" : "Live Space"}</span>
               </div>
               <p>
                 {space.artist} · {TEMPLATES.find((template) => template.id === space.templateId)?.name ?? "LIEUVA"}
@@ -172,7 +192,7 @@ export default function ExploreSpacesMenu({ open, onClose, focusSpaceId }: Explo
         )}
 
         <footer className="space-menu__footer">
-          <p>One menu for every published room. No page hunting.</p>
+          <p>Guest Spaces appear here for up to 7 days. Publish yours without a profile.</p>
           <a href="/creators">Find Creators <span>→</span></a>
         </footer>
       </div>

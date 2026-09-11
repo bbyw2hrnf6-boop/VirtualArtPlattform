@@ -152,6 +152,18 @@ describe("Firestore authorization matrix", () => {
     );
   });
 
+  it("keeps a guest direct link readable after Explore ends without granting browser writes or a profile", async () => {
+    const galleryId = "guest-past-explore";
+    const data = gallery(galleryId, { guestPublication: true, ownerId: "anonymous-user",
+      publishedAt: Timestamp.fromMillis(now() - 8 * 86_400_000), expiresAt: future(300) });
+    await seedFirestore(environment, [[`galleries/${galleryId}`, data]]);
+    const contexts = authContexts(environment);
+    await assertSucceeds(getDoc(doc(contexts.anonymous.firestore(), `galleries/${galleryId}`)));
+    await assertFails(setDoc(doc(contexts.signedAnonymous.firestore(), `galleries/${galleryId}`), { ...data, guestPublication: false }));
+    await assertFails(setDoc(doc(contexts.signedAnonymous.firestore(), "profiles/anonymous-user"), { uid: "anonymous-user", displayName: "Guest" }));
+    await assertFails(setDoc(doc(contexts.signedAnonymous.firestore(), "creatorProfiles/guest"), { ownerId: "anonymous-user", profilePublic: true }));
+  });
+
   it("restricts active private galleries to owners and active verified members", async () => {
     const galleryId = "private-gallery";
     await seedFirestore(environment, [

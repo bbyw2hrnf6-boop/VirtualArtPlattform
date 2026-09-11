@@ -45,6 +45,8 @@ describe("LIEUVA email templates", () => {
       unsubscribeUrl: "https://aura.example/unsubscribe/token",
     });
     expect(mail.text).toContain("PLANNED, NOT ACTIVE YET");
+    expect(mail.text).toContain("without a public profile, for up to seven days in Explore");
+    expect(mail.text).not.toContain("Publishing uses a verified account");
     expect(mail.html).toContain("Manage subscription");
     expect(mail.html).not.toContain("Unsubscribe in one click");
     expect(mail.html).toContain("LIEUVA Studio · Example Street 1 · Amsterdam");

@@ -65,6 +65,7 @@ export class GalleryRepositoryDataError extends Error {
 export interface ParsedGalleryDocument extends GalleryDraft {
   publishedAt: string;
   expiresAt: string;
+  guestPublication?: boolean;
   ownerId?: string;
   coverSrc?: string;
   coverPath?: string;
@@ -326,6 +327,7 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
   const coverSrc = optionalImageSource(data.coverSrc, recordId, 'coverSrc', MAX_LEGACY_COVER_SOURCE_LENGTH);
   const coverPath = optionalStoragePath(data.coverPath, recordId, 'coverPath');
   const discoverEligible = optionalBoolean(data.discoverEligible, recordId, 'discoverEligible');
+  const guestPublication = optionalBoolean(data.guestPublication, recordId, 'guestPublication');
   const exploreListed = optionalBoolean(data.exploreListed, recordId, 'exploreListed') ?? true;
   const creatorProfileListed = optionalBoolean(data.creatorProfileListed, recordId, 'creatorProfileListed') ?? true;
   const lifecycleStatus = data.lifecycleStatus === undefined
@@ -357,8 +359,9 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
     ...(trashedAt ? { trashedAt } : {}),
     ...(purgeAt ? { purgeAt } : {}),
     ...(discoverEligible !== undefined ? { discoverEligible } : {}),
+    ...(guestPublication !== undefined ? { guestPublication } : {}),
     exploreListed,
-    creatorProfileListed,
+    creatorProfileListed: guestPublication === true ? false : creatorProfileListed,
   };
 }
 

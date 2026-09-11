@@ -2,7 +2,8 @@ import './pitchSections.css';
 
 const FAQS = [
   ['Do I need Blender or 3D software?', 'No. LIEUVA Studio creates each template Space directly in the browser. Choose a room, arrange your work, preview the visit, and publish from one workflow.'],
-  ['What can I publish today?', 'You can build and Walk Preview without an account. A verified email or Google account lets you publish with public, unlisted, or private access.'],
+  ['Can I publish without signing up?', 'Yes. Publish a public Space as a guest, without a Creator profile. It can appear in Explore for up to 7 days from first publication. The direct link remains available during the 365-day hosting preview. Quality and safety checks still apply.'],
+  ['How do I keep control of a guest Space?', 'Guest control belongs to this browser’s anonymous session. Create and verify a new account here before signing out or clearing site data. Signing into an existing account does not transfer guest Spaces. Updates need a verified account and do not restart the 7-day Explore window.'],
   ['How does private access work?', 'The Owner invites verified accounts as Viewers or Editors. Viewers can enter private Spaces; Editors can update content under the same share URL. Only the Owner manages access and deletion. Permanent hosting and billing are not active.'],
   ['Where are work files stored?', 'Published images and covers use Firebase Storage. Space data and access roles use Firestore. Only upload work you have the right to share.'],
   ['Which devices are supported?', 'Visitors can enter on modern desktop and mobile browsers. LIEUVA Studio works on mobile through a resizable tool sheet; desktop remains the most precise arrangement surface.']
@@ -18,10 +19,10 @@ export function PitchSections() {
         </div>
         <div className="aura-pilot-options">
           <article>
-            <span>Studio access · Available now</span>
-            <h3>Build before signing in</h3>
-            <p>Build, arrange, and Walk Preview without an account. Your local draft stays with you until you are ready to publish.</p>
-            <a href="#/create">Create a Space <b>↗</b></a>
+            <span>Guest publishing · 7 days in Explore</span>
+            <h3>Your work. Out in the world.</h3>
+            <p>Build and publish a public room without signing up. No Creator profile, up to 7 days in Explore, and a share link that stays live afterward during the hosting preview.</p>
+            <a href="#/create">Create as a guest <b>↗</b></a>
           </article>
           <article>
             <span>Publishing access · Available now</span>

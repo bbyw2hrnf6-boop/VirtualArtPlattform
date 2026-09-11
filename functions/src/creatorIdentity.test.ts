@@ -46,6 +46,7 @@ describe("Creator identity contract", () => {
     expect(isCreatorProfileSpaceListed({})).toBe(true);
     expect(isCreatorProfileSpaceListed({ creatorProfileListed: true })).toBe(true);
     expect(isCreatorProfileSpaceListed({ creatorProfileListed: false })).toBe(false);
+    expect(isCreatorProfileSpaceListed({ guestPublication: true, creatorProfileListed: true })).toBe(false);
   });
 
   it("reserves product and routing names", () => {

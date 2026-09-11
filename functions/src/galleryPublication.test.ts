@@ -35,6 +35,12 @@ describe("trusted publication permits", () => {
       galleryId: "space-1",
       now: 50_000,
     })).toThrow(/ownership/);
+    expect(validateInitialPublicationPermit({ ...permit, guestPublication: true }, {
+      ownerId: "owner-1", galleryId: "space-1", now: 50_000,
+    }).permit.guestPublication).toBe(true);
+    expect(() => validateInitialPublicationPermit({ ...permit, guestPublication: true, visibility: "private" }, {
+      ownerId: "owner-1", galleryId: "space-1", now: 50_000,
+    })).toThrow(/guest visibility/);
   });
 
   it("binds revision permits to uploader, base revision, and immutable path ID", () => {
@@ -86,6 +92,8 @@ describe("trusted publication permits", () => {
     };
     expect(validateRevisionAuthorization({ gallery, member: undefined, uid: "owner-1", expectedRevision: 4, now: 50_000 }))
       .toMatchObject({ ownerId: "owner-1", visibility: "unlisted", templateId: "white-cube" });
+    expect(validateRevisionAuthorization({ gallery: { ...gallery, guestPublication: true }, member: undefined, uid: "owner-1", expectedRevision: 4, now: 50_000 }))
+      .toMatchObject({ guestPublication: true, creatorProfileListed: false, publishedAt: gallery.publishedAt });
     expect(validateRevisionAuthorization({
       gallery,
       member: { email: "editor@example.test", role: "editor", status: "active" },

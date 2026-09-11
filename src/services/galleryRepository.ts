@@ -16,6 +16,8 @@ export interface GalleryRecord extends GalleryDraft {
   id: string;
   publishedAt: string;
   expiresAt: string;
+  /** Immutable server-authored guest origin; Explore ends seven days after publishedAt. */
+  guestPublication?: boolean;
   ownerId?: string;
   coverSrc?: string;
   coverPath?: string;

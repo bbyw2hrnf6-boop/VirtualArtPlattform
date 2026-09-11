@@ -72,7 +72,7 @@ export function normalizeGalleryPublishingError(error: unknown, projectId: strin
   ) {
     return new GalleryPublishingError(
       'authentication-disabled',
-      `Account publishing is not enabled correctly for “${projectId}”. Confirm Email/Password and Google Authentication are enabled, then retry. Your room is still saved locally.`,
+      `Publishing authentication is not enabled correctly for “${projectId}”. Enable Anonymous Authentication for guest publishing, or Email/Password and Google Authentication for accounts, then retry. Your room is still saved locally.`,
       error
     );
   }

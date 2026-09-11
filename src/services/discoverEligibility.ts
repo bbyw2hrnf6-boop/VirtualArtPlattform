@@ -5,6 +5,7 @@ export type DiscoverEligibilityReason =
   | "not-public"
   | "not-active"
   | "expired"
+  | "guest-window-ended"
   | "safety-restricted"
   | "not-listed"
   | "invalid-identity"
@@ -48,7 +49,7 @@ export function discoverEligibility(
     | "artist"
     | "artworks"
     | "discoverEligible"
-  > & { exploreListed?: boolean },
+  > & { exploreListed?: boolean; guestPublication?: boolean; publishedAt?: string },
   now = Date.now(),
 ): DiscoverEligibility {
   if (record.visibility !== "public")
@@ -62,6 +63,11 @@ export function discoverEligibility(
     return { eligible: false, reason: "safety-restricted" };
   if (record.exploreListed === false)
     return { eligible: false, reason: "not-listed" };
+  if (record.guestPublication === true) {
+    const deadline = guestExploreDeadline(record.publishedAt);
+    if (!Number.isFinite(deadline) || deadline <= now)
+      return { eligible: false, reason: "guest-window-ended" };
+  }
   if (!hasPublicIdentity(record))
     return { eligible: false, reason: "invalid-identity" };
   if (!hasVisibleMedia(record))
@@ -85,5 +91,9 @@ export function isPublicSpaceIndexEligible(
   record: Parameters<typeof discoverEligibility>[0],
   now = Date.now(),
 ) {
-  return discoverEligibility({ ...record, exploreListed: true }, now).eligible;
+  return discoverEligibility({ ...record, exploreListed: true, guestPublication: false }, now).eligible;
+}
+
+export function guestExploreDeadline(publishedAt: string | undefined) {
+  return new Date(publishedAt ?? "").getTime() + 7 * 86_400_000;
 }

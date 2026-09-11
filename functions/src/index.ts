@@ -35,6 +35,7 @@ import {
   normalizeMemberEmail,
   parseGalleryId,
   publicationTerms,
+  isGuestPublisher,
   type GalleryVisibility,
 } from "./galleryPolicy.js";
 import {
@@ -253,6 +254,7 @@ const publicDeliveryFields = [
   "discoverEligible",
   "exploreListed",
   "creatorProfileListed",
+  "guestPublication",
   "artworks",
 ] as const;
 
@@ -308,6 +310,14 @@ function requireAccount(auth: { uid: string; token: Record<string, unknown> } | 
 function requireSignedIn(auth: { uid: string; token: Record<string, unknown> } | undefined) {
   if (!auth) throw new HttpsError("unauthenticated", "Sign in before changing a Space.");
   return auth.uid;
+}
+
+/** Narrow guest exception for initial publication, not profiles, teams or admin. */
+function requirePublisher(auth: { uid: string; token: Record<string, unknown> } | undefined) {
+  const uid = requireSignedIn(auth);
+  if (!isGuestPublisher(auth) && !verifiedAccount(auth))
+    throw new HttpsError("failed-precondition", "Verify your email before publishing.");
+  return uid;
 }
 
 function accountDeletionJobReference(uid: string) {
@@ -761,6 +771,7 @@ function galleryCallableResult(id: string, data: Record<string, unknown>) {
     lifecycleStatus: data.lifecycleStatus ?? "active",
     exploreListed: data.exploreListed ?? true,
     creatorProfileListed: data.creatorProfileListed ?? true,
+    guestPublication: data.guestPublication === true,
     discoverEligible: data.discoverEligible === true,
     publishedAt: new Date(publishedAt).toISOString(),
     updatedAt: new Date(updatedAt).toISOString(),
@@ -4041,17 +4052,16 @@ export const resumeAuraAccountDeletions = onSchedule(
 export const beginAuraGalleryPublication = onCall(
   { region: REGION, timeoutSeconds: 30, enforceAppCheck: true },
   async (request) => {
-    const uid = requireAccount(request.auth);
-    if (!verifiedAccount(request.auth))
-      throw new HttpsError("failed-precondition", "Verify your email before publishing.");
+    const uid = requirePublisher(request.auth);
+    const guestPublication = isGuestPublisher(request.auth);
     const galleryId = galleryIdFrom(request.data?.galleryId);
     const visibility = request.data?.visibility;
     if (typeof visibility !== "string" || !galleryVisibilities.has(visibility))
       throw new HttpsError("invalid-argument", "Invalid Space visibility.");
     const now = Date.now();
-    const terms = publicationTerms(true, visibility as GalleryVisibility, now);
+    const terms = publicationTerms(verifiedAccount(request.auth), visibility as GalleryVisibility, now, guestPublication);
     if (!terms)
-      throw new HttpsError("failed-precondition", "A verified account is required to publish.");
+      throw new HttpsError("failed-precondition", "Guest Spaces must be public. Use a verified account for other visibility options.");
     const { retention, expiresAt } = terms;
     const permitExpiresAt = new Date(now + 20 * 60_000);
     const quotaReference = db.collection("galleryPublicationQuotas").doc(uid);
@@ -4081,6 +4091,7 @@ export const beginAuraGalleryPublication = onCall(
           || existingData?.galleryId !== galleryId
           || existingData?.visibility !== visibility
           || existingData?.retention !== retention
+          || (existingData?.guestPublication === true) !== guestPublication
           || existingPermitExpiry === undefined
           || existingPermitExpiry <= now
           || existingPublicationExpiry === undefined
@@ -4096,14 +4107,15 @@ export const beginAuraGalleryPublication = onCall(
         return {
           expiresAt: new Date(existingPublicationExpiry).toISOString(),
           retention: "account-preview" as const,
+          guestPublication,
         };
       }
       const data = quota.data() ?? {};
-      if (activeRooms.size >= 30)
+      if (activeRooms.size >= (guestPublication ? 3 : 30))
         throw new HttpsError("resource-exhausted", "Archive or remove a live Space before publishing another.");
       const day = new Date(now).toISOString().slice(0, 10);
       const dailyCount = data.day === day ? Number(data.dailyCount ?? 0) : 0;
-      if (dailyCount >= 20)
+      if (!Number.isSafeInteger(dailyCount) || dailyCount >= (guestPublication ? 3 : 20))
         throw new HttpsError("resource-exhausted", "Daily publication limit reached. Try again tomorrow.");
       transaction.set(quotaReference, {
         day,
@@ -4117,12 +4129,13 @@ export const beginAuraGalleryPublication = onCall(
         ownerId: uid,
         visibility,
         retention,
+        guestPublication,
         expiresAt,
         permitExpiresAt,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
-      return { expiresAt: expiresAt.toISOString(), retention };
+      return { expiresAt: expiresAt.toISOString(), retention, guestPublication };
     });
     return issuedPermit;
   },
@@ -4140,10 +4153,8 @@ export const uploadAuraGalleryAsset = onCall(
     enforceAppCheck: true,
   },
   async (request) => {
-    const uid = requireAccount(request.auth);
+    const uid = requirePublisher(request.auth);
     await assertAccountMutationAllowed(uid);
-    if (!verifiedAccount(request.auth))
-      throw new HttpsError("failed-precondition", "Verify your email before uploading Space media.");
     let upload: ReturnType<typeof parseGalleryServerAssetUpload>;
     try {
       upload = parseGalleryServerAssetUpload(request.data);
@@ -4155,6 +4166,8 @@ export const uploadAuraGalleryAsset = onCall(
       throw new HttpsError("invalid-argument", "The Space image upload request is invalid.");
     }
 
+    if (upload.revisionId !== undefined && !verifiedAccount(request.auth))
+      throw new HttpsError("failed-precondition", "Create and verify an account to update a published Space.");
     const now = Date.now();
     const assetUploadId = upload.requestId;
     const assetUploadKey = galleryServerAssetUploadKey(upload);
@@ -4172,6 +4185,8 @@ export const uploadAuraGalleryAsset = onCall(
         if (gallery.exists)
           throw new HttpsError("already-exists", "This publication id is already in use.");
         const permitData = permit.data();
+        if (isGuestPublisher(request.auth) && permitData?.guestPublication !== true)
+          throw new HttpsError("permission-denied", "A guest publication permit is required.");
         const checked = initialPermitFrom(permitData, {
           ownerId: uid,
           galleryId: upload.galleryId,
@@ -4301,10 +4316,8 @@ export const finalizeAuraGalleryPublication = onCall(
     enforceAppCheck: true,
   },
   async (request) => {
-    const uid = requireAccount(request.auth);
+    const uid = requirePublisher(request.auth);
     await assertAccountMutationAllowed(uid);
-    if (!verifiedAccount(request.auth))
-      throw new HttpsError("failed-precondition", "Verify your email before publishing.");
     const galleryId = galleryIdFrom(request.data?.galleryId);
     const galleryReference = db.collection("galleries").doc(galleryId);
     const permitReference = db.collection("galleryPublishPermits").doc(galleryId);
@@ -4324,9 +4337,13 @@ export const finalizeAuraGalleryPublication = onCall(
     }
     if (!permitSnapshot.exists || permitSnapshot.data()?.ownerId !== uid)
       throw new HttpsError("permission-denied", "No publication permit is available for this account.");
+    if (isGuestPublisher(request.auth) && permitSnapshot.data()?.guestPublication !== true)
+      throw new HttpsError("permission-denied", "A guest publication permit is required.");
     const context = { ownerId: uid, galleryId };
     const draft = trustedManifestFrom(request.data?.draft, context);
     const distribution = trustedDistributionFrom(request.data?.distribution);
+    if (permitSnapshot.data()?.guestPublication === true && distribution.creatorProfileListed)
+      throw new HttpsError("invalid-argument", "Guest Spaces cannot appear on a Creator profile.");
     const expectedCoverPath = `${galleryUploadRoot(context)}/cover.webp`;
     const inspectionId = randomBytes(24).toString("base64url");
     const claim = await db.runTransaction(async (transaction) => {
@@ -4389,6 +4406,18 @@ export const finalizeAuraGalleryPublication = onCall(
         });
         if (!ownsGalleryInspectionLease(latestPermit.data(), inspectionId, Date.now()))
           throw new HttpsError("aborted", "Trusted image inspection lease expired. Retry safely.");
+        if (permit.permit.guestPublication === true) {
+          // Recheck under the same per-owner transaction lock at commit: several
+          // outstanding permits must not race past the three-live-room cap.
+          const quotaReference = db.collection("galleryPublicationQuotas").doc(uid);
+          await transaction.get(quotaReference);
+          const activeRooms = await transaction.get(db.collection("galleries")
+            .where("ownerId", "==", uid).where("lifecycleStatus", "==", "active")
+            .where("expiresAt", ">", new Date()).limit(3));
+          if (activeRooms.size >= 3)
+            throw new HttpsError("resource-exhausted", "Guest limit reached. Create an account to manage your Spaces.");
+          transaction.set(quotaReference, { lastGuestCommitAt: FieldValue.serverTimestamp() }, { merge: true });
+        }
         transaction.create(galleryReference, {
           ...draft,
           coverPath: paths[0],
@@ -4400,6 +4429,8 @@ export const finalizeAuraGalleryPublication = onCall(
           retention: permit.retention,
           accessVersion: 1,
           ...distribution,
+          guestPublication: permit.permit.guestPublication === true,
+          creatorProfileListed: permit.permit.guestPublication === true ? false : distribution.creatorProfileListed,
           // Successful trusted inspection makes a public Space immediately
           // discoverable. Placement switches still decide its surfaces.
           discoverEligible: permit.visibility === "public",
@@ -4748,6 +4779,7 @@ export const finalizeAuraGalleryRevision = onCall(
           accessVersion: latestAuthorization.accessVersion,
           exploreListed: latestAuthorization.exploreListed,
           creatorProfileListed: latestAuthorization.creatorProfileListed,
+          guestPublication: latestAuthorization.guestPublication,
           // Editing a live public Space must not silently remove it from Explore.
           discoverEligible: latestAuthorization.visibility === "public",
           revision: baseRevision + 1,
@@ -4869,6 +4901,16 @@ export const manageAuraGalleryLifecycle = onCall(
           ?? 0;
         if (restoredExpiry <= Date.now())
           throw new HttpsError("failed-precondition", "This Space expired while it was in Trash and cannot be restored.");
+        if (data.guestPublication === true && isGuestPublisher(request.auth)) {
+          const quotaReference = db.collection("galleryPublicationQuotas").doc(uid);
+          await transaction.get(quotaReference);
+          const activeRooms = await transaction.get(db.collection("galleries")
+            .where("ownerId", "==", uid).where("lifecycleStatus", "==", "active")
+            .where("expiresAt", ">", now).limit(3));
+          if (activeRooms.size >= 3)
+            throw new HttpsError("resource-exhausted", "Guest limit reached. Create an account to manage your Spaces.");
+          transaction.set(quotaReference, { lastGuestCommitAt: FieldValue.serverTimestamp() }, { merge: true });
+        }
         transaction.update(galleryReference, {
           lifecycleStatus: "active",
           expiresAt: new Date(restoredExpiry),
@@ -4888,6 +4930,8 @@ export const manageAuraGalleryLifecycle = onCall(
         const creatorProfileListed = request.data?.creatorProfileListed;
         if (typeof exploreListed !== "boolean" || typeof creatorProfileListed !== "boolean")
           throw new HttpsError("invalid-argument", "Invalid Space placement settings.");
+        if (data.guestPublication === true && creatorProfileListed)
+          throw new HttpsError("invalid-argument", "Guest Spaces cannot appear on a Creator profile.");
         transaction.update(galleryReference, {
           exploreListed,
           creatorProfileListed,
@@ -5561,7 +5605,7 @@ export const creatorAttribution = onRequest(
       const gallery = await publicDeliveryManifest(spaceId);
       const delivery = classifySpaceForDelivery(spaceId, gallery);
       const ownerId = gallery?.ownerId;
-      if (delivery.kind !== "public" || !delivery.indexEligible || typeof ownerId !== "string")
+      if (gallery?.guestPublication === true || delivery.kind !== "public" || !delivery.indexEligible || typeof ownerId !== "string")
         throw new Error("not-public");
       const owner = await db.collection("creatorAccountOwners").doc(ownerId).get();
       const creatorId = owner.data()?.creatorId;

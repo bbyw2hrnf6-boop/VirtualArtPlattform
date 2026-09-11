@@ -8,8 +8,12 @@ import {
   limit,
   orderBy,
   query,
+  startAfter,
   Timestamp,
   where,
+  type Query,
+  type DocumentData,
+  type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import {
   getBlob,
@@ -118,6 +122,7 @@ type TrustedGalleryFinalization = {
   expiresAt: string;
   updatedAt: string;
   revision: number;
+  guestPublication?: boolean;
 };
 
 const AMBIGUOUS_FINALIZATION_ERRORS = new Set([
@@ -183,6 +188,7 @@ function trustedFinalization(
     expiresAt: expiresAt.toISOString(),
     updatedAt: updatedAt.toISOString(),
     revision: value.revision,
+    guestPublication: value.guestPublication === true,
   };
 }
 
@@ -443,7 +449,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         await currentUser.getIdToken(true);
         return currentUser;
       } catch (error) {
-        if (!RECOVERABLE_ANONYMOUS_SESSION_ERRORS.has(firebaseErrorCode(error)))
+        if (!currentUser.isAnonymous || !RECOVERABLE_ANONYMOUS_SESSION_ERRORS.has(firebaseErrorCode(error)))
           throw error;
         await signOut(firebaseAuth);
       }
@@ -480,24 +486,27 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       const verifiedAccount = !owner.isAnonymous && owner.emailVerified;
       const visibility = options.visibility ?? "public";
       const exploreListed = options.exploreListed ?? true;
-      const creatorProfileListed = options.creatorProfileListed ?? false;
-      if (!verifiedAccount)
+      const creatorProfileListed = owner.isAnonymous ? false : options.creatorProfileListed ?? false;
+      if (!verifiedAccount && !owner.isAnonymous)
         throw new Error(
           "Sign in with Google or create and verify a LIEUVA account before publishing. Your Project and Walk Preview remain available.",
         );
+      if (owner.isAnonymous && visibility !== "public")
+        throw new Error("Guest Spaces must be public. Create and verify an account for other visibility options.");
       const retention = "account-preview" as const;
       const base = slugify(`${validatedDraft.artist}-${validatedDraft.title}`) || "gallery";
       const id = `${base}-${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
       permittedGalleryId = id;
       const permit = await httpsCallable<
         { galleryId: string; visibility: string },
-        { expiresAt: string; retention: "account-preview" }
+        { expiresAt: string; retention: "account-preview"; guestPublication?: boolean }
       >(firebaseFunctions, "beginAuraGalleryPublication")({
         galleryId: id,
         visibility,
       });
       const expires = new Date(permit.data.expiresAt);
-      if (!Number.isFinite(expires.getTime()))
+      if (!Number.isFinite(expires.getTime()) || permit.data.retention !== retention
+        || (permit.data.guestPublication === true) !== owner.isAnonymous)
         throw new Error("The publication permit returned an invalid expiry.");
       const coverSource = validateGalleryCoverSource(
         await createThumbnail(roomCoverSource || validatedDraft.artworks[0]?.src),
@@ -556,10 +565,13 @@ export class FirebaseGalleryRepository implements GalleryRepository {
             expiresAt: committed.expiresAt,
             updatedAt: committed.updatedAt,
             revision: committed.revision,
+            guestPublication: committed.guestPublication,
           };
         },
       );
       const publication = trustedFinalization(finalized, 1);
+      if (publication.guestPublication !== owner.isAnonymous)
+        throw new Error("The publication identity could not be confirmed. Reload your Space before continuing.");
       return {
         ...validatedDraft,
         coverSrc: coverSource,
@@ -568,6 +580,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         ownerId,
         publishedAt: publication.publishedAt,
         expiresAt: publication.expiresAt,
+        guestPublication: publication.guestPublication,
         visibility,
         retention,
         accessVersion: 1,
@@ -721,6 +734,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
             expiresAt: committed.expiresAt,
             updatedAt: committed.updatedAt,
             revision: committed.revision,
+            guestPublication: committed.guestPublication,
           };
         },
       );
@@ -734,6 +748,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         publishedAt: publication.publishedAt,
         expiresAt: publication.expiresAt,
         visibility: current.visibility,
+        guestPublication: current.guestPublication === true,
         retention: current.retention,
         accessVersion: current.accessVersion,
         exploreListed: current.exploreListed,
@@ -851,9 +866,27 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       orderBy("expiresAt", "desc"),
       limit(30),
     );
+    // Expired guest placements must not consume the entire first page. Keep
+    // directory reads bounded, but continue past hidden/expired placements.
+    const eligiblePages = async (base: Query<DocumentData>) => {
+      const docs: QueryDocumentSnapshot<DocumentData>[] = [];
+      let cursor: QueryDocumentSnapshot<DocumentData> | undefined;
+      let eligibleCount = 0;
+      for (let page = 0; page < 10 && eligibleCount < 12; page += 1) {
+        const result = await getDocs(cursor ? query(base, startAfter(cursor)) : base);
+        docs.push(...result.docs);
+        for (const item of result.docs) {
+          try { if (isDiscoverEligible(fromFirestore(item.id, item.data()))) eligibleCount += 1; }
+          catch { /* Invalid public records must not block the directory. */ }
+        }
+        if (result.docs.length < 30) break;
+        cursor = result.docs.at(-1);
+      }
+      return { docs };
+    };
     const snapshotResults = await Promise.allSettled([
-      getDocs(publicActive),
-      getDocs(legacyActive),
+      eligiblePages(publicActive),
+      eligiblePages(legacyActive),
     ]);
     const snapshots = snapshotResults.flatMap((result) => {
       if (result.status === "fulfilled") return [result.value];
@@ -1057,6 +1090,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         expiresAt: gallery.expiresAt,
         visibility: gallery.visibility,
         retention: gallery.retention,
+        guestPublication: gallery.guestPublication === true,
         accessVersion: gallery.accessVersion,
         revision: gallery.revision,
         exploreListed: gallery.exploreListed,

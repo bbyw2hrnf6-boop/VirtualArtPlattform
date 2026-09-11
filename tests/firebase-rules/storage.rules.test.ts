@@ -230,6 +230,17 @@ describe("Storage authorization matrix", () => {
     await assertSucceeds(readMetadata(contexts.anonymous, paths[5]));
   });
 
+  it("keeps guest public media readable after Explore ends", async () => {
+    const galleryId = "guest-past-explore";
+    const expiresAtMs = futureMs(300);
+    await seedFirestore(environment, [[`galleries/${galleryId}`, galleryRecord(galleryId, expiresAtMs, {
+      guestPublication: true, publishedAt: Timestamp.fromMillis(now() - 8 * 86_400_000),
+    })]]);
+    const path = `published/${USER_IDS.owner}/${galleryId}/cover.webp`;
+    await seedStorage(environment, [[path]]);
+    await assertSucceeds(readMetadata(authContexts(environment).anonymous, path));
+  });
+
   it("allows only media referenced by the current manifest, never retired revisions", async () => {
     const expiresAtMs = futureMs();
     const galleryId = "current-revision-only";

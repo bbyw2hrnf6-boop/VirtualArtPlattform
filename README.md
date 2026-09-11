@@ -87,7 +87,8 @@ The largest implementation files are `src/App.tsx`, `src/features/gallery/Galler
 
 ## Product and data contracts
 
-- Drafts are local and account-free. Publishing requires a verified Email/Password or Google account.
+- Drafts are local and account-free. Guests can publish a public Space without creating an account or Creator profile. New guest publications carry immutable server-authored `guestPublication: true`; Explore eligibility ends exactly seven days after the original `publishedAt`. The direct link keeps the existing 365-day preview hosting lifetime (`account-preview` retention); this is not permanent hosting or a seven-day deletion policy. Legacy `guest-10-days` records keep their original semantics.
+- Anonymous guest publication uses the same App Check, ownership, decoded-media and transactional permit boundary as account publication, with three new permits per UTC day and three active Spaces per guest identity. Guests need to create/link and verify an account in the same browser for live updates; ordinary sign-in to an existing account does not transfer guest-owned Spaces. Updates, restored rooms and UID-preserving signup never restart the Explore window or add a guest-origin room to a Creator profile.
 - Public, unlisted and private Spaces use the existing `galleries/{galleryId}` identity. Owner/Editor/Viewer access is stored separately.
 - Published media uses immutable owner/revision-scoped Storage paths. Updates preserve the Space ID and share URL.
 - New records use the current schema; schema-v1/v2 records remain readable.

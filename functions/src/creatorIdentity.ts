@@ -323,7 +323,7 @@ export function creatorNotificationProjection(
 
 /** Legacy Spaces predate placement controls and remain visible by default. */
 export function isCreatorProfileSpaceListed(data: Record<string, unknown>): boolean {
-  return data.creatorProfileListed !== false;
+  return data.guestPublication !== true && data.creatorProfileListed !== false;
 }
 
 export function creatorCanonicalUrl(handle: string): string {

@@ -41,6 +41,7 @@ export type GalleryEditTarget = {
   publishedAt: string;
   expiresAt: string;
   visibility: GalleryVisibility;
+  guestPublication?: boolean;
   retention: GalleryRetention;
   accessVersion: number;
   revision: number;

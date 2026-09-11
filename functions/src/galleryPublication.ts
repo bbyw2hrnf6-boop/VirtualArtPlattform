@@ -43,6 +43,7 @@ function commonPermit(
   if (typeof visibility !== "string" || !VISIBILITIES.has(visibility))
     fail("permit visibility is invalid");
   if (permit.retention !== "account-preview") fail("permit retention is invalid");
+  if (permit.guestPublication === true && visibility !== "public") fail("guest visibility is invalid");
   const expiresAtMs = trustedTimestampMilliseconds(permit.expiresAt, "expiry");
   const permitExpiresAtMs = trustedTimestampMilliseconds(permit.permitExpiresAt, "permit expiry");
   if (
@@ -144,6 +145,8 @@ export function validateRevisionAuthorization(options: {
     publishedAt: gallery.publishedAt,
     accessVersion: gallery.accessVersion === 1 ? 1 : fail("gallery access version is invalid"),
     exploreListed: typeof gallery.exploreListed === "boolean" ? gallery.exploreListed : true,
-    creatorProfileListed: typeof gallery.creatorProfileListed === "boolean" ? gallery.creatorProfileListed : true,
+    guestPublication: gallery.guestPublication === true,
+    creatorProfileListed: gallery.guestPublication === true ? false
+      : typeof gallery.creatorProfileListed === "boolean" ? gallery.creatorProfileListed : true,
   };
 }

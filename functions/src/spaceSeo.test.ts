@@ -43,6 +43,11 @@ function record(overrides: Record<string, unknown> = {}) {
 }
 
 describe("Space SEO delivery policy", () => {
+  it("keeps guest delivery public after its Explore window without extending physical hosting", () => {
+    const guest = record({ guestPublication: true, publishedAt: new Date(NOW - 8 * 86_400_000) });
+    expect(classifySpaceForDelivery("material-futures-abc123", guest, NOW)).toMatchObject({ kind: "public", indexEligible: true });
+    expect(classifySpaceForDelivery("material-futures-abc123", guest, NOW + 2 * 86_400_000).kind).not.toBe("public");
+  });
   it("returns unique raw public metadata without client JavaScript", () => {
     const delivery = classifySpaceForDelivery(
       "material-futures-abc123",
