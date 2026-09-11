@@ -74,6 +74,30 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+// The dependency-free deploy resolver must not import (execute) artifact code.
+// Support only the explicit endpoint declarations emitted by our TS build;
+// never infer an export-star module's endpoint set from the discovery manifest.
+export function compiledEndpointNames(source) {
+  const identifier = "[A-Za-z][A-Za-z0-9_]{0,127}";
+  const declarations = new RegExp(`^export\\s+const\\s+(${identifier})\\b`, "gm");
+  const names = [...source.matchAll(declarations)].map((match) => match[1]);
+  const namedExports = /^export[ \t]*\{([^{}]+)\}[ \t\r\n]*from[ \t\r\n]*["']\.\/[-A-Za-z0-9_./]+\.js["'][ \t]*;/gm;
+  for (const match of source.matchAll(namedExports)) {
+    const specifiers = match[1].trim().replace(/,$/, "").split(",");
+    for (const specifier of specifiers) {
+      const parsed = new RegExp(`^(${identifier})(?:\\s+as\\s+(${identifier}))?$`).exec(specifier.trim());
+      if (!parsed) fail("compiled Functions named export is unsupported");
+      names.push(parsed[2] ?? parsed[1]);
+    }
+  }
+  // Fail closed if another export form is introduced instead of silently
+  // overlooking a wildcard, default, namespace or local named export.
+  const remaining = source.replace(declarations, "").replace(namedExports, "");
+  if (/^export\b/m.test(remaining))
+    fail("compiled Functions export form is unsupported");
+  return names;
+}
+
 function normalizedRelativePath(root, path) {
   const value = relative(root, path).split(sep).join("/");
   if (
@@ -367,11 +391,7 @@ async function validateDeploymentConfiguration(
     resolve(releaseRoot, "functions/lib/index.js"),
     "utf8",
   );
-  const compiledExports = [
-    ...compiledIndex.matchAll(
-      /^export\s+const\s+([A-Za-z][A-Za-z0-9_-]{0,127})\b/gm,
-    ),
-  ].map((match) => match[1]);
+  const compiledExports = compiledEndpointNames(compiledIndex);
   try {
     validateReleaseManifest(functionsManifest, compiledExports, environment);
   } catch {

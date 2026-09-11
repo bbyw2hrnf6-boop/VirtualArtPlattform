@@ -13,6 +13,7 @@ import {
 import {
   RELEASE_DIRECTORY,
   assembleReleaseBundle,
+  compiledEndpointNames,
   verifyReleaseBundle,
 } from "./wp2-release-artifact-lib.mjs";
 
@@ -158,6 +159,44 @@ test("assembles a fail-closed mail-disabled production bundle", async () => {
   const manifest = await assembleReleaseBundle(root, releaseRoot, disabledOptions);
   assert.equal(manifest.mailMode, "disabled");
   await verifyReleaseBundle(releaseRoot, disabledOptions);
+});
+
+test("assembles the explicit admin re-exports without executing artifact code", async () => {
+  const root = await fixture();
+  const adminNames = ["getLieuvaAdminSession", "getLieuvaAdminDashboard", "runLieuvaAdminChecks", "manageLieuvaAdminAccess"];
+  await writeFile(join(root, "functions/lib/index.js"), [
+    `export {\n ${adminNames.join(",\n ")},\n} from "./adminConsole.js";`,
+    ...EXPECTED_RELEASE_ENDPOINTS.filter((name) => !adminNames.includes(name))
+      .map((name) => `export const ${name} = true;`),
+  ].join("\n"));
+  await writeFile(join(root, "functions/lib/adminConsole.js"), 'throw new Error("Artifact code must not execute during verification");');
+  const releaseRoot = join(root, RELEASE_DIRECTORY);
+  await assembleReleaseBundle(root, releaseRoot, options);
+  await verifyReleaseBundle(releaseRoot, options);
+});
+
+test("compiled endpoint extraction handles aliases and rejects unsupported exports", () => {
+  assert.deepEqual(compiledEndpointNames('export { local as publicName, other } from "./adminConsole.js";\nexport const direct = true;'), ["direct", "publicName", "other"]);
+  for (const source of [
+    'export * from "./adminConsole.js";',
+    'export * as admin from "./adminConsole.js";',
+    'export { admin };',
+    'export default admin;',
+    'export { admin } from "firebase-functions";',
+    'export { admin, , other } from "./adminConsole.js";',
+  ]) assert.throws(() => compiledEndpointNames(source), /export.*unsupported/);
+});
+
+test("re-export discovery still rejects missing, extra and duplicate endpoints", async () => {
+  for (const names of [
+    EXPECTED_RELEASE_ENDPOINTS.slice(1),
+    [...EXPECTED_RELEASE_ENDPOINTS, "unreviewedEndpoint"],
+    [...EXPECTED_RELEASE_ENDPOINTS, EXPECTED_RELEASE_ENDPOINTS[0]],
+  ]) {
+    const root = await fixture();
+    await writeFile(join(root, "functions/lib/index.js"), `export { ${names.join(", ")} } from "./adminConsole.js";`);
+    await assert.rejects(assembleReleaseBundle(root, join(root, RELEASE_DIRECTORY), options), /does not match the reviewed compiled exports/);
+  }
 });
 
 test("rejects changed bytes, config drift, extras, and symbolic links", async () => {

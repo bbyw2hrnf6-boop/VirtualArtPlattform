@@ -35,6 +35,8 @@ The admin console deliberately extends the aggregate release ceilings from 575,0
 
 ## Release boundary
 
+The immutable release validator accepts direct endpoint declarations and explicit named local-module re-exports, including the admin callables, without executing bundled code. The exact endpoint allowlist and digest checks remain mandatory; unsupported export forms fail closed.
+
 Treat the product as a controlled production pilot until these external conditions are evidenced:
 
 - deployed Firestore/Storage rules and indexes match the reviewed repository policy;

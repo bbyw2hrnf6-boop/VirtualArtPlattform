@@ -57,6 +57,8 @@ npm ci --prefix firebase-cli --ignore-scripts --no-audit --no-fund
 
 Run `npm run build` before an isolated browser-smoke run. Install Chromium once with `npm run test:browser-smoke:install`.
 
+Release validation checks both direct Functions endpoint declarations and explicit named local-module re-exports against the reviewed endpoint allowlist without executing artifact code. Wildcard exports are not supported; see the [release procedure](./FIREBASE_SETUP.md#current-release-order).
+
 ## Repository map
 
 ```text

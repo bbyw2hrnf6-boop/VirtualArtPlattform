@@ -656,7 +656,12 @@ migration is involved. Main `Verify` prepares
    `functions/functions.yaml`, records every file digest, strips Firebase
    predeploy hooks, and uploads the artifact for 30 days. The bundle has no
    `node_modules`; it carries dedicated lock metadata for the exact Firebase CLI
-   instead.
+   instead. Compiled endpoint discovery accepts direct `export const` declarations
+   and explicit named re-exports from local `.js` modules (including aliases),
+   without importing or executing artifact code. It rejects unsupported export
+   forms such as `export *`; missing, extra and duplicate endpoint names still
+   fail the reviewed allowlist check. Regression fixtures cover the modular
+   admin exports and immutable bundle assembly.
 3. Inspect the main Verify result, commit SHA, artifact ID, and archive digest.
    The automatic deploy resolves that exact successful push-to-main run. A
    manual deploy requires the full SHA of an unexpired successful main artifact.
