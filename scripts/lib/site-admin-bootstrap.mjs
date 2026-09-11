@@ -1,4 +1,5 @@
 import { execFile as execFileCallback } from "node:child_process";
+import { createHash } from "node:crypto";
 import { promisify } from "node:util";
 
 import {
@@ -15,6 +16,7 @@ const SUPPORTED_SIGN_IN_PROVIDERS = new Set(["google.com", "password"]);
 export const SITE_ADMIN_BOOTSTRAP_PATH = "siteAdminControl/bootstrap";
 export const SITE_ADMIN_COLLECTION = "siteAdmins";
 export const SITE_ADMIN_AUDIT_COLLECTION = "siteAdminAuditEvents";
+export const ACCOUNT_DELETION_COLLECTION = "accountDeletionJobs";
 
 export function validatedAdminEmail(value, label = "Admin email") {
   if (typeof value !== "string") throw new Error(`${label} is required.`);
@@ -26,6 +28,10 @@ export function validatedAdminEmail(value, label = "Admin email") {
 
 export function validatedFirebaseUid(value, label = "Firebase Auth UID") {
   return validatedDocumentId(value, label);
+}
+
+export function siteAdminPseudonymousRef(value) {
+  return createHash("sha256").update(validatedFirebaseUid(value)).digest("hex").slice(0, 12);
 }
 
 export function validatedBootstrapSelector({ uid, email }) {
@@ -259,8 +265,12 @@ export async function readSiteAdminBootstrapState(client, { uid, transaction } =
     allowMissing: true,
     transaction,
   });
+  const deletionJob = await client.getDocument(`${ACCOUNT_DELETION_COLLECTION}/${targetUid}`, {
+    allowMissing: true,
+    transaction,
+  });
   const admins = await client.listSiteAdmins({ transaction });
-  return { control, target, admins };
+  return { control, target, deletionJob, admins };
 }
 
 function createWrite(name, values) {
@@ -293,12 +303,17 @@ export function buildSiteAdminBootstrapPlan({
   if (!state || typeof state !== "object") throw new Error("Bootstrap registry state is missing.");
   if (state.control) throw new Error("Site-admin bootstrap is already initialized; refusing replacement.");
   if (state.target) throw new Error("The selected site-admin registry document already exists.");
+  if (!Object.prototype.hasOwnProperty.call(state, "deletionJob"))
+    throw new Error("The selected account deletion state was not checked.");
+  if (state.deletionJob)
+    throw new Error("The selected account has an account-deletion job; refusing administrator grant.");
   if (!Array.isArray(state.admins)) throw new Error("Site-admin registry query result is invalid.");
   if (state.admins.length > 0)
     throw new Error("Site-admin registry is not empty; reconcile it instead of bootstrapping another owner.");
 
   const adminPath = `${SITE_ADMIN_COLLECTION}/${eligibleUser.uid}`;
   const eventPath = `${SITE_ADMIN_AUDIT_COLLECTION}/${validatedEventId}`;
+  const targetRef = siteAdminPseudonymousRef(eligibleUser.uid);
   const values = {
     admin: {
       uid: eligibleUser.uid,
@@ -311,7 +326,7 @@ export function buildSiteAdminBootstrapPlan({
       schemaVersion: 1,
     },
     control: {
-      ownerUid: eligibleUser.uid,
+      ownerRef: targetRef,
       initializedAt: timestamp,
       initializedBy: validatedActor,
       auditEventId: validatedEventId,
@@ -319,8 +334,7 @@ export function buildSiteAdminBootstrapPlan({
     },
     event: {
       action: "bootstrap-owner",
-      targetUid: eligibleUser.uid,
-      targetEmail: eligibleUser.email,
+      targetRef,
       role: "owner",
       active: true,
       actor: validatedActor,

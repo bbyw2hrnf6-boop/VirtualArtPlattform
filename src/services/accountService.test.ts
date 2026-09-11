@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { normalizeAccountProfile } from "./accountService";
+import { accountErrorMessage, normalizeAccountProfile } from "./accountService";
+
+describe("administrator account deletion guidance", () => {
+  it("explains the owner handoff instead of incorrectly requesting repeated sign-in", () => {
+    expect(accountErrorMessage({ code: "functions/failed-precondition", details: { reason: "active-site-admin-membership" } })).toContain("appoint another owner first");
+    expect(accountErrorMessage({ code: "functions/failed-precondition", details: { reason: "invalid-site-admin-membership" } })).toContain("operator review");
+    expect(accountErrorMessage({ code: "functions/failed-precondition" })).toContain("sign in again");
+  });
+});
 
 describe("normalizeAccountProfile", () => {
   it("normalizes a clear public identity", () => {

@@ -173,7 +173,7 @@ describe("account deletion jobs", () => {
 
   it("derives the exact non-UID admin check-rate document ID", () => {
     expect(siteAdminCheckRateDocumentId("account-a")).toBe(
-      "checkRate-37f21325d59449edee1a8ae152776c3145fc53854fb5410aaa20f42343752282",
+      "checkRate-fc164f8250803ea8d41834f1de85821035d27d3747e83610789e0f8e5313b9c3",
     );
     expect(() => siteAdminCheckRateDocumentId("nested/account"))
       .toThrow("deletion-site-admin-state-invalid");

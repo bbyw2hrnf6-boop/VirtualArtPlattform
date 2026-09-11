@@ -88,6 +88,15 @@ describe("admin telemetry projection", () => {
           },
         },
       }, {
+        timestamp: "2026-09-11T11:57:45.000Z",
+        severity: "INFO",
+        jsonPayload: {
+          schema: "lieuva_client_telemetry_v1",
+          name: "three_milestone",
+          environment: "production",
+          properties: { metric: "untrusted_metric", stage: "interactive", duration_ms: 1 },
+        },
+      }, {
         timestamp: "2026-09-11T11:57:30.000Z",
         severity: "ERROR",
         jsonPayload: {
@@ -208,6 +217,15 @@ describe("stored admin check history", () => {
 });
 
 describe("fixed live checks", () => {
+  it("does not follow redirects outside the fixed target allowlist", async () => {
+    const fetcher: typeof fetch = async (_url, init) => {
+      expect(init?.redirect).toBe("manual");
+      return new Response(null, { status: 302, headers: { location: "http://169.254.169.254/" } });
+    };
+    const run = await runFixedLieuvaAdminChecks(fetcher);
+    expect(run.overall).toBe("failed");
+    expect(run.checks.every((check) => check.actualStatus === 302 && check.status === "failed")).toBe(true);
+  });
   it("calls only the four fixed LIEUVA URLs and honors the intentional missing-Space 404", async () => {
     const calls: string[] = [];
     const fetcher = async (input: string | URL | Request) => {

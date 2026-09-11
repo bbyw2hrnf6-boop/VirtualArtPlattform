@@ -580,6 +580,10 @@ export function summarizeLoggingEntries(value: unknown) {
     );
     if (!kind) continue;
     const properties = asRecord(json.properties);
+    if (
+      clientReported && kind === "three_milestone" &&
+      (properties?.metric !== "scene_setup" || properties.stage !== "interactive")
+    ) continue;
     const rawDuration = typeof json.durationMs === "number" ? json.durationMs : properties?.duration_ms;
     const durationMs = typeof rawDuration === "number" && Number.isFinite(rawDuration) &&
       rawDuration >= 0 && rawDuration <= 86_400_000 ? rawDuration : null;
@@ -817,7 +821,7 @@ export async function runFixedLieuvaAdminChecks(
     try {
       const response = await fetcher(definition.url, {
         method: "GET",
-        redirect: "follow",
+        redirect: "manual",
         headers: { "User-Agent": "LIEUVA-admin-console-check/1" },
         signal: AbortSignal.timeout(EXTERNAL_TIMEOUT_MS),
       });
@@ -1006,8 +1010,8 @@ async function manageAccessHandler(
   let planned;
   try {
     planned = await db.runTransaction(async (transaction) => {
-      // Reading the complete bounded registry in the same transaction makes the
-      // 100-member capacity decision serialize with concurrent grants.
+      // The bounded query supplies the complete capacity/owner view; the shared
+      // revision document written below serializes concurrent changed grants.
       const [
         actorSnapshot,
         targetSnapshot,

@@ -59,6 +59,45 @@ describe("account deletion integration contract", () => {
     expect(accountDocuments).toContain("accountExportJobReference(state.uid)");
   });
 
+  it("fences administrator grants against deletion and refuses active self-deletion", () => {
+    const initializer = deletion.slice(
+      deletion.indexOf("async function initializeAccountDeletion"),
+      deletion.indexOf("async function acquireAccountDeletionLease"),
+    );
+    const lease = deletion.slice(
+      deletion.indexOf("async function acquireAccountDeletionLease"),
+      deletion.indexOf("async function releaseAccountDeletionLease"),
+    );
+    expect(initializer).toContain("transaction.get(adminReference)");
+    expect(initializer.indexOf("transaction.get(adminReference)")).toBeLessThan(
+      initializer.indexOf("transaction.create(reference"),
+    );
+    expect(lease).toContain("accountDeletionSiteAdminReference(state.uid)");
+    expect(lease).toContain("assertAccountDeletionSiteAdminInactive");
+    expect(source).toContain('reason: "active-site-admin-membership"');
+    expect(source).toContain('reason: "invalid-site-admin-membership"');
+  });
+
+  it("removes only inactive admin authority and rechecks immediately before Auth deletion", () => {
+    const accountDocuments = deletion.slice(
+      deletion.indexOf("async function processAccountDocuments"),
+      deletion.indexOf("async function processAccountAuthentication"),
+    );
+    const authentication = deletion.slice(
+      deletion.indexOf("async function processAccountAuthentication"),
+      deletion.indexOf("async function runAccountDeletionStep"),
+    );
+    expect(accountDocuments).toContain('adminDisposition === "inactive"');
+    expect(accountDocuments).toContain("transaction.delete(adminReference)");
+    expect(accountDocuments).toContain("accountDeletionSiteAdminCheckRateReference(state.uid)");
+    expect(authentication).toContain("assertAccountDeletionSiteAdminInactive");
+    expect(authentication).toContain('adminDisposition === "inactive"');
+    expect(authentication).toContain("accountDeletionSiteAdminCheckRateReference(state.uid)");
+    expect(authentication.indexOf("assertAccountDeletionSiteAdminInactive")).toBeLessThan(
+      authentication.indexOf("getAuth().deleteUser(state.uid)"),
+    );
+  });
+
   it("moves submitted reports to pseudonymous IDs without deleting case evidence", () => {
     const submittedReports = deletion.slice(
       deletion.indexOf("async function processSubmittedReports"),

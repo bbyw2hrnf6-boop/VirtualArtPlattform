@@ -153,25 +153,56 @@ npm run admin:bootstrap -- \
   --confirm-email 'EXACT_EMAIL_FROM_DRY_RUN'
 ```
 
-Execution reads the registry inside one Firestore transaction, requires the
-registry and `siteAdminControl/bootstrap` guard to be empty, and creates exactly:
+Execution reads the registry, `siteAdminControl/bootstrap`, and the selected
+user's `accountDeletionJobs/{uid}` fence inside one Firestore transaction. It
+requires the registry and bootstrap guard to be empty and refuses every running
+job or completion tombstone before creating exactly:
 
 - `siteAdmins/{uid}` with the UID, normalized email, `role: owner`,
   `active: true`, audit actor/timestamps, and `schemaVersion: 1`;
-- `siteAdminControl/bootstrap`, the global one-shot first-owner guard;
-- `siteAdminAuditEvents/{eventId}`, an immutable bootstrap event containing no
-  OAuth token, password material, provider payload, or custom claim.
+- `siteAdminControl/bootstrap`, the global one-shot first-owner guard. It stores
+  a 12-hex SHA-256 `ownerRef`, not the UID;
+- `siteAdminAuditEvents/{eventId}`, an immutable bootstrap event containing the
+  same pseudonymous `targetRef`, role/result, project, timestamp, and named human
+  gcloud operator. It contains no target email, raw target UID, OAuth token,
+  password material, provider payload, or custom claim.
 
 Every write has an `exists: false` precondition. A concurrent bootstrap, an
-existing owner/admin record, or an existing control document aborts instead of
-updating or replacing authority. Do not delete the control document to rerun the
-tool. Create, deactivate, or change later `owner|admin` records only through the
-audited admin Functions. `siteAdminCheckRuns/{runId}` stores server-side check
-history; `siteAdminControl/checkRate-{sha256(uid)}` stores the per-actor live-check
-cooldown without exposing the UID in its document ID. Firestore's existing
-default-deny boundary keeps all four collection families inaccessible to
-web/mobile clients, and the emulator matrix locks that behavior without a rules
-change.
+existing owner/admin record, existing account-deletion fence, or existing
+control document aborts instead of updating or replacing authority. Do not
+delete the control document to rerun the tool. Create, deactivate, or change
+later `owner|admin` records only through the audited admin Functions. Those
+Functions store 12-hex `actorRef`/`targetRef` values in audit/check history,
+reject grants and role changes for a target with any deletion job, and keep
+revocation available as the required remediation before self-deletion.
+
+`siteAdminControl/adminRegistry` is the shared capacity lock with
+`{schemaVersion: 1, kind: 'admin-registry-revision', revision, updatedAt}`; every
+changed access mutation creates or increments its positive safe-integer
+revision transactionally. `siteAdminCheckRuns/{runId}` stores count-bounded
+server-side check history; `siteAdminControl/checkRate-{sha256(uid)}` stores the
+per-actor live-check cooldown without exposing the UID in its document ID or
+fields. Firestore's existing default-deny boundary keeps all four collection
+families and every control-document variant inaccessible to web/mobile clients,
+and the emulator matrix locks that behavior without a rules change.
+
+The bootstrap operator email is intentionally retained in the one-shot guard
+and bootstrap event for operator attribution; the hash references are
+pseudonymous, not anonymous. The durable guard and admin audit ledger currently
+have no automatic TTL. Check history is bounded by count and incrementally
+pruned. These are technical retention facts, not a legal-compliance claim; the
+data-rights record lists the unresolved policy decisions.
+
+Read-only IAM inspection on 2026-09-11 found that the existing Gen2 Functions
+run as `680521841065-compute@developer.gserviceaccount.com` and that this shared
+runtime principal has project-level `roles/editor`. That currently supplies the
+Cloud Logging, Firebase Auth, and Firestore permissions, but is substantially
+broader than the admin console requires. Do not treat this as the intended
+least-privilege state. A reviewed follow-up should assign the admin callables a
+dedicated runtime service account with Cloud Logging entry read/write
+(`logging.logEntries.list`/`logging.logEntries.create`), Firebase Auth user read,
+and only the required Firestore transactional permissions. No IAM binding is
+changed by this repository update.
 
 ## 3. Blaze and Storage bucket
 

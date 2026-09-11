@@ -470,6 +470,12 @@ export function accountErrorMessage(error: unknown) {
     typeof error === "object" && error && "code" in error
       ? String(error.code).toLowerCase()
       : "";
+  const details = typeof error === "object" && error && "details" in error ? error.details : null;
+  const reason = typeof details === "object" && details && "reason" in details ? details.reason : null;
+  if (code.includes("failed-precondition") && reason === "active-site-admin-membership")
+    return "Ask another owner to revoke your administrator access before deleting your account. If you are the only owner, appoint another owner first.";
+  if (code.includes("failed-precondition") && reason === "invalid-site-admin-membership")
+    return "Administrator membership needs an operator review before this account can be deleted. Your account has not been deleted.";
   if (code.includes("invalid-credential"))
     return "Email or password is incorrect.";
   if (code.includes("email-already-in-use") || code.includes("credential-already-in-use"))

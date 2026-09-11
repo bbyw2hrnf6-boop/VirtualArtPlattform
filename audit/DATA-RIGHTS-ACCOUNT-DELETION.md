@@ -3,6 +3,7 @@
 > Durable lifecycle specification with dated evidence. For current status and test coverage, use [`CURRENT-STATE.md`](./CURRENT-STATE.md) and run the repository gates.
 
 Date: 2026-09-04
+Updated: 2026-09-11 — site-administrator deletion fence and retention inventory
 Work packages: WP2 export; WP3 resumable deletion
 Verdict: **LOCAL PASS WITH EXTERNAL AND LEGAL CONDITIONS**
 
@@ -27,6 +28,11 @@ This evidence records the product-side implementation only. No production data w
 | `accountDeletionJobs/{uid}` | Retry/progress record and short completion tombstone for cross-service deletion | document ID/`uid` | Server-only; retained after Auth deletion with a provisional 24-hour `expiresAt`, then removed asynchronously by TTL |
 | `accountMediaUploadLeases/{uid}` | Short server-owned lease for account and Creator avatar/cover writes | document ID/`uid` | Server-only; deletion waits for an active lease, then drains media; stale leases expire through TTL |
 | `accountExportJobs/{uid}` and `accountExportJobs/{uid}/accountExportChunks/*` | Private managed-export checkpoint, lease and bounded JSONL parts | authenticated `uid` plus server-issued job ID | Rules deny all client access; callable returns only owner-authorized redacted status/parts; both parent and parts expire through the `expiresAt` TTL field; deletion drains chunks before removing the parent |
+| `siteAdmins/{uid}` | Server-authoritative site-wide owner/admin membership | document ID/`uid`, normalized email, and `createdBy` attribution | Not currently included in self-service export. Active membership blocks account deletion; after another owner revokes it, deletion removes the inactive record before Auth deletion. Other members' records may retain the deleting administrator's raw UID in historical `createdBy`; export/reconciliation of that attribution remains open |
+| `siteAdminControl/bootstrap`, `siteAdminControl/adminRegistry` | One-shot first-owner presence guard and concurrent registry-capacity revision | 12-hex UID digest (`ownerRef`) plus named bootstrap operator; no target email/raw target UID in the control records | Server-only and intentionally durable; no automatic TTL. Not removed by account deletion because the presence/revision guards protect global authority integrity |
+| `siteAdminControl/checkRate-{sha256(uid)}` | Per-actor live-check cooldown | full UID digest in document ID; 12-hex `actorRef` in body | Server-only, overwritten in place, and deterministically removed during account deletion; not currently included in self-service export |
+| `siteAdminAuditEvents/{eventId}` | Immutable access-change and first-owner operator trail | ordinary mutations use 12-hex `actorRef`/`targetRef`; bootstrap additionally retains the named human gcloud operator | Server-only; no automatic TTL and not currently included in self-service export. Retention/export policy remains an owner/legal decision |
+| `siteAdminCheckRuns/{runId}` | Fixed-target production HTTP check result/history | 12-hex `actorRef`; no raw actor UID/email | Server-only; newest 100 records are retained as incremental pruning converges, with at most 20 overflow deletions per new run; not currently included in self-service export |
 | `creatorAccountOwners/{uid}`, `creatorAccounts/{creatorId}`, `creatorProfiles/{creatorId}`, `creatorHandles/*`, `creator-public/{creatorId}/**` | Creator identity, public profile/handle, social root, and public media | owner mapping plus `ownerId` | Export selected account-linked data; delete only while the persisted Creator ID still belongs to the deleting account |
 | Creator posts, comments, reactions, follows, blocks, and notifications | Community content and relationships | Creator/account IDs | Export account-linked records; delete in bounded pages; decrement follower/comment/reaction aggregates transactionally and clamp at zero |
 | `creatorReports/*`, `moderationCases/*`, and case events | User reports and moderation evidence | reporter/target IDs | Provisionally preserve reports/cases/evidence; remove display identity, move affected report documents to deletion-scoped IDs, rewrite case source-report references, and replace deleting reporter/target fields with pseudonyms pending owner/legal decisions 9–12 |
@@ -50,6 +56,11 @@ No product Analytics user store was discovered in the current implementation. Ap
 6. **Legal/provider retention:** backup and provider-log behavior is not asserted by the product; a production policy remains open.
 7. **Browser-only data:** IndexedDB/fallback projects and account avatar object URLs.
 8. **Other-user data:** other owners' manifests/assets and collaborator identities are neither deleted nor exported.
+9. **Site-administration data:** the live authority record is directly linkable
+   and therefore must be revoked before deletion. Control, audit, and check
+   records use deterministic digests that reduce casual disclosure but remain
+   pseudonymous. Their documented retention is not a claim of anonymization or
+   legal sufficiency.
 
 ## 3. Export contents
 
@@ -85,7 +96,24 @@ The existing per-Space `aura-gallery-export` `.aura.json` implementation in `Acc
 
 `deleteAuraAccount` is an App Check-protected callable. It requires a non-anonymous account and literal `DELETE` confirmation. A new job also requires an Auth token no older than ten minutes; an existing durable job is loaded before any Admin Auth lookup so an ambiguous retry after `deleteUser` can still finish. The client performs Google popup or password re-authentication before the first call, then loops on the coarse `running`/`complete` response.
 
-The first request atomically creates `accountDeletionJobs/{uid}` and captures the current Creator ownership mapping. The existence of that record is the deletion fence: account-mutating callables reject the actor and affected account, transactionally where the write is transactional, while Firestore/Storage Rules reject direct profile/avatar and publication-upload writes. Account and Creator media writes are callable-only and hold a server-owned lease; deletion waits out an active lease and then drains those exact media prefixes. This prevents new account data from racing behind a destructive page.
+The first request atomically creates `accountDeletionJobs/{uid}`, captures the
+current Creator ownership mapping, and reads `siteAdmins/{uid}` in the same
+transaction. An active administrator receives `failed-precondition` and must
+have another active owner revoke the membership first; a last owner must first
+assign a replacement owner. A malformed registry record also fails closed for
+operator reconciliation. Every deletion lease repeats this check so older or
+resumed jobs cannot bypass it.
+
+The existence of the job is the deletion fence: account-mutating callables
+reject the actor and affected account, transactionally where the write is
+transactional, while administrator grants/reactivations and role changes read
+the same target fence and reject any running job or completion tombstone.
+Revocation remains available as remediation. Firestore/Storage Rules reject
+direct profile/avatar and publication-upload writes. Account and Creator media
+writes are callable-only and hold a server-owned lease; deletion waits out an
+active lease and then drains those exact media prefixes. These paired
+transactions serialize a concurrent admin grant against job creation rather
+than relying on check-then-write timing.
 
 Each invocation acquires a ten-minute lease, performs at most four steps under a five-minute function ceiling, and re-fetches page one after deletion rather than persisting a cursor over a shrinking set. Firestore pages contain at most 200 ordinary records; large managed-export chunks use pages of eight and near-limit legacy artwork documents use pages of five. Storage pages contain at most 100 objects. A scheduled worker runs every 15 minutes, selects running jobs oldest `updatedAt` first through the declared composite index, and resumes at most two jobs per run. Lease acquisition refreshes `updatedAt`, so a failing/hot job rotates behind older waiting jobs.
 
@@ -96,8 +124,13 @@ The persisted phase machine performs these operations in order:
 3. remove shared memberships and invitations by both normalized email and persisted `acceptedBy` UID, then drain managed-export chunks before deleting the export job root;
 4. remove Creator follows, comments, reactions, posts, blocks, notifications, handles, and rate-limit state in bounded pages, transactionally reconciling follower/comment/reaction aggregate counts;
 5. provisionally pseudonymize, rather than erase, reports submitted by or targeting the deleted Creator/account; move each affected report from its linkable deterministic document ID to a deletion-scoped 64-hex ID and rewrite linked case `sourceReportIds` atomically; linked moderation cases and immutable events remain available, with case target fields pseudonymized where applicable;
-6. wait for active account-media leases, then delete account documents, profile/Creator media, and Creator roots only after re-validating the captured ownership mapping;
-7. delete Firebase Auth **last**, treating only Admin Auth `user-not-found` as a successful ambiguous retry;
+6. wait for active account-media leases, then delete account documents, an
+   inactive `siteAdmins/{uid}` membership, the deterministic live-check rate
+   record, profile/Creator media, and Creator roots only after re-validating the
+   captured ownership mapping;
+7. transactionally re-read administrator state and repeat inactive membership
+   and check-rate cleanup immediately before deleting Firebase Auth **last**;
+   treat only Admin Auth `user-not-found` as a successful ambiguous retry;
 8. mark the same job `complete`, remove temporary identity/lease fields, retain a bounded summary, and set a provisional 24-hour TTL.
 
 Every destructive phase tolerates already-absent records and can restart from its durable state. The scheduler provides forward progress if the browser closes. The UI clears local account-linked drafts, signs out, and reports success only after receiving `complete`.
@@ -130,6 +163,24 @@ their retention and export treatment remain blocked on WP1 owner/legal answers
 because those legacy IDs are target-derived, their retention is part of the same
 unresolved legal/evidence policy and is not represented as full anonymization.
 
+Administrator control-plane retention is deliberately described separately:
+the inactive live membership and per-actor check-rate document are removed by
+account deletion, while the global bootstrap/capacity guards remain. Ordinary
+access audit events and check runs retain only deterministic 12-hex actor/target
+references; the one-time bootstrap records also retain the named human gcloud
+operator. Check history is count-bounded to the newest 100 as incremental
+pruning converges. The immutable audit ledger and global guards currently have
+no automatic TTL. Deterministic hashes are pseudonymous and may remain
+linkable; retention and access/export handling require explicit owner/legal
+approval before any compliance claim.
+
+The current deletion worker does not scan other administrators' membership
+documents for a matching historical `createdBy` UID. That attribution can
+therefore remain linkable after the creating administrator deletes their own
+account. Whether it must be pseudonymized, retained, or disclosed in data-subject
+access/export handling is an explicit unresolved policy and engineering item;
+it is not represented here as erased.
+
 Configurable/product-policy boundary:
 
 - a future approved account grace policy would require a different account-deactivation state and scheduled worker before Auth deletion;
@@ -154,6 +205,13 @@ Legacy editor drafts created before `accountUid` existed cannot be safely attrib
 - Firestore `accountDeletionJobs` is denied to all clients; Admin Functions coordinate it.
 - Firestore `accountMediaUploadLeases` is denied to clients; direct avatar writes are denied by Storage Rules and trusted media callables hold the lease.
 - Existing job presence is also a write fence. Account-mutating callables check it, and Firestore/Storage Rules reject direct profile/avatar and permit-bound media writes once deletion starts.
+- Active or malformed `siteAdmins/{uid}` authority blocks job creation, lease
+  acquisition, and final Auth deletion. Admin grants/role changes read the
+  deletion fence transactionally; revocation remains available.
+- Inactive administrator membership and the deterministic live-check rate
+  record are deleted before Auth. Pseudonymous audit/check history and durable
+  global guards follow the stated retention limitations rather than being
+  represented as anonymous or automatically erased.
 - Export projection redacts collaborator/invite target identities and recursively removes known sensitive keys.
 - Media export uses paths/metadata only, never signed URLs.
 - Exported personal data is not logged. Failure records contain only phase and bounded error code.

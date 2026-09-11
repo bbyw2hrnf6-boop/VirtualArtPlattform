@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { decodeFirestoreFields } from "./lib/firebase-operator-tools.mjs";
 import {
+  ACCOUNT_DELETION_COLLECTION,
   assertBootstrapExecutionGuard,
   buildSiteAdminBootstrapPlan,
   commitSiteAdminBootstrap,
@@ -13,6 +14,7 @@ import {
   SITE_ADMIN_AUDIT_COLLECTION,
   SITE_ADMIN_BOOTSTRAP_PATH,
   SITE_ADMIN_COLLECTION,
+  siteAdminPseudonymousRef,
   SiteAdminFirestoreClient,
   validatedAdminEmail,
   validatedBootstrapSelector,
@@ -25,6 +27,7 @@ const actor = "operator@example.test";
 const occurredAt = "2026-09-11T10:00:00.000Z";
 const eventId = "0123456789abcdef0123456789abcdef";
 const user = { uid, email, providerIds: ["password"] };
+const targetRef = siteAdminPseudonymousRef(uid);
 
 function response(body, status = 200) {
   return new Response(body === undefined ? undefined : JSON.stringify(body), {
@@ -191,7 +194,7 @@ test("bootstrap plan creates only registry, one-shot guard, and immutable audit 
     actor,
     occurredAt,
     eventId,
-    state: { control: null, target: null, admins: [] },
+    state: { control: null, target: null, deletionJob: null, admins: [] },
   });
   assert.equal(plan.summary.writeCount, 3);
   assert.deepEqual(plan.summary.target, user);
@@ -214,7 +217,7 @@ test("bootstrap plan creates only registry, one-shot guard, and immutable audit 
     schemaVersion: 1,
   });
   assert.deepEqual(control, {
-    ownerUid: uid,
+    ownerRef: targetRef,
     initializedAt: occurredAt,
     initializedBy: actor,
     auditEventId: eventId,
@@ -222,8 +225,7 @@ test("bootstrap plan creates only registry, one-shot guard, and immutable audit 
   });
   assert.deepEqual(event, {
     action: "bootstrap-owner",
-    targetUid: uid,
-    targetEmail: email,
+    targetRef,
     role: "owner",
     active: true,
     actor,
@@ -241,23 +243,45 @@ test("bootstrap plan refuses every pre-existing registry or guard state", () => 
   assert.throws(
     () => buildSiteAdminBootstrapPlan({
       ...base,
-      state: { control: { name: SITE_ADMIN_BOOTSTRAP_PATH }, target: null, admins: [] },
+      state: { control: { name: SITE_ADMIN_BOOTSTRAP_PATH }, target: null, deletionJob: null, admins: [] },
     }),
     /already initialized/,
   );
   assert.throws(
     () => buildSiteAdminBootstrapPlan({
       ...base,
-      state: { control: null, target: { name: `${SITE_ADMIN_COLLECTION}/${uid}` }, admins: [] },
+      state: {
+        control: null,
+        target: { name: `${SITE_ADMIN_COLLECTION}/${uid}` },
+        deletionJob: null,
+        admins: [],
+      },
     }),
     /already exists/,
   );
   assert.throws(
     () => buildSiteAdminBootstrapPlan({
       ...base,
-      state: { control: null, target: null, admins: [{ name: `${SITE_ADMIN_COLLECTION}/other` }] },
+      state: {
+        control: null,
+        target: null,
+        deletionJob: null,
+        admins: [{ name: `${SITE_ADMIN_COLLECTION}/other` }],
+      },
     }),
     /not empty/,
+  );
+  assert.throws(
+    () => buildSiteAdminBootstrapPlan({
+      ...base,
+      state: {
+        control: null,
+        target: null,
+        deletionJob: { name: `${ACCOUNT_DELETION_COLLECTION}/${uid}` },
+        admins: [],
+      },
+    }),
+    /account-deletion job/,
   );
 });
 
@@ -284,7 +308,7 @@ test("Firestore REST client binds reads and all create preconditions to one tran
   const documentReads = calls.filter((call) => (
     call.url.includes("/documents/") && call.options.method === undefined
   ));
-  assert.equal(documentReads.length, 2);
+  assert.equal(documentReads.length, 3);
   assert.ok(documentReads.every((call) => call.url.endsWith(`transaction=${encodeURIComponent(transaction)}`)));
   const query = calls.find((call) => call.url.endsWith(":runQuery"));
   assert.equal(JSON.parse(query.options.body).transaction, transaction);
@@ -316,6 +340,7 @@ test("execute orchestration commits once and rolls back any refused bootstrap", 
     "begin",
     `get:${SITE_ADMIN_BOOTSTRAP_PATH}`,
     `get:${SITE_ADMIN_COLLECTION}/${uid}`,
+    `get:${ACCOUNT_DELETION_COLLECTION}/${uid}`,
     "query",
     "commit:transaction-one:3",
   ]);

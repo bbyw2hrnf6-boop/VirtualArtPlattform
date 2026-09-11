@@ -680,6 +680,8 @@ describe("Firestore authorization matrix", () => {
       "siteAdmins/blocked/history/event",
       "siteAdminControl/bootstrap",
       "siteAdminControl/bootstrap/history/event",
+      "siteAdminControl/adminRegistry",
+      `siteAdminControl/checkRate-${"a".repeat(64)}`,
       "siteAdminAuditEvents/blocked",
       "siteAdminAuditEvents/blocked/details/event",
       "siteAdminCheckRuns/blocked",

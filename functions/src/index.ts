@@ -3667,20 +3667,57 @@ async function processCreatorRoots(state: AccountDeletionJobState) {
 }
 
 async function processAccountDocuments(state: AccountDeletionJobState) {
-  const batch = db.batch();
-  [
-    db.collection("profiles").doc(state.uid),
-    db.collection("newsletterSubscriptions").doc(state.uid),
-    db.collection("galleryPublicationQuotas").doc(state.uid),
-    db.collection("verificationMailRateLimits").doc(state.uid),
-    db.collection("creatorActionRateLimits").doc(creatorActionRateId(state.uid, "report")),
-    accountExportJobReference(state.uid),
-  ].forEach((reference) => batch.delete(reference));
-  await batch.commit();
-  await advanceAccountDeletionPhase(state);
+  await db.runTransaction(async (transaction) => {
+    const jobReference = accountDeletionJobReference(state.uid);
+    const adminReference = accountDeletionSiteAdminReference(state.uid);
+    const [job, admin] = await Promise.all([
+      transaction.get(jobReference),
+      transaction.get(adminReference),
+    ]);
+    const current = assertAccountDeletionJobState(job.data(), state.uid);
+    if (current.deletionId !== state.deletionId || current.phase !== "account-documents") return;
+    const adminDisposition = assertAccountDeletionSiteAdminInactive(
+      admin.exists ? admin.data() : undefined,
+      state.uid,
+    );
+    [
+      db.collection("profiles").doc(state.uid),
+      db.collection("newsletterSubscriptions").doc(state.uid),
+      db.collection("galleryPublicationQuotas").doc(state.uid),
+      db.collection("verificationMailRateLimits").doc(state.uid),
+      db.collection("creatorActionRateLimits").doc(creatorActionRateId(state.uid, "report")),
+      accountExportJobReference(state.uid),
+    ].forEach((reference) => transaction.delete(reference));
+    if (adminDisposition === "inactive") transaction.delete(adminReference);
+    transaction.delete(accountDeletionSiteAdminCheckRateReference(state.uid));
+    transaction.update(jobReference, {
+      phase: nextAccountDeletionPhase(state.phase),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
 }
 
 async function processAccountAuthentication(state: AccountDeletionJobState) {
+  const mayDeleteAuthentication = await db.runTransaction(async (transaction) => {
+    const jobReference = accountDeletionJobReference(state.uid);
+    const adminReference = accountDeletionSiteAdminReference(state.uid);
+    const [job, admin] = await Promise.all([
+      transaction.get(jobReference),
+      transaction.get(adminReference),
+    ]);
+    const current = assertAccountDeletionJobState(job.data(), state.uid);
+    if (current.deletionId !== state.deletionId || current.phase !== "authentication") return false;
+    const adminDisposition = assertAccountDeletionSiteAdminInactive(
+      admin.exists ? admin.data() : undefined,
+      state.uid,
+    );
+    // Repeat this cleanup for jobs that reached authentication before the
+    // administrator registry became part of the deletion lifecycle.
+    if (adminDisposition === "inactive") transaction.delete(adminReference);
+    transaction.delete(accountDeletionSiteAdminCheckRateReference(state.uid));
+    return true;
+  });
+  if (!mayDeleteAuthentication) return;
   try {
     await getAuth().deleteUser(state.uid);
   } catch (error) {
@@ -3811,11 +3848,14 @@ async function initializeAccountDeletion(uid: string, authTime: unknown) {
   const deletionId = randomBytes(16).toString("hex");
   return db.runTransaction(async (transaction) => {
     const reference = accountDeletionJobReference(uid);
-    const [current, creatorOwner] = await Promise.all([
+    const adminReference = accountDeletionSiteAdminReference(uid);
+    const [current, creatorOwner, admin] = await Promise.all([
       transaction.get(reference),
       transaction.get(db.collection("creatorAccountOwners").doc(uid)),
+      transaction.get(adminReference),
     ]);
     if (current.exists) return assertAccountDeletionJobState(current.data(), uid);
+    assertAccountDeletionSiteAdminInactive(admin.exists ? admin.data() : undefined, uid);
     const creatorId = creatorOwner.data()?.creatorId;
     const proposed: AccountDeletionJobState = {
       schemaVersion: ACCOUNT_DELETION_SCHEMA_VERSION,
@@ -3841,9 +3881,13 @@ async function initializeAccountDeletion(uid: string, authTime: unknown) {
 async function acquireAccountDeletionLease(state: AccountDeletionJobState, leaseId: string) {
   return db.runTransaction(async (transaction) => {
     const reference = accountDeletionJobReference(state.uid);
-    const snapshot = await transaction.get(reference);
+    const [snapshot, admin] = await Promise.all([
+      transaction.get(reference),
+      transaction.get(accountDeletionSiteAdminReference(state.uid)),
+    ]);
     const current = assertAccountDeletionJobState(snapshot.data(), state.uid);
     if (current.status === "complete") return false;
+    assertAccountDeletionSiteAdminInactive(admin.exists ? admin.data() : undefined, state.uid);
     const leaseExpiresAt = timestampMilliseconds(snapshot.data()?.leaseExpiresAt) ?? 0;
     if (!accountDeletionLeaseAvailable(leaseExpiresAt, Date.now()) && snapshot.data()?.leaseId !== leaseId)
       return false;
@@ -3904,6 +3948,7 @@ export const deleteAuraAccount = onCall(
         lastErrorAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       }).catch(() => undefined);
+      if (error instanceof HttpsError && error.code === "failed-precondition") throw error;
       throw new HttpsError("internal", "Account deletion is incomplete. Retry safely.");
     } finally {
       await releaseAccountDeletionLease(uid, leaseId);
@@ -3946,7 +3991,22 @@ export const resumeAuraAccountDeletions = onSchedule(
         continue;
       }
       const leaseId = randomBytes(16).toString("hex");
-      if (!(await acquireAccountDeletionLease(state, leaseId))) continue;
+      let acquired: boolean;
+      try {
+        acquired = await acquireAccountDeletionLease(state, leaseId);
+      } catch (error) {
+        logger.warn("account_deletion_resume_blocked", {
+          accountRef: safeResourceRef(state.uid),
+          errorCode: accountDeletionErrorCode(error),
+        });
+        await accountDeletionJobReference(state.uid).update({
+          lastErrorCode: accountDeletionErrorCode(error),
+          lastErrorAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }).catch(() => undefined);
+        continue;
+      }
+      if (!acquired) continue;
       resumed += 1;
       try {
         for (let step = 0; step < ACCOUNT_DELETION_STEPS_PER_CALL; step += 1) {

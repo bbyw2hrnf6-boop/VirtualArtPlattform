@@ -17,6 +17,12 @@ Creator `discoverEligible` value is ignored. Space discovery review and
 reported-post moderation remain in force. Historical production notes below
 describe the 2026-09-02 rollout and are retained as an execution record.
 
+**Superseding administration update (2026-09-11):** the repository now contains
+an authenticated, server-authorized `/admin` operational dashboard and
+owner-only administrator-registry management. It is not a public admin surface
+and does not replace the moderation decision/action tooling specified below.
+Current deployment and release status belongs in `CURRENT-STATE.md`.
+
 **Production execution record:**
 
 - Before mutation, the complete live gallery, Creator-profile, report, and
@@ -70,8 +76,10 @@ for unrestricted public uploads.
 - Firestore denies all client access to reports, cases, and case events
   (`firestore.rules:324-330`), which is a good boundary. The bounded CLI tools in
   section 4 provide local operator access through explicit short-lived Google
-  credentials; the repository still has no Admin web UI or deployed operator
-  role/alerting evidence.
+  credentials. At this 2026-09-02 checkpoint the repository had no Admin web UI
+  or deployed operator role/alerting evidence; the 2026-09-11 superseding note
+  above records the later private operational dashboard without rewriting this
+  historical production snapshot.
 - Browser image preparation decodes, bounds, and re-encodes normal UI uploads
   (`src/services/imagePreparation.ts:59-130`,
   `src/workers/imageProcessor.worker.ts:5-51`). A custom client can bypass that:
@@ -303,7 +311,8 @@ identity in creator-facing notices.
 
 ### Operator tools
 
-Pilot volume does not justify a public admin web app. Build narrow Admin tools:
+Pilot volume does not justify a public moderation web app. Build narrow Admin
+tools (the later private operational dashboard does not execute these actions):
 
 - `scripts/moderation-queue.mjs`: read-only by default; list overdue/open case IDs
   and bounded metadata; content requires a separate explicit flag.
