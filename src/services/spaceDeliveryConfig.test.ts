@@ -79,4 +79,11 @@ describe("WP5 delivery configuration", () => {
       expect(cacheControl).toContain("must-revalidate");
     }
   });
+
+  it("always revalidates the deployed release identity instead of caching a stale SHA", () => {
+    const rule = firebase.hosting.headers.filter(({ source }) => source === "/release.json");
+    expect(rule).toHaveLength(1);
+    expect(rule[0].headers.find(({ key }) => key === "Cache-Control")?.value.split(",").map((value) => value.trim()))
+      .toEqual(expect.arrayContaining(["no-cache", "max-age=0", "must-revalidate"]));
+  });
 });

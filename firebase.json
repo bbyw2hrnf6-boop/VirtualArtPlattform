@@ -142,6 +142,10 @@
     ],
     "headers": [
       {
+        "source": "/release.json",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache,max-age=0,must-revalidate" }]
+      },
+      {
         "source": "/admin{,/**}",
         "headers": [
           { "key": "Cache-Control", "value": "private,no-store,max-age=0" },

@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -29,7 +31,9 @@ import type {
   AdminView,
   ManageAdminAccessInput,
 } from "../../services/adminConsoleTypes";
+import { CHECK_LABELS, CHECK_NEXT_STEPS, checkRunReport, downloadAdminJson, EVIDENCE_LABELS, isFailedObservation, releaseComparison } from "./adminOperationsModel";
 import "./adminConsole.css";
+const AdminOperations = lazy(() => import("./AdminOperations"));
 
 type AdminConsoleProps = {
   view: AdminView;
@@ -56,6 +60,7 @@ const NAV_ITEMS: Array<{ id: AdminView; label: string }> = [
   { id: "overview", label: "Overview" },
   { id: "diagnostics", label: "Room diagnostics" },
   { id: "tests", label: "Tests" },
+  { id: "operations", label: "Operations" },
   { id: "spaces", label: "Spaces" },
   { id: "creators", label: "Creators" },
   { id: "usage", label: "Usage" },
@@ -70,6 +75,7 @@ function Icon({ name }: { name: IconName }) {
     overview: <><path d="M3 10.5 10 4l7 6.5"/><path d="M5 9.5V18h10V9.5M8 18v-5h4v5"/></>,
     diagnostics: <path d="M2 11h4l2-7 4 14 2-7h4"/>,
     tests: <><rect x="3" y="3" width="14" height="14" rx="2"/><path d="m6.5 10 2.2 2.2 4.8-5"/></>,
+    operations: <><path d="M3 5h14M3 10h14M3 15h14"/><circle cx="7" cy="5" r="2"/><circle cx="13" cy="10" r="2"/><circle cx="8" cy="15" r="2"/></>,
     spaces: <><path d="m10 2 7 4v8l-7 4-7-4V6z"/><path d="m3 6 7 4 7-4M10 10v8"/></>,
     creators: <><circle cx="7" cy="7" r="3"/><circle cx="14.5" cy="8" r="2.5"/><path d="M2 17c.5-3.3 2.1-5 5-5s4.5 1.7 5 5M12 13c3.4-.6 5.3.8 5.8 4"/></>,
     usage: <><path d="M3 17V11h3v6M9 17V5h3v12M15 17V8h3v9"/></>,
@@ -151,10 +157,6 @@ function filterAdminTelemetry(
     (template === "all" || entry.template === template) &&
     (viewport === "all" || entry.viewport === viewport),
   );
-}
-
-function isFailedObservation(entry: AdminTelemetryEntry): boolean {
-  return /error|fatal/i.test(entry.severity) || /fail|error/i.test(entry.outcome ?? "");
 }
 
 function sceneSetupEntries(entries: AdminTelemetryEntry[]): AdminTelemetryEntry[] {
@@ -307,7 +309,7 @@ function OverviewView({ dashboard, onNavigate }: { dashboard: AdminDashboard; on
   const latestCheck = checks?.runs[0] ?? null;
   const checkPassed = latestCheck?.checks.filter((check) => check.status === "passed").length ?? null;
   const runs = github?.runs ?? [];
-  const latestRelease = runs.find((run) => run.workflow === "Deploy") ?? null;
+  const latestRelease = releaseComparison(dashboard).lastSuccessful;
   const latestVerify = runs.find((run) => run.workflow === "Verify") ?? null;
   const failedChecks = latestCheck?.checks.filter((check) => check.status !== "passed") ?? [];
   const failedObservations = telemetryEntries.filter(isFailedObservation);
@@ -364,7 +366,7 @@ function OverviewView({ dashboard, onNavigate }: { dashboard: AdminDashboard; on
             : <SourceUnavailable source={dashboard.telemetry} label="Telemetry" />}
         </section>
         <section className="admin-panel admin-release">
-          <h2>Latest deploy run</h2>
+          <h2>Last successful deployment</h2>
           {dashboard.github.status === "unavailable"
             ? <SourceUnavailable source={dashboard.github} label="GitHub" />
             : latestRelease ? <>
@@ -372,7 +374,7 @@ function OverviewView({ dashboard, onNavigate }: { dashboard: AdminDashboard; on
               <span className="admin-release__meta">Commit {latestRelease.headSha.slice(0, 7)} · {formatTimestamp(latestRelease.updatedAt)}</span>
               <ul className="admin-status-list">
                 <li><span>Deploy workflow</span><span className={statusClass(latestRelease.conclusion ?? latestRelease.status)}>{statusLabel(latestRelease.conclusion ?? latestRelease.status)}</span></li>
-                {latestVerify && <li><span>Latest verification</span><span className={statusClass(latestVerify.conclusion ?? latestVerify.status)}>{statusLabel(latestVerify.conclusion ?? latestVerify.status)}</span></li>}
+                <li><span>Hosting commit</span><span>{dashboard.release?.status === "ok" ? dashboard.release.data.commitSha.slice(0, 7) : "Not observed"}</span></li>
               </ul>
               <a className="admin-button" href={latestRelease.url} target="_blank" rel="noreferrer">View run <Icon name="external" /></a>
             </> : <div className="admin-empty"><div><h2>No deploy run</h2><p>GitHub returned no deploy workflow run in the bounded history.</p></div></div>}
@@ -508,7 +510,7 @@ function DiagnosticsView({ dashboard }: { dashboard: AdminDashboard }) {
 }
 
 function checkLabel(check: AdminCheck): string {
-  return ({ home: "Home page", creators: "Creator directory", sitemap: "Sitemap", "missing-space": "Missing Space response" })[check.target];
+  return CHECK_LABELS[check.target];
 }
 
 function TestsView({ dashboard, busy, feedback, onRun }: {
@@ -518,7 +520,10 @@ function TestsView({ dashboard, busy, feedback, onRun }: {
   onRun: () => void;
 }) {
   const checks = sourceData(dashboard.checks);
-  const latest = checks?.runs[0] ?? null;
+  const [selectedRun, setSelectedRun] = useState("");
+  const [failuresOnly, setFailuresOnly] = useState(false);
+  const latest = checks?.runs.find((run) => run.id === selectedRun) ?? checks?.runs[0] ?? null;
+  const visibleChecks = latest?.checks.filter((check) => !failuresOnly || check.status !== "passed") ?? [];
   const passed = latest?.checks.filter((check) => check.status === "passed").length ?? null;
   const failed = latest?.checks.filter((check) => check.status === "failed").length ?? null;
   const unavailable = latest?.checks.filter((check) => check.status === "unavailable").length ?? null;
@@ -529,24 +534,28 @@ function TestsView({ dashboard, busy, feedback, onRun }: {
     <>
       <PageHeading title="Tests" description="Run bounded live endpoint checks and inspect GitHub verification.">
         <a className="admin-button" href={REPOSITORY_ACTIONS_URL} target="_blank" rel="noreferrer">View CI history</a>
-        <button className="admin-button admin-button--primary" type="button" onClick={onRun} disabled={busy}><Icon name="play" />{busy ? "Running…" : "Run checks"}</button>
+        <button className="admin-button admin-button--primary" type="button" onClick={() => { setSelectedRun(""); onRun(); }} disabled={busy}><Icon name="play" />{busy ? "Running…" : "Run checks"}</button>
       </PageHeading>
       <FeedbackNotice feedback={feedback} />
-      <div className="admin-test-context"><strong>Production</strong><span>Live checks make bounded HTTP requests to public LIEUVA endpoints. Browser rendering and interaction remain covered by GitHub CI.</span></div>
+      <div className="admin-test-context"><strong>Production · suite 2</strong><span>13 fixed checks, no user-data changes. Includes headers, public response contracts, three asset HEAD requests and anonymous admin rejection. One run per administrator per minute. Browser journeys remain covered by CI.</span></div>
       {dashboard.checks.status === "unavailable" ? <section className="admin-panel"><SourceUnavailable source={dashboard.checks} label="Live checks" /></section> : <>
         <section className="admin-stat-grid" aria-label="Latest live check run">
-          <Stat label="Latest run" value={latest ? `#${latest.id}` : "Unavailable"} note={latest ? formatTimestamp(latest.completedAt) : "No completed run"} />
+          <Stat label="Selected run" value={latest ? `#${latest.id}` : "Unavailable"} note={latest ? `Suite ${latest.suiteVersion ?? 1} · ${formatTimestamp(latest.completedAt)}` : "No completed run"} />
           <Stat label="Passed" value={formatCount(passed)} note={latest ? `Of ${latest.checks.length} checks` : "No completed run"} icon="tests" />
           <Stat label="Failed / unavailable" value={latest ? `${failed}/${unavailable}` : "Unavailable"} note="Failures / no response" icon="warning" />
           <Stat label="Duration" value={latest ? formatRunDuration(latest.startedAt, latest.completedAt) : "Unavailable"} note="Server-side live check run" icon="clock" />
         </section>
         <div className="admin-grid">
           <section className="admin-panel">
-            <header className="admin-panel__header"><div><h2>Latest endpoint run</h2><p>{latest ? formatTimestamp(latest.completedAt) : "No completed check run"}</p></div></header>
+            <header className="admin-panel__header"><div><h2>Endpoint results</h2><p>{latest ? formatTimestamp(latest.completedAt) : "No completed check run"}</p></div></header>
+            <div className="admin-results-controls"><label>Check run<select className="admin-select" value={latest?.id ?? ""} onChange={(event) => setSelectedRun(event.target.value)} disabled={!checks?.runs.length}>{checks?.runs.map((run) => <option key={run.id} value={run.id}>{formatTimestamp(run.completedAt)} · {run.overall} · suite {run.suiteVersion ?? 1}</option>)}</select></label><label><input type="checkbox" checked={failuresOnly} onChange={(event) => setFailuresOnly(event.target.checked)} /> Failures only</label>
+              <button className="admin-button" disabled={!latest} onClick={() => { if (latest) downloadAdminJson(checkRunReport(latest), "lieuva-check-run"); }}>Export selected run</button></div>
             {latest ? <ul className="admin-check-list">
-              {latest.checks.map((check) => <li key={check.target} data-status={check.status}>
-                <span><strong>{checkLabel(check)}</strong></span><span><small>HTTP {check.actualStatus ?? "no response"} / expected {check.expectedStatus}</small></span><span className={statusClass(check.status)}>{check.status} · {formatMilliseconds(check.durationMs)}</span>
+              {visibleChecks.map((check) => <li key={check.target} data-status={check.status}>
+                <span><strong>{checkLabel(check)}</strong><small>{EVIDENCE_LABELS[check.evidence ?? "legacy"]}</small></span><span><small>HTTP {check.actualStatus ?? "no response"} / expected {check.target === "admin-auth" ? "401 or 403" : check.expectedStatus}</small></span><span className={statusClass(check.status)}>{check.status} · {formatMilliseconds(check.durationMs)}</span>
+                <details className="admin-check-evidence"><summary>Expected contract & next step</summary><p>{CHECK_NEXT_STEPS[check.evidence ?? "legacy"]}</p><code>{check.url}</code></details>
               </li>)}
+              {!visibleChecks.length && <li>No failed check in this selected run.</li>}
             </ul> : <div className="admin-empty"><div><h2>No live check yet</h2><p>Run live checks to observe the configured production endpoints.</p></div></div>}
           </section>
           <section className="admin-panel">
@@ -918,6 +927,7 @@ export default function AdminConsole({ view, onNavigate }: AdminConsoleProps) {
   const renderView = () => {
     if (!dashboard) return <LoadingOrError loading={dashboardLoading} error={dashboardError} onRetry={() => void loadDashboard()} />;
     switch (view) {
+      case "operations": return <Suspense fallback={<LoadingOrError loading error={null} onRetry={() => undefined} />}><AdminOperations dashboard={dashboard} /></Suspense>;
       case "overview": return <OverviewView dashboard={dashboard} onNavigate={onNavigate} />;
       case "diagnostics": return <DiagnosticsView dashboard={dashboard} />;
       case "tests": return <TestsView dashboard={dashboard} busy={busyKey === "checks"} feedback={feedback} onRun={() => void handleRunChecks()} />;

@@ -186,6 +186,30 @@ fields. Firestore's existing default-deny boundary keeps all four collection
 families and every control-document variant inaccessible to web/mobile clients,
 and the emulator matrix locks that behavior without a rules change.
 
+Admin live-check documents keep `schemaVersion: 1` and independently version
+the probe suite: missing `suiteVersion` is legacy v1 (four URLs), while
+`suiteVersion: 2` requires all 13 fixed targets exactly once. V2 persists only
+safe enum evidence (status/type/privacy/security/cache/body/size/network/timeout),
+not response bodies, tokens or arbitrary error messages. The server validates
+target URLs, status/evidence consistency and computed overall result when reading
+history. The newest 10 runs are exposed; retention keeps 100, pruning at most 20
+overflow documents per completed run. The existing per-actor 60-second cooldown,
+App Check, current verified Auth account and active registry checks remain mandatory.
+
+Operations data stays read-only. GitHub success and failure responses are cached
+for five minutes per warm instance, and concurrent requests share one fetch pair.
+Rate-limited 403/429 responses remain explicitly unavailable, never green health.
+Telemetry entries identify client versus trusted server origin; the 60-minute /
+50-entry sample is not a complete incident ledger. No new IAM access, credentials,
+rules or collections are introduced by these dashboard features.
+
+`npm run build` creates `dist/release.json` from `GITHUB_SHA` (or null for local
+builds) and a build timestamp. CI's immutable artifact validator requires exactly
+`schemaVersion`, `commitSha` and `builtAt`, and binds the stamp to the manifest's
+commit. The file is digest-covered and served with revalidation. The dashboard
+reads the fixed public URL without credentials or redirects; a missing, malformed
+or local/unknown stamp is unavailable, not an inferred deployed version.
+
 The bootstrap operator email is intentionally retained in the one-shot guard
 and bootstrap event for operator attribution; the hash references are
 pseudonymous, not anonymous. The durable guard and admin audit ledger currently

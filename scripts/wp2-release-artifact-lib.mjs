@@ -56,6 +56,7 @@ const EXACT_RELEASE_FILES = new Set([
 const REQUIRED_RELEASE_FILES = new Set([
   ...EXACT_RELEASE_FILES,
   "dist/index.html",
+  "dist/release.json",
   "functions/lib/index.js",
 ]);
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -322,6 +323,11 @@ async function validateDeploymentConfiguration(
   manifest,
   environment,
 ) {
+  const stamp = await readJson(resolve(releaseRoot, "dist/release.json"), "Hosting release stamp");
+  assertExactKeys(stamp, ["schemaVersion", "commitSha", "builtAt"], "Hosting release stamp");
+  if (stamp.schemaVersion !== 1 || stamp.commitSha !== manifest.commitSha ||
+    typeof stamp.builtAt !== "string" || !Number.isFinite(Date.parse(stamp.builtAt)))
+    fail("Hosting release stamp must match the verified commit and contain a valid build time");
   const firebase = await readJson(
     resolve(releaseRoot, "firebase.json"),
     "firebase.json",

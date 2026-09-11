@@ -47,6 +47,7 @@ const FIREBASE_PROJECT_ID = "virtualartplattform";
 const GITHUB_REPOSITORY = "bbyw2hrnf6-boop/VirtualArtPlattform" as const;
 const GITHUB_API_ROOT = `https://api.github.com/repos/${GITHUB_REPOSITORY}`;
 const SOURCE_CACHE_MS = 60_000;
+const GITHUB_CACHE_MS = 5 * 60_000;
 const GITHUB_RUN_LIMIT = 6;
 const TELEMETRY_WINDOW_MINUTES = 60 as const;
 const TELEMETRY_SAMPLE_LIMIT = 50 as const;
@@ -93,6 +94,7 @@ export type LieuvaAdminActionRun = {
 };
 
 export type LieuvaAdminTelemetryEntry = {
+  origin?: "client" | "server";
   timestamp: string;
   kind: string;
   outcome: string | null;
@@ -104,26 +106,14 @@ export type LieuvaAdminTelemetryEntry = {
   viewport: "mobile" | "desktop" | null;
 };
 
-export type LieuvaAdminCheck = {
-  target: "home" | "creators" | "sitemap" | "missing-space";
-  url: string;
-  expectedStatus: number;
-  actualStatus: number | null;
-  status: "passed" | "failed" | "unavailable";
-  durationMs: number;
-};
-
-export type LieuvaAdminCheckRun = {
-  id: string;
-  startedAt: string;
-  completedAt: string;
-  overall: "passed" | "failed";
-  checks: LieuvaAdminCheck[];
-};
+export { FIXED_LIVE_CHECKS, runFixedLieuvaAdminChecks } from "./adminLiveChecks.js";
+import { ADMIN_CHECK_SUITE_VERSION, FIXED_LIVE_CHECKS, LEGACY_LIVE_CHECKS, allowedCheckStatus, parseReleaseStamp, readCheckBody, revalidatesRelease, runFixedLieuvaAdminChecks, type CheckEvidence, type LieuvaAdminCheck, type LieuvaAdminCheckRun, type ReleaseStamp } from "./adminLiveChecks.js";
+export type { LieuvaAdminCheck, LieuvaAdminCheckRun } from "./adminLiveChecks.js";
 
 export type LieuvaAdminDashboardResponse = {
   schemaVersion: 1;
   generatedAt: string;
+  release: LieuvaAdminSource<ReleaseStamp>;
   content: LieuvaAdminSource<{
     galleries: {
       total: number;
@@ -201,6 +191,8 @@ type TelemetryDashboardData = {
 };
 
 let githubCache: SourceCache<GithubDashboardData> | undefined;
+let githubFailureCache: { expiresAt: number; value: LieuvaAdminSource<GithubDashboardData> } | undefined;
+let githubPending: Promise<LieuvaAdminSource<GithubDashboardData>> | undefined;
 let telemetryCache: SourceCache<TelemetryDashboardData> | undefined;
 
 function adminApp(): App {
@@ -431,10 +423,12 @@ async function loadContentSource() {
   };
 }
 
-function sourceFailureForResponse(response: Response): AdminSourceUnavailable {
+export function sourceFailureForResponse(response: Response): AdminSourceUnavailable {
+  if (response.status === 429 || (response.status === 403 &&
+    (response.headers.get("x-ratelimit-remaining") === "0" || response.headers.has("retry-after"))))
+    return new AdminSourceUnavailable("rate-limit");
   if (response.status === 401 || response.status === 403)
     return new AdminSourceUnavailable("permission");
-  if (response.status === 429) return new AdminSourceUnavailable("rate-limit");
   if (response.status === 408 || response.status === 504)
     return new AdminSourceUnavailable("timeout");
   return new AdminSourceUnavailable("upstream");
@@ -514,6 +508,7 @@ export function parseGithubWorkflowRuns(
 async function githubWorkflowRuns(fetcher: FetchLike, workflowFile: "ci.yml" | "deploy.yml", label: "Verify" | "Deploy") {
   const url = `${GITHUB_API_ROOT}/actions/workflows/${workflowFile}/runs?branch=main&per_page=${GITHUB_RUN_LIMIT}`;
   const response = await fetcher(url, {
+    redirect: "manual",
     headers: {
       Accept: "application/vnd.github+json",
       "User-Agent": "LIEUVA-admin-console",
@@ -526,7 +521,7 @@ async function githubWorkflowRuns(fetcher: FetchLike, workflowFile: "ci.yml" | "
   return parseGithubWorkflowRuns(payload, label);
 }
 
-async function loadGithubData(fetcher: FetchLike = fetch) {
+async function fetchGithubData(fetcher: FetchLike) {
   const now = Date.now();
   if (githubCache && githubCache.expiresAt > now)
     return sourceOk(githubCache.data, githubCache.fetchedAt, true);
@@ -540,9 +535,42 @@ async function loadGithubData(fetcher: FetchLike = fetch) {
       runs: [...verify, ...deploy].sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
     };
     const fetchedAt = new Date().toISOString();
-    githubCache = { data, fetchedAt, expiresAt: now + SOURCE_CACHE_MS };
+    githubCache = { data, fetchedAt, expiresAt: now + GITHUB_CACHE_MS };
+    githubFailureCache = undefined;
     return sourceOk(data, fetchedAt, false);
-  } catch (error) { return sourceUnavailable<GithubDashboardData>(error); }
+  } catch (error) {
+    const value = sourceUnavailable<GithubDashboardData>(error);
+    githubFailureCache = { value, expiresAt: now + GITHUB_CACHE_MS };
+    return value;
+  }
+}
+
+export async function loadGithubData(fetcher: FetchLike = fetch) {
+  if (githubCache && githubCache.expiresAt > Date.now()) return sourceOk(githubCache.data, githubCache.fetchedAt, true);
+  if (githubFailureCache && githubFailureCache.expiresAt > Date.now()) return { ...githubFailureCache.value, cached: true };
+  if (githubPending) return githubPending;
+  githubPending = fetchGithubData(fetcher).finally(() => { githubPending = undefined; });
+  return githubPending;
+}
+
+export async function loadReleaseData(fetcher: FetchLike = fetch) {
+  const response = await fetcher("https://lieuva.com/release.json", {
+    redirect: "manual", headers: { "cache-control": "no-cache" }, signal: AbortSignal.timeout(EXTERNAL_TIMEOUT_MS),
+  });
+  try {
+    if (!response.ok) throw sourceFailureForResponse(response);
+    if (response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json" || !revalidatesRelease(response.headers))
+      throw new AdminSourceUnavailable("invalid-response");
+    let payload: unknown;
+    try { payload = JSON.parse(await readCheckBody(response, 2048)); }
+    catch (error) {
+      if (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name)) throw error;
+      throw new AdminSourceUnavailable("invalid-response");
+    }
+    const stamp = parseReleaseStamp(payload);
+    if (!stamp) throw new AdminSourceUnavailable("invalid-response");
+    return stamp;
+  } finally { await response.body?.cancel().catch(() => undefined); }
 }
 
 const SAFE_TELEMETRY_TEMPLATES = new Set(["white-cube", "nocturne", "pavilion"]);
@@ -588,6 +616,7 @@ export function summarizeLoggingEntries(value: unknown) {
     const durationMs = typeof rawDuration === "number" && Number.isFinite(rawDuration) &&
       rawDuration >= 0 && rawDuration <= 86_400_000 ? rawDuration : null;
     recent.push({
+      origin: clientReported ? "client" : "server",
       timestamp,
       kind,
       outcome: boundedString(json.outcome, 40) ?? boundedString(properties?.outcome, 40),
@@ -660,18 +689,22 @@ export function parseStoredCheckRun(
   const data = document.data();
   const startedAt = isoTimestamp(data.startedAt);
   const completedAt = isoTimestamp(data.completedAt);
+  const suiteVersion = data.suiteVersion === undefined ? 1 : data.suiteVersion;
+  const definitions = suiteVersion === 1 ? LEGACY_LIVE_CHECKS : FIXED_LIVE_CHECKS;
   if (
     data.schemaVersion !== ADMIN_SCHEMA_VERSION ||
     typeof data.actorRef !== "string" || !/^[a-f0-9]{12}$/.test(data.actorRef) ||
     !startedAt || !completedAt || Date.parse(completedAt) < Date.parse(startedAt) ||
-    !Array.isArray(data.checks) || data.checks.length !== FIXED_LIVE_CHECKS.length
+    ![1, ADMIN_CHECK_SUITE_VERSION].includes(suiteVersion) ||
+    !Array.isArray(data.checks) || data.checks.length !== definitions.length
   )
     return null;
   const checks: LieuvaAdminCheck[] = [];
   const seenTargets = new Set<LieuvaAdminCheck["target"]>();
   for (const raw of data.checks) {
     const check = asRecord(raw);
-    const definition = check && FIXED_LIVE_CHECKS.find((candidate) => candidate.target === check.target);
+    const definition = check && definitions.find((candidate) => candidate.target === check.target);
+    const evidence = suiteVersion === 1 ? "legacy" : check?.evidence;
     if (!check || !definition || check.url !== definition.url || check.expectedStatus !== definition.expectedStatus ||
       seenTargets.has(definition.target) ||
       !["passed", "failed", "unavailable"].includes(String(check.status)) ||
@@ -681,7 +714,10 @@ export function parseStoredCheckRun(
         Number(check.actualStatus) <= 599
       )) ||
       (check.status === "unavailable") !== (check.actualStatus === null) ||
-      (check.status === "passed" && check.actualStatus !== definition.expectedStatus)) return null;
+      (check.status === "passed" && !allowedCheckStatus(definition.target, definition.expectedStatus, check.actualStatus)) ||
+      !["ok", "http-status", "content-type", "privacy-headers", "security-headers", "cache-policy", "body-contract", "body-too-large", "network", "timeout", "legacy"].includes(String(evidence)) ||
+      (suiteVersion === 2 && (evidence === "legacy" || (check.status === "passed") !== (evidence === "ok") ||
+        (check.status === "unavailable" && !["network", "timeout"].includes(String(evidence)))))) return null;
     seenTargets.add(definition.target);
     checks.push({
       target: definition.target,
@@ -690,13 +726,15 @@ export function parseStoredCheckRun(
       actualStatus: check.actualStatus === null ? null : Number(check.actualStatus),
       status: check.status as LieuvaAdminCheck["status"],
       durationMs: Math.round(Number(check.durationMs)),
+      evidence: evidence as CheckEvidence,
     });
   }
-  if (seenTargets.size !== FIXED_LIVE_CHECKS.length) return null;
+  if (seenTargets.size !== definitions.length) return null;
   const computedOverall = checks.every(({ status }) => status === "passed") ? "passed" : "failed";
   if (data.overall !== computedOverall) return null;
   return {
     id: document.id,
+    suiteVersion,
     startedAt,
     completedAt,
     overall: computedOverall,
@@ -797,67 +835,6 @@ function adminMember(
   };
 }
 
-type FixedLiveCheck = {
-  target: LieuvaAdminCheck["target"];
-  url: string;
-  expectedStatus: number;
-  contentType: "html" | "xml";
-};
-
-export const FIXED_LIVE_CHECKS: readonly FixedLiveCheck[] = [
-  { target: "home", url: "https://lieuva.com/", expectedStatus: 200, contentType: "html" },
-  { target: "creators", url: "https://lieuva.com/creators", expectedStatus: 200, contentType: "html" },
-  { target: "sitemap", url: "https://lieuva.com/sitemap.xml", expectedStatus: 200, contentType: "xml" },
-  { target: "missing-space", url: "https://lieuva.com/spaces/does-not-exist", expectedStatus: 404, contentType: "html" },
-] as const;
-
-export async function runFixedLieuvaAdminChecks(
-  fetcher: FetchLike = fetch,
-  clock: () => number = Date.now,
-): Promise<Omit<LieuvaAdminCheckRun, "id">> {
-  const startedAtMs = clock();
-  const checks = await Promise.all(FIXED_LIVE_CHECKS.map(async (definition): Promise<LieuvaAdminCheck> => {
-    const checkStartedAt = clock();
-    try {
-      const response = await fetcher(definition.url, {
-        method: "GET",
-        redirect: "manual",
-        headers: { "User-Agent": "LIEUVA-admin-console-check/1" },
-        signal: AbortSignal.timeout(EXTERNAL_TIMEOUT_MS),
-      });
-      void response.body?.cancel().catch(() => undefined);
-      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-      const correctContent = definition.contentType === "html"
-        ? contentType.includes("text/html")
-        : contentType.includes("xml");
-      const passed = response.status === definition.expectedStatus && correctContent;
-      return {
-        target: definition.target,
-        url: definition.url,
-        expectedStatus: definition.expectedStatus,
-        actualStatus: response.status,
-        status: passed ? "passed" : "failed",
-        durationMs: Math.max(0, Math.round(clock() - checkStartedAt)),
-      };
-    } catch {
-      return {
-        target: definition.target,
-        url: definition.url,
-        expectedStatus: definition.expectedStatus,
-        actualStatus: null,
-        status: "unavailable",
-        durationMs: Math.max(0, Math.round(clock() - checkStartedAt)),
-      };
-    }
-  }));
-  const completedAtMs = clock();
-  return {
-    startedAt: new Date(startedAtMs).toISOString(),
-    completedAt: new Date(completedAtMs).toISOString(),
-    overall: checks.every(({ status }) => status === "passed") ? "passed" : "failed",
-    checks,
-  };
-}
 
 async function getSessionHandler(request: CallableRequest<unknown>): Promise<LieuvaAdminSessionResponse> {
   try { parseEmptyAdminInput(request.data); } catch (error) { return throwHttps(error); }
@@ -873,12 +850,13 @@ async function getSessionHandler(request: CallableRequest<unknown>): Promise<Lie
 async function getDashboardHandler(request: CallableRequest<unknown>): Promise<LieuvaAdminDashboardResponse> {
   try { parseEmptyAdminInput(request.data); } catch (error) { return throwHttps(error); }
   const principal = await requireAdmin(request);
-  const [content, github, telemetry, checks, access] = await Promise.all([
+  const [content, github, telemetry, checks, access, release] = await Promise.all([
     optionalSource(loadContentSource),
     loadGithubData(),
     loadTelemetryData(),
     optionalSource(loadCheckHistory),
     principal.role === "owner" ? optionalSource(listAdminMembers) : Promise.resolve(null),
+    optionalSource(loadReleaseData),
   ]);
   return {
     schemaVersion: ADMIN_SCHEMA_VERSION,
@@ -888,6 +866,7 @@ async function getDashboardHandler(request: CallableRequest<unknown>): Promise<L
     telemetry,
     checks,
     access,
+    release,
   };
 }
 
@@ -952,6 +931,7 @@ async function runChecksHandler(request: CallableRequest<unknown>): Promise<RunL
     await reference.create({
       schemaVersion: ADMIN_SCHEMA_VERSION,
       actorRef: safeResourceRef(principal.uid),
+      suiteVersion: ADMIN_CHECK_SUITE_VERSION,
       startedAt: new Date(run.startedAt),
       completedAt: new Date(run.completedAt),
       overall: run.overall,
@@ -1126,5 +1106,7 @@ export const manageLieuvaAdminAccess = onCall(
 
 export function resetAdminConsoleCachesForTesting() {
   githubCache = undefined;
+  githubFailureCache = undefined;
+  githubPending = undefined;
   telemetryCache = undefined;
 }

@@ -39,6 +39,7 @@ async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "lieuva-release-"));
   const files = {
     "dist/index.html": "<!doctype html><title>LIEUVA</title>",
+    "dist/release.json": JSON.stringify({ schemaVersion: 1, commitSha: options.commitSha, builtAt: "2026-09-11T12:00:00.000Z" }),
     "dist/assets/index-abc.js": 'console.log("LIEUVA");',
     "firebase-cli/package.json": JSON.stringify({
       name: "@lieuva/firebase-cli-toolchain",
@@ -142,6 +143,19 @@ test("assembles a production-only bundle and verifies every digest", async () =>
   assert.equal(Object.hasOwn(firebase.functions, "predeploy"), false);
   assert.equal(Object.hasOwn(firebase.hosting, "predeploy"), false);
   await verifyReleaseBundle(releaseRoot, options);
+});
+
+test("rejects unknown, mismatched, malformed and over-projected Hosting release identity", async () => {
+  for (const stamp of [
+    { schemaVersion: 1, commitSha: null, builtAt: "2026-09-11T12:00:00.000Z" },
+    { schemaVersion: 1, commitSha: "b".repeat(40), builtAt: "2026-09-11T12:00:00.000Z" },
+    { schemaVersion: 1, commitSha: options.commitSha, builtAt: "invalid" },
+    { schemaVersion: 1, commitSha: options.commitSha, builtAt: "2026-09-11T12:00:00.000Z", secret: "must-not-be-published" },
+  ]) {
+    const root = await fixture();
+    await writeFile(join(root, "dist/release.json"), JSON.stringify(stamp));
+    await assert.rejects(assembleReleaseBundle(root, join(root, RELEASE_DIRECTORY), options), /Hosting release stamp/);
+  }
 });
 
 test("assembles a fail-closed mail-disabled production bundle", async () => {

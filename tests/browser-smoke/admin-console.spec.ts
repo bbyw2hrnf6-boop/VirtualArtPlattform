@@ -1,16 +1,24 @@
 import { expect, test, type Page } from "@playwright/test";
-import type { AdminDashboard, AdminSession, AdminSource } from "../../src/services/adminConsoleTypes";
+import { readFile } from "node:fs/promises";
+import type { AdminCheckRun, AdminDashboard, AdminSession, AdminSource } from "../../src/services/adminConsoleTypes";
+import { FIXED_LIVE_CHECKS } from "../../functions/src/adminLiveChecks";
 
 // Contract fixtures live only in the test runner. Production has no admin bypass.
-const stamp = "2026-09-11T12:00:00.000Z";
+const stamp = new Date().toISOString();
 const ok = <T>(data: T): AdminSource<T> => ({ status: "ok", fetchedAt: stamp, cached: false, data });
 const session: AdminSession = {
   schemaVersion: 1, generatedAt: stamp,
   principal: { uid: "fixture-admin", email: "admin@example.test", displayName: "Test Administrator", role: "owner" },
   canManageAccess: true,
 };
+const currentRun: AdminCheckRun = { id: "fixture-current", suiteVersion: 2, startedAt: stamp, completedAt: stamp, overall: "failed", checks: FIXED_LIVE_CHECKS.map(({ target, url, expectedStatus }) => ({
+  target, url, expectedStatus, actualStatus: expectedStatus, durationMs: 125,
+  status: target === "admin-shell" ? "failed" : "passed", evidence: target === "admin-shell" ? "privacy-headers" : "ok",
+})) };
+const legacyRun: AdminCheckRun = { ...currentRun, id: "fixture-legacy", suiteVersion: 1, overall: "passed", checks: currentRun.checks.slice(0, 4).map((check) => ({ ...check, evidence: "legacy" })) };
 const dashboard: AdminDashboard = {
   schemaVersion: 1, generatedAt: stamp,
+  release: ok({ schemaVersion: 1, commitSha: "a".repeat(40), builtAt: stamp }),
   content: ok({
     galleries: { total: 12, recentLimit: 20, recent: [{ resourceRef: "ab12cd34ef56", visibility: "public", lifecycleStatus: "active", templateId: "white-cube", revision: 2, updatedAt: stamp, expiresAt: null }] },
     creators: { total: 4, recentLimit: 20, recent: [{ resourceRef: "fe65dc43ba21", handle: "test-studio", isPublic: true, updatedAt: stamp }] },
@@ -23,11 +31,11 @@ const dashboard: AdminDashboard = {
     { timestamp: stamp, kind: "three_milestone", outcome: null, severity: "INFO", durationMs: 1800, template: "white-cube", runtime: "published_viewer", stage: "interactive", viewport: "desktop" },
     { timestamp: stamp, kind: "three_milestone", outcome: null, severity: "INFO", durationMs: 3200, template: "white-cube", runtime: "published_viewer", stage: "interactive", viewport: "mobile" },
   ] }),
-  checks: ok({ historyLimit: 10, runs: [] }),
+  checks: ok({ historyLimit: 10, runs: [currentRun, legacyRun] }),
   access: ok({ memberLimit: 100, members: [{ ...session.principal, active: true, createdAt: stamp, updatedAt: stamp }] }),
 };
 
-async function installAdminFixture(page: Page, role: "owner" | "admin" | "denied" = "owner") {
+async function installAdminFixture(page: Page, role: "owner" | "admin" | "denied" = "owner", overrides: Partial<AdminDashboard> = {}) {
   let revoked = role === "denied";
   let dashboardRequests = 0;
   await page.addInitScript(() => {
@@ -56,11 +64,9 @@ async function installAdminFixture(page: Page, role: "owner" | "admin" | "denied
       dashboardRequests++;
       await route.fulfill(revoked
         ? { status: 403, json: { error: { status: "PERMISSION_DENIED", message: "Access revoked." } } }
-        : { json: { result: { ...dashboard, access: role === "owner" ? dashboard.access : null } } });
+        : { json: { result: { ...dashboard, ...overrides, access: role === "owner" ? dashboard.access : null } } });
     } else if (name === "runLieuvaAdminChecks") {
-      await route.fulfill({ json: { result: { schemaVersion: 1, run: { id: "fixture-check", startedAt: stamp, completedAt: stamp, overall: "passed", checks: [
-        { target: "home", url: "https://lieuva.com/", expectedStatus: 200, actualStatus: 200, status: "passed", durationMs: 100 },
-      ] } } } });
+      await route.fulfill({ json: { result: { schemaVersion: 1, run: { ...currentRun, id: "fixture-check", overall: "passed", checks: currentRun.checks.map((check) => ({ ...check, status: "passed", evidence: "ok" })) } } } });
     } else await route.fulfill({ json: { result: {} } });
   });
   return { revoke: () => { revoked = true; }, setRole: (next: "owner" | "admin") => { role = next; }, dashboardRequests: () => dashboardRequests };
@@ -72,6 +78,9 @@ test("signed-out and non-admin visitors cannot see the admin navigation or data"
   await expect(page.locator('a[href="/admin/access"]')).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Run checks", exact: true })).toHaveCount(0);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,nofollow,noarchive");
+  await page.goto("/admin/operations");
+  await expect(page.getByRole("button", { name: "Export support report", exact: true })).toHaveCount(0);
+  await expect(page.locator('a[href="/admin/operations"]')).toHaveCount(0);
   const fixture = await installAdminFixture(page, "denied");
   await page.reload();
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -109,6 +118,79 @@ test("revocation clears an already visible console and ordinary admins cannot ma
   await page.getByRole("button", { name: /Refresh/ }).first().click();
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toHaveCount(0);
   await expect(page.getByText("Test Administrator", { exact: true })).toHaveCount(0);
+});
+
+test("test center filters failures, explains contracts, switches legacy history and exports the selected run", async ({ page }) => {
+  test.skip(Boolean(process.env.LIEUVA_BROWSER_SMOKE_BASE_URL), "Test-only local contracts.");
+  await installAdminFixture(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/admin/tests");
+  await expect(page.locator(".admin-check-list > li")).toHaveCount(13);
+  await page.getByLabel("Failures only").check();
+  await expect(page.locator(".admin-check-list > li")).toHaveCount(1);
+  await page.getByText("Expected contract & next step", { exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/Inspect the raw response and Hosting/)).toBeVisible();
+  await page.screenshot({ path: "artifacts/admin-tests-desktop.png", fullPage: true });
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export selected run", exact: true }).click();
+  const download = await downloadEvent;
+  const exported = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(exported.id).toBe("fixture-current");
+  expect(exported.checks).toHaveLength(13);
+  expect(exported).not.toHaveProperty("actorRef");
+  await page.getByRole("combobox", { name: "Check run", exact: true }).selectOption("fixture-legacy");
+  await expect(page.getByText("No failed check in this selected run.")).toBeVisible();
+  await page.getByLabel("Failures only").uncheck();
+  await expect(page.locator(".admin-check-list > li")).toHaveCount(4);
+  await expect(page.getByText("Legacy HTTP-only suite", { exact: true })).toHaveCount(4);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("combobox", { name: "Check run", exact: true }).selectOption("fixture-current");
+  await page.getByLabel("Failures only").check();
+  await page.getByText("Expected contract & next step", { exact: true }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: "artifacts/admin-check-evidence-mobile.png", fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("operations shows real source state and exports only safe data with copy-only tools", async ({ page }) => {
+  test.skip(Boolean(process.env.LIEUVA_BROWSER_SMOKE_BASE_URL), "Test-only local contracts.");
+  await installAdminFixture(page, "admin");
+  await page.addInitScript(() => { Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (text: string) => { document.documentElement.dataset.copiedCommand = text; } } }); });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/admin/operations");
+  await expect(page.getByRole("heading", { name: "Operations", exact: true })).toBeVisible();
+  await expect(page.getByText("aaaaaaaaaaaa", { exact: true })).toBeVisible();
+  await expect(page.getByText("Passed #33", { exact: true })).toBeVisible();
+  await expect(page.getByText("Expiry not reported", { exact: true })).toBeVisible();
+  await expect(page.locator(".admin-tool")).toHaveCount(6);
+  await page.getByRole("button", { name: "Copy Firebase access rules", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-copied-command", "npm run test:firebase-rules");
+  await expect(page.getByRole("status").filter({ hasText: "command copied" })).toBeVisible();
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export support report", exact: true }).click();
+  const content = await readFile((await (await downloadEvent).path())!, "utf8");
+  const bundle = JSON.parse(content);
+  expect(bundle).not.toHaveProperty("access");
+  expect(content).not.toContain("admin@example.test");
+  expect(content).not.toContain("fixture-admin");
+  expect(bundle.checks).toHaveLength(2);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: "artifacts/admin-operations-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: "artifacts/admin-operations-mobile.png", fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("operations never presents missing sources as healthy or invents a deployed version", async ({ page }) => {
+  test.skip(Boolean(process.env.LIEUVA_BROWSER_SMOKE_BASE_URL), "Test-only local contracts.");
+  await installAdminFixture(page, "owner", { release: undefined, github: { status: "unavailable", reason: "rate-limit", cached: true, fetchedAt: stamp, data: null }, telemetry: { status: "unavailable", reason: "permission", cached: false, fetchedAt: stamp, data: null } });
+  await page.goto("/admin/operations");
+  await expect(page.getByText("GitHub · unavailable", { exact: true })).toBeVisible();
+  await expect(page.getByText("Release identity · unavailable", { exact: true })).toBeVisible();
+  await expect(page.getByText("Telemetry source unavailable.", { exact: true })).toBeVisible();
+  await expect(page.getByText("aaaaaaaaaaaa", { exact: true })).toHaveCount(0);
 });
 
 test("an existing session refreshes owner promotions and demotions without signing out", async ({ page }) => {

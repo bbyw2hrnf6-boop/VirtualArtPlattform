@@ -1,14 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CHECK_HISTORY_PRUNE_BATCH_LIMIT,
   CHECK_HISTORY_RETENTION_LIMIT,
   FIXED_LIVE_CHECKS,
+  loadGithubData,
+  loadReleaseData,
   parseGithubWorkflowRuns,
   parseStoredCheckRun,
   pruneLieuvaAdminCheckHistory,
   runFixedLieuvaAdminChecks,
+  resetAdminConsoleCachesForTesting,
+  sourceFailureForResponse,
   summarizeLoggingEntries,
 } from "./adminConsole.js";
+import { LEGACY_LIVE_CHECKS } from "./adminLiveChecks.js";
+
+afterEach(() => { resetAdminConsoleCachesForTesting(); vi.useRealTimers(); });
 
 function githubRun(overrides: Record<string, unknown> = {}) {
   return {
@@ -121,6 +128,7 @@ describe("admin telemetry projection", () => {
     expect(summary.recent[0]).toEqual({
       timestamp: "2026-09-11T11:59:00.000Z",
       kind: "three_milestone",
+      origin: "client",
       outcome: null,
       severity: "INFO",
       durationMs: 1_234,
@@ -131,6 +139,7 @@ describe("admin telemetry projection", () => {
     });
     expect(summary.recent[1]).toMatchObject({
       kind: "publication_permit",
+      origin: "server",
       template: null,
       runtime: null,
       stage: null,
@@ -154,11 +163,13 @@ function storedCheckDocument(overrides: Record<string, unknown> = {}) {
     actualStatus: definition.expectedStatus,
     status: "passed",
     durationMs: 25,
+    evidence: "ok",
   }));
   return {
     id: "check-run-1",
     data: () => ({
       schemaVersion: 1,
+      suiteVersion: 2,
       actorRef: "a".repeat(12),
       startedAt: new Date("2026-09-11T12:00:00.000Z"),
       completedAt: new Date("2026-09-11T12:00:01.000Z"),
@@ -170,10 +181,11 @@ function storedCheckDocument(overrides: Record<string, unknown> = {}) {
 }
 
 describe("stored admin check history", () => {
-  it("accepts only all four fixed targets exactly once with a consistent overall result", () => {
+  it("accepts only the full versioned target set exactly once with a consistent overall result", () => {
     expect(parseStoredCheckRun(storedCheckDocument())).toMatchObject({
       id: "check-run-1",
       overall: "passed",
+      suiteVersion: 2,
       checks: expect.arrayContaining(FIXED_LIVE_CHECKS.map(({ target }) =>
         expect.objectContaining({ target }))),
     });
@@ -185,12 +197,35 @@ describe("stored admin check history", () => {
       actualStatus: definition.expectedStatus,
       status: "passed",
       durationMs: 25,
+      evidence: "ok",
     }));
     duplicateChecks[1] = { ...duplicateChecks[0] };
     expect(parseStoredCheckRun(storedCheckDocument({ checks: duplicateChecks }))).toBeNull();
     expect(parseStoredCheckRun(storedCheckDocument({
       overall: "failed",
     }))).toBeNull();
+  });
+
+  it("preserves four-check legacy history and rejects unknown suites or impossible evidence", () => {
+    const data = storedCheckDocument().data();
+    const legacy = data.checks.filter((check: { target: string }) => LEGACY_LIVE_CHECKS.some(({ target }) => target === check.target));
+    const parsed = parseStoredCheckRun(storedCheckDocument({ suiteVersion: undefined, checks: legacy }));
+    expect(parsed?.suiteVersion).toBe(1);
+    expect(parsed?.checks).toHaveLength(4);
+    expect(parsed?.checks.every(({ evidence }) => evidence === "legacy")).toBe(true);
+    expect(parseStoredCheckRun(storedCheckDocument({ suiteVersion: 3 }))).toBeNull();
+    expect(parseStoredCheckRun(storedCheckDocument({ suiteVersion: null, checks: legacy }))).toBeNull();
+    for (const override of [
+      { status: "unavailable", actualStatus: null, evidence: "privacy-headers" },
+      { status: "failed", actualStatus: 200, evidence: "ok" },
+      { status: "passed", actualStatus: 200, evidence: "body-contract" },
+      { status: "passed", actualStatus: 302, evidence: "ok" },
+    ]) {
+      const checks = data.checks.map((check: object, index: number) => index === 0 ? { ...check, ...override } : check);
+      expect(parseStoredCheckRun(storedCheckDocument({ checks, overall: override.status === "passed" ? "passed" : "failed" }))).toBeNull();
+    }
+    const denied = data.checks.map((check: { target: string }) => check.target === "admin-auth" ? { ...check, actualStatus: 403 } : check);
+    expect(parseStoredCheckRun(storedCheckDocument({ checks: denied }))?.overall).toBe("passed");
   });
 
   it("prunes at most 20 runs beyond the newest 100 and validates adapter output", async () => {
@@ -226,29 +261,6 @@ describe("fixed live checks", () => {
     expect(run.overall).toBe("failed");
     expect(run.checks.every((check) => check.actualStatus === 302 && check.status === "failed")).toBe(true);
   });
-  it("calls only the four fixed LIEUVA URLs and honors the intentional missing-Space 404", async () => {
-    const calls: string[] = [];
-    const fetcher = async (input: string | URL | Request) => {
-      const url = String(input);
-      calls.push(url);
-      if (url.endsWith("sitemap.xml"))
-        return new Response(null, { status: 200, headers: { "content-type": "application/xml" } });
-      if (url.endsWith("does-not-exist"))
-        return new Response(null, { status: 404, headers: { "content-type": "text/html" } });
-      return new Response(null, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
-    };
-    let now = Date.parse("2026-09-11T12:00:00.000Z");
-    const run = await runFixedLieuvaAdminChecks(fetcher, () => now++);
-    expect(calls).toEqual(FIXED_LIVE_CHECKS.map(({ url }) => url));
-    expect(run.overall).toBe("passed");
-    expect(run.checks).toHaveLength(4);
-    expect(run.checks.find(({ target }) => target === "missing-space")).toMatchObject({
-      expectedStatus: 404,
-      actualStatus: 404,
-      status: "passed",
-    });
-  });
-
   it("surfaces HTTP mismatches and network failure without inventing a result", async () => {
     const fetcher = async (input: string | URL | Request) => {
       const url = String(input);
@@ -269,5 +281,53 @@ describe("fixed live checks", () => {
       actualStatus: 200,
       status: "failed",
     });
+  });
+});
+
+describe("GitHub source pressure", () => {
+  it("distinguishes rate limiting from missing permission", () => {
+    expect(sourceFailureForResponse(new Response(null, { status: 403, headers: { "x-ratelimit-remaining": "0" } })).message).toBe("rate-limit");
+    expect(sourceFailureForResponse(new Response(null, { status: 403, headers: { "retry-after": "60" } })).message).toBe("rate-limit");
+    expect(sourceFailureForResponse(new Response(null, { status: 429 })).message).toBe("rate-limit");
+    expect(sourceFailureForResponse(new Response(null, { status: 403 })).message).toBe("permission");
+  });
+
+  it("coalesces concurrent reads and caches success for five minutes", async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      expect(init?.redirect).toBe("manual");
+      expect(init?.headers).not.toHaveProperty("Authorization");
+      return Response.json({ workflow_runs: [githubRun()] });
+    });
+    const values = await Promise.all([loadGithubData(fetcher), loadGithubData(fetcher)]);
+    expect(values[0].status).toBe("ok");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect((await loadGithubData(fetcher)).cached).toBe(true);
+    vi.advanceTimersByTime(300_001);
+    await loadGithubData(fetcher);
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it("caches unavailable responses without labeling them successful", async () => {
+    const fetcher = vi.fn(async () => new Response(null, { status: 403, headers: { "x-ratelimit-remaining": "0" } }));
+    expect(await loadGithubData(fetcher)).toMatchObject({ status: "unavailable", reason: "rate-limit", cached: false });
+    expect(await loadGithubData(fetcher)).toMatchObject({ status: "unavailable", reason: "rate-limit", cached: true });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("deployed release source", () => {
+  it("reads only the fixed public release stamp without following redirects", async () => {
+    const stamp = { schemaVersion: 1, commitSha: "a".repeat(40), builtAt: "2026-09-11T12:00:00.000Z" };
+    expect(await loadReleaseData(async (url, init) => {
+      expect(url).toBe("https://lieuva.com/release.json");
+      expect(init?.redirect).toBe("manual");
+      return Response.json(stamp, { headers: { "cache-control": "no-cache,max-age=0,must-revalidate" } });
+    })).toEqual(stamp);
+    for (const response of [Response.json({ ...stamp, commitSha: null }), Response.json({ ...stamp, secret: "private" }), new Response("{", { headers: { "content-type": "application/json" } }), new Response("fallback", { headers: { "content-type": "text/html" } })]) {
+      response.headers.set("cache-control", "no-cache,max-age=0,must-revalidate");
+      await expect(loadReleaseData(async () => response)).rejects.toThrow("invalid-response");
+    }
+    await expect(loadReleaseData(async () => Response.json(stamp))).rejects.toThrow("invalid-response");
   });
 });

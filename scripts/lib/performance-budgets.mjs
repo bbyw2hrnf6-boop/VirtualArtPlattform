@@ -7,11 +7,13 @@ export const PERFORMANCE_TARGETS = Object.freeze({
 });
 
 // The admin console deliberately adds a bounded, lazy-only surface (+13KB JS,
-// +1KB CSS aggregate ceiling). Public entry and largest-chunk ceilings remain
+// +1KB CSS aggregate ceiling), plus 5KB JS headroom for the lazy operations
+// dashboard and check evidence (measured +5.4KB production JS, no dependencies). CSS stays
+// at the existing 55KB ceiling. Public entry and largest-chunk ceilings remain
 // frozen; assertAdminLazyBoundary verifies the console never enters that graph.
 // WP4 still owns lowering the public baseline to the product targets above.
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
-  jsGzip: 588_000,
+  jsGzip: 593_000,
   cssGzip: 55_000,
   largestLazyGzip: 195_000,
   entryGzip: 305_000,
@@ -29,7 +31,7 @@ export function assertAdminLazyBoundary(manifest) {
     visited.add(key);
     const chunk = manifest[key];
     if (!chunk) throw new Error(`Missing manifest dependency: ${key}`);
-    if (key === adminKey || /(?:AdminConsole|adminConsoleService)/.test(chunk.file))
+    if (key === adminKey || /(?:AdminConsole|AdminOperations|adminOperationsModel|adminConsoleService)/.test(chunk.file))
       throw new Error('Admin code entered the public initial dependency graph.');
     for (const dependency of chunk.imports ?? []) visit(dependency);
   }

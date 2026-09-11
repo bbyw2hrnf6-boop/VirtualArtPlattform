@@ -4,6 +4,56 @@
 
 Status: provider-neutral production specification. Data source today is Google Cloud Logging through the App Check protected telemetry callable and structured Firebase Function logs.
 
+## Implemented admin operations
+
+The repository implementation is a bounded operational view, not the complete
+RUM dashboards and alert policies specified below. All admin data/actions still
+require server-confirmed active registry membership; only owners manage access.
+
+- `/admin/tests`: 13 fixed, credential-free probes, with no caller-provided URL,
+  script, redirect following or production user-data writes. HTML probes check
+  expected status/type/document shape; admin and missing-resource responses must
+  be noindex/no-store, and home/admin responses must retain nosniff and DENY.
+  Sitemap permits only canonical public route shapes and requires both roots;
+  robots declares the canonical sitemap. Creator JSON is a bounded exact public
+  field projection. Anonymous admin access must return callable 401/403 denial
+  with no result/data. The three desktop GLBs use HEAD only, requiring the expected
+  type, a positive integral length <=25 MiB and immutable one-year public caching
+  (an HTTP sanity ceiling, not permission to raise the stricter GLB asset budgets).
+  Release identity must parse the exact public stamp contract. Every request has
+  an 8-second deadline and body reads are limited to 512,000 bytes. Results retain
+  enums only; header/body failures can correctly fail an HTTP 200 response.
+- Current check runs carry suite version 2. Four-target v1 runs remain readable
+  and visibly legacy. Selection, failure filtering, expandable next steps and
+  selected-run export operate only on the bounded server-projected history.
+  Run checks writes only its own bounded operational check/rate/audit records.
+  Authenticated publish/recovery flows remain local emulator/unit/browser gates;
+  live probes do not replace them or measure real-device rendering performance.
+- `/admin/operations`: the Hosting stamp identifies the observed deployed commit;
+  the latest attempt and last successful Deploy are distinct. Successful Verify
+  matches only the exact stamp SHA within the available six-runs-per-workflow
+  sample. Missing history is unknown, not a claimed failed or verified deployment.
+  Source timestamps/cache state and six-minute stale detection (updated each minute)
+  make partial outages visible. GitHub data/errors are cached five minutes per
+  instance with concurrent read coalescing; no GitHub token is added.
+- Recent Space review uses the existing latest-20 metadata sample, not a global
+  cleanup queue. It flags active expiry, upcoming expiry, absent expiry and Trash
+  for manual review without changing content. Failure observations include INFO
+  events ending `_failed`/`_error`, outcome failures and error severity; each entry
+  preserves whether it was client-reported or a server observation.
+- Support export explicitly projects operational fields and excludes memberships,
+  emails, UIDs, raw response/log bodies and arbitrary future fields. Hashed resource
+  references in the underlying admin view remain pseudonymous, not anonymous.
+- Six copy-only local scripts expose public HTTP smoke, local browser smoke,
+  publishing/draft recovery tests, emulator access rules, Functions checks and the
+  full quality gate. No cleanup, role bootstrap, deployment or arbitrary command
+  runs from the console. Operators review prerequisites and execute in a trusted
+  checkout. No new diagnostic library or public initial dependency is introduced.
+
+The release stamp is generated during build, validated against the immutable
+artifact SHA and digest-covered. A local null SHA or older deployment without the
+file is unavailable. It contains build time, not an invented deployment timestamp.
+
 ## 1. Product funnel dashboard
 
 Filter `jsonPayload.schema="lieuva_client_telemetry_v1"` and `jsonPayload.environment="production"`.

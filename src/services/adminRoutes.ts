@@ -1,4 +1,4 @@
-export const ADMIN_VIEWS = ["overview", "diagnostics", "tests", "spaces", "creators", "usage", "access"] as const;
+export const ADMIN_VIEWS = ["overview", "diagnostics", "tests", "operations", "spaces", "creators", "usage", "access"] as const;
 export type AdminView = (typeof ADMIN_VIEWS)[number];
 
 /** Routing is presentation only. Every admin request is authorized by the server. */

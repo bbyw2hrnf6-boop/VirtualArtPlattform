@@ -14,21 +14,26 @@ export type AdminSession = {
   canManageAccess: boolean;
 };
 export type AdminCheck = {
-  target: "home" | "creators" | "sitemap" | "missing-space";
+  target: "home" | "creators" | "sitemap" | "missing-space" | "admin-shell" | "missing-creator" |
+    "robots" | "creator-data" | "admin-auth" | "white-cube-asset" | "nocturne-asset" | "pavilion-asset" | "release";
   url: string; expectedStatus: number; actualStatus: number | null;
   status: "passed" | "failed" | "unavailable"; durationMs: number;
+  evidence?: "ok" | "http-status" | "content-type" | "privacy-headers" | "security-headers" |
+    "cache-policy" | "body-contract" | "body-too-large" | "network" | "timeout" | "legacy";
 };
 export type AdminCheckRun = {
-  id: string; startedAt: string; completedAt: string;
+  id: string; suiteVersion?: 1 | 2; startedAt: string; completedAt: string;
   overall: "passed" | "failed"; checks: AdminCheck[];
 };
 export type AdminTelemetryEntry = {
+  origin?: "client" | "server";
   timestamp: string; kind: string; outcome: string | null; severity: string;
   durationMs: number | null; template: string | null; runtime: string | null;
   stage: string | null; viewport: "mobile" | "desktop" | null;
 };
 export type AdminDashboard = {
   schemaVersion: 1; generatedAt: string;
+  release?: AdminSource<{ schemaVersion: 1; commitSha: string; builtAt: string }>;
   content: AdminSource<{
     galleries: { total: number; recentLimit: 20; recent: Array<{
       resourceRef: string; visibility: string; lifecycleStatus: string; templateId: string | null;

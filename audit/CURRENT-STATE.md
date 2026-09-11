@@ -8,7 +8,9 @@
 
 LIEUVA currently provides the landing story, Explore Spaces, Creator Hub/profiles, account and access management, three-template Studio, local drafts/recovery, artwork and room editing, Arrange, Walk Preview, publication review, canonical Space sharing and the Danny reference exhibition.
 
-The repository also contains a server-owned `/admin` control plane. Direct client access to the `siteAdmins`, admin-control, audit-event and admin-check-run collections is denied. Admin authority is read from `siteAdmins/{uid}` with an active `owner` or `admin` role; no custom claim or email allow-list is authoritative. The guarded operator CLI can create only the first active owner and has not been run against production by this implementation change.
+The repository also contains a server-owned `/admin` control plane. Direct client access to the `siteAdmins`, admin-control, audit-event and admin-check-run collections is denied. Admin authority is read from `siteAdmins/{uid}` with an active `owner` or `admin` role; no custom claim or email allow-list is authoritative. The existing verified account explicitly selected by the owner was bootstrapped on 2026-09-11; the one-shot guard and active owner membership were independently confirmed. Bootstrap must not be repeated.
+
+The current local extension adds `/admin/operations` and a 13-probe v2 test center with actionable enum evidence and compatible legacy history. Operations exposes deployed Hosting identity, source freshness, bounded recent lifecycle/failure observations, a privacy-projected support report and six copy-only diagnostic commands. It does not add production cleanup, arbitrary execution, new admin endpoints or broader access. This extension has not yet been published; its release-identity probe remains unavailable on an older build without `/release.json`.
 
 The homepage's optional film and native scroll use the same reversible 20-second, 24-shot score. It demonstrates three floors and three walls before entering the White Cube. Desktop and mobile have separate compositions; reduced motion receives a static/fallback path.
 
@@ -31,11 +33,13 @@ Run them with Node `22.23.2` and npm `10.9.8`; rule tests also require the pinne
 
 Performance ceilings live in `scripts/lib/performance-budgets.mjs`; GLB limits live in `scripts/validate-premium-glb.mjs`. Raising either requires an explicit, documented decision.
 
-The admin console deliberately extends the aggregate release ceilings from 575,000 to 588,000 bytes JS gzip and 54,000 to 55,000 bytes CSS gzip. It remains a separate dynamic entry, checked against the built import graph and its own 12,000-byte JS / 5,000-byte CSS limits. Public initial-JS (305,000), initial-CSS (32,500) and largest-lazy-chunk (195,000) ceilings are unchanged. The 560,000-byte total-JS target remains open; new dependencies still require measured impact. Admin smoke coverage includes signed-out/non-admin denial, owner views, role refresh, revocation and 1440 × 1000 / 390 × 844 layouts, using test-only intercepted backend fixtures rather than a production bypass.
+The original admin console extended the aggregate release ceilings to 588,000 bytes JS gzip and 55,000 bytes CSS gzip. Operations and detailed check evidence deliberately add a further 5,000-byte JS allowance (593,000 total; measured approximately +5.4 KB against the previous production build, with no dependencies). CSS stays at 55,000. The console remains a separate dynamic entry with its existing 12,000-byte JS / 5,000-byte CSS limits; Operations is additionally lazy. The built import graph rejects admin console, operations/model and service code in the public initial graph. Public initial-JS (305,000), initial-CSS (32,500) and largest-lazy-chunk (195,000) ceilings are unchanged. The 560,000-byte total-JS target remains open. Admin smoke coverage includes signed-out/non-admin denial, owner views, role refresh, revocation, history/evidence filters, report exports, copy-only tools, missing sources and 1440 × 1000 / 390 × 844 layouts, using test-only intercepted backend fixtures rather than a production bypass.
 
 ## Release boundary
 
 The immutable release validator accepts direct endpoint declarations and explicit named local-module re-exports, including the admin callables, without executing bundled code. The exact endpoint allowlist and digest checks remain mandatory; unsupported export forms fail closed.
+
+Builds generate a minimal `/release.json` with schema version, build time and the exact CI commit SHA. Local builds without `GITHUB_SHA` carry a null SHA, never a guessed live identity. Immutable artifact validation requires a non-null stamp matching the manifest SHA, rejects extra fields and includes the file in digest verification. Hosting revalidates it on every request. Older live deployments do not retroactively gain this identity file.
 
 Treat the product as a controlled production pilot until these external conditions are evidenced:
 
@@ -45,7 +49,7 @@ Treat the product as a controlled production pilot until these external conditio
 - Terms, Privacy, retention, data-rights and operator/brand decisions have owner/legal approval;
 - physical iOS Safari and Android Chrome passes cover upload, recovery, Walk, reduced motion, memory and touch comfort;
 - production RUM dashboards, alerts, cold-start behavior, crawler cards and incident/rollback ownership are exercised.
-- one explicitly approved, existing verified Firebase Auth account is dry-run reviewed and bootstrapped as the first registry owner; subsequent role changes use the audited admin control plane rather than rerunning bootstrap.
+- subsequent role changes use the audited admin control plane; the approved first-owner bootstrap is complete and must not be rerun.
 
 Local verification never authorizes deployment or live-data mutation.
 

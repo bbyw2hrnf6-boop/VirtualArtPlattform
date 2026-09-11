@@ -18,6 +18,9 @@ test('admin code is a bounded dynamic entry, never a public static dependency', 
   assert.deepEqual(assertAdminLazyBoundary(manifest), { js: 'assets/AdminConsole.js', css: ['assets/AdminConsole.css'] });
   assert.throws(() => assertAdminLazyBoundary({}), /separately loaded/);
   assert.throws(() => assertAdminLazyBoundary({ ...manifest, 'index.html': { ...manifest['index.html'], imports: [adminKey] } }), /initial dependency graph/);
+  for (const file of ['assets/AdminOperations.js', 'assets/adminOperationsModel.js']) {
+    assert.throws(() => assertAdminLazyBoundary({ ...manifest, '_firebase.js': { file } }), /initial dependency graph/);
+  }
 });
 
 test('initial assets come from the HTML dependency graph and are de-duplicated', () => {
