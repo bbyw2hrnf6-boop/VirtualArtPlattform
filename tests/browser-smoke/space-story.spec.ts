@@ -351,10 +351,12 @@ test('20-second playback demonstrates floors and walls automatically and settles
   await page.goto('/');
   const story=page.locator('.sgs'),scene=story.locator('.gallery-scene');
   await expect(story).toHaveAttribute('data-arrival','ready');
-  await page.getByRole('button',{name:'Chapter 3: Your atmosphere'}).click();
-  await page.getByRole('button',{name:'Preview oak floor'}).click();
-  await page.getByRole('button',{name:'Chapter 1: Your space'}).click();
+  // Manual material controls and chapter transitions have their own desktop,
+  // touch and mobile journeys above. Start this controlled-clock journey from
+  // the canonical opening frame so its scope stays the authored film itself.
+  await expect(story).toHaveAttribute('data-chapter','0');
   await expect(scene).toHaveAttribute('data-floor','concrete');
+  await expect(scene).toHaveAttribute('data-wall','chalk');
   await page.evaluate(() => window.scrollTo({top:0, behavior:'instant'}));
   await expectStoryFrame(scene,0);
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
