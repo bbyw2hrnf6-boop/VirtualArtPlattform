@@ -95,6 +95,10 @@
   .visitor-controls__actions { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 
+@media (max-width: 620px), (max-height: 520px) and (pointer: coarse) {
+  .visitor-controls { background: rgba(13, 15, 12, .95); box-shadow: 0 8px 22px rgba(0, 0, 0, .36); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+}
+
 @media (max-width: 620px) {
   .visitor-controls {
     top: auto;
@@ -109,8 +113,11 @@
   .visitor-controls button { min-height: 44px; padding: 7px 6px; text-align: center; }
   .visitor-controls button > small { display: none; }
   .visitor-controls__actions { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .visitor-controls__actions button { padding-inline: 4px; font-size: 11px; }
+  .visitor-controls__actions button > span { line-height: 1.1; white-space: normal; }
   .visitor-controls__tour-nav button > span { display: none; }
   .visitor-controls__help { top:auto; right:0; bottom:calc(100% + 8px); }
+  .visitor-controls__help > button { width:44px; min-height:44px; }
   .visitor-controls__help-desktop { display:none!important; }
   .visitor-controls__help-mobile { display:block!important; }
   .visitor-controls__mobile-move {
@@ -124,9 +131,10 @@
     padding: 7px;
     border: 1px solid rgba(255, 255, 255, .16);
     border-radius: 14px;
-    background: rgba(13, 15, 12, .88);
-    box-shadow: 0 14px 38px rgba(0, 0, 0, .45);
-    backdrop-filter: blur(12px);
+    background: rgba(13, 15, 12, .95);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .36);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
   .visitor-controls__mobile-move button {
     width: 48px;

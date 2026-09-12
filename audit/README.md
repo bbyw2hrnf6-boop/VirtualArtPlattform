@@ -5,6 +5,7 @@ This directory contains current state and durable operational contracts. It is n
 ## Start here
 
 - [`CURRENT-STATE.md`](./CURRENT-STATE.md) — current product boundary, release conditions and maintenance priorities.
+- [`MOBILE-EXPERIENCE-AND-AI-DIRECTION.md`](./MOBILE-EXPERIENCE-AND-AI-DIRECTION.md) — evidence-ranked mobile journey and AI/Astra product boundary.
 - [`REPOSITORY-CLEANUP-2026-09-11.md`](./REPOSITORY-CLEANUP-2026-09-11.md) — repository cleanup scope, evidence and preservation decisions.
 
 ## Retained operational specifications

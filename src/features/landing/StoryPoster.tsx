@@ -5,12 +5,12 @@ export function StoryPosterImage({ className }: { className?: string }) {
   </picture>;
 }
 
-/** Real room imagery while the optional cinematic renderer warms up. No loader. */
+/** Actionable room imagery while the optional cinematic renderer warms up or stays disabled. */
 export function StoryPoster() {
   return <section className="story-placeholder" aria-label="Create an immersive Space">
     <StoryPosterImage />
     <div><p>Immersive 3D presentation platform</p><h1>Give your work a place.</h1>
       <p>Choose a room. Bring your work. Share a space people can enter.</p>
-      <a href="#/create">Create a Space ↗</a></div>
+      <a href="#/create/white-cube/demo">Open this Space in Studio ↗</a></div>
   </section>;
 }

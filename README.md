@@ -11,6 +11,7 @@ Live product: [lieuva.com](https://lieuva.com/)
 - Three templates: White Cube, Warm Gallery (technical ID `nocturne`) and Grand Forum (`pavilion`).
 - Arrange and Walk Preview share one Three.js scene and camera session.
 - Artwork upload, placement, framing, transforms, undo/redo, versioned local recovery and publish review are active.
+- Studio `Auto-arrange` is a local, reversible palette-and-placement workflow; it does not send artwork to an AI service.
 - The homepage contains the reversible 20-second room sequence with three floor and three wall comparisons, plus reduced-motion and mobile behavior.
 - `public/assets/templates/premium-v3/` is the only shipping template-runtime generation. Older exports remain recoverable from Git; editable `.blend` sources and 4K masters remain in `blender/production/`.
 - The Danny Hirsch exhibition remains the visitor-quality and metadata reference.
@@ -97,6 +98,7 @@ The largest implementation files are `src/App.tsx`, `src/features/gallery/Galler
 - Published media uses immutable owner/revision-scoped Storage paths. Updates preserve the Space ID and share URL.
 - New records use the current schema; schema-v1/v2 records remain readable.
 - The same placement validator must govern click, drag, sliders, curation, restore and publish.
+- Any future remote-AI feature is opt-in and advisory: the user reviews a diff, acceptance is undoable, and deterministic validation remains authoritative.
 - Invalid transforms must fail transactionally: mesh, React state and persisted state may not diverge.
 - Renderer, controls, PMREM environment and full scene must survive selection, transform and mode-only changes.
 - Adaptive DPR, progressive loading, reduced motion, keyboard scope, WebGL fallbacks and non-WebGL artwork access are first-class behavior.
@@ -137,6 +139,7 @@ Do not deploy, publish fixtures, mutate production data or alter rules while doi
 - [AGENTS.md](./AGENTS.md): default rules for future Codex work.
 - [audit/CURRENT-STATE.md](./audit/CURRENT-STATE.md): current product boundary, open risks and maintenance priorities.
 - [audit/README.md](./audit/README.md): retained audit/operations index and evidence policy.
+- [Mobile experience and AI direction](./audit/MOBILE-EXPERIENCE-AND-AI-DIRECTION.md): evidence-ranked mobile journey priorities and the Astra integration boundary.
 - [FIREBASE_SETUP.md](./FIREBASE_SETUP.md): Firebase setup, deployment and rollback.
 - [ASSET_LICENSES.md](./ASSET_LICENSES.md): asset provenance and rights.
 - [blender/EXPORT_CONTRACT.md](./blender/EXPORT_CONTRACT.md): Blender-to-GLB contract.

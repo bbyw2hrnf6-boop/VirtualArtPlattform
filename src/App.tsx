@@ -24,7 +24,6 @@ import { PRODUCT_BRAND } from "./config/brand";
 import { TEMPLATES } from "./features/gallery/templates";
 import {
   autoCurateGallery,
-  type CurationPhase,
   type CurationStyle,
   type CurationScope,
   type CurationReport,
@@ -407,6 +406,10 @@ function LandingProductProof() {
 function DeferredScrollStory() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    // Honor Data Saver where the browser exposes the Network Information signal.
+    // Browsers without that signal still use reduced-motion/WebGL fallbacks.
+    if (connection?.saveData) return undefined;
     const compact = window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
     const idleWindow = window as Window & {
       requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
@@ -951,7 +954,6 @@ function Studio({
   const [uploadError, setUploadError] = useState<string>();
   const [uploadReadyCount, setUploadReadyCount] = useState(0);
   const [curating, setCurating] = useState(false);
-  const [curationPhase, setCurationPhase] = useState<CurationPhase>("palette");
   const [curationReport, setCurationReport] = useState<CurationReport>();
   const [curationAppliedDraft, setCurationAppliedDraft] = useState<GalleryDraft>();
   const [curationStyle, setCurationStyle] = useState<CurationStyle>("auto");
@@ -1409,7 +1411,7 @@ function Studio({
     setSelectedDecorId(item.id);
     setSelectedId(undefined);
   };
-  const curateWithAi = async () => {
+  const runAutoArrange = async () => {
     if (curating || uploading) return;
     const source = draftRef.current;
     setCurationAppliedDraft(undefined);
@@ -1419,12 +1421,10 @@ function Studio({
     setSelectedDecorId(undefined);
     setCurating(true);
     if (usesCompactInteractionLayout()) setToolSheet("peek");
-    setCurationPhase("palette");
     try {
       const result = await autoCurateGallery(
         source,
         roomTemplate,
-        setCurationPhase,
         { style: curationStyle, scope: curationScope, recent: curationRecent.current },
       );
       if (draftRef.current !== source) {
@@ -1447,7 +1447,7 @@ function Studio({
       setCurationError(
         error instanceof Error
           ? error.message
-          : "AI Curator could not prepare this exhibition.",
+          : "Auto-arrange could not prepare this exhibition.",
       );
     } finally {
       setCurating(false);
@@ -1461,11 +1461,6 @@ function Studio({
     setSelectedId(undefined);
     setSelectedDecorId(undefined);
   };
-  const curationPhaseCopy = {
-    palette: "Reading the collection",
-    composition: "Composing the walls",
-    atmosphere: "Balancing atmosphere and objects",
-  }[curationPhase];
   const upload = async (files: FileList | null) => {
     if (!files?.length) return;
     const remaining = Math.max(0, maxArtworks - draft.artworks.length);
@@ -2043,12 +2038,12 @@ function Studio({
           </div>
           <button
             className="ai-curate-button"
-            onClick={() => void curateWithAi()}
+            onClick={() => void runAutoArrange()}
             disabled={curating || uploading}
-            title="Generate a new room variation; adjust its direction in the tools"
+            title="Create a local room variation; adjust its direction in the tools"
           >
-            <span>✦</span>
-            {curating ? "Curating…" : "AI Curator"}
+            <span aria-hidden="true">✦</span>
+            {curating ? "Arranging…" : "Auto-arrange"}
           </button>
           <button
             ref={publishButton}
@@ -2146,15 +2141,6 @@ function Studio({
                 Redo
               </button>
             </div>
-            <button
-              type="button"
-              className="studio-mobile-actions__curate"
-              onClick={() => void curateWithAi()}
-              disabled={curating || uploading}
-            >
-              <span aria-hidden="true">✦</span>{" "}
-              {curating ? "Curating…" : "Curate with AI"}
-            </button>
           </section>
           <Accordion title="Design direction" tool="more" mobileActive={mobileTool === 'more'}>
             <div className="placement">
@@ -2174,9 +2160,9 @@ function Studio({
                 </select>
               </label>
             </div>
-            <p className="object-help">A fresh arrangement with every run. Locked artworks stay in place. Undo restores the previous design.</p>
-            <button className="catalog-control" onClick={() => void curateWithAi()} disabled={curating || uploading}>
-              {curating ? "Curating…" : "Generate variation"}
+            <p className="object-help">Uses local color sampling and placement rules. No artwork is sent to an AI service. Locked artworks stay in place; Undo restores the previous design.</p>
+            <button className="catalog-control" onClick={() => void runAutoArrange()} disabled={curating || uploading}>
+              {curating ? "Arranging…" : "Generate local variation"}
             </button>
           </Accordion>
           <section data-studio-tool="artwork">
@@ -2812,20 +2798,9 @@ function Studio({
               role="status"
               aria-live="polite"
             >
-              <div className="ai-orbit">
-                <i />
-                <i />
-                <i />
-                <span>✦</span>
-              </div>
-              <p>AI Curator</p>
-              <h2>{curationPhaseCopy}</h2>
-              <small>Your images stay in this browser.</small>
-              <div className={`ai-progress ai-progress--${curationPhase}`}>
-                <i />
-                <i />
-                <i />
-              </div>
+              <p>Auto-arrange</p>
+              <h2>Creating a local variation</h2>
+              <small>Local rules · No AI service.</small>
             </div>
           )}
           {(curationReport || curationError) && !curating && (
@@ -2839,12 +2814,12 @@ function Studio({
                   setCurationReport(undefined);
                   setCurationError(undefined);
                 }}
-                aria-label="Close AI Curator result"
+                aria-label="Close auto-arrange result"
               >
                 ×
               </button>
               <span>
-                {curationError ? "AI Curator" : "Curated automatically ✦"}
+                {curationError ? "Auto-arrange" : "Arranged locally ✦"}
               </span>
               {curationError ? (
                 <p>{curationError}</p>
@@ -2858,12 +2833,12 @@ function Studio({
                     {curationReport?.palette}
                   </p>
                   <p>{curationReport?.rationale}</p>
-                  <button className="ai-undo" onClick={() => void curateWithAi()}>Another variation</button>
+                  <button className="ai-undo" onClick={() => void runAutoArrange()}>Another variation</button>
                 </>
               )}
               {curationAppliedDraft === draft && !curationError && (
                 <button className="ai-undo" onClick={undoCuration}>
-                  Undo AI curation
+                  Undo auto-arrange
                 </button>
               )}
             </div>

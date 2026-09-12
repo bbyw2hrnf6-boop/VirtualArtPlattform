@@ -21,8 +21,6 @@ import {
   validateDraftPlacements,
 } from "./editor/placementValidation";
 
-export type CurationPhase = "palette" | "composition" | "atmosphere";
-
 export interface CurationReport {
   mood: string;
   palette: string;
@@ -378,12 +376,9 @@ export function composeGallery(
 
 export async function autoCurateGallery(
   draft: GalleryDraft, template: GalleryTemplate,
-  onPhase?: (phase: CurationPhase) => void, options: CurationOptions = {},
+  options: CurationOptions = {},
 ): Promise<{ draft: GalleryDraft; report: CurationReport }> {
-  onPhase?.("palette");
   const analysis = await analyzeCollection(draft.artworks.filter(item => !item.hidden));
-  onPhase?.("composition");
   const result = composeGallery(draft, template, options, analysis);
-  onPhase?.("atmosphere");
   return result;
 }

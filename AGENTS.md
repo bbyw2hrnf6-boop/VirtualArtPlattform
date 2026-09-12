@@ -57,6 +57,17 @@ Do not treat a dated Git-history audit, screenshot or generated report as curren
 - Keep a non-WebGL artwork directory and meaningful loading/failure states.
 - Dialogs need focus containment, Escape, focus return and `aria-modal`.
 - Native scrolling stays in control; scroll-linked motion must be reversible with a reduced-motion fallback.
+- Keep draft/publication scope visible on compact layouts; a bare `Saved` state must never imply that local changes are live.
+- Treat Data Saver as a request for an actionable lightweight fallback, not as an error state.
+
+## AI and automation boundary
+
+- Studio `Auto-arrange` is a local color-sampling and placement-rules workflow. It does not call an AI service; keep that distinction explicit in product copy.
+- Do not send artwork or metadata to a remote model without a deliberate feature contract, explicit per-action consent and an exact preview of the transmitted data.
+- Remote model output is advisory: show a proposal/diff with Apply, Edit and Discard, commit acceptance as one undoable transaction, and never auto-save or auto-publish it.
+- The deterministic placement validator remains authoritative. Never persist model-generated coordinates directly.
+- Do not generate, modify, train on or infer provenance for artist work by default. Keep human, AI-assisted and AI-generated provenance user-declared and visibly distinct.
+- Keep model credentials server-side and re-check current provider retention, training, regional and cost controls before implementation.
 
 ## Maintainability and repository hygiene
 

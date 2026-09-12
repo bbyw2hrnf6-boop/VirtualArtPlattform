@@ -126,6 +126,22 @@ test('mobile reduced motion stays composed and offers a functioning Studio actio
   await expect(page.getByRole('button', { name: 'Open this Space in Studio' })).toBeInViewport();
 });
 
+test('browser-reported Data Saver keeps the landing actionable without loading the WebGL story', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'connection', {
+      configurable: true,
+      value: { saveData: true },
+    });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.locator('.story-placeholder')).toBeVisible();
+  const action = page.getByRole('link', { name: 'Open this Space in Studio' });
+  await expect(action).toHaveAttribute('href', '#/create/white-cube/demo');
+  await page.waitForTimeout(1_000);
+  await expect(page.locator('.sgs')).toHaveCount(0);
+});
+
 for (const room of ['white-cube', 'nocturne', 'pavilion']) {
   test(`${room}: one arrival screen precedes the prepared room`, async ({ page }) => {
     await page.goto(`/#/create/${room}/demo`);
@@ -172,6 +188,8 @@ test('Arrange redraws camera and roof changes and resumes Walk preview', async (
   await page.goto('/#/create/white-cube/demo');
   const scene = page.locator('.studio .gallery-scene');
   await expect(scene).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Auto-arrange', exact: true })).toBeVisible();
+  await expect(page.locator('.studio')).not.toContainText(/AI Curator|Curate with AI|Undo AI curation/i);
   await expectStationaryScene(scene);
   const frames = Number(await scene.getAttribute('data-render-frames'));
   const position = await scene.getAttribute('data-camera-position');
@@ -280,6 +298,30 @@ test('mobile Studio materials can be applied, dismissed and undone', async ({ pa
   await expect(page.getByRole('navigation', { name: 'Studio tools' })).toBeVisible();
 });
 
+test('compact Studio preserves touch geometry and the local Auto-arrange workflow', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 667 });
+  await page.goto('/#/create/white-cube/demo');
+  await expect(page.locator('.studio .gallery-scene')).toHaveAttribute('data-arrival', 'ready');
+  for (const target of ['.studio-header .logo', '.studio-header .account-entry', '.studio .publish-button', '.room-turn--left', '.room-turn--right']) {
+    const box = await page.locator(target).boundingBox();
+    expect(box, `${target} should be rendered`).not.toBeNull();
+    expect(box!.width, `${target} width`).toBeGreaterThanOrEqual(44);
+    expect(box!.height, `${target} height`).toBeGreaterThanOrEqual(44);
+  }
+  const canvasBefore = await page.locator('.studio .canvas-wrap').boundingBox();
+  await page.getByRole('button', { name: 'Edit more', exact: true }).click();
+  const canvasBehindSheet = await page.locator('.studio .canvas-wrap').boundingBox();
+  expect(canvasBefore).not.toBeNull();
+  expect(canvasBehindSheet).not.toBeNull();
+  expect(canvasBehindSheet!.height).toBe(canvasBefore!.height);
+  expect(canvasBehindSheet!.height).toBeGreaterThan(400);
+  await expect(page.getByText(/No artwork is sent to an AI service/)).toBeVisible();
+  await page.getByRole('button', { name: 'Generate local variation', exact: true }).click();
+  await expect(page.getByText('Arranged locally ✦', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Undo auto-arrange', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Close auto-arrange result', exact: true })).toBeVisible();
+});
+
 test.describe('touch story', () => {
   test.use({ viewport: {width:320,height:667}, hasTouch:true, isMobile:true });
   test('material demonstration, manual choice and explicit touch exploration', async ({page}) => {
@@ -337,10 +379,14 @@ test('mobile artwork upload, history, recovery and publication review stay avail
   await page.goto('/#/create/white-cube/demo');
   const scene=page.locator('.studio .gallery-scene');
   await expect(scene).toHaveAttribute('data-arrival','ready');
+  await expect(page.locator('.draft-save-status__scope')).toHaveText('Draft · Not live');
+  await expect(page.locator('.draft-save-status__scope')).toBeVisible();
   await page.getByRole('button',{name:'Edit artwork',exact:true}).click();
   await page.locator('.upload input[type=file]').setInputFiles('public/assets/artworks/aura-cliffs-study.webp');
   await expect(page.locator('.artwork-list button')).toHaveCount(4);
   await page.getByRole('button',{name:'Edit more',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Generate local variation',exact:true})).toBeVisible();
+  await expect(page.getByText(/No artwork is sent to an AI service/)).toBeVisible();
   await page.getByRole('button',{name:'Undo',exact:true}).click();
   await expect(page.locator('.artwork-list button')).toHaveCount(3);
   await expect(page.locator('.draft-save-status')).toHaveClass(/--saved/);
