@@ -344,6 +344,7 @@ test.describe('touch story', () => {
     for (const [shot,wall,label] of [[15.5,'chalk','Plaster'],[16.5,'warm','Clay'],[17.5,'travertine','Travertine']] as const) {
       await seek(shot);
       await expect(scene).toHaveAttribute('data-wall',wall);
+      await expect(scene).toHaveAttribute('data-camera-position',camera!);
       await expect(story.locator('.sgs__finish')).toHaveAttribute('data-surface','wall');
       await expect(story.getByRole('button',{name:`Preview ${wall} wall`})).toHaveAttribute('aria-pressed','true');
       await expect(story.getByRole('button',{name:`Preview ${wall} wall`})).toContainText(label);

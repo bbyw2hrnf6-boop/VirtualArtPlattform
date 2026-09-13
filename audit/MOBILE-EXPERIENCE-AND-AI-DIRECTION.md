@@ -79,6 +79,14 @@ The implementation was inspected end to end at 390 × 844, 360 × 800 and the li
 | Creator Hub | The signed-out composer dominates the narrow first viewport, and at 320 pixels the bottom navigation can crowd the sign-in action. | Open P2 layout refinement; do not mix it into the 3D control change without its own Hub visual and auth-state coverage. |
 | Existing 3D safeguards | The runtime already caps initial DPR, adapts quality from measured frame time, pauses work with page visibility, disposes resources and provides an artwork directory. Context events are observed, but a failed restoration does not yet guarantee stateful directory fallback. | Keep these foundations. Finish forced-loss recovery and physical-device soak evidence before claiming mobile resilience complete. |
 
+### Landing camera motion contract
+
+The 20-second score remains a reversible native-scroll presentation of the shared Studio scene, not a video replacement or a separate renderer. Camera position and look target use shared, shape-preserving cubic Hermite tangents: velocity continues across moving waypoints, while zero tangents preserve intentional holds and prevent coordinate overshoot. The final approach descends forward through the safe entrance aisle with a small lateral arc; it never backs out or rises between entrance beats. The original final viewpoint and 1.75 m eye height remain fixed.
+
+All three floor and three wall samples share one camera/target/FOV composition on both viewport classes. Compact aerial framing releases only after the last comparison. Pause, Skip, reverse scrolling, explicit Look around, reduced motion and the Data Saver poster keep their existing authority. Tests cover nonzero through-motion, matching join velocities, monotone descent, shell clearance, six-comparison stability and exact endpoint/reverse-seek behavior. No renderer, Blender/GLB, artwork, lighting or publication contract changes are needed for this refinement.
+
+The design separates route, gaze and pacing, consistent with [Blender's Follow Path and tracking-target workflow](https://docs.blender.org/manual/en/4.5/animation/constraints/relationship/follow_path.html). [Blender's F-Curve guidance](https://docs.blender.org/manual/en/4.5/editors/graph_editor/fcurves/properties.html) also distinguishes interpolation smoothness from overshoot; the runtime uses its own bounded Hermite implementation, not Blender's solver. Model-assisted authoring remains a development workflow, not a new remote-AI product feature.
+
 ## Method and limits
 
 ### Evidence method

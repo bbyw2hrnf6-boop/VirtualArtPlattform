@@ -12,7 +12,7 @@ Live product: [lieuva.com](https://lieuva.com/)
 - Arrange and Walk Preview share one Three.js scene and camera session.
 - Artwork upload, placement, framing, transforms, undo/redo, versioned local recovery and publish review are active.
 - Studio `Auto-arrange` is a local, reversible palette-and-placement workflow; it does not send artwork to an AI service.
-- The homepage contains the reversible 20-second room sequence with three floor and three wall comparisons, plus reduced-motion and mobile behavior.
+- The homepage contains the reversible 20-second room sequence with continuous, shape-preserving camera/gaze curves, a gentle forward entrance, and a fixed view for all three floor and three wall comparisons on desktop and mobile. Reduced motion remains stationary.
 - `public/assets/templates/premium-v3/` is the only shipping template-runtime generation. Older exports remain recoverable from Git; editable `.blend` sources and 4K masters remain in `blender/production/`.
 - The Danny Hirsch exhibition remains the visitor-quality and metadata reference.
 - The repository is suitable for a controlled production pilot, not unrestricted public uploads. External launch conditions are listed in [current state](./audit/CURRENT-STATE.md).

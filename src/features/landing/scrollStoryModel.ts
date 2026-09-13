@@ -22,25 +22,32 @@ export function filmProgress(current: number, target: number) {
   const next = Math.max(12, Math.floor(current * 24) + 1);
   return clamp(next <= 17 ? Math.min(target, (next + .01) / 24) : target);
 }
-// All twenty-four authored shots are retained; playback retimes them to 20 seconds.
-// Comparison shots share one pose; materials change without a moving baseline.
+// The twenty-four story beats keep their 20-second score. Position and gaze
+// travel on continuous rails, with deliberate holds for upload and comparison.
 const poses: Array<[number, number, number, number, number, number]> = [
   [0, 11, 19, 0, .7, -1], [0, 10.9, 18.9, 0, .7, -1],
   [0, 10.8, 18.8, 0, .7, -1], [0, 10.7, 18.7, 0, .7, -1],
   [.3, 10.5, 18.4, 0, .8, -1], [.6, 10.3, 18, 0, .9, -1],
   [.6, 10.3, 18, 0, .9, -1], [.6, 10.3, 18, 0, .9, -1],
   [.3, 9, 16, 0, 1.4, -2], [.2, 8.6, 15.5, 0, 1.6, -2.5],
-  [.6, 9, 15, 0, 1, -1], [.3, 8.3, 13.8, 0, 1, -1],
+  [.15, 8.3, 14.7, 0, 1.3, -1.6], [.07, 7.9, 13.6, 0, 1.15, -1.2],
   [0, 7.5, 12.5, 0, 1, -1], [0, 7.5, 12.5, 0, 1, -1],
   [0, 7.5, 12.5, 0, 1, -1], [0, 7.5, 12.5, 0, 1, -1],
-  [0, 7.5, 12.5, 0, 1, -1], [1, 6.4, 10.8, 1, .3, -.5],
-  [0, 7.5, 12.5, 0, 1, -1], [0, 5.6, 9.7, 0, 1.75, -4],
-  [0, 3.5, 7, 0, 1.75, -5], [0, 1.75, 5.35, 0, 1.75, -5],
-  [-.3, 1.75, 5.3, -.4, 1.75, -5], [-.5, 1.75, 5.3, 0, 1.75, -5],
+  [0, 7.5, 12.5, 0, 1, -1], [0, 7.5, 12.5, 0, 1, -1],
+  [0, 7.5, 12.5, 0, 1, -1], [.25, 5.9, 10.25, .15, 1.35, -2.6],
+  [.3, 4.25, 8.15, .05, 1.6, -3.8], [.05, 2.8, 6.35, -.2, 1.75, -4.6],
+  [-.25, 1.95, 5.5, -.15, 1.75, -5], [-.5, 1.75, 5.3, 0, 1.75, -5],
   [-.5, 1.75, 5.3, 0, 1.75, -5],
 ];
 export const STORY_CAMERA_STOPS = poses.map((pose, i) => ({ at: i / 24,
   position: pose.slice(0, 3) as [number, number, number], target: pose.slice(3) as [number, number, number], fov: 55 }));
+// Shared, shape-preserving Hermite tangents: no stop/start at every waypoint,
+// and no overshoot through the shell or drift during a stationary comparison.
+const tangents = poses.map((pose, index) => pose.map((value, axis) => {
+  if (index === 0 || index === poses.length - 1) return 0;
+  const incoming = value - poses[index - 1][axis], outgoing = poses[index + 1][axis] - value;
+  return incoming * outgoing > 0 ? 2 * incoming * outgoing / (incoming + outgoing) : 0;
+}));
 const smooth = (value: number) => { const t = clamp(value); return t * t * (3 - 2 * t); };
 export function storyReveals(progress: number) {
   const shot = clamp(progress) * 24;
@@ -73,12 +80,13 @@ export function storyPresentation(raw: number, compact = false, reduced = false)
   const progress = reduced ? 1 : clamp(raw);
   const index = Math.min(23, Math.floor(progress * 24));
   const a = STORY_CAMERA_STOPS[index], b = STORY_CAMERA_STOPS[index + 1];
-  const t = smooth((progress - a.at) / (b.at - a.at));
-  const mix = (a: number, b: number) => a + (b - a) * t;
-  const position = a.position.map((value, axis) => mix(value, b.position[axis])) as [number, number, number];
-  const target = a.target.map((value, axis) => mix(value, b.target[axis])) as [number, number, number];
+  const t = clamp(progress * 24 - index), t2 = t * t, t3 = t2 * t;
+  const mix = (a: number, b: number, axis: number) => a + (b - a) * (3 * t2 - 2 * t3)
+    + tangents[index][axis] * (t3 - 2 * t2 + t) + tangents[index + 1][axis] * (t3 - t2);
+  const position = a.position.map((value, axis) => mix(value, b.position[axis], axis)) as [number, number, number];
+  const target = a.target.map((value, axis) => mix(value, b.target[axis], axis + 3)) as [number, number, number];
   if (compact) {
-    const aerial = 1 - smooth((progress - 16 / 24) / (5 / 24));
+    const aerial = 1 - smooth((progress - 18 / 24) / (5 / 24));
     position[0] *= .5; position[1] += aerial; position[2] += 2.8 * aerial;
   }
   // The authored shell has a solid front wall: keep that cutaway open until
