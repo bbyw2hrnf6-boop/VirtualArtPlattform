@@ -1,4 +1,5 @@
-import { fitArrangeCamera } from "./scene/arrangeCamera";
+import { arrangeZoomLimit, fitArrangeCamera } from "./scene/arrangeCamera";
+import { clampWalkFov, createWalkPreferences, defaultWalkPace } from "./scene/walkPreferences";
 import { createStoryArchitecture } from "./scene/storyArchitecture";
 import { storyReveals } from "../landing/scrollStoryModel";
 import { cameraTourTiming, cameraTourFrame, dollyProgress, type TourTiming } from "./scene/cameraMotion";
@@ -2737,6 +2738,7 @@ function createFirstPersonWalk(
   onUserIntent?: () => void,
   onEscape?: () => void,
   allowWheelZoom = true,
+  defaultPace = 1,
 ) {
   const keys = new Set<string>();
   let enabled = true;
@@ -2774,6 +2776,16 @@ function createFirstPersonWalk(
   let pitch = camera.rotation.x;
   let eyeHeight = camera.position.y;
   let targetFov = camera.fov;
+  const preferences = allowWheelZoom ? createWalkPreferences(canvas, defaultPace, () => {
+    onUserIntent?.();
+    targetFov = preferences!.fov();
+    camera.fov = targetFov;
+    camera.updateProjectionMatrix();
+  }) : undefined;
+  const changeFov = (value: number) => {
+    targetFov = preferences ? clampWalkFov(value) : THREE.MathUtils.clamp(value, 40, 72);
+    preferences?.setFov(targetFov);
+  };
   let touchForward = 0;
   let touchStrafe = 0;
   let lastPinchDistance = 0;
@@ -2827,10 +2839,8 @@ function createFirstPersonWalk(
       if (touches.size >= 2) {
         const distance = pinchDistance();
         if (lastPinchDistance)
-          targetFov = THREE.MathUtils.clamp(
+          changeFov(
             targetFov + (lastPinchDistance - distance) * 0.075,
-            40,
-            72,
           );
         lastPinchDistance = distance;
         dragged = true;
@@ -2863,7 +2873,7 @@ function createFirstPersonWalk(
   const wheel = (event: WheelEvent) => {
     if (!enabled || !allowWheelZoom) return;
     onUserIntent?.();
-    targetFov = THREE.MathUtils.clamp(targetFov + event.deltaY * 0.012, 40, 72);
+    changeFov(targetFov + event.deltaY * 0.012);
     event.preventDefault();
   };
   const contextMenu = (event: Event) => event.preventDefault();
@@ -2913,7 +2923,8 @@ function createFirstPersonWalk(
     if (keys.has("KeyA")) desired.sub(right);
     if (touchForward) desired.addScaledVector(forward, touchForward);
     if (touchStrafe) desired.addScaledVector(right, touchStrafe);
-    if (desired.lengthSq()) desired.normalize().multiplyScalar(2.3);
+    const pace = preferences?.pace() ?? 1;
+    if (desired.lengthSq()) desired.normalize().multiplyScalar(2.3 * pace);
     else if (destinations.length) {
       desired.subVectors(destinations[0], camera.position);
       desired.y = 0;
@@ -2924,7 +2935,7 @@ function createFirstPersonWalk(
       } else
         desired
           .normalize()
-          .multiplyScalar(Math.min(2.2, Math.max(0.55, distance * 1.35)));
+          .multiplyScalar(Math.min(2.2 * pace, Math.max(0.55, distance * 1.35)));
     }
     const response = desired.lengthSq() > velocity.lengthSq() ? 7.4 : 10.8;
     velocity.lerp(desired, 1 - Math.exp(-response * delta));
@@ -2979,6 +2990,7 @@ function createFirstPersonWalk(
   };
   const setEnabled = (value: boolean) => {
     enabled = value;
+    preferences?.show(value);
     keys.clear();
     touchForward = 0;
     touchStrafe = 0;
@@ -3006,6 +3018,7 @@ function createFirstPersonWalk(
     );
   };
   return {
+    preferredFov: () => preferences?.fov() ?? 62,
     update,
     lookAt,
     moveTo,
@@ -3015,6 +3028,7 @@ function createFirstPersonWalk(
     consumeClick,
     hasDestination: () => destinations.length > 0,
     dispose: () => {
+      preferences?.dispose();
       canvas.removeEventListener("keydown", keyDown);
       canvas.removeEventListener("keyup", keyUp);
       canvas.removeEventListener("blur", blur);
@@ -3602,6 +3616,7 @@ type GalleryRuntime = {
   setViewMode: (mode: GalleryViewMode) => void;
   setEditorMode: (mode: GalleryEditorMode) => void;
   setEditorCutaway: (open: boolean) => void;
+  zoomArrange: (direction: -1 | 1) => void;
   resetView: () => void;
   focusWall: (wall: WallId) => void;
   focusArtwork: (id: string) => void;
@@ -3880,7 +3895,8 @@ function GallerySceneRenderer({
     controls.minDistance = initial.visitor ? largestDimension * 0.42 : 1.45;
     controls.maxDistance = initial.visitor
       ? largestDimension * 1.75
-      : Math.max(20, largestDimension * 1.12);
+      : arrangeZoomLimit(templateW, templateD, 0);
+    camera.far = Math.max(camera.far, controls.maxDistance + largestDimension * 2);
     controls.enablePan =
       initial.visitor || currentDraft.templateId === "pavilion";
     controls.screenSpacePanning = true;
@@ -3972,6 +3988,7 @@ function GallerySceneRenderer({
       () => onWalkIntent(),
       () => onWalkEscape(),
       !initial.presentation,
+      defaultWalkPace(currentDraft.templateId),
     );
     const walkMarker = new THREE.Mesh(
       new THREE.RingGeometry(0.18, 0.25, 32),
@@ -4000,8 +4017,8 @@ function GallerySceneRenderer({
       if (element.clientWidth > 900 || initial.visitor) return;
       const pose = fitArrangeCamera(templateW, templateD, h, element.clientWidth / Math.max(1, element.clientHeight));
       camera.position.copy(pose.position); controls.target.copy(pose.target);
-      controls.maxDistance = Math.max(controls.maxDistance, pose.distance * 1.5);
-      camera.far = Math.max(160, pose.distance + largestDimension * 2);
+      controls.maxDistance = arrangeZoomLimit(templateW, templateD, pose.distance);
+      camera.far = Math.max(160, controls.maxDistance + largestDimension * 2);
     };
     if (!cameraState.current) fitMobileArrange();
     const arrangeState = {
@@ -4015,7 +4032,7 @@ function GallerySceneRenderer({
     const walkState = {
       position: walkPosition,
       quaternion: cameraQuaternionFor(walkPosition, finalLook),
-      fov: 62,
+      fov: navigation.preferredFov(),
     };
     const overviewTarget = new THREE.Vector3(0, h * 0.34, 0);
     const overviewPosition = new THREE.Vector3(
@@ -4348,7 +4365,7 @@ function GallerySceneRenderer({
       );
       walkState.position.copy(position);
       walkState.quaternion.copy(cameraQuaternionFor(position, target));
-      walkState.fov = 58;
+      walkState.fov = navigation.preferredFov();
       return true;
     };
     const setMode = (nextMode: GallerySceneMode) => {
@@ -4374,7 +4391,7 @@ function GallerySceneRenderer({
       } else if (mode === "walk") {
         walkState.position.copy(camera.position);
         walkState.quaternion.copy(camera.quaternion);
-        walkState.fov = camera.fov;
+        walkState.fov = navigation.preferredFov();
         if (initial.visitor && nextMode === "overview") {
           overviewTarget.set(
             THREE.MathUtils.clamp(
@@ -4533,7 +4550,7 @@ function GallerySceneRenderer({
           walkState.quaternion.copy(
             cameraQuaternionFor(walkState.position, finalLook),
           );
-          walkState.fov = 62;
+          walkState.fov = navigation.preferredFov();
         }
         camera.position.copy(walkState.position);
         camera.quaternion.copy(walkState.quaternion);
@@ -4653,7 +4670,7 @@ function GallerySceneRenderer({
       const finish = () => {
         camera.position.copy(pose.position);
         camera.quaternion.copy(pose.quaternion);
-        camera.fov = 58;
+        camera.fov = navigation.preferredFov();
         camera.updateProjectionMatrix();
         navigation.syncFromCamera();
         navigation.setEnabled(true);
@@ -4669,7 +4686,7 @@ function GallerySceneRenderer({
         fromFov: camera.fov,
         toPosition: pose.position.clone(),
         toQuaternion: pose.quaternion.clone(),
-        toFov: 58,
+        toFov: navigation.preferredFov(),
         finish,
       };
       element.dataset.transition = "active";
@@ -5468,7 +5485,7 @@ function GallerySceneRenderer({
       if (mode === "walk") {
         walkState.position.copy(camera.position);
         walkState.quaternion.copy(camera.quaternion);
-        walkState.fov = camera.fov;
+        walkState.fov = navigation.preferredFov();
         navigation.syncFromCamera();
         navigation.setEnabled(true);
       }
@@ -5524,7 +5541,7 @@ function GallerySceneRenderer({
       const finish = () => {
         camera.position.copy(pose.position);
         camera.quaternion.copy(pose.quaternion);
-        camera.fov = 58;
+        camera.fov = navigation.preferredFov();
         camera.updateProjectionMatrix();
         modeTransition = null;
         navigation.syncFromCamera();
@@ -5546,7 +5563,7 @@ function GallerySceneRenderer({
       if (reducedMotion.matches) {
         camera.position.copy(featured.position);
         camera.quaternion.copy(featured.quaternion);
-        camera.fov = 58;
+        camera.fov = navigation.preferredFov();
         camera.updateProjectionMatrix();
         navigation.syncFromCamera();
         navigation.setEnabled(true);
@@ -5557,7 +5574,7 @@ function GallerySceneRenderer({
       }
       camera.position.copy(poses[0].position);
       camera.quaternion.copy(poses[0].quaternion);
-      camera.fov = 58;
+      camera.fov = navigation.preferredFov();
       camera.updateProjectionMatrix();
       navigation.setEnabled(false);
       const timing = cameraTourTiming(poses);
@@ -5580,7 +5597,7 @@ function GallerySceneRenderer({
       const pose = poses[smartGalleryViewIndex];
       camera.position.copy(pose.position);
       camera.quaternion.copy(pose.quaternion);
-      camera.fov = 58;
+      camera.fov = navigation.preferredFov();
       camera.updateProjectionMatrix();
       navigation.syncFromCamera();
       navigation.setEnabled(true);
@@ -5605,6 +5622,13 @@ function GallerySceneRenderer({
         if (!initial.visitor) setMode(next);
       },
       setEditorCutaway: setEditorCutawayMode,
+      zoomArrange: (direction) => {
+        if (mode !== "arrange" || modeTransition) return;
+        orbitAnimation = null; wallCameraAnimation = null; editorZoomDistance = null;
+        const distance = THREE.MathUtils.clamp(camera.position.distanceTo(controls.target) * 1.35 ** direction, controls.minDistance, controls.maxDistance);
+        camera.position.sub(controls.target).setLength(distance).add(controls.target);
+        controls.enabled = true; controls.update();
+      },
       resetView: resetSceneView,
       focusWall: focusWallView,
       focusArtwork: focusArtworkView,
@@ -5665,6 +5689,13 @@ function GallerySceneRenderer({
       const height = element.clientHeight;
       renderer.setSize(width, height, false);
       const aspect = width / Math.max(height, 1);
+      if (!initial.visitor) {
+        const fit = fitArrangeCamera(w, d, h, aspect);
+        controls.maxDistance = arrangeZoomLimit(w, d, fit.distance);
+        camera.far = Math.max(160, controls.maxDistance + largestDimension * 2);
+        element.dataset.arrangeZoomLimit = String(controls.maxDistance);
+        element.dataset.cameraFar = String(camera.far);
+      }
       if (!initial.visitor && mode === "arrange" && width <= 900 && previousAspect && aspect !== previousAspect) {
         const direction = camera.position.clone().sub(controls.target);
         const before = fitArrangeCamera(w, d, h, previousAspect, direction);
@@ -5807,7 +5838,7 @@ function GallerySceneRenderer({
         const to = tour.poses[segment + 1];
         camera.position.lerpVectors(from.position, to.position, local);
         camera.quaternion.slerpQuaternions(from.quaternion, to.quaternion, local);
-        camera.fov = 58;
+        camera.fov = navigation.preferredFov();
         camera.updateProjectionMatrix();
         if (tour.segment !== segment || now - tour.lastUiUpdate > 120) {
           tour.segment = segment;
@@ -5993,6 +6024,7 @@ function GallerySceneRenderer({
           .map((value) => value.toFixed(3))
           .join(",");
         element.dataset.cameraYaw = camera.rotation.y.toFixed(3);
+        element.dataset.cameraFov = camera.fov.toFixed(1);
         if (mode === "arrange" || mode === "overview")
           element.dataset.cameraTarget = controls.target
             .toArray()
@@ -6316,6 +6348,10 @@ function GallerySceneRenderer({
             >
               →
             </button>
+            <div className="arrange-zoom" role="group" aria-label="Arrange zoom">
+              <button type="button" onClick={() => runtime.current?.zoomArrange(1)} aria-label="Zoom out">−</button>
+              <button type="button" onClick={() => runtime.current?.zoomArrange(-1)} aria-label="Zoom in">+</button>
+            </div>
           </>
         </>
       )}
@@ -6743,7 +6779,7 @@ export function DannyDemoScene({
     const walkState = {
       position: new THREE.Vector3(0, VISITOR_EYE_HEIGHT, 4.8),
       quaternion: camera.quaternion.clone(),
-      fov: 62,
+      fov: navigation.preferredFov(),
     };
     const overviewState = {
       position: new THREE.Vector3(16.5, 14.5, 24),
@@ -6838,7 +6874,7 @@ export function DannyDemoScene({
       if (mode === "walk") {
         walkState.position.copy(camera.position);
         walkState.quaternion.copy(camera.quaternion);
-        walkState.fov = camera.fov;
+        walkState.fov = navigation.preferredFov();
       }
       setGuidedTourState(false, result);
       resumeInteraction();
@@ -6887,7 +6923,7 @@ export function DannyDemoScene({
       const progress = progressForDannyPose(poseIndex);
       camera.position.copy(pose.position);
       camera.quaternion.copy(pose.quaternion);
-      camera.fov = 58;
+      camera.fov = navigation.preferredFov();
       camera.updateProjectionMatrix();
       activeTour.segment = Math.max(-1, poseIndex - 1);
       activeTour.startedAt = performance.now() - progress * activeTour.duration;
@@ -6914,7 +6950,7 @@ export function DannyDemoScene({
         if (mode === "walk") {
           walkState.position.copy(camera.position);
           walkState.quaternion.copy(camera.quaternion);
-          walkState.fov = camera.fov;
+          walkState.fov = navigation.preferredFov();
         } else {
           overviewState.position.copy(camera.position);
           overviewState.quaternion.copy(camera.quaternion);
@@ -6982,7 +7018,7 @@ export function DannyDemoScene({
         transitionToPose(
           authoredPosition,
           anchorQuaternion(anchor, authoredPosition),
-          58,
+          navigation.preferredFov(),
         );
       }
       element.dataset.smartView = anchor.id;
@@ -7021,7 +7057,7 @@ export function DannyDemoScene({
           focusAnchor(entrance);
           return;
         }
-        transitionToPose(walkState.position, walkState.quaternion, 62);
+        transitionToPose(walkState.position, walkState.quaternion, navigation.preferredFov());
         return;
       }
       const overviewAnchor = viewAnchors.find(
@@ -7051,11 +7087,11 @@ export function DannyDemoScene({
           tourPoses[tourPoses.length - 1];
         camera.position.copy(featured.position);
         camera.quaternion.copy(featured.quaternion);
-        camera.fov = 58;
+        camera.fov = navigation.preferredFov();
         camera.updateProjectionMatrix();
         walkState.position.copy(camera.position);
         walkState.quaternion.copy(camera.quaternion);
-        walkState.fov = camera.fov;
+        walkState.fov = navigation.preferredFov();
         element.dataset.smartViewLabel = featured.label;
         element.dataset.lastTourResult = "reduced-instant";
         setSmartViewLabel(featured.label);
@@ -7065,7 +7101,7 @@ export function DannyDemoScene({
       }
       camera.position.copy(tourPoses[0].position);
       camera.quaternion.copy(tourPoses[0].quaternion);
-      camera.fov = 58;
+      camera.fov = navigation.preferredFov();
       camera.updateProjectionMatrix();
       const timing = cameraTourTiming(tourPoses.map((pose) => ({ ...pose, isStop: pose.isView })));
       element.dataset.tourDuration = String(Math.round(timing.duration));
@@ -7090,7 +7126,7 @@ export function DannyDemoScene({
       if (mode === "walk") {
         walkState.position.copy(camera.position);
         walkState.quaternion.copy(camera.quaternion);
-        walkState.fov = camera.fov;
+        walkState.fov = navigation.preferredFov();
       } else {
         overviewState.position.copy(camera.position);
         overviewState.quaternion.copy(camera.quaternion);
@@ -7741,7 +7777,7 @@ export function DannyDemoScene({
         if (mode === "walk") {
           camera.position.copy(walkState.position);
           camera.quaternion.copy(walkState.quaternion);
-          camera.fov = 62;
+          camera.fov = navigation.preferredFov();
           camera.updateProjectionMatrix();
           navigation.syncFromCamera();
           if (
@@ -7825,7 +7861,7 @@ export function DannyDemoScene({
           activeTour.poses[activeTour.poses.length - 1];
         camera.position.copy(featured.position);
         camera.quaternion.copy(featured.quaternion);
-        camera.fov = 58;
+        camera.fov = navigation.preferredFov();
         camera.updateProjectionMatrix();
         activeTour = null;
         setGuidedTourState(false, "reduced-instant");
@@ -7892,7 +7928,7 @@ export function DannyDemoScene({
           to.quaternion,
           local,
         );
-        camera.fov = 58;
+        camera.fov = navigation.preferredFov();
         camera.updateProjectionMatrix();
         if (activeTour.segment !== segment || now - activeTour.lastUiUpdate > 120) {
           activeTour.segment = segment;
@@ -7940,6 +7976,7 @@ export function DannyDemoScene({
           .map((value) => value.toFixed(2))
           .join(",");
         element.dataset.cameraYaw = camera.rotation.y.toFixed(3);
+        element.dataset.cameraFov = camera.fov.toFixed(1);
         element.dataset.intro =
           intro && !intro.isComplete() ? "active" : "complete";
       }

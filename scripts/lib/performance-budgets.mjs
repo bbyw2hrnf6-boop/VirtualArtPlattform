@@ -12,8 +12,11 @@ export const PERFORMANCE_TARGETS = Object.freeze({
 // and fully shadowed declarations were removed at a 53,995-byte production
 // baseline, so the aggregate CSS ceiling is tightened without changing styles.
 // Lazy admin and guest-publication additions retain their existing allowances.
+// Session-only view/pace controls and accessible Arrange zoom deliberately add
+// 1KB to the aggregate feature allowance; entry/lazy-chunk/CSS ceilings and the
+// tighter product targets are unchanged. See the mobile camera contract.
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
-  jsGzip: 595_000,
+  jsGzip: 596_000,
   cssGzip: 54_500,
   largestLazyGzip: 195_000,
   entryGzip: 123_000,

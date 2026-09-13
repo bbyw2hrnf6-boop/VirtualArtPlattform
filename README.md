@@ -10,6 +10,7 @@ Live product: [lieuva.com](https://lieuva.com/)
 
 - Three templates: White Cube, Warm Gallery (technical ID `nocturne`) and Grand Forum (`pavilion`).
 - Arrange and Walk Preview share one Three.js scene and camera session.
+- Mobile Walk starts with a wider 78° view. “View & pace” adjusts the lens (40–90°) and walking speed (0.5–2×) for the current room session; Grand Forum defaults to 1.25×. Arrange supports much farther zoom-out, with tap-friendly −/+ controls as well as wheel/pinch.
 - Artwork upload, placement, framing, transforms, undo/redo, versioned local recovery and publish review are active.
 - Studio `Auto-arrange` is a local, reversible palette-and-placement workflow; it does not send artwork to an AI service.
 - The homepage contains the reversible 20-second room sequence with continuous, shape-preserving camera/gaze curves, a gentle forward entrance, and a fixed view for all three floor and three wall comparisons on desktop and mobile. Reduced motion remains stationary.

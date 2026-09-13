@@ -1,5 +1,9 @@
 import { Vector3 } from 'three';
 
+/** Four full-room fits of dolly range, including narrow portrait canvases. */
+export const arrangeZoomLimit = (width: number, depth: number, fitDistance: number) =>
+  Math.max(40, Math.max(width, depth) * 5, fitDistance * 4);
+
 /** Fit every room corner to the actual portrait canvas, keeping an aerial view. */
 export function fitArrangeCamera(width: number, depth: number, height: number, aspect: number, viewDirection = new Vector3(.08, .7, 1)) {
   const target = new Vector3(0, height * .3, 0);
