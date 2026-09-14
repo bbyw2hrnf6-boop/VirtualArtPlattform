@@ -1,7 +1,29 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const position = async (scene: Locator) => (await scene.getAttribute('data-camera-position'))!.split(',').map(Number);
 const distance = (a: number[], b: number[]) => Math.hypot(...a.map((n, i) => n - b[i]));
+const renderedFrames = async (scene: Locator) => Number(await scene.getAttribute('data-render-frames'));
+
+const holdThroughMovementSample = async (
+  page: Page,
+  scene: Locator,
+  press: () => Promise<void>,
+  release: () => Promise<void>,
+) => {
+  const firstFrame = await renderedFrames(scene);
+  await press();
+  const pressedAt = Date.now();
+  try {
+    // SwiftShader can render only a few frames per second. Require both the
+    // user-facing hold duration and enough actual movement updates so this
+    // checks pace rather than runner throughput or diagnostic cadence.
+    await expect.poll(() => renderedFrames(scene)).toBeGreaterThanOrEqual(firstFrame + 8);
+    const remainingHold = 1000 - (Date.now() - pressedAt);
+    if (remainingHold > 0) await page.waitForTimeout(remainingHold);
+  } finally {
+    await release();
+  }
+};
 
 for (const width of [1440, 390]) {
   test(`${width}px view and pace stay camera-local across Arrange, reset and focus`, async ({ page }, testInfo) => {
@@ -121,15 +143,25 @@ test('walking pace changes both keyboard and mobile hold movement without escapi
       await expect(canvas).toHaveAttribute('data-walk-pace', pace);
       await page.getByRole('slider', { name: 'Walking speed', exact: true }).press('Escape');
       const from = await position(scene);
-      if (input === 'keyboard') await canvas.press('w', { delay: 1000 });
-      else {
+      if (input === 'keyboard') {
+        await canvas.focus();
+        await holdThroughMovementSample(
+          page,
+          scene,
+          () => page.keyboard.down('w'),
+          () => page.keyboard.up('w'),
+        );
+      } else {
         const box = await page.getByRole('button', { name: 'Move forward', exact: true }).boundingBox();
         await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
-        await page.mouse.down();
-        // Deliberate hold duration, not a readiness delay.
-        await page.waitForTimeout(1000);
-        await page.mouse.up();
+        await holdThroughMovementSample(
+          page,
+          scene,
+          () => page.mouse.down(),
+          () => page.mouse.up(),
+        );
       }
+      await expect.poll(async () => distance(from, await position(scene))).toBeGreaterThan(.2);
       const to = await position(scene);
       travelled.push(distance(from, to));
       expect(Math.abs(to[0])).toBeLessThan(20);
