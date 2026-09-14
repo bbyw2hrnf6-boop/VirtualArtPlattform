@@ -20,10 +20,13 @@ forged, extra-metadata, MIME, path, index, size, overwrite, and deletion cases;
 Storage ACL parity; recursive denial of managed-export checkpoints/parts; and
 default-deny paths.
 
-The gallery list rule now requires all three query-provable public conditions:
-`discoverEligible == true`, `lifecycleStatus == active`, and a future
-`expiresAt`. Direct schema-v1/v2 URLs remain readable under their compatibility
-contract, but old records missing explicit lifecycle approval are not listed.
+The gallery list rule requires four query-provable public conditions:
+`visibility == public`, `discoverEligible == true`, `lifecycleStatus == active`,
+and a future `expiresAt`. Direct schema-v1/v2 URLs without `visibility` keep the
+historical public fallback; explicit legacy `public` and `unlisted` remain
+directly readable, while explicit legacy `private` requires the owner or an
+active verified member. Missing-visibility legacy records are not listable until
+an authorized migration materializes `visibility: "public"`.
 
 ## Immutable, approved promotion
 

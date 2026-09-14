@@ -5,6 +5,7 @@ import {
   cacheControlForSpace,
   classifySpaceForDelivery,
   metadataForSpace,
+  mediaRobots,
   renderPublicSitemap,
   renderSpaceDocument,
   spaceCanonicalUrl,
@@ -43,6 +44,10 @@ function record(overrides: Record<string, unknown> = {}) {
 }
 
 describe("Space SEO delivery policy", () => {
+  it("keeps share media available while independently excluding ineligible resources", () => {
+    expect(mediaRobots(true)).toBeUndefined();
+    expect(mediaRobots(false)).toBe("noindex");
+  });
   it("keeps guest delivery public after its Explore window without extending physical hosting", () => {
     const guest = record({ guestPublication: true, publishedAt: new Date(NOW - 8 * 86_400_000) });
     expect(classifySpaceForDelivery("material-futures-abc123", guest, NOW)).toMatchObject({ kind: "public", indexEligible: true });
@@ -69,6 +74,7 @@ describe("Space SEO delivery policy", () => {
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
     expect(html).toContain('<meta name="lieuva:space-state" content="public">');
     expect(html).toContain('"@type":"WebPage"');
+    expect(html).toContain('data-lieuva-page-metadata="https://lieuva.com/spaces/material-futures-abc123"');
     expect(html).not.toContain("home description");
     expect(html.match(/rel="canonical"/g)).toHaveLength(1);
   });
@@ -222,7 +228,7 @@ describe("Space SEO delivery policy", () => {
     );
     const placeholder = classifySpaceForDelivery(
       "placeholder-space-123",
-      record({ title: "Untitled Space" }),
+      record({ title: "Untitled Space", artist: "Your name" }),
       NOW,
     );
     for (const delivery of [missingReview, moderated, incomplete, placeholder]) {
@@ -239,6 +245,50 @@ describe("Space SEO delivery policy", () => {
     expect(sitemap).not.toContain("missing-review-space-123");
     expect(sitemap).not.toContain("incomplete-space-123");
     expect(sitemap).not.toContain("placeholder-space-123");
+  });
+
+  it("filters known multi-signal QA identities without blocking reviewed artistic names", () => {
+    const qaCases = [
+      ["pavilion-test", { title: "PAvilion test", artist: "LIEUVA sample collection" }],
+      ["starter-placeholder", { title: "Untitled exhibition", artist: "Your name" }],
+    ] as const;
+    const qaDeliveries = qaCases.map(([id, overrides]) =>
+      classifySpaceForDelivery(id, record(overrides), NOW));
+
+    for (const delivery of qaDeliveries) {
+      expect(delivery).toMatchObject({ kind: "public", indexEligible: false });
+      expect(metadataForSpace(delivery).robots).toContain("noindex");
+      expect(metadataForSpace(delivery).structuredData).toBeUndefined();
+    }
+
+    const artisticTitles = [
+      "The Turing Test",
+      "Test Patterns: Light and Memory",
+      "Protest Forms",
+      "Testament to Light",
+      "The Gallery Test",
+      "Pavilion of Memory",
+      "Pavilion Test",
+      "Demo Tape",
+      "space123",
+      "TEST-004",
+      "Untitled Exhibition",
+    ];
+    for (const [index, title] of artisticTitles.entries()) {
+      expect(classifySpaceForDelivery(`artistic-title-${index}`, record({ title }), NOW))
+        .toMatchObject({ kind: "public", indexEligible: true });
+    }
+    for (const artist of ["Test Dept", "Demo Tapes Studio"]) {
+      expect(classifySpaceForDelivery("artist-name-space", record({ artist }), NOW))
+        .toMatchObject({ kind: "public", indexEligible: true });
+    }
+    expect(classifySpaceForDelivery("short-reviewed-name", record({ title: "A", artist: "B" }), NOW))
+      .toMatchObject({ kind: "public", indexEligible: true });
+
+    const sitemap = renderPublicSitemap(
+      qaDeliveries.filter((delivery): delivery is PublicSpaceDelivery => delivery.kind === "public"),
+    );
+    for (const [id] of qaCases) expect(sitemap).not.toContain(`/spaces/${id}`);
   });
 
   it("does not approve a cover path owned by another publication", () => {

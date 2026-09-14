@@ -69,6 +69,43 @@ test("public review hides content unless explicitly requested", () => {
   assert.equal(explicit.artworks[0].description, "Wall text");
 });
 
+test("public review includes compatibility-public legacy Spaces while excluding non-public HTML delivery", () => {
+  const legacyData = {
+    schemaVersion: 2,
+    title: "Archive of Light",
+    artist: "Studio North",
+    lifecycleStatus: "active",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    artworks: [{ storagePath: "published/owner/legacy-space/artworks/1.webp" }],
+    discoverEligible: false,
+  };
+  const legacy = raw("galleries/legacy-space", legacyData);
+  const reviewed = formatPublicContent("spaces", legacy);
+  assert.equal(reviewed.revision, 1);
+  assert.doesNotThrow(() => buildPublicContentDecisionPlan({
+    projectId,
+    kind: "space",
+    targetId: "legacy-space",
+    decision: "approve",
+    reasonCode: "reviewed-production",
+    operatorId: "operator.one",
+    occurredAt: timestamp,
+    eventId: "event123",
+    rawTarget: legacy,
+    rawReview: null,
+    expectedGate: "pending",
+    expectedUpdateTime: legacy.updateTime,
+    expectedFingerprint: reviewed.contentFingerprint,
+    expectedRevision: 1,
+  }));
+
+  const explicitlyPrivate = raw("galleries/private-legacy-space", {
+    ...legacyData,
+    visibility: "private",
+  });
+  assert.equal(formatPublicContent("spaces", explicitlyPrivate), null);
+});
+
 test("public-content approval binds exact Space revision, fingerprint, and update time", () => {
   const gallery = raw("galleries/example-space", {
     title: "Material Futures",
@@ -138,6 +175,61 @@ test("public-content approval refuses a stale review or placeholder Space", () =
     expectedUpdateTime: "2026-09-02T08:59:59.000Z",
   }), /update-time mismatch/);
   assert.throws(() => buildPublicContentDecisionPlan(input), /non-placeholder/);
+});
+
+test("public-content approval uses the same narrow QA boundary as public delivery", () => {
+  const base = {
+    title: "Material Futures",
+    artist: "Studio North",
+    visibility: "public",
+    lifecycleStatus: "active",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+    revision: 1,
+    artworks: [{ storagePath: "published/owner/example-space/artworks/1.webp" }],
+    discoverEligible: false,
+  };
+  const planFor = (overrides) => {
+    const gallery = raw("galleries/example-space", { ...base, ...overrides });
+    const reviewed = formatPublicContent("spaces", gallery);
+    return () => buildPublicContentDecisionPlan({
+      projectId,
+      kind: "space",
+      targetId: "example-space",
+      decision: "approve",
+      reasonCode: "reviewed-production",
+      operatorId: "operator.one",
+      occurredAt: timestamp,
+      eventId: "event123",
+      rawTarget: gallery,
+      rawReview: null,
+      expectedGate: "pending",
+      expectedUpdateTime: gallery.updateTime,
+      expectedFingerprint: reviewed.contentFingerprint,
+      expectedRevision: 1,
+    });
+  };
+
+  for (const overrides of [
+    { title: "PAvilion test", artist: "LIEUVA sample collection" },
+    { title: "Untitled Space", artist: "Your name 2" },
+  ]) assert.throws(planFor(overrides), /non-placeholder/);
+
+  for (const title of [
+    "The Turing Test",
+    "Test Patterns: Light and Memory",
+    "Protest Forms",
+    "Testament to Light",
+    "The Gallery Test",
+    "Pavilion of Memory",
+    "Pavilion Test",
+    "Demo Tape",
+    "space123",
+    "TEST-004",
+    "Untitled Exhibition",
+  ]) assert.doesNotThrow(planFor({ title }));
+  for (const artist of ["Test Dept", "Demo Tapes Studio"])
+    assert.doesNotThrow(planFor({ artist }));
+  assert.doesNotThrow(planFor({ title: "A", artist: "B" }));
 });
 
 test("moderation queue projection exposes case metadata but no reporter identity", () => {

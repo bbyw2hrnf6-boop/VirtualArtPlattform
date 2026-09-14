@@ -3,14 +3,6 @@ import { prepareProfileCover, prepareProfileImage } from "./profileImage";
 import type { AccountSession } from "./accountTypes";
 import { callFirebaseFunction } from "./lazyFirebaseFunctions";
 
-const DEMO_CREATOR_HANDLES = new Set([
-  "mira-vale",
-  "atlas-studio",
-  "noor-patel",
-  "common-field",
-  "elian-ross",
-]);
-
 export function creatorHandleBase(session: Pick<AccountSession, "nickname" | "displayName" | "email">) {
   const source = session.nickname || session.displayName || session.email?.split("@")[0] || "creator";
   const normalized = source
@@ -55,6 +47,7 @@ export type CreatorSpaceCard = {
 };
 export type PublicCreatorPayload = {
   schemaVersion: 1;
+  indexEligible: boolean;
   profile: CreatorProfile;
   spaces: CreatorSpaceCard[];
   posts?: CreatorPost[];
@@ -138,20 +131,11 @@ async function creatorCallableWithRetry<T>(operation: () => Promise<T>) {
 }
 
 export async function loadPublicCreatorProfile(handle: string, signal?: AbortSignal) {
-  const normalizedHandle = handle.trim().toLowerCase();
-  if (DEMO_CREATOR_HANDLES.has(normalizedHandle)) {
-    const { demoCreatorPayload } = await import("../features/creator/demoCreators");
-    const demo = demoCreatorPayload(normalizedHandle);
-    if (demo) return demo;
-  }
   const response = await fetch(`/creator-profiles/${encodeURIComponent(handle)}.json`, {
     headers: { Accept: "application/json" },
     signal,
   });
-  if (response.status === 404 && DEMO_CREATOR_HANDLES.has(normalizedHandle)) {
-    const { demoCreatorPayload } = await import("../features/creator/demoCreators");
-    return demoCreatorPayload(normalizedHandle);
-  }
+  if (response.status === 404) return null;
   if (!response.ok) throw new Error("Creator profile is temporarily unavailable.");
   return await response.json() as PublicCreatorPayload;
 }

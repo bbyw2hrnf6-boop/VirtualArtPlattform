@@ -17,14 +17,16 @@ export type DiscoverEligibility = {
 };
 
 function hasPublicIdentity(record: Pick<GalleryRecord, "title" | "artist">) {
-  const title = record.title.trim();
-  const creator = record.artist.trim();
-  const placeholderTitle = /^(?:untitled|test|demo)(?:\b|[-_\s])/i;
-  const placeholderCreator = /^(?:your(?:[-_\s]*name|\d)|test(?:\b|[-_\s])|demo(?:\b|[-_\s]))/i;
-  return title.length >= 3
-    && creator.length >= 2
-    && !placeholderTitle.test(title)
-    && !placeholderCreator.test(creator);
+  const title = record.title.normalize("NFKC").trim();
+  const creator = record.artist.normalize("NFKC").trim();
+  const knownQaIdentity = (
+    /^untitled[-_\s]+(?:space|exhibition)$/i.test(title)
+    && /^your[-_\s]*name(?:[-_\s]*\d+)?$/i.test(creator)
+  ) || (
+    /^pavilion[-_\s]+test$/i.test(title)
+    && /^lieuva[-_\s]+sample[-_\s]+collection$/i.test(creator)
+  );
+  return Boolean(title && creator) && !knownQaIdentity;
 }
 
 function hasVisibleMedia(record: Pick<GalleryRecord, "artworks">) {
@@ -35,9 +37,9 @@ function hasVisibleMedia(record: Pick<GalleryRecord, "artworks">) {
 
 /**
  * Public access and Discover placement are deliberately separate concepts.
- * The server enables eligible public publications automatically, while safety
- * actions can still remove a Space from discovery without breaking its direct
- * URL. Defensive placeholder and visible-media checks mirror the server policy.
+ * A trusted operator grants reviewed distribution separately, while safety
+ * actions can remove a Space from discovery without breaking its direct URL.
+ * Defensive placeholder and visible-media checks mirror the server policy.
  */
 export function discoverEligibility(
   record: Pick<
@@ -59,10 +61,6 @@ export function discoverEligibility(
   const expiry = new Date(record.expiresAt).getTime();
   if (!Number.isFinite(expiry) || expiry <= now)
     return { eligible: false, reason: "expired" };
-  if (record.discoverEligible !== true)
-    return { eligible: false, reason: "safety-restricted" };
-  if (record.exploreListed === false)
-    return { eligible: false, reason: "not-listed" };
   if (record.guestPublication === true) {
     const deadline = guestExploreDeadline(record.publishedAt);
     if (!Number.isFinite(deadline) || deadline <= now)
@@ -72,6 +70,10 @@ export function discoverEligibility(
     return { eligible: false, reason: "invalid-identity" };
   if (!hasVisibleMedia(record))
     return { eligible: false, reason: "no-visible-content" };
+  if (record.discoverEligible !== true)
+    return { eligible: false, reason: "safety-restricted" };
+  if (record.exploreListed === false)
+    return { eligible: false, reason: "not-listed" };
   return { eligible: true, reason: "eligible" };
 }
 

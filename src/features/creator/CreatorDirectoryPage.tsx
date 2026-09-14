@@ -327,23 +327,22 @@ export default function CreatorDirectoryPage({ embedded = false }: { embedded?: 
 
                 <div className="creator-directory__creator-grid" aria-label="Editorial preview profiles">
                   {DEMO_CREATORS.map((creator, index) => (
-                    <a
+                    <article
+                      aria-labelledby={`editorial-preview-${creator.handle}`}
                       className="creator-directory-card creator-directory-card--showcase"
-                      href={creatorCanonicalUrl(creator.handle, window.location.href)}
                       key={creator.handle}
                     >
                       <span className="creator-directory-card__number">Example {String(index + 1).padStart(2, "0")}</span>
                       <CreatorPortrait creator={creator} />
                       <span className="creator-directory-card__identity">
                         <small>@{creator.handle}</small>
-                        <strong>{creator.displayName}</strong>
+                        <strong id={`editorial-preview-${creator.handle}`}>{creator.displayName}</strong>
                       </span>
                       <span className="creator-directory-card__bio">{creator.bio}</span>
                       <span className="creator-directory-card__meta">
                         <small>Editorial preview · not a member</small>
-                        <b aria-hidden="true">↗</b>
                       </span>
-                    </a>
+                    </article>
                   ))}
                 </div>
               </section>

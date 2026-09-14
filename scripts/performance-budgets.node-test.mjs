@@ -4,6 +4,7 @@ import {
   PERFORMANCE_RELEASE_CEILINGS,
   PERFORMANCE_TARGETS,
   assertAdminLazyBoundary,
+  assertDeferredStoryLazyBoundary,
   assertPublicEntryLazyBoundary,
   initialAssetReferences,
   performanceBudgetOverages,
@@ -46,6 +47,33 @@ test('Firebase and account services stay outside the public static dependency gr
       'src/services/accountService.ts': { file: 'assets/accountService-A.js' },
     }),
     /entered the public initial dependency graph/,
+  );
+});
+
+test('the immediate landing sections never pull in the deferred 3D story', () => {
+  const storyKey = 'src/features/landing/ScrollGalleryStory.tsx';
+  const immediateKey = 'src/features/landing/ImmediateLandingSections.ts';
+  const manifest = {
+    'index.html': { isEntry: true, file: 'assets/index.js' },
+    [immediateKey]: { isDynamicEntry: true, file: 'assets/ImmediateLandingSections.js', imports: ['_react.js'] },
+    [storyKey]: { isDynamicEntry: true, file: 'assets/ScrollGalleryStory.js', imports: ['_scene.js'] },
+    '_react.js': { file: 'assets/react.js' },
+    '_scene.js': { file: 'assets/GalleryScene.js' },
+  };
+  assert.doesNotThrow(() => assertDeferredStoryLazyBoundary(manifest));
+  assert.throws(
+    () => assertDeferredStoryLazyBoundary({
+      ...manifest,
+      [immediateKey]: { ...manifest[immediateKey], imports: [storyKey] },
+    }),
+    /deferred 3D story/,
+  );
+  assert.throws(
+    () => assertDeferredStoryLazyBoundary({
+      ...manifest,
+      [immediateKey]: { ...manifest[immediateKey], imports: ['_scene.js'] },
+    }),
+    /deferred 3D story/,
   );
 });
 

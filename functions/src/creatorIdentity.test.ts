@@ -6,8 +6,10 @@ import {
   creatorNotificationProjection,
   creatorFollowTransition,
   creatorCanonicalUrl,
+  creatorAttributionMatchesCredit,
   isReservedCreatorHandle,
   isCreatorProfileSpaceListed,
+  isCreatorProfileIndexEligible,
   isPublicCreatorProfile,
   isValidCreatorWebp,
   normalizeCreatorHandle,
@@ -24,6 +26,11 @@ import {
 const SHELL = "<!doctype html><html><head><title>Home</title><meta name=\"robots\" content=\"index\"><meta property=\"og:image:width\" content=\"1200\"><meta name=\"twitter:image:alt\" content=\"Old alt\"><link rel=\"canonical\" href=\"https://lieuva.com/\"></head><body><div id=\"root\"></div></body></html>";
 
 describe("Creator identity contract", () => {
+  it("connects a profile only to the matching published artist credit", () => {
+    expect(creatorAttributionMatchesCredit("Studio North", "  STUDIO   NORTH ")).toBe(true);
+    expect(creatorAttributionMatchesCredit("Studio North", "Different Artist")).toBe(false);
+  });
+
   it("separates the public directory, private Hub and stable profile routes", () => {
     expect(classifyCreatorDocumentRoute("/creators")).toEqual({ kind: "directory" });
     expect(classifyCreatorDocumentRoute("/creator-hub/")).toEqual({ kind: "hub" });
@@ -150,6 +157,58 @@ describe("Creator identity contract", () => {
     expect(publicCreatorDirectoryEntry({ ...profile, profilePublic: false })).toBeNull();
   });
 
+  it("keeps obvious QA profiles public by direct URL but out of search distribution", () => {
+    const qaProfile = parseCreatorProfileInput({
+      handle: "skippertestadmin",
+      displayName: "SkipperAdmin",
+      bio: "test Bio admin 001",
+      links: [],
+      profilePublic: true,
+    });
+    expect(isPublicCreatorProfile(qaProfile)).toBe(true);
+    expect(isCreatorProfileIndexEligible(qaProfile)).toBe(false);
+    expect(publicCreatorDirectoryEntry(qaProfile)).toBeNull();
+
+    const html = renderCreatorDocument(SHELL, {
+      kind: "public",
+      profile: qaProfile!,
+      spaces: [],
+      posts: [],
+    });
+    expect(html).toContain('name="lieuva:creator-state" content="public"');
+    expect(html).toContain("noindex,follow,noarchive");
+    expect(html).not.toContain("ProfilePage");
+
+    const genericQaProfile = parseCreatorProfileInput({
+      handle: "test-2",
+      displayName: "Test Creator",
+      bio: "sample bio 2",
+      links: [],
+      profilePublic: true,
+    });
+    expect(isCreatorProfileIndexEligible(genericQaProfile)).toBe(false);
+
+    const artisticProfile = parseCreatorProfileInput({
+      handle: "protestadmin",
+      displayName: "Protest Studio",
+      bio: "Test patterns are central to this image-making practice.",
+      links: [],
+      profilePublic: true,
+    });
+    expect(isCreatorProfileIndexEligible(artisticProfile)).toBe(true);
+
+    for (const handle of ["test-patterns", "sample-size", "demo-tapes", "latestadmin", "contestadmin"]) {
+      const legitimateProfile = parseCreatorProfileInput({
+        handle,
+        displayName: "Signal Studio",
+        bio: "An established artistic practice with current exhibitions.",
+        links: [],
+        profilePublic: true,
+      });
+      expect(isCreatorProfileIndexEligible(legitimateProfile)).toBe(true);
+    }
+  });
+
   it("uses the owner's public/private choice as the sole visibility gate", () => {
     const publicProfile = parseCreatorProfileInput({
       handle: "studio-north", displayName: "Studio North", bio: "Spatial work.", links: [],
@@ -211,9 +270,11 @@ describe("Creator identity contract", () => {
     });
     expect(html).toContain(creatorCanonicalUrl("studio-north"));
     expect(html).toContain("ProfilePage");
+    expect(html).toContain('data-lieuva-page-metadata="https://lieuva.com/creators/studio-north"');
     expect(html).toContain('"mainEntity":{"@type":"Person"');
     expect(html).toContain('"alternateName":"@studio-north"');
-    expect(html).toContain('"sameAs":["https://example.com"]');
+    expect(html).not.toContain('"sameAs"');
+    expect(html).not.toContain("https://example.com");
     expect(html).toContain('name="twitter:image:alt" content="Public Creator profile for Studio North"');
     expect(html).toContain("https://lieuva.com/creator-covers/studio-north.webp");
     expect(html).not.toContain("og:image:width");
@@ -239,6 +300,7 @@ describe("Creator identity contract", () => {
     expect(html).toContain('name="lieuva:creator-route" content="directory"');
     expect(html).toContain("https://lieuva.com/assets/social/lieuva-social-preview-v2.jpg");
     expect(html).toContain("CollectionPage");
+    expect(html).toContain('data-lieuva-page-metadata="https://lieuva.com/creators"');
     expect(html.match(/rel="canonical"/g)).toHaveLength(1);
     expect(html).not.toContain("Creator unavailable");
   });

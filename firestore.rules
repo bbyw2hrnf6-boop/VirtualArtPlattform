@@ -45,6 +45,11 @@ service cloud.firestore {
       return data.schemaVersion in [1, 2];
     }
 
+    function isCompatibilityPublicGallery(data) {
+      return isLegacyGallery(data)
+        && !data.keys().hasAny(['visibility']);
+    }
+
     function isActive(data) {
       return data.expiresAt > request.time
         && (!data.keys().hasAny(['lifecycleStatus']) || data.lifecycleStatus == 'active');
@@ -52,8 +57,9 @@ service cloud.firestore {
 
     function canGetGallery(galleryId, data) {
       return ownsGalleryData(data) || (isActive(data) && (
-        isLegacyGallery(data)
-        || data.visibility in ['public', 'unlisted']
+        isCompatibilityPublicGallery(data)
+        || (data.keys().hasAny(['visibility'])
+          && data.visibility in ['public', 'unlisted'])
         || isGalleryMember(galleryId)
       ));
     }
@@ -62,7 +68,7 @@ service cloud.firestore {
       return data.expiresAt > request.time
         && data.lifecycleStatus == 'active'
         && data.discoverEligible == true
-        && (isLegacyGallery(data) || data.visibility == 'public');
+        && data.visibility == 'public';
     }
 
     function validPublicationWindow(data) {

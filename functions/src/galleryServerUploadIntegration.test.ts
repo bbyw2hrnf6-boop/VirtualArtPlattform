@@ -68,4 +68,18 @@ describe("server-owned gallery upload integration", () => {
     expect(cleanupSource).toContain("galleryPermitCleanupDecision");
     expect(cleanupSource).toContain("assetUploadLeaseUntil");
   });
+
+  it("revokes discovery on every lifecycle change and refuses misleading legacy privacy", () => {
+    const lifecycle = exportedBlock("manageAuraGalleryLifecycle", "purgeAuraGallery");
+    expect(lifecycle.match(/discoveryApprovalAfterMutation\(data\.discoverEligible, "lifecycle"\)/g))
+      .toHaveLength(4);
+    expect(lifecycle).toContain("supportsGalleryVisibility(data.schemaVersion)");
+    expect(lifecycle).toContain("Update this legacy Space first if Studio editing is available, or publish a new current-schema Space.");
+  });
+
+  it("replaces an authorized legacy revision with the current trusted schema", () => {
+    const finalizeRevision = exportedBlock("finalizeAuraGalleryRevision", "abortAuraGalleryRevision");
+    expect(finalizeRevision).toContain("revisionAuthorizationFrom");
+    expect(finalizeRevision).toContain("schemaVersion: TRUSTED_GALLERY_SCHEMA_VERSION");
+  });
 });

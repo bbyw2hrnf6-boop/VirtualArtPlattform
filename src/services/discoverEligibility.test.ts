@@ -33,13 +33,29 @@ describe("Discover eligibility", () => {
     expect(discoverEligibility({ ...base, expiresAt: new Date(now - 1).toISOString() }, now).reason).toBe("expired");
     expect(discoverEligibility({ ...base, lifecycleStatus: "archived" }, 0).reason).toBe("not-active");
     expect(discoverEligibility({ ...base, title: "  " }, 0).reason).toBe("invalid-identity");
-    expect(discoverEligibility({ ...base, artist: "A" }, 0).reason).toBe("invalid-identity");
+    expect(discoverEligibility({ ...base, artist: " " }, 0).reason).toBe("invalid-identity");
     expect(discoverEligibility({ ...base, artworks: [] }, 0).reason).toBe("no-visible-content");
+    expect(discoverEligibility({ ...base, discoverEligible: false, title: " ", artworks: [] }, 0).reason).toBe("invalid-identity");
+    expect(discoverEligibility({ ...base, discoverEligible: false, artworks: [] }, 0).reason).toBe("no-visible-content");
   });
 
-  it("keeps approved starter placeholders out of both Discover and indexing", () => {
-    expect(discoverEligibility({ ...base, title: "Untitled exhibition", artist: "Field Office" }, 0).reason).toBe("invalid-identity");
-    expect(discoverEligibility({ ...base, title: "Material Futures", artist: "Your nameefefef" }, 0).reason).toBe("invalid-identity");
+  it("requires multiple QA signals instead of excluding artistic words", () => {
+    expect(discoverEligibility({ ...base, title: "Untitled exhibition", artist: "Your name" }, 0).reason).toBe("invalid-identity");
+    expect(discoverEligibility({ ...base, title: "Untitled exhibition", artist: "Field Office" }, 0).reason).toBe("eligible");
+    expect(discoverEligibility({ ...base, title: "Material Futures", artist: "Your name" }, 0).reason).toBe("eligible");
+  });
+
+  it("keeps the client robots decision aligned with the server QA filter", () => {
+    for (const record of [
+      { ...base, title: "PAvilion test", artist: "LIEUVA sample collection" },
+      { ...base, title: "Untitled Space", artist: "Your name 2" },
+    ]) expect(isPublicSpaceIndexEligible(record, 0)).toBe(false);
+
+    for (const title of ["The Turing Test", "Test Patterns: Light and Memory", "The Gallery Test", "Protest Forms", "Testament to Light", "Pavilion Test", "Demo Tape", "space123", "TEST-004", "Untitled Exhibition"])
+      expect(isPublicSpaceIndexEligible({ ...base, title }, 0)).toBe(true);
+    for (const artist of ["Test Dept", "Demo Tapes Studio"])
+      expect(isPublicSpaceIndexEligible({ ...base, artist }, 0)).toBe(true);
+    expect(isPublicSpaceIndexEligible({ ...base, title: "A", artist: "B" }, 0)).toBe(true);
   });
 
   it("honors the server safety gate even when quality checks pass", () => {

@@ -30,7 +30,7 @@ export interface GalleryRecord extends GalleryDraft {
   lifecycleStatus: GalleryLifecycleStatus;
   trashedAt?: string;
   purgeAt?: string;
-  /** Server-authored public-discovery gate. Public publications are enabled automatically; safety actions can disable it. */
+  /** Server-owned editorial approval. New, revised or lifecycle-changed Spaces fail closed until guarded review; placement-only changes preserve it. */
   discoverEligible?: boolean;
   /** User-controlled homepage placement. Missing legacy values resolve to true. */
   exploreListed: boolean;

@@ -153,6 +153,18 @@ export async function isValidCreatorWebp(bytesValue: Uint8Array): Promise<boolea
 
 const CREATOR_BIO_FONTS = new Set<CreatorBioFont>(["sans", "serif", "editorial"]);
 const CREATOR_PROFILE_TONES = new Set<CreatorProfileTone>(["paper", "warm", "sage", "clay", "blue", "ink"]);
+const KNOWN_QA_CREATOR_HANDLE = /^skippertestadmin$/i;
+const GENERIC_QA_CREATOR_HANDLE = /^(?:admin|demo|example|placeholder|qa|sample|staging|test)(?:-\d+)?$/i;
+const CREATOR_PLACEHOLDER_WORDS = new Set([
+  "admin", "bio", "creator", "demo", "example", "placeholder", "profile", "qa", "sample", "staging", "test", "user",
+]);
+
+function isOnlyCreatorPlaceholderCopy(value: string): boolean {
+  const words = value.normalize("NFKC").trim().toLowerCase().split(/[-_\s]+/).filter(Boolean);
+  return words.length > 0
+    && words.some((word) => ["demo", "example", "placeholder", "qa", "sample", "staging", "test"].includes(word))
+    && words.every((word) => CREATOR_PLACEHOLDER_WORDS.has(word) || /^\d+$/.test(word));
+}
 
 function boundedText(value: unknown, maximum: number, required = false): string | null {
   if (typeof value !== "string") return required ? null : "";
@@ -268,10 +280,22 @@ export function isPublicCreatorProfile(
   return profile?.profilePublic === true;
 }
 
+/** Keep direct public access independent from search distribution. This is a
+ * derived, fail-safe QA filter rather than a new persisted profile contract. */
+export function isCreatorProfileIndexEligible(
+  profile: PublicCreatorProfile | null | undefined,
+): profile is PublicCreatorProfile {
+  return isPublicCreatorProfile(profile)
+    && !KNOWN_QA_CREATOR_HANDLE.test(profile.handle)
+    && !(GENERIC_QA_CREATOR_HANDLE.test(profile.handle)
+      && isOnlyCreatorPlaceholderCopy(profile.displayName)
+      && isOnlyCreatorPlaceholderCopy(profile.bio));
+}
+
 /** Minimal allow-listed projection used by public Creator search. */
 export function publicCreatorDirectoryEntry(value: unknown): PublicCreatorDirectoryEntry | null {
   const profile = parseCreatorProfileInput(value);
-  if (!isPublicCreatorProfile(profile)) return null;
+  if (!isCreatorProfileIndexEligible(profile)) return null;
   return {
     handle: profile.handle,
     displayName: profile.displayName,
@@ -332,6 +356,13 @@ export function creatorCanonicalUrl(handle: string): string {
   return `https://lieuva.com/creators/${normalized}`;
 }
 
+/** A profile may change independently from an immutable Space revision. Only
+ * connect both public identities while the current name matches its credit. */
+export function creatorAttributionMatchesCredit(displayName: string, publishedArtist: string) {
+  const normalize = (value: string) => value.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
+  return normalize(displayName) === normalize(publishedArtist);
+}
+
 const SOCIAL_SHARE_IMAGE = "https://lieuva.com/assets/social/lieuva-social-preview-v2.jpg";
 
 export function classifyCreatorDocumentRoute(path: string): CreatorDocumentRoute {
@@ -363,6 +394,7 @@ function stripMetadata(html: string): string {
 export function renderCreatorDocument(shell: string, delivery: CreatorDelivery): string {
   const isPublic = delivery.kind === "public";
   const profile = isPublic ? delivery.profile : undefined;
+  const indexEligible = isCreatorProfileIndexEligible(profile);
   const canonical = profile ? creatorCanonicalUrl(profile.handle) : "https://lieuva.com/creators";
   const title = profile ? `${profile.displayName} — Creator | LIEUVA` : "Creator unavailable | LIEUVA";
   const description = profile
@@ -379,7 +411,7 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
   const tags = [
     `<title>${escapeHtml(title)}</title>`,
     `<meta name="description" content="${escapeHtml(description)}">`,
-    `<meta name="robots" content="${isPublic ? "index,follow,max-image-preview:large" : "noindex,nofollow,noarchive"}">`,
+    `<meta name="robots" content="${indexEligible ? "index,follow,max-image-preview:large" : isPublic ? "noindex,follow,noarchive" : "noindex,nofollow,noarchive"}">`,
     `<meta name="lieuva:creator-state" content="${isPublic ? "public" : "unavailable"}">`,
     `<link rel="canonical" href="${escapeHtml(canonical)}">`,
     `<meta property="og:type" content="profile">`,
@@ -399,7 +431,7 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
     `<meta name="twitter:description" content="${escapeHtml(description)}">`,
     `<meta name="twitter:image" content="${escapeHtml(image)}">`,
     `<meta name="twitter:image:alt" content="Public Creator profile for ${escapeHtml(profile?.displayName ?? "LIEUVA")}">`,
-    ...(profile ? [`<script type="application/ld+json">${JSON.stringify({
+    ...(profile && indexEligible ? [`<script type="application/ld+json" data-lieuva-page-metadata="${escapeHtml(canonical)}">${JSON.stringify({
       "@context": "https://schema.org",
       "@type": "ProfilePage",
       url: canonical,
@@ -411,7 +443,9 @@ export function renderCreatorDocument(shell: string, delivery: CreatorDelivery):
         alternateName: `@${profile.handle}`,
         url: canonical,
         ...(profile.coverPresent || profile.imagePresent ? { image } : {}),
-        ...(profile.links.length ? { sameAs: profile.links.map((link) => link.url) } : {}),
+        // A verified LIEUVA account controls this profile, but the current data
+        // contract does not verify ownership of its self-service external URLs.
+        // Omit sameAs until a server-owned verification state exists.
       },
     }).replaceAll("<", "\\u003c")}</script>`] : []),
   ].join("\n    ");
@@ -446,7 +480,7 @@ export function renderCreatorDirectoryDocument(shell: string): string {
     `<meta name="twitter:description" content="${description}">`,
     `<meta name="twitter:image" content="${image}">`,
     `<meta name="twitter:image:alt" content="Public Creators and Spaces in the LIEUVA Creator Hub">`,
-    `<script type="application/ld+json">${JSON.stringify({
+    `<script type="application/ld+json" data-lieuva-page-metadata="${canonical}">${JSON.stringify({
       "@context": "https://schema.org",
       "@type": "CollectionPage",
       url: canonical,

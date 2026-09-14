@@ -286,7 +286,7 @@ export function CreatorProfileSettings({ account }: { account: AccountSession })
           <section className="creator-settings__visibility">
             <div>
               <strong>Profile visibility</strong>
-              <p>You control whether this profile is private or immediately visible in search, follows and studio notes. Space placement stays with each Space in Your Spaces.</p>
+              <p>You control whether this profile is private or public. Public profiles open immediately by direct link and enable follows and studio notes; quality-eligible profiles can also appear in search. Space placement stays with each Space in Your Spaces.</p>
             </div>
             <label className="creator-settings__switch">
               <b>Make profile public</b>

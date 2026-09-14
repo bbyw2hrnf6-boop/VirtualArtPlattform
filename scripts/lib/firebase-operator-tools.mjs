@@ -316,12 +316,18 @@ function publicCreatorId(document) {
   return accountIndex >= 0 ? segments[accountIndex + 1] : undefined;
 }
 
+function isPublicSpaceRecord(data) {
+  if (new Set(["public", "unlisted", "private"]).has(data.visibility))
+    return data.visibility === "public";
+  return data.schemaVersion === 1 || data.schemaVersion === 2;
+}
+
 export function formatPublicContent(kind, rawDocument, { includeContent = false, creatorProfile } = {}) {
   const document = decodeFirestoreDocument(rawDocument);
   const data = document.data;
   if (kind === "spaces") {
     const expiresAtMs = Date.parse(String(data.expiresAt ?? ""));
-    const publicNow = data.visibility === "public"
+    const publicNow = isPublicSpaceRecord(data)
       && (data.lifecycleStatus ?? "active") === "active"
       && Number.isFinite(expiresAtMs)
       && expiresAtMs > Date.now();
@@ -489,24 +495,28 @@ export function publicContentReviewId(kind, targetId) {
 }
 
 function assertReviewableSpace(data, occurredAt) {
-  const placeholderTitle = /^(?:untitled|test|demo)(?:\b|[-_\s])/i;
-  const placeholderCreator = /^(?:your(?:[-_\s]*name|\d)|test(?:\b|[-_\s])|demo(?:\b|[-_\s]))/i;
-  const title = typeof data.title === "string" ? data.title.trim() : "";
-  const artist = typeof data.artist === "string" ? data.artist.trim() : "";
+  const title = typeof data.title === "string" ? data.title.trim().replace(/\s+/g, " ").normalize("NFKC") : "";
+  const artist = typeof data.artist === "string" ? data.artist.trim().replace(/\s+/g, " ").normalize("NFKC") : "";
+  const knownQaIdentity = (
+    /^untitled[-_\s]+(?:space|exhibition)$/i.test(title)
+    && /^your[-_\s]*name(?:[-_\s]*\d+)?$/i.test(artist)
+  ) || (
+    /^pavilion[-_\s]+test$/i.test(title)
+    && /^lieuva[-_\s]+sample[-_\s]+collection$/i.test(artist)
+  );
   const expiry = Date.parse(String(data.expiresAt ?? ""));
   const visibleMedia = Array.isArray(data.artworks) && data.artworks.some((artwork) => (
     artwork && typeof artwork === "object" && artwork.hidden !== true
     && [artwork.src, artwork.storagePath, artwork.assetId].some((value) => typeof value === "string" && value.length > 0)
   ));
   if (
-    data.visibility !== "public"
+    !isPublicSpaceRecord(data)
     || (data.lifecycleStatus ?? "active") !== "active"
     || !Number.isFinite(expiry)
     || expiry <= occurredAt.getTime()
-    || title.length < 3
-    || artist.length < 2
-    || placeholderTitle.test(title)
-    || placeholderCreator.test(artist)
+    || !title
+    || !artist
+    || knownQaIdentity
     || !visibleMedia
   ) throw new Error("Space is not an active, non-placeholder public revision with visible media.");
 }
@@ -561,7 +571,7 @@ export function buildPublicContentDecisionPlan({
 
   assertReviewableSpace(target.data, timestamp);
   const revision = validatedNonNegativeInteger(expectedRevision, "Expected Space revision");
-  if (revision < 1 || target.data.revision !== revision)
+  if (revision < 1 || (target.data.revision ?? 1) !== revision)
     throw new Error(`Space revision mismatch: expected ${revision}, found ${target.data.revision ?? "missing"}.`);
   const contentVersion = String(revision);
 

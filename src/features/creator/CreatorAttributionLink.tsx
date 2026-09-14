@@ -19,6 +19,6 @@ export function CreatorAttributionLink({
     return () => controller.abort();
   }, [spaceId]);
   return creator
-    ? <a className={className} href={creator.profileUrl}>By {creator.displayName}</a>
-    : <span className={className}>{fallback}</span>;
+    ? <a className={className} href={creator.profileUrl}>By {fallback}</a>
+    : <span className={className}>By {fallback}</span>;
 }

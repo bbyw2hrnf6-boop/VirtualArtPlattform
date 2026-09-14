@@ -1,6 +1,6 @@
 # LIEUVA current state
 
-- **Reviewed:** 2026-09-11
+- **Reviewed:** 2026-09-14
 - **Prior cleanup baseline:** `ef9739e`
 - **Audit baseline:** `3e6e58226c3b6204e06033b1e5df0957fa2fc2d5` (`main` = `origin/main` at review start)
 - **Live deployment verified at review:** `3e6e58226c3b6204e06033b1e5df0957fa2fc2d5` (`/release.json`, built 2026-09-11T17:57:51.084Z)
@@ -10,7 +10,7 @@
 
 LIEUVA currently provides the landing story, Explore Spaces, Creator Hub/profiles, account and access management, three-template Studio, local drafts/recovery, artwork and room editing, Arrange, Walk Preview, publication review, canonical Space sharing and the Danny reference exhibition.
 
-Guest publishing is deployed and enables public initial publication through Firebase anonymous Auth without a public profile. A server-authored immutable `guestPublication` marker and original `publishedAt` determine the seven-day Explore window; the browser directory filters at the boundary, on focus and on reopen. Public manifest/media access remains independent and uses the existing 365-day preview `expiresAt`; no seven-day cleanup is introduced. Discovery scans at most ten pages of thirty records per modern/legacy query, continuing past ended guest placements; deeper eligible records can remain outside this bounded directory slice. Guest origin survives account linking and revisions and is excluded from Creator projection/attribution. Guest control is browser-bound until UID-preserving account creation, and live updates still require verification. The combined Functions/Hosting release preserved the direct-write rule boundary and required no new indexes.
+Guest publishing is deployed and enables public initial publication through Firebase anonymous Auth without a public profile. A server-authored immutable `guestPublication` marker and original `publishedAt` determine the seven-day Explore window; the browser directory filters at the boundary, on focus and on reopen. Public manifest/media access remains independent and uses the existing 365-day preview `expiresAt`; no seven-day cleanup is introduced. The deployed baseline scans at most ten pages of thirty records per modern/legacy query, continuing past ended guest placements; the local P0 change below replaces the broad legacy client query with the explicit-public query only. Guest origin survives account linking and revisions and is excluded from Creator projection/attribution. Guest control is browser-bound until UID-preserving account creation, and live updates still require verification. The combined Functions/Hosting release preserved the direct-write rule boundary and required no new indexes.
 
 The repository also contains a server-owned `/admin` control plane. Direct client access to the `siteAdmins`, admin-control, audit-event and admin-check-run collections is denied. Admin authority is read from `siteAdmins/{uid}` with an active `owner` or `admin` role; no custom claim or email allow-list is authoritative. The existing verified account explicitly selected by the owner was bootstrapped on 2026-09-11; the one-shot guard and active owner membership were independently confirmed. Bootstrap must not be repeated.
 
@@ -23,6 +23,27 @@ The Studio's `Auto-arrange` action is local and rules-based: it samples artwork 
 The active shared template environment is `premium-v3`. Six desktop/mobile GLBs ship from `public/assets/templates/premium-v3/`. Procedural geometry remains the loading/error fallback and explicit `?environment=procedural` diagnostic path. The current `.blend` sources, runtime maps, camera studies and final 4K masters remain under `blender/production/v3/`; historical editable sources remain under v1/v2.
 
 No AURA/gallery technical identifier was migrated. Existing Firebase collections, fields, Storage paths, callable names, draft/export formats, routes and GLB metadata remain compatibility contracts.
+
+The local P0 SEO hardening restores the documented reviewed-content boundary:
+new Spaces, content revisions, visibility transitions and lifecycle actions now
+fail closed outside Discover/search indexing, while placement-only changes
+preserve a prior review.
+Legacy schema-v1/v2 gallery documents without `visibility` keep their historical
+public direct-link fallback. Explicit legacy `public`, `unlisted` and `private`
+values are now authoritative across Firestore, Storage, SSR, operator tooling
+and the client. Because rules are not filters, the anonymous client no longer
+runs a schema-version-only legacy Discover query; missing-visibility records
+need an authorized explicit-public migration before optional client-side
+placement. A fully account-owned legacy record can use the existing authorized
+Studio revision path, whose successful finalizer replaces it with schema v3;
+older records need a new current-schema publication or a separately authorized
+schema/data migration.
+Obvious QA Spaces and Creator profiles remain directly reviewable but are
+derived `noindex`, omitted from structured data and excluded from directory and
+sitemap output. Editorial preview cards no longer link to reserved 404 routes;
+unverified Creator links are UGC rather than `sameAs` claims; and a published
+artist credit links to a Creator profile only while both names agree. This work
+is locally verified only and has not been deployed or applied to production data.
 
 The local camera-control change adds session-only “View & pace” in room Walk/Studio Walk Preview and the Danny reference: 78° on compact/coarse-pointer devices, 62° desktop, a 40–90° lens range and 0.5–2× walking pace (Grand Forum defaults to 1.25×). Keyboard, held movement and reachable floor paths share the pace multiplier; guided-tour timing remains separately authored. Arrange keeps its 48° lens but allows four full-room fit distances (at least five room spans), with safe far clipping and −/+ tap controls. Settings are not draft/profile/publication data and survive mode switches, focus and Reset view; Reset settings restores the room-session defaults. The homepage presentation, including its Look around pinch range, is excluded. See the [room camera contract](./MOBILE-EXPERIENCE-AND-AI-DIRECTION.md#room-view-and-pace-contract). No deployment is included.
 
@@ -44,7 +65,7 @@ Client and Functions checks enforce repository-wide V8 coverage floors and keep 
 
 Performance ceilings live in `scripts/lib/performance-budgets.mjs`; GLB limits live in `scripts/validate-premium-glb.mjs`. Raising either requires an explicit, documented decision.
 
-The original admin console extended the aggregate release ceilings to 588,000 bytes JS gzip and 55,000 bytes CSS gzip. Operations and detailed check evidence deliberately added a further 5,000-byte JS allowance (593,000 total; measured approximately +5.4 KB against the previous production build, with no dependencies). The console remains a separate dynamic entry with its existing 12,000-byte JS / 5,000-byte CSS limits; Operations is additionally lazy. The built import graph rejects admin console, operations/model and service code in the public initial graph. The `lazyFirebaseFunctions` boundary and non-recursive Firebase chunk group also keep Firebase/account services outside that graph. The current public initial-JS ceiling is 123,000 bytes gzip (measured 119,278), tightened from 305,000 after that split; initial CSS remains 32,500 and the largest lazy chunk is 174,668 against a 195,000 ceiling. The reviewed production build measures 595,779 total JS and 54,165 CSS against 596,000 / 54,500 hard ceilings. The 115,000-byte initial-JS, 560,000-byte total-JS and 43,000-byte CSS targets remain open. Admin smoke coverage includes signed-out/non-admin denial, owner views, role refresh, revocation, history/evidence filters, report exports, copy-only tools, missing sources and 1440 × 1000 / 390 × 844 layouts, using test-only intercepted backend fixtures rather than a production bypass. The session-only view/pace and tap-zoom feature explicitly adds 1,000 bytes to the aggregate JS ceiling (approximately 0.17%); the measured feature delta is approximately 1 KB, and all other ceilings stay unchanged.
+The original admin console extended the aggregate release ceilings to 588,000 bytes JS gzip and 55,000 bytes CSS gzip. Operations and detailed check evidence deliberately added a further 5,000-byte JS allowance (593,000 total; measured approximately +5.4 KB against the previous production build, with no dependencies). The console remains a separate dynamic entry with its existing 12,000-byte JS / 5,000-byte CSS limits; Operations is additionally lazy. The built import graph rejects admin console, operations/model and service code in the public initial graph. The `lazyFirebaseFunctions` boundary and non-recursive Firebase chunk group also keep Firebase/account services outside that graph. The current public initial-JS ceiling is 123,000 bytes gzip (measured 119,978), tightened from 305,000 after that split; initial CSS remains 32,500 and the largest lazy chunk is 174,668 against a 195,000 ceiling. The reviewed production build measures 595,877 total JS and 53,766 CSS against 596,000 / 54,500 hard ceilings. The 115,000-byte initial-JS, 560,000-byte total-JS and 43,000-byte CSS targets remain open. Admin smoke coverage includes signed-out/non-admin denial, owner views, role refresh, revocation, history/evidence filters, report exports, copy-only tools, missing sources and 1440 × 1000 / 390 × 844 layouts, using test-only intercepted backend fixtures rather than a production bypass. The session-only view/pace and tap-zoom feature explicitly adds 1,000 bytes to the aggregate JS ceiling (approximately 0.17%); the measured feature delta is approximately 1 KB, and all other ceilings stay unchanged.
 
 ## Release boundary
 
@@ -62,11 +83,12 @@ Treat the product as a controlled production pilot until these external conditio
 - Terms, Privacy, retention, data-rights and operator/brand decisions have owner/legal approval;
 - physical iOS Safari and Android Chrome passes cover upload, recovery, Walk, reduced motion, memory and touch comfort;
 - production RUM dashboards, alerts, cold-start behavior, crawler cards and incident/rollback ownership are exercised.
+- Google Search Console and Bing Webmaster ownership, sitemap submission, URL Inspection and a non-brand/index-coverage baseline are evidenced by the operator.
 - subsequent role changes use the audited admin control plane; the approved first-owner bootstrap is complete and must not be rerun.
 
 Local verification never authorizes deployment or live-data mutation.
 
-A read-only public-content review on 2026-09-11 found two still-indexable QA records: Space `lieuva-sample-collection-pavilion-test-dad82647f0d041b8` and Creator handle `skippertestadmin`. Their production demotion or removal needs an explicit owner/operator decision and credentials; this cleanup did not mutate them. The existing Gen2 runtime principal also still has project-level `roles/editor`; the least-privilege migration is specified in `FIREBASE_SETUP.md` and remains an external IAM/deploy action.
+A read-only public-content review on 2026-09-11 found two still-indexable QA records: Space `lieuva-sample-collection-pavilion-test-dad82647f0d041b8` and Creator handle `skippertestadmin`. The local P0 gate will make both `noindex` and remove them from discovery/sitemap after a protected release, without deleting them. Explicit production demotion or removal remains an owner/operator decision and needs credentials; no live data was mutated. The existing Gen2 runtime principal also still has project-level `roles/editor`; the least-privilege migration is specified in `FIREBASE_SETUP.md` and remains an external IAM/deploy action.
 
 ## Maintenance priorities
 

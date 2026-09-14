@@ -24,6 +24,10 @@ describe("public Creator profile visual contract", () => {
     expect(profileSource).toContain('aria-pressed={Boolean(followState?.following)}');
   });
 
+  it("marks self-service external links as unverified user-generated content", () => {
+    expect(profileSource).toContain('rel="noopener noreferrer ugc nofollow"');
+  });
+
   it("renders the chosen title image, typography and tone as safe presets", () => {
     expect(profileSource).toContain("creatorCoverUrl(profile.handle, profile.updatedAt)");
     expect(profileSource).toContain("creator-profile__title-cover");
@@ -42,5 +46,9 @@ describe("public Creator profile visual contract", () => {
     expect(profileSource).toContain("const deliveredCanonical = document");
     expect(profileSource).toContain("new URL(deliveredCanonical, window.location.href).pathname");
     expect(profileSource).toContain("new URL(creatorProfileUrl(handle)).pathname");
+    expect(profileSource).toContain("state.payload.indexEligible");
+    expect(profileSource).toContain('serverState === "public" && state.status !== "not-found"');
+    expect(profileSource).toContain("unavailableCreatorMetadataPolicy()");
+    expect(profileSource).toContain("applyPageMetadata(publicCreatorMetadataPolicy(");
   });
 });

@@ -13,7 +13,7 @@ WP5 uses Firebase Hosting plus three public, privacy-aware HTTP Functions on the
 
 - `spaceDocument` returns the generated Vite application shell with current route-specific metadata and correct Space status semantics;
 - `spaceCard` revalidates current public eligibility before proxying the approved Storage cover;
-- `spaceSitemap` emits the homepage and eligible public Spaces only.
+- `spaceSitemap` emits the homepage, Creator directory and eligible public Spaces and Creator profiles only.
 
 The React application keeps its existing lightweight router. Only published-Space delivery gains a clean pathname. Studio, Account, Auth, DannyHirschArts and the other hash routes are preserved.
 
@@ -82,13 +82,19 @@ Private/unlisted/missing requests return 404 and `no-store`; they cannot retriev
 
 | Space state | Initial metadata | Robots | Sitemap | Card |
 | --- | --- | --- | --- | --- |
-| Public + active + unexpired | Current approved public metadata | index/follow | yes | current cover/fallback |
+| Public + active + unexpired + reviewed + quality-eligible | Current approved public metadata | index/follow | yes | current cover/fallback |
+| Public + pending review or obvious QA placeholder | Current public metadata, no structured data | noindex/follow/noarchive | no | current cover/fallback |
 | Unlisted + active + unexpired | Generic Shared Space only | noindex/nofollow/noarchive | no | no protected media |
 | Private + active + unexpired | Generic Private Space only | noindex/nofollow/noarchive | no | no protected media |
 | Missing/malformed/archived/trashed/expired | Generic unavailable | noindex/nofollow/noarchive | no | 404 |
 | Backend/shell failure | Generic temporary error | noindex/nofollow/noarchive | no | 404/no-store |
 
-Discover eligibility was not changed. Sitemap eligibility does not add items to Discover.
+`discoverEligible` is reviewed distribution authority, not a synonym for public
+visibility. New publications, content revisions, visibility transitions and
+lifecycle actions set it to `false`; placement-only distribution changes
+preserve an existing review.
+Defensive derived QA checks can still reject an approved placeholder from both
+indexing and sitemap without breaking its direct public URL.
 
 ## 10. Sitemap behavior
 
@@ -97,9 +103,11 @@ Discover eligibility was not changed. Sitemap eligibility does not add items to 
 Output contains:
 
 - `https://lieuva.com/`;
+- `https://lieuva.com/creators`;
 - active, unexpired public `/spaces/{id}` URLs.
+- quality-eligible public `/creators/{handle}` URLs.
 
-It excludes private, unlisted, archived, trashed, expired, Account, Studio, invitations, tokens, revisions and all hash URLs. Backend failure returns 503 and only the homepage fallback XML.
+It excludes private, unlisted, archived, trashed, expired, Account, Studio, invitations, tokens, revisions and all hash URLs. Backend failure returns 503 with a minimal fallback XML containing only the homepage and Creator directory.
 
 ## 11. Robots behavior
 
@@ -110,6 +118,13 @@ It excludes private, unlisted, archived, trashed, expired, Account, Studio, invi
 The homepage retains truthful `WebApplication` JSON-LD. An eligible public Space receives minimal `WebPage` JSON-LD with name, description, canonical URL, current modification date when valid, and LIEUVA `WebSite` membership. No ratings, offers, reviews, events or unverified creator entity type were invented.
 
 Protected and unavailable documents emit no structured data.
+Public QA/placeholder documents also emit no structured data even though their
+direct review URL remains available.
+
+Public image proxies keep direct sharing functional, but Space cards and
+Creator avatar/cover resources attached to derived-ineligible content emit
+`X-Robots-Tag: noindex`. Public JSON projections emit resource-level
+`noindex,nofollow` so they cannot become duplicate search results.
 
 ## 13. Error and status behavior
 
@@ -149,11 +164,17 @@ Deterministic coverage confirms:
 - unlisted content uses generic noindex metadata;
 - protected cards cannot resolve;
 - malformed modern visibility fails closed;
-- legacy public schema remains readable;
+- legacy records without visibility retain their public direct-link fallback,
+  while explicit legacy private/unlisted values remain authoritative;
 - cover paths belonging to another owner/Space are rejected;
 - user-controlled public text is HTML-escaped and JSON-LD `<` characters are neutralized;
 - public → private → public eligibility changes safely;
 - private/unlisted records cannot enter generated sitemap output.
+- pending-review and obvious QA Space/Creator records cannot enter sitemap or
+  emit indexable metadata;
+- content revisions, visibility transitions and lifecycle actions revoke prior
+  Space approval, while placement-only changes preserve it;
+- unverified Creator links are marked UGC and omitted from `sameAs`.
 
 No secret, account credential or production test fixture was created.
 
@@ -212,9 +233,13 @@ The owner-approved Hosting/Functions deployment, DNS cutover, certificates, cano
 
 1. Run the remaining authenticated browser matrix on production: Auth verification/reset, Google OAuth, invitations, private owner/editor/viewer access, publication/update, and visibility transitions.
 2. Verify real social previews in the target crawler tools and refresh their caches where necessary.
-3. Submit `https://lieuva.com/sitemap.xml` to Google Search Console.
+3. Verify the property and submit `https://lieuva.com/sitemap.xml` to Google
+   Search Console; record URL Inspection/index coverage and non-brand query
+   baselines. Repeat the sitemap submission in Bing Webmaster Tools.
 
-Commands and detailed checks are also recorded in `FIREBASE_SETUP.md`. Firestore rules, Storage rules and existing indexes need no WP5 change.
+Commands and detailed checks are also recorded in `FIREBASE_SETUP.md`. WP5
+needed no rules/index change at delivery time; the later P0 hardening aligns
+Firestore and Storage with explicit legacy visibility without adding an index.
 
 ## 20. Rollback plan
 
@@ -232,7 +257,9 @@ Do not delete Functions first, and never delete/migrate Firestore records, Stora
 - The exact Hosting custom-domain/DNS records and certificate timing are external state.
 - Actual crawler previews (Facebook, LinkedIn, X, Slack) need post-preview verification and cache refresh.
 - A public cover may remain in shared cache for up to 60 seconds after a visibility change; this is bounded and documented but not instant invalidation.
-- Sitemap output is capped at 1,000 pre-deduplicated candidates. Pagination/index partitioning is required before that scale.
+- Sitemap collection is capped at 1,000 pre-deduplicated Space candidates plus 500 Creator candidates. Pagination/index partitioning is required before either limit is reached.
+- Review ownership, criteria and turnaround time for granting Space
+  `discoverEligible` approval still need an explicit operating decision.
 - DannyHirschArts has no persisted `galleries/{id}` publication identity, so it intentionally remains the reference demo route rather than receiving a fabricated one-off canonical Space.
 - Java is absent locally, preventing full Firebase emulator integration. Pure policy, raw HTTP output, build and browser route tests passed.
 

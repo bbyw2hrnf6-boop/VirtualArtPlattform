@@ -43,9 +43,11 @@ import {
 } from "./emailTemplates.js";
 import {
   GALLERY_VISIBILITIES,
+  discoveryApprovalAfterMutation,
   normalizeMemberEmail,
   parseGalleryId,
   publicationTerms,
+  supportsGalleryVisibility,
   isGuestPublisher,
   type GalleryVisibility,
 } from "./galleryPolicy.js";
@@ -4284,9 +4286,10 @@ export const finalizeAuraGalleryPublication = onCall(
           ...distribution,
           guestPublication: permit.permit.guestPublication === true,
           creatorProfileListed: permit.permit.guestPublication === true ? false : distribution.creatorProfileListed,
-          // Successful trusted inspection makes a public Space immediately
-          // discoverable. Placement switches still decide its surfaces.
-          discoverEligible: permit.visibility === "public",
+          // Image inspection proves file safety, not editorial quality. New
+          // publications stay outside Discover and search indexing until the
+          // reviewed-content operator workflow approves this exact revision.
+          discoverEligible: discoveryApprovalAfterMutation(undefined, "publication"),
           revision: 1,
           updatedAt: FieldValue.serverTimestamp(),
           lifecycleStatus: "active",
@@ -4633,8 +4636,12 @@ export const finalizeAuraGalleryRevision = onCall(
           exploreListed: latestAuthorization.exploreListed,
           creatorProfileListed: latestAuthorization.creatorProfileListed,
           guestPublication: latestAuthorization.guestPublication,
-          // Editing a live public Space must not silently remove it from Explore.
-          discoverEligible: latestAuthorization.visibility === "public",
+          // Any content revision invalidates the previous editorial review.
+          // The direct public link remains available while re-review is pending.
+          discoverEligible: discoveryApprovalAfterMutation(
+            latestData.discoverEligible,
+            "content-revision",
+          ),
           revision: baseRevision + 1,
           updatedAt: FieldValue.serverTimestamp(),
           lifecycleStatus: "active",
@@ -4735,6 +4742,7 @@ export const manageAuraGalleryLifecycle = onCall(
         const preTrashExpiry = timestampMilliseconds(data.preTrashExpiresAt) ?? currentExpiry;
         transaction.update(galleryReference, {
           lifecycleStatus: "trashed",
+          discoverEligible: discoveryApprovalAfterMutation(data.discoverEligible, "lifecycle"),
           trashedAt: now,
           purgeAt: recoveryEndsAt,
           // Expiry cleanup must never shorten the explicit Trash recovery
@@ -4766,6 +4774,7 @@ export const manageAuraGalleryLifecycle = onCall(
         }
         transaction.update(galleryReference, {
           lifecycleStatus: "active",
+          discoverEligible: discoveryApprovalAfterMutation(data.discoverEligible, "lifecycle"),
           expiresAt: new Date(restoredExpiry),
           trashedAt: FieldValue.delete(),
           purgeAt: FieldValue.delete(),
@@ -4788,9 +4797,7 @@ export const manageAuraGalleryLifecycle = onCall(
         transaction.update(galleryReference, {
           exploreListed,
           creatorProfileListed,
-          // Also repairs publications created under the former manual-review
-          // gate as soon as their owner saves placement settings.
-          ...(data.visibility === "public" ? { discoverEligible: true } : {}),
+          discoverEligible: discoveryApprovalAfterMutation(data.discoverEligible, "distribution"),
           updatedAt: FieldValue.serverTimestamp(),
         });
         return;
@@ -4798,6 +4805,7 @@ export const manageAuraGalleryLifecycle = onCall(
       if (action === "archive") {
         transaction.update(galleryReference, {
           lifecycleStatus: status === "archived" ? "active" : "archived",
+          discoverEligible: discoveryApprovalAfterMutation(data.discoverEligible, "lifecycle"),
           updatedAt: FieldValue.serverTimestamp(),
         });
       } else if (action === "renew") {
@@ -4805,14 +4813,24 @@ export const manageAuraGalleryLifecycle = onCall(
           throw new HttpsError("failed-precondition", "Guest Spaces cannot be renewed.");
         transaction.update(galleryReference, {
           expiresAt: new Date(Date.now() + 365 * 86_400_000),
+          discoverEligible: discoveryApprovalAfterMutation(data.discoverEligible, "lifecycle"),
           updatedAt: FieldValue.serverTimestamp(),
         });
       } else {
+        if (!supportsGalleryVisibility(data.schemaVersion))
+          throw new HttpsError(
+            "failed-precondition",
+            "Update this legacy Space first if Studio editing is available, or publish a new current-schema Space.",
+          );
         if (typeof visibility !== "string" || !galleryVisibilities.has(visibility))
           throw new HttpsError("invalid-argument", "Invalid Space visibility.");
         transaction.update(galleryReference, {
           visibility,
-          discoverEligible: visibility === "public",
+          // A visibility transition never grants editorial approval. Moving a
+          // Space back to public requires the ordinary operator review.
+          discoverEligible: visibility === data.visibility
+            ? data.discoverEligible === true
+            : discoveryApprovalAfterMutation(data.discoverEligible, "visibility"),
           updatedAt: FieldValue.serverTimestamp(),
         });
       }

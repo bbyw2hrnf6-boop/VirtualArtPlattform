@@ -26,6 +26,23 @@ describe("public Creator directory contract", () => {
     expect(directorySource).toContain('href="/"');
   });
 
+  it("renders editorial previews as non-interactive examples", () => {
+    const previewStart = directorySource.indexOf("{DEMO_CREATORS.map");
+    const previewEnd = directorySource.indexOf("</section>", previewStart);
+
+    expect(previewStart).toBeGreaterThan(-1);
+    expect(previewEnd).toBeGreaterThan(previewStart);
+
+    const previewCards = directorySource.slice(previewStart, previewEnd);
+
+    expect(previewCards).toContain("<article");
+    expect(previewCards).toContain('aria-labelledby={`editorial-preview-${creator.handle}`}');
+    expect(previewCards).toContain("Editorial preview · not a member");
+    expect(previewCards).not.toMatch(/<a(?:\s|>)/);
+    expect(previewCards).not.toContain("creatorCanonicalUrl");
+    expect(previewCards).not.toContain("↗");
+  });
+
   it("keeps search, loading, empty and retry language visible", () => {
     expect(directorySource).toContain('type="search"');
     expect(directorySource).toContain("Loading the public directory…");

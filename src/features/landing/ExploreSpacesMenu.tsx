@@ -192,7 +192,7 @@ export default function ExploreSpacesMenu({ open, onClose, focusSpaceId }: Explo
         )}
 
         <footer className="space-menu__footer">
-          <p>Guest Spaces appear here for up to 7 days. Publish yours without a profile.</p>
+          <p>Eligible guest Spaces can appear here for up to 7 days after review. Publish yours without a profile.</p>
           <a href="/creators">Find Creators <span>→</span></a>
         </footer>
       </div>

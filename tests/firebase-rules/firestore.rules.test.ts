@@ -226,31 +226,65 @@ describe("Firestore authorization matrix", () => {
     }
   });
 
-  it("preserves direct-read compatibility for active schema-v1 and schema-v2 galleries", async () => {
+  it("defaults only missing legacy visibility to public and honors explicit legacy access", async () => {
+    const legacyV1 = gallery("legacy-v1", { schemaVersion: 1 });
+    const legacyV2 = gallery("legacy-v2", { schemaVersion: 2 });
+    const modernMissing = gallery("modern-missing");
+    delete legacyV1.visibility;
+    delete legacyV2.visibility;
+    delete modernMissing.visibility;
     await seedFirestore(environment, [
+      ["galleries/legacy-v1", legacyV1],
+      ["galleries/legacy-v2", legacyV2],
+      ["galleries/legacy-public", gallery("legacy-public", { schemaVersion: 2, visibility: "public" })],
+      ["galleries/legacy-unlisted", gallery("legacy-unlisted", { schemaVersion: 2, visibility: "unlisted" })],
+      ["galleries/legacy-private", gallery("legacy-private", { schemaVersion: 2, visibility: "private" })],
+      ["galleries/modern-missing", modernMissing],
       [
-        "galleries/legacy-v1",
-        gallery("legacy-v1", { schemaVersion: 1, visibility: "private" }),
-      ],
-      [
-        "galleries/legacy-v2",
-        gallery("legacy-v2", { schemaVersion: 2, visibility: "private" }),
+        `galleries/legacy-private/members/${USER_EMAILS.viewer}`,
+        { email: USER_EMAILS.viewer, role: "viewer", status: "active" },
       ],
     ]);
-    const { anonymous } = authContexts(environment);
+    const contexts = authContexts(environment);
 
-    await assertSucceeds(
-      getDoc(doc(anonymous.firestore(), "galleries/legacy-v1")),
+    for (const galleryId of ["legacy-v1", "legacy-v2", "legacy-public", "legacy-unlisted"]) {
+      await assertSucceeds(
+        getDoc(doc(contexts.anonymous.firestore(), `galleries/${galleryId}`)),
+      );
+    }
+    await assertFails(
+      getDoc(doc(contexts.anonymous.firestore(), "galleries/legacy-private")),
     );
     await assertSucceeds(
-      getDoc(doc(anonymous.firestore(), "galleries/legacy-v2")),
+      getDoc(doc(contexts.owner.firestore(), "galleries/legacy-private")),
+    );
+    await assertSucceeds(
+      getDoc(doc(contexts.viewer.firestore(), "galleries/legacy-private")),
+    );
+    await assertFails(
+      getDoc(doc(contexts.anonymous.firestore(), "galleries/modern-missing")),
     );
   });
 
   it("enforces bounded, visibility-constrained gallery queries", async () => {
     await seedFirestore(environment, [
-      ["galleries/listed", gallery("listed")],
+      ["galleries/listed", gallery("listed", { discoverEligible: true })],
       ["galleries/owned", gallery("owned", { visibility: "private" })],
+      ["galleries/legacy-public", gallery("legacy-public", {
+        schemaVersion: 2,
+        visibility: "public",
+        discoverEligible: true,
+      })],
+      ["galleries/legacy-private", gallery("legacy-private", {
+        schemaVersion: 2,
+        visibility: "private",
+        discoverEligible: true,
+      })],
+      ["galleries/legacy-unlisted", gallery("legacy-unlisted", {
+        schemaVersion: 2,
+        visibility: "unlisted",
+        discoverEligible: true,
+      })],
     ]);
     const contexts = authContexts(environment);
     const publicBase = query(
@@ -271,6 +305,30 @@ describe("Firestore authorization matrix", () => {
           where("visibility", "==", "private"),
           where("discoverEligible", "==", true),
           where("lifecycleStatus", "==", "active"),
+          limit(30),
+        ),
+      ),
+    );
+    await assertFails(
+      getDocs(
+        query(
+          collection(contexts.anonymous.firestore(), "galleries"),
+          where("schemaVersion", "in", [1, 2]),
+          where("discoverEligible", "==", true),
+          where("lifecycleStatus", "==", "active"),
+          where("expiresAt", ">", Timestamp.fromMillis(now() + 60_000)),
+          limit(30),
+        ),
+      ),
+    );
+    await assertFails(
+      getDocs(
+        query(
+          collection(contexts.anonymous.firestore(), "galleries"),
+          where("visibility", "==", "unlisted"),
+          where("discoverEligible", "==", true),
+          where("lifecycleStatus", "==", "active"),
+          where("expiresAt", ">", Timestamp.fromMillis(now() + 60_000)),
           limit(30),
         ),
       ),
@@ -722,10 +780,16 @@ describe("Firestore authorization matrix", () => {
   });
 
   it("binds legacy artwork reads to an existing active readable parent and denies writes", async () => {
+    const compatibilityPublic = gallery("legacy-active", { schemaVersion: 1 });
+    delete compatibilityPublic.visibility;
     await seedFirestore(environment, [
-      ["galleries/legacy-active", gallery("legacy-active", { schemaVersion: 1 })],
-      ["galleries/legacy-private", gallery("legacy-private", { schemaVersion: 3, visibility: "private" })],
+      ["galleries/legacy-active", compatibilityPublic],
+      ["galleries/legacy-private", gallery("legacy-private", { schemaVersion: 2, visibility: "private" })],
       ["galleries/legacy-trashed", gallery("legacy-trashed", { schemaVersion: 1, lifecycleStatus: "trashed" })],
+      [
+        `galleries/legacy-private/members/${USER_EMAILS.viewer}`,
+        { email: USER_EMAILS.viewer, role: "viewer", status: "active" },
+      ],
       ["galleryArtworks/active", { expiresAt: future(), galleryId: "legacy-active" }],
       ["galleryArtworks/private", { expiresAt: future(), galleryId: "legacy-private" }],
       ["galleryArtworks/trashed", { expiresAt: future(), galleryId: "legacy-trashed" }],
@@ -745,6 +809,9 @@ describe("Firestore authorization matrix", () => {
     );
     await assertSucceeds(
       getDoc(doc(contexts.owner.firestore(), "galleryArtworks/private")),
+    );
+    await assertSucceeds(
+      getDoc(doc(contexts.viewer.firestore(), "galleryArtworks/private")),
     );
     await assertFails(
       getDoc(doc(contexts.owner.firestore(), "galleryArtworks/trashed")),

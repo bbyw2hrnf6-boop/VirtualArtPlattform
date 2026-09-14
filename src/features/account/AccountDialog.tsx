@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import type { AccountSession } from "../../services/accountTypes";
 import { galleryRepository, type GalleryRecord } from "../../services/galleryRepository";
 import { galleryShareUrl } from "../../services/galleryShareUrl";
-import { isDiscoverEligible } from "../../services/discoverEligibility";
+import { isDiscoverEligible, isPublicSpaceIndexEligible } from "../../services/discoverEligibility";
 import { hashApplicationUrl } from "../../services/spaceRoutes";
 import { visibilityLabel } from "../../services/galleryAccess";
 import type { GalleryInvite } from "../../services/galleryAccess";
@@ -26,6 +26,8 @@ import {
   accountSectionTitle,
   accountSectionUrl,
   accountSignInMethods,
+  isPublicProfileSpace,
+  publicPlacementNote,
   type AccountSection,
 } from "./accountPresentation";
 import "./accountDialog.css";
@@ -189,9 +191,9 @@ function AccountRooms({ session }: { session: AccountSession }) {
         exploreListed: field === "exploreListed" ? value : room.exploreListed,
         creatorProfileListed: field === "creatorProfileListed" ? value : room.creatorProfileListed,
       });
-      setRooms((current) => current.map((item) => item.id === room.id
-        ? { ...item, [field]: value }
-        : item));
+      // Re-read the server-owned review gate as well as both placement fields;
+      // a concurrent content revision may have revoked approval.
+      await loadRooms();
     } catch (caught) {
       console.error("Space placement update failed", caught);
       setError(firebaseActionErrorMessage(
@@ -235,12 +237,8 @@ function AccountRooms({ session }: { session: AccountSession }) {
     (room) => isDiscoverEligible(room, currentTime),
   );
   const hubRooms = activeRooms.filter(
-    (room) => (
-      room.visibility === "public"
-      && room.discoverEligible === true
-      && room.creatorProfileListed
-      && (room.ownerId === session.uid || room.effectiveRole === "owner")
-    ),
+    (room) => room.creatorProfileListed
+      && isPublicProfileSpace(room, session.uid, currentTime),
   );
   const sharedRooms = activeRooms.filter((room) => room.ownerId !== session.uid);
   const filteredRooms = rooms.filter((room) => {
@@ -353,6 +351,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
             const role = room.effectiveRole ?? (room.ownerId === session.uid ? "owner" : "viewer");
             const expired = new Date(room.expiresAt).getTime() <= currentTime;
             const available = room.lifecycleStatus === "active" && !expired;
+            const publicIndexEligible = isPublicSpaceIndexEligible(room, currentTime);
             const workspace = publishedProjectState(
               room,
               linkedDrafts.find((draft) => draft.publication?.id === room.id),
@@ -361,7 +360,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
               {available ? <a href={galleryShareUrl(room.id, window.location.href)}>
                 <span className="account-room-cover">{room.coverSrc && <img src={room.coverSrc} alt="" />}</span>
                 <span className="account-room-copy">
-                  <span className="account-room-badges"><i>{visibilityLabel[room.visibility]}</i><i>{role}</i>{room.visibility === "public" && room.discoverEligible !== true && <i>Public listing unavailable</i>}<i data-state={workspace.state}>{workspace.label}</i></span>
+                  <span className="account-room-badges"><i>{visibilityLabel[room.visibility]}</i><i>{role}</i>{room.visibility === "public" && !publicIndexEligible && <i>Public listing unavailable</i>}<i data-state={workspace.state}>{workspace.label}</i></span>
                   <strong>{room.title}</strong>
                   <small>{workspace.detail} · Live until {new Date(room.expiresAt).toLocaleDateString()}</small>
                 </span>
@@ -428,13 +427,7 @@ function AccountRooms({ session }: { session: AccountSession }) {
                     </label>
                   </fieldset>
                   <small className="account-room-placement__note">
-                    {room.guestPublication
-                      ? "Guest Space: no Creator profile placement. Explore ends 7 days after first publication; updates do not restart that window."
-                      : room.visibility === "public" && room.discoverEligible !== true
-                      ? "Save either placement choice once to restore this older Space to public listings."
-                      : room.visibility === "public"
-                        ? "Choose whether this Space appears in Explore Spaces on the main homepage and/or in your Creator Hub profile. Changes apply automatically."
-                      : "Set visibility to Public before choosing public placement."}
+                    {publicPlacementNote(room, currentTime)}
                   </small>
                   {available && <button type="button" onClick={() => {
                     const shareUrl = galleryShareUrl(room.id, window.location.href);
@@ -962,7 +955,7 @@ export function AccountDialog({
           <>
             <p className="eyebrow">LIEUVA account</p>
             <h2 id="account-dialog-title">Keep control<br /><em>of your Spaces.</em></h2>
-            <p className="account-lead">Publish a public guest Space without signing up: no profile and up to 7 days in Explore. Create an account for live updates, private access and Creator features.</p>
+            <p className="account-lead">Publish a guest Space without signing up: no profile. Request up to 7 days in Explore, if approved. Accounts add updates, private access and Creator features.</p>
             <div className="account-tabs" role="tablist" aria-label="Account action">
               <button role="tab" aria-selected={mode === "create"} onClick={() => setMode("create")}>Create account</button>
               <button role="tab" aria-selected={mode === "signin"} onClick={() => setMode("signin")}>Sign in</button>

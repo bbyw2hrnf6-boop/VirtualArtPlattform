@@ -127,4 +127,28 @@ describe("trusted publication permits", () => {
       now: Number.NaN,
     })).toThrow(/current time/);
   });
+
+  it("authorizes an enriched legacy revision for current-schema replacement", () => {
+    const gallery = {
+      schemaVersion: 2,
+      ownerId: "owner-1",
+      templateId: "white-cube",
+      revision: 1,
+      lifecycleStatus: "active",
+      expiresAt: timestamp(10_000_000),
+      publishedAt: timestamp(1_000),
+      visibility: "private",
+      retention: "account-preview",
+      accessVersion: 1,
+      exploreListed: false,
+      creatorProfileListed: true,
+    };
+    expect(validateRevisionAuthorization({
+      gallery,
+      member: undefined,
+      uid: "owner-1",
+      expectedRevision: 1,
+      now: 50_000,
+    })).toMatchObject({ ownerId: "owner-1", visibility: "private", retention: "account-preview" });
+  });
 });

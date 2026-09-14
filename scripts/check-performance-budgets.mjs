@@ -6,6 +6,7 @@ import {
   PERFORMANCE_RELEASE_CEILINGS,
   PERFORMANCE_TARGETS,
   assertAdminLazyBoundary,
+  assertDeferredStoryLazyBoundary,
   assertPublicEntryLazyBoundary,
   initialAssetReferences,
   performanceBudgetOverages,
@@ -42,6 +43,7 @@ const initialCss = initialAssets(initial.css, 'CSS');
 const initialJsPaths = new Set(initial.js);
 const manifest = JSON.parse(readFileSync(join(root, '.vite/manifest.json'), 'utf8'));
 assertPublicEntryLazyBoundary(manifest);
+assertDeferredStoryLazyBoundary(manifest);
 const adminAssets = assertAdminLazyBoundary(manifest);
 const adminJsGzip = assetByPath.get(adminAssets.js)?.gzip;
 const adminCssGzip = adminAssets.css.reduce((sum, path) => sum + (assetByPath.get(path)?.gzip ?? Number.NaN), 0);

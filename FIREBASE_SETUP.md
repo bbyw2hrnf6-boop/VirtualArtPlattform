@@ -16,7 +16,11 @@ LIEUVA uses Anonymous, Email/Password, and Google Authentication; Firestore for 
 | App Check | Blocks scripts that are not running in the registered LIEUVA app |
 | GitHub Action | Physical cleanup after expiry or the Trash recovery window |
 
-New publications use schema v3. Existing schema-v1/v2 galleries remain public and readable; new rooms do not create legacy `galleryArtworks` documents.
+New publications use schema v3. Existing schema-v1/v2 galleries without a
+`visibility` field retain the historical public direct-link fallback. When a
+legacy record has an explicit `public`, `unlisted` or `private` value, Firestore,
+Storage, server delivery and the client all honor it. New rooms do not create
+legacy `galleryArtworks` documents.
 
 ## 1. Confirm the project
 
@@ -310,37 +314,95 @@ froze old-client publication until Hosting completed; the deployed client now
 writes the required fail-closed state. Already-open pre-WP1 Studio tabs should
 be reloaded before publishing.
 
-### WP1 Space reviewed-content rollout order
+### Space reviewed-content promotion order
 
-For Spaces, `discoverEligible: true` is trusted approval state. Do not deploy Functions that
-trust it while production still has older Firestore rules that let clients
-preserve or introduce that field.
+For Spaces, `discoverEligible: true` is trusted approval state. The current P0
+promotion includes tightened Firestore and Storage reads for explicit legacy
+visibility. Verify the deployed WP1 baseline before replacing it, then verify
+the new rule sources after promotion. Do not deploy the new Functions or Hosting
+while production is on an unknown rule revision: the bootstrap needs a
+publication maintenance window so neither an old client nor an old finalizer can
+re-grant approval between containment and promotion.
 
-1. Back up and set all unreviewed live Space records to `discoverEligible: false`.
-2. Deploy `firestore:indexes` and wait until every new index is **Enabled**.
-3. Deploy Hosting only, so new and reloaded Studio clients always write `false`
-   for creates and revisions.
-4. Deploy the strict `firestore:rules`. Older already-open Studio tabs may then
-   fail a publish once; reloading moves them to the compatible client.
-5. Deploy Functions only after the strict rules are active.
-6. Inspect exact Space revisions with `npm run review:public-content -- --kind spaces ...`, then use
+The current invariant is fail-closed: a new publication, any content revision,
+visibility transition or lifecycle action writes `discoverEligible: false`.
+Changing only `exploreListed` or `creatorProfileListed` preserves an existing
+review decision. Only the guarded operator decision command may grant approval
+for an inspected exact revision.
+
+Schema-v1/v2 galleries without `visibility` remain publicly readable by direct
+link under the Firestore and Storage compatibility contract. An explicit legacy
+`public`, `unlisted` or `private` value is authoritative across rules, server
+delivery and the client: `unlisted` permits direct public reads but not list
+queries, while `private` requires the owner or an active verified member. A
+broad schema-version-only client query is intentionally forbidden because
+Firestore rules are not filters; compatibility-public records need an
+authorized `visibility: "public"` migration before they can re-enter the
+client-side Discover query. The server-owned sitemap and review inventory can
+classify missing visibility safely without weakening data access.
+
+The lifecycle callable refuses visibility changes for schema-v1/v2 records. A
+legacy record that already has valid account ownership, revision,
+`account-preview` retention and access fields can be edited in Studio;
+successful revision finalization replaces it with schema v3. Older records
+without that complete authorization path require a new current-schema
+publication or a separately authorized schema/data migration. Inventory
+explicit legacy visibility values during preflight and do not replace them as
+an SEO cleanup.
+
+1. Verify the active strict WP1 rule baseline and confirm every declared index
+   is **Enabled**. Stop and review any unexplained production drift.
+2. Open a short publication/update maintenance window, pause operator approvals,
+   and take a fresh backup/inventory of all live Space review states. This also
+   prevents the old client from reporting a listing as active while the new
+   Functions already persist the fail-closed gate.
+3. Deploy `firestore.rules` and `storage.rules`, then verify their active source
+   parity and test one missing-visibility legacy public read, one explicit
+   legacy unlisted direct read, and anonymous rejection for an explicit legacy
+   private manifest and media object. Already-open clients may see the retired
+   broad legacy Discover subquery denied; the deployed client tolerates that
+   partial query failure and retains the explicit-public results.
+4. Deploy the fail-closed Functions and wait until every scoped function is
+   **ACTIVE**. With the verified strict rules, neither old clients nor the new
+   finalizers can grant approval.
+5. After the new Functions are **ACTIVE**, keep the maintenance window closed
+   for at least four minutes (longer than the 180-second finalizer timeout) and
+   confirm logs show no remaining requests on the previous revision. Then
+   re-read production, back it up again, and set every retained Space without a
+   valid exact-current review ledger to `discoverEligible: false`, across active,
+   archived, trashed and expired states. Include compatibility-public
+   schema-v1/v2 records without an explicit `visibility` field. Repeat the
+   inventory until two reads are stable. This drain plus final containment pass
+   closes invocations or writes that raced the deployment; the new lifecycle
+   handlers also revoke any stale approval before reactivation or renewal.
+6. Deploy Hosting, require already-open Studio tabs to reload, verify the new
+   review copy, and only then reopen publication and updates.
+7. Inspect exact Space revisions with `npm run review:public-content -- --kind spaces ...`, then use
    `npm run review:public-content:decision -- ...` first as a dry-run and only
    then with its exact execution guard. Never edit the gate directly in Firebase
    Console.
-7. Verify Explore Spaces, the sitemap, one approved Space, and one pending Space.
+8. Verify Explore Spaces, the sitemap, one approved Space, and one pending Space.
 
 The current production GitHub workflow deploys only Hosting and Functions. It
-must not be used for the first WP1 rollout or as proof that repository rules and
-indexes are in parity.
+is not proof that production rules and indexes are in parity, and it does not
+deploy the required tightened P0 rules or perform the post-Functions containment
+pass.
 
 ### Creator profile visibility — current contract (2026-09-06)
 
 Creator profiles do **not** use the reviewed-content approval gate. The owner is
 the only visibility authority: `profilePublic: true` makes the normalized
-profile, profile media, Creator directory entry, Hub identity, follows and
-studio-note actions public immediately; `profilePublic: false` removes those
-public projections immediately. The legacy Creator-profile
+profile, profile media, Hub identity, follows and studio-note actions public
+immediately; `profilePublic: false` removes those public projections
+immediately. A derived, non-persisted QA filter additionally keeps obvious
+test/placeholder profiles out of the public directory, sitemap, structured data
+and search indexing while preserving their direct public URL for review. The
+legacy Creator-profile
 `discoverEligible` field is ignored and is no longer written or queried.
+
+Creator external URLs are self-service UGC. Public links use `ugc nofollow`, and
+the server does not emit them as Schema.org `sameAs` until a future server-owned
+identity-verification contract exists.
 
 The `discoverEligible` workflow documented above remains a **Space discovery
 and moderation** control only. Post reports and operator moderation also remain
@@ -414,7 +476,9 @@ Explore uses the original trusted `publishedAt` plus exactly seven 24-hour days,
 never `updatedAt`. Directory clients filter this deadline and re-evaluate mounted
 cards at expiry/focus/reopen; Firestore public list reads remain possible after
 this deadline because the room intentionally remains public. Bounded pagination
-continues past ended placements (maximum 300 records per modern/legacy query).
+continues past ended placements (maximum 300 explicit-public records). Legacy
+records without `visibility` remain direct-link compatible but require an
+authorized explicit-public migration for client-side Discover placement.
 The separate physical hosting lifetime remains the existing 365-day preview
 (`retention: account-preview`), including its normal `expiresAt` cleanup. No new
 TTL is introduced and legacy `guest-10-days` records are not migrated.

@@ -135,6 +135,27 @@ describe('gallery publication payload', () => {
     expect(parsed.creatorProfileListed).toBe(true);
   });
 
+  it('preserves explicit legacy visibility for client/server SEO parity', () => {
+    const published = new Date('2026-08-12T12:00:00.000Z');
+    const parsed = parseGalleryDocument('legacy-private-room', {
+      ...draft([artwork({
+        src: '',
+        storagePath: 'published/owner_1/legacy-private-room/artworks/1.webp',
+      })]),
+      ownerId: 'owner_1',
+      coverPath: 'published/owner_1/legacy-private-room/cover.webp',
+      publishedAt: Timestamp.fromDate(published),
+      expiresAt: Timestamp.fromDate(new Date('2026-08-22T12:00:00.000Z')),
+      visibility: 'private',
+      retention: 'account-preview',
+      accessVersion: 1,
+      schemaVersion: 2,
+    });
+    expect(parsed.visibility).toBe('private');
+    expect(parsed.retention).toBe('account-preview');
+    expect(parsed.accessVersion).toBe(1);
+  });
+
   it('accepts account-backed schema v3 access settings', () => {
     const published = new Date('2026-08-12T12:00:00.000Z');
     const expires = new Date('2027-08-12T12:00:00.000Z');

@@ -38,10 +38,17 @@ service firebase.storage {
           || firestore.get(/databases/(default)/documents/galleries/$(galleryId)/members/$(request.auth.token.email.lower())).data.status == 'active');
     }
 
+    function isCompatibilityPublicGallery(galleryId) {
+      let data = gallery(galleryId).data;
+      return data.schemaVersion in [1, 2]
+        && !data.keys().hasAny(['visibility']);
+    }
+
     function canReadGallery(galleryId) {
       return galleryOwner(galleryId) || (activeGallery(galleryId) && (
-        gallery(galleryId).data.schemaVersion in [1, 2]
-        || gallery(galleryId).data.visibility in ['public', 'unlisted']
+        isCompatibilityPublicGallery(galleryId)
+        || (gallery(galleryId).data.keys().hasAny(['visibility'])
+          && gallery(galleryId).data.visibility in ['public', 'unlisted'])
         || galleryMember(galleryId)
       ));
     }

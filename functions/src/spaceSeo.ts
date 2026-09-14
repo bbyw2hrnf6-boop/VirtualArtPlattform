@@ -14,19 +14,29 @@ export type PublicSpaceDelivery = {
   coverPath?: string;
 };
 
-const PLACEHOLDER_TITLE = /^(?:untitled|test|demo)(?:\b|[-_\s])/i;
-const PLACEHOLDER_CREATOR = /^(?:your(?:[-_\s]*name|\d)|test(?:\b|[-_\s])|demo(?:\b|[-_\s]))/i;
+function hasKnownQaIdentity(title: string, creator: string): boolean {
+  const normalizedTitle = title.normalize("NFKC");
+  const normalizedCreator = creator.normalize("NFKC");
+  return (
+    /^untitled[-_\s]+(?:space|exhibition)$/i.test(normalizedTitle)
+    && /^your[-_\s]*name(?:[-_\s]*\d+)?$/i.test(normalizedCreator)
+  ) || (
+    /^pavilion[-_\s]+test$/i.test(normalizedTitle)
+    && /^lieuva[-_\s]+sample[-_\s]+collection$/i.test(normalizedCreator)
+  );
+}
 
 function publicSpaceIndexEligibility(
   data: Record<string, unknown>,
   title: string,
   creator: string,
 ): boolean {
-  // Public access and reviewed distribution are deliberately separate. Only a
-  // trusted operator can set this gate to true; missing legacy values therefore
-  // fail closed without breaking direct public links.
+  // Public access and index eligibility are deliberately separate. The stored
+  // discoverEligible flag is the explicit reviewed distribution/safety gate;
+  // missing and false values fail closed. The derived checks below add defense
+  // in depth without changing stored data or breaking direct public links.
   if (data.discoverEligible !== true) return false;
-  if (PLACEHOLDER_TITLE.test(title) || PLACEHOLDER_CREATOR.test(creator)) return false;
+  if (hasKnownQaIdentity(title, creator)) return false;
   if (!Array.isArray(data.artworks)) return false;
   return data.artworks.some((value) => {
     const artwork = recordValue(value);
@@ -59,6 +69,10 @@ export type SpaceDocumentMetadata = {
   twitterCard: "summary_large_image";
   structuredData?: Record<string, unknown>;
 };
+
+export function mediaRobots(indexEligible: boolean): "noindex" | undefined {
+  return indexEligible ? undefined : "noindex";
+}
 
 function recordValue(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -269,7 +283,7 @@ export function renderSpaceDocument(shell: string, delivery: SpaceDelivery): str
     `<meta name="twitter:image" content="${escapeHtml(metadata.ogImage)}">`,
     `<meta name="twitter:image:alt" content="${escapeHtml(metadata.ogImageAlt)}">`,
     ...(metadata.structuredData
-      ? [`<script type="application/ld+json">${JSON.stringify(metadata.structuredData).replaceAll("<", "\\u003c")}</script>`]
+      ? [`<script type="application/ld+json" data-lieuva-page-metadata="${escapeHtml(metadata.canonical)}">${JSON.stringify(metadata.structuredData).replaceAll("<", "\\u003c")}</script>`]
       : []),
   ].join("\n    ");
   return stripRouteMetadata(shell).replace("</head>", `    ${tags}\n  </head>`);

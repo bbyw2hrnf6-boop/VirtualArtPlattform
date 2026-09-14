@@ -80,15 +80,12 @@ export const DEMO_CREATORS: DemoCreator[] = [
   ),
 ];
 
-export function isDemoCreatorHandle(handle: string) {
-  return DEMO_CREATORS.some((creator) => creator.handle === handle.toLowerCase());
-}
-
 export function demoCreatorPayload(handle: string): PublicCreatorPayload | null {
   const creator = DEMO_CREATORS.find((candidate) => candidate.handle === handle.toLowerCase());
   if (!creator) return null;
   return {
     schemaVersion: 1,
+    indexEligible: false,
     profile: {
       handle: creator.handle,
       displayName: creator.displayName,

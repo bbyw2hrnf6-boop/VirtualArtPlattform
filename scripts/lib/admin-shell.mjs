@@ -6,5 +6,5 @@ export function adminShell(html) {
     .replace(/<title>[^<]*<\/title>/, '<title>Admin Console | LIEUVA</title>')
     .replace(/<meta name="robots" content="[^"]*"\s*\/>/, '<meta name="robots" content="noindex,nofollow,noarchive" />')
     .replace(/<link rel="canonical" href="[^"]*"\s*\/>/, '<link rel="canonical" href="https://lieuva.com/admin/overview" />')
-    .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, '');
+    .replace(/<script\s+[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '');
 }

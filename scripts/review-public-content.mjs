@@ -49,7 +49,10 @@ const limit = boundedLimit(flags.limit);
 const client = runtimeOperatorClient();
 
 const query = kind === "spaces"
-  ? { collectionId: "galleries", where: equalityFilter("visibility", "public") }
+  // Legacy schema-v1/v2 records without an explicit visibility field remain
+  // public by compatibility contract, so the review inventory must scan the
+  // collection and let formatPublicContent apply the exact delivery policy.
+  ? { collectionId: "galleries" }
   : {
         collectionId: "posts",
         allDescendants: true,

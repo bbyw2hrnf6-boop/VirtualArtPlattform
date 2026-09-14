@@ -301,13 +301,13 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
   const published = timestampValue(data.publishedAt, recordId, 'publishedAt');
   const expires = timestampValue(data.expiresAt, recordId, 'expiresAt');
   if (expires.getTime() <= published.getTime()) invalid(recordId, 'expiresAt', 'expected expiration after publication');
-  const visibility = schemaVersion === 3
+  const visibility = schemaVersion === 3 || data.visibility !== undefined
     ? enumValue(data.visibility, GALLERY_VISIBILITIES, recordId, 'visibility')
     : 'public';
-  const retention = schemaVersion === 3
+  const retention = schemaVersion === 3 || data.retention !== undefined
     ? enumValue(data.retention, GALLERY_RETENTIONS, recordId, 'retention')
     : 'guest-10-days';
-  const accessVersion = schemaVersion === 3
+  const accessVersion = schemaVersion === 3 || data.accessVersion !== undefined
     ? integerValue(data.accessVersion, recordId, 'accessVersion', 1, 1)
     : 1;
   const revision = data.revision === undefined
@@ -321,7 +321,7 @@ export function parseGalleryDocument(recordId: string, value: unknown): ParsedGa
   const maximumDuration = retention === 'account-preview' ? 367 : 12;
   if (expires.getTime() - updated.getTime() > maximumDuration * 86_400_000)
     invalid(recordId, 'expiresAt', `expected a maximum ${maximumDuration}-day publication window`);
-  if (retention === 'guest-10-days' && visibility !== 'public')
+  if (schemaVersion === 3 && retention === 'guest-10-days' && visibility !== 'public')
     invalid(recordId, 'visibility', 'guest publications must be public');
   const ownerId = optionalString(data.ownerId, recordId, 'ownerId', 128);
   const coverSrc = optionalImageSource(data.coverSrc, recordId, 'coverSrc', MAX_LEGACY_COVER_SOURCE_LENGTH);

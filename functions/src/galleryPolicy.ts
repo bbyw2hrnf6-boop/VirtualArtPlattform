@@ -1,5 +1,27 @@
 export const GALLERY_VISIBILITIES = ["public", "unlisted", "private"] as const;
 export type GalleryVisibility = (typeof GALLERY_VISIBILITIES)[number];
+export type GalleryDiscoveryMutation =
+  | "publication"
+  | "content-revision"
+  | "distribution"
+  | "visibility"
+  | "lifecycle";
+
+/** `discoverEligible` is server-owned editorial approval, not a consequence of
+ * public visibility. Content, visibility and lifecycle changes require another
+ * review; presentation-only placement changes preserve an existing decision. */
+export function discoveryApprovalAfterMutation(
+  current: unknown,
+  mutation: GalleryDiscoveryMutation,
+) {
+  return mutation === "distribution" && current === true;
+}
+
+/** Existing legacy visibility remains authoritative, but only the current
+ * schema supports visibility mutations. Republish before changing that state. */
+export function supportsGalleryVisibility(schemaVersion: unknown) {
+  return schemaVersion === 3;
+}
 
 /** Guest identity is authenticated by Firebase, never by a client payload. */
 export function isGuestPublisher(auth: { token: Record<string, unknown> } | undefined) {

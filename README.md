@@ -97,7 +97,11 @@ The largest implementation files are `src/App.tsx`, `src/features/gallery/Galler
 - Anonymous guest publication uses the same App Check, ownership, decoded-media and transactional permit boundary as account publication, with three new permits per UTC day and three active Spaces per guest identity. Guests need to create/link and verify an account in the same browser for live updates; ordinary sign-in to an existing account does not transfer guest-owned Spaces. Updates, restored rooms and UID-preserving signup never restart the Explore window or add a guest-origin room to a Creator profile.
 - Public, unlisted and private Spaces use the existing `galleries/{galleryId}` identity. Owner/Editor/Viewer access is stored separately.
 - Published media uses immutable owner/revision-scoped Storage paths. Updates preserve the Space ID and share URL.
-- New records use the current schema; schema-v1/v2 records remain readable.
+- `discoverEligible` is a server-owned reviewed-distribution and search-indexing gate. New publications, content revisions, visibility transitions and lifecycle actions fail closed to `false`; placement-only changes preserve an existing decision. Approval uses the guarded public-content review tools, never a client toggle.
+- Public Creator profiles remain owner-controlled, but an additional derived QA filter keeps obvious test/placeholder profiles out of the directory, sitemap and indexing. Self-service external links are treated as unverified UGC and are not asserted as `sameAs` identities.
+- New records use the current schema. Schema-v1/v2 records without a
+  `visibility` field keep their historical public direct-link fallback;
+  explicit legacy `public`, `unlisted` and `private` values are authoritative.
 - The same placement validator must govern click, drag, sliders, curation, restore and publish.
 - Any future remote-AI feature is opt-in and advisory: the user reviews a diff, acceptance is undoable, and deterministic validation remains authoritative.
 - Invalid transforms must fail transactionally: mesh, React state and persisted state may not diverge.

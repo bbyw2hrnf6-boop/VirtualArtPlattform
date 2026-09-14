@@ -63,6 +63,24 @@ export function assertAdminLazyBoundary(manifest) {
   return { js: admin.file, css: admin.css ?? [] };
 }
 
+export function assertDeferredStoryLazyBoundary(manifest) {
+  const storyKey = 'src/features/landing/ScrollGalleryStory.tsx';
+  const immediateKey = 'src/features/landing/ImmediateLandingSections.ts';
+  if (!manifest?.[storyKey]?.isDynamicEntry || !manifest?.[immediateKey]?.isDynamicEntry)
+    throw new Error('Landing sections and the 3D story must remain separate dynamic entries.');
+  const visited = new Set();
+  function visit(key) {
+    if (visited.has(key)) return;
+    visited.add(key);
+    const chunk = manifest[key];
+    if (!chunk) throw new Error(`Missing manifest dependency: ${key}`);
+    if (key === storyKey || /(?:ScrollGalleryStory|GalleryScene)/.test(chunk.file ?? ''))
+      throw new Error('The deferred 3D story entered the immediate landing dependency graph.');
+    for (const dependency of chunk.imports ?? []) visit(dependency);
+  }
+  visit(immediateKey);
+}
+
 function attributes(tag) {
   return Object.fromEntries(
     [...tag.matchAll(/\b([A-Za-z][\w:-]*)\s*=\s*["']([^"']*)["']/g)]

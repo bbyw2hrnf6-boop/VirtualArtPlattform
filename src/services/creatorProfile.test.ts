@@ -1,17 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   creatorNotificationPostAnchor,
   creatorProfileSaveLabel,
   creatorProfileUrl,
+  loadPublicCreatorProfile,
   mergeCreatorHomeViewerState,
   unreadCreatorNotificationCount,
   type CreatorHomePayload,
   type CreatorNotification,
 } from "./creatorProfile";
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe("Creator profile URLs", () => {
   it("uses the canonical clean public route", () => {
     expect(creatorProfileUrl("studio-north")).toBe("https://lieuva.com/creators/studio-north");
+  });
+
+  it("returns not-found for a missing public profile instead of reporting an outage", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 404, ok: false }));
+
+    await expect(loadPublicCreatorProfile("missing-creator")).resolves.toBeNull();
   });
 });
 

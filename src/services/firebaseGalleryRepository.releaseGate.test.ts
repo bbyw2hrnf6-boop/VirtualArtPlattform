@@ -37,6 +37,8 @@ const mock = vi.hoisted(() => {
     failTransaction: false,
     initialFinalizeResponseLosses: 0,
     revisionFinalizeResponseLosses: 0,
+    approveInitialBeforeRecovery: false,
+    approveRevisionBeforeRecovery: false,
     callableFailure: null as Error | null,
     deletedObjects: [] as string[],
     abortedGalleryIds: [] as string[],
@@ -266,6 +268,7 @@ vi.mock("firebase/functions", () => ({
           updatedAt: updatedAt.toDate().toISOString(),
           revision: 1,
           guestPublication: existing.guestPublication,
+          discoverEligible: existing.discoverEligible === true,
         } };
         if (mock.state.initialFinalizeResponseLosses > 0) {
           mock.state.initialFinalizeResponseLosses -= 1;
@@ -293,7 +296,7 @@ vi.mock("firebase/functions", () => ({
         accessVersion: 1,
         ...distribution,
         guestPublication: permit.guestPublication,
-        discoverEligible: permit.visibility === "public",
+        discoverEligible: false,
         revision: 1,
         updatedAt: publishedAt,
         lifecycleStatus: "active",
@@ -301,6 +304,11 @@ vi.mock("firebase/functions", () => ({
       mock.state.publicationPermits.delete(id);
       if (mock.state.initialFinalizeResponseLosses > 0) {
         mock.state.initialFinalizeResponseLosses -= 1;
+        if (mock.state.approveInitialBeforeRecovery) {
+          const committed = mock.state.documents.get(`galleries/${id}`);
+          if (committed) committed.discoverEligible = true;
+          mock.state.approveInitialBeforeRecovery = false;
+        }
         throw firebaseError("functions/unavailable", "response lost after commit");
       }
       return { data: {
@@ -309,6 +317,7 @@ vi.mock("firebase/functions", () => ({
         updatedAt: publishedAt.toDate().toISOString(),
         revision: 1,
         guestPublication: permit.guestPublication,
+        discoverEligible: false,
       } };
     }
     if (name === "abortAuraGalleryPublication") {
@@ -358,6 +367,7 @@ vi.mock("firebase/functions", () => ({
           expiresAt: (current.expiresAt as InstanceType<typeof mock.Timestamp>).toDate().toISOString(),
           updatedAt: (current.updatedAt as InstanceType<typeof mock.Timestamp>).toDate().toISOString(),
           revision: Number(expectedRevision) + 1,
+          discoverEligible: current.discoverEligible === true,
         } };
         if (mock.state.revisionFinalizeResponseLosses > 0) {
           mock.state.revisionFinalizeResponseLosses -= 1;
@@ -382,7 +392,7 @@ vi.mock("firebase/functions", () => ({
         exploreListed: current.exploreListed,
         creatorProfileListed: current.creatorProfileListed,
         guestPublication: current.guestPublication,
-        discoverEligible: current.visibility === "public",
+        discoverEligible: false,
         revision: Number(expectedRevision) + 1,
         updatedAt,
         lifecycleStatus: "active",
@@ -390,6 +400,11 @@ vi.mock("firebase/functions", () => ({
       mock.state.revisionPermits.delete(`${id}:${revision}`);
       if (mock.state.revisionFinalizeResponseLosses > 0) {
         mock.state.revisionFinalizeResponseLosses -= 1;
+        if (mock.state.approveRevisionBeforeRecovery) {
+          const committed = mock.state.documents.get(`galleries/${id}`);
+          if (committed) committed.discoverEligible = true;
+          mock.state.approveRevisionBeforeRecovery = false;
+        }
         throw firebaseError("functions/unavailable", "response lost after commit");
       }
       return { data: {
@@ -397,6 +412,7 @@ vi.mock("firebase/functions", () => ({
         expiresAt: (current.expiresAt as InstanceType<typeof mock.Timestamp>).toDate().toISOString(),
         updatedAt: updatedAt.toDate().toISOString(),
         revision: Number(expectedRevision) + 1,
+        discoverEligible: false,
       } };
     }
     if (name === "abortAuraGalleryRevision") {
@@ -446,13 +462,16 @@ vi.mock("firebase/functions", () => ({
       const current = mock.state.documents.get(path)!;
       mock.state.documents.set(path,
         action === "visibility"
-          ? { ...current, visibility, discoverEligible: visibility === "public" }
+          ? {
+              ...current,
+              visibility,
+              discoverEligible: visibility === current.visibility && current.discoverEligible === true,
+            }
           : action === "distribution"
             ? {
                 ...current,
                 exploreListed,
                 creatorProfileListed,
-                ...(current.visibility === "public" ? { discoverEligible: true } : {}),
               }
             : current,
       );
@@ -473,6 +492,7 @@ vi.mock("./firebase", () => ({
   FIREBASE_PROJECT_ID: "release-gate-test",
 }));
 
+import { getDocs } from "firebase/firestore";
 import { getBlob } from "firebase/storage";
 import { FirebaseGalleryRepository } from "./firebaseGalleryRepository";
 import { GalleryAccessDeniedError } from "./galleryRepository";
@@ -566,6 +586,8 @@ beforeEach(() => {
   mock.state.failTransaction = false;
   mock.state.initialFinalizeResponseLosses = 0;
   mock.state.revisionFinalizeResponseLosses = 0;
+  mock.state.approveInitialBeforeRecovery = false;
+  mock.state.approveRevisionBeforeRecovery = false;
   mock.state.callableFailure = null;
   mock.state.deletedObjects = [];
   mock.state.abortedGalleryIds = [];
@@ -598,8 +620,17 @@ describe("publish → visit → edit → update release gate", () => {
     mock.state.initialFinalizeResponseLosses = 2;
     const repository = new FirebaseGalleryRepository();
     const published = await repository.publish(draft(), media.webp, { visibility: "public", creatorProfileListed: true });
-    expect(published).toMatchObject({ guestPublication: true, visibility: "public", creatorProfileListed: false });
+    expect(published).toMatchObject({
+      guestPublication: true,
+      visibility: "public",
+      creatorProfileListed: false,
+      discoverEligible: false,
+    });
     expect([...mock.state.documents.keys()].every((path) => path.startsWith("galleries/"))).toBe(true);
+    mock.state.documents.set(`galleries/${published.id}`, {
+      ...mock.state.documents.get(`galleries/${published.id}`),
+      discoverEligible: true,
+    });
     const deadline = new Date(published.publishedAt).getTime() + 7 * 86_400_000;
     vi.setSystemTime(deadline - 1);
     expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
@@ -646,7 +677,10 @@ describe("publish → visit → edit → update release gate", () => {
   it("continues past a page of ended guest placements to find current Spaces", async () => {
     const repository = new FirebaseGalleryRepository();
     const published = await repository.publish(draft(), media.webp);
-    const data = mock.state.documents.get(`galleries/${published.id}`)!;
+    const data = {
+      ...mock.state.documents.get(`galleries/${published.id}`)!,
+      discoverEligible: true,
+    };
     mock.state.documents.clear();
     for (let index = 0; index < 35; index += 1) {
       mock.state.documents.set(`galleries/old-guest-${index}`, {
@@ -658,6 +692,30 @@ describe("publish → visit → edit → update release gate", () => {
     expect((await repository.discover()).map((record) => record.id)).toEqual([published.id]);
   });
 
+  it("never issues the broad legacy Discover query that can match explicit private records", async () => {
+    mock.state.currentUser = null;
+    mock.state.documents.set("galleries/legacy-private", {
+      schemaVersion: 2,
+      visibility: "private",
+      discoverEligible: true,
+      lifecycleStatus: "active",
+      expiresAt: mock.Timestamp.fromDate(new Date("2027-08-23T10:00:00.000Z")),
+    });
+    vi.mocked(getDocs).mockClear();
+
+    expect(await new FirebaseGalleryRepository().discover()).toEqual([]);
+
+    const queries = vi.mocked(getDocs).mock.calls.map(([input]) => input as unknown as MockQuery);
+    expect(queries).toHaveLength(1);
+    expect(queries[0].clauses).toContainEqual({
+      kind: "where",
+      field: "visibility",
+      op: "==",
+      value: "public",
+    });
+    expect(queries[0].clauses.some((clause) => clause.field === "schemaVersion")).toBe(false);
+  });
+
   it("publishes and hydrates public JPG, PNG, and WebP media", async () => {
     const repository = new FirebaseGalleryRepository();
     const published = await repository.publish(draft(), media.webp, { visibility: "public" });
@@ -665,7 +723,7 @@ describe("publish → visit → edit → update release gate", () => {
       visibility: "public",
       exploreListed: true,
       creatorProfileListed: false,
-      discoverEligible: true,
+      discoverEligible: false,
       revision: 1,
       accessVersion: 1,
     });
@@ -675,6 +733,10 @@ describe("publish → visit → edit → update release gate", () => {
     mock.state.currentUser = null;
     const visited = await repository.find(published.id);
     expect(visited?.artworks.every((artwork) => artwork.src.startsWith("blob:"))).toBe(true);
+    mock.state.documents.set(`galleries/${published.id}`, {
+      ...mock.state.documents.get(`galleries/${published.id}`),
+      discoverEligible: true,
+    });
     expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
   });
 
@@ -705,10 +767,6 @@ describe("publish → visit → edit → update release gate", () => {
     expect(published).toMatchObject({
       exploreListed: false,
       creatorProfileListed: true,
-      discoverEligible: true,
-    });
-    mock.state.documents.set(`galleries/${published.id}`, {
-      ...mock.state.documents.get(`galleries/${published.id}`),
       discoverEligible: false,
     });
     expect((await repository.discover()).map((record) => record.id)).not.toContain(published.id);
@@ -721,9 +779,51 @@ describe("publish → visit → edit → update release gate", () => {
     expect(replaced).toMatchObject({
       exploreListed: true,
       creatorProfileListed: false,
+      discoverEligible: false,
+    });
+    expect((await repository.discover()).map((record) => record.id)).not.toContain(published.id);
+
+    mock.state.documents.set(`galleries/${published.id}`, {
+      ...mock.state.documents.get(`galleries/${published.id}`),
+      discoverEligible: true,
+    });
+    await repository.updateDistribution(published.id, {
+      exploreListed: true,
+      creatorProfileListed: true,
+    });
+    expect(await repository.findManifest(published.id)).toMatchObject({
+      exploreListed: true,
+      creatorProfileListed: true,
       discoverEligible: true,
     });
     expect((await repository.discover()).map((record) => record.id)).toContain(published.id);
+  });
+
+  it("requires a fresh review after every visibility transition", async () => {
+    const repository = new FirebaseGalleryRepository();
+    const published = await repository.publish(draft(), media.webp, { visibility: "public" });
+    mock.state.documents.set(`galleries/${published.id}`, {
+      ...mock.state.documents.get(`galleries/${published.id}`),
+      discoverEligible: true,
+    });
+
+    await repository.updateLifecycle(published.id, "visibility", "public");
+    expect(await repository.findManifest(published.id)).toMatchObject({
+      visibility: "public",
+      discoverEligible: true,
+    });
+
+    await repository.updateLifecycle(published.id, "visibility", "unlisted");
+    expect(await repository.findManifest(published.id)).toMatchObject({
+      visibility: "unlisted",
+      discoverEligible: false,
+    });
+
+    await repository.updateLifecycle(published.id, "visibility", "public");
+    expect(await repository.findManifest(published.id)).toMatchObject({
+      visibility: "public",
+      discoverEligible: false,
+    });
   });
 
   it("keeps unlisted rooms direct-link accessible but out of Discover", async () => {
@@ -807,7 +907,7 @@ describe("publish → visit → edit → update release gate", () => {
     expect(live).toMatchObject({ id: published.id, revision: 2, title: "Current live" });
     expect([...pathsAfterSuccess].every((path) => mock.state.objects.has(path))).toBe(true);
     expect(updated.id).toBe(published.id);
-    expect(updated.discoverEligible).toBe(true);
+    expect(updated.discoverEligible).toBe(false);
   });
 
   it("supports invite, editor update, revoke, and denied access after revoke", async () => {
@@ -877,6 +977,17 @@ describe("publish → visit → edit → update release gate", () => {
     expect(mock.state.abortedGalleryIds).toEqual([]);
   });
 
+  it("preserves approval granted to a committed publication before replay recovery", async () => {
+    const repository = new FirebaseGalleryRepository();
+    mock.state.initialFinalizeResponseLosses = 1;
+    mock.state.approveInitialBeforeRecovery = true;
+
+    const published = await repository.publish(draft(), media.webp, { visibility: "public" });
+
+    expect(published.discoverEligible).toBe(true);
+    expect(mock.state.documents.get(`galleries/${published.id}`)?.discoverEligible).toBe(true);
+  });
+
   it("replays an exact server-owned asset upload when its response is lost", async () => {
     const repository = new FirebaseGalleryRepository();
     mock.state.assetUploadResponseLosses = 1;
@@ -923,6 +1034,22 @@ describe("publish → visit → edit → update release gate", () => {
     expect(updated).toMatchObject({ id: published.id, revision: 2, title: "Recovered update" });
     expect(mock.state.documents.get(`galleries/${published.id}`)?.revision).toBe(2);
     expect(mock.state.abortedRevisions).toEqual([]);
+  });
+
+  it("preserves approval granted to a committed revision before replay recovery", async () => {
+    const repository = new FirebaseGalleryRepository();
+    const published = await repository.publish(draft(), media.webp, { visibility: "public" });
+    mock.state.revisionFinalizeResponseLosses = 1;
+    mock.state.approveRevisionBeforeRecovery = true;
+
+    const updated = await repository.updatePublished(
+      target(published),
+      draft("Reviewed recovered update"),
+      media.webp,
+    );
+
+    expect(updated.discoverEligible).toBe(true);
+    expect(mock.state.documents.get(`galleries/${published.id}`)?.discoverEligible).toBe(true);
   });
 
   it("returns actionable App Check/callable errors without leaving published state", async () => {

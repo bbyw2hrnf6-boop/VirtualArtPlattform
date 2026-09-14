@@ -13,6 +13,7 @@ import {
   SPACE_CARD_FALLBACK,
   cacheControlForSpace,
   classifySpaceForDelivery,
+  mediaRobots,
   metadataForSpace,
   renderPublicSitemap,
   renderSpaceDocument,
@@ -21,7 +22,9 @@ import {
 } from "./spaceSeo.js";
 import {
   classifyCreatorDocumentRoute,
+  creatorAttributionMatchesCredit,
   creatorCanonicalUrl,
+  isCreatorProfileIndexEligible,
   isCreatorProfileSpaceListed,
   isPublicCreatorProfile,
   normalizeCreatorHandle,
@@ -174,7 +177,13 @@ export async function creatorDeliveryForHandle(handleValue: unknown): Promise<Cr
 
 function publicCreatorPayload(delivery: CreatorDelivery) {
   if (delivery.kind !== "public") return undefined;
-  return { schemaVersion: 1, profile: delivery.profile, spaces: delivery.spaces, posts: delivery.posts };
+  return {
+    schemaVersion: 1,
+    indexEligible: isCreatorProfileIndexEligible(delivery.profile),
+    profile: delivery.profile,
+    spaces: delivery.spaces,
+    posts: delivery.posts,
+  };
 }
 
 async function publicDeliveryManifest(spaceId: string) {
@@ -279,7 +288,9 @@ export const creatorDocument = onRequest(
         ? "public, max-age=0, s-maxage=60, must-revalidate"
         : "private, no-store, max-age=0");
       response.set("X-Robots-Tag", delivery.kind === "public"
-        ? "index,follow,max-image-preview:large"
+        ? isCreatorProfileIndexEligible(delivery.profile)
+          ? "index,follow,max-image-preview:large"
+          : "noindex,follow,noarchive"
         : "noindex,nofollow,noarchive");
       response.status(delivery.kind === "public" ? 200 : 404)
         .send(renderCreatorDocument(generatedAppShell(), delivery));
@@ -300,6 +311,7 @@ export const creatorProfileData = onRequest(
   async (request, response) => {
     response.set("Content-Type", "application/json; charset=utf-8");
     response.set("X-Content-Type-Options", "nosniff");
+    response.set("X-Robots-Tag", "noindex,nofollow");
     if (request.method !== "GET" && request.method !== "HEAD") {
       response.set("Allow", "GET, HEAD");
       response.status(405).json({ error: "method-not-allowed" });
@@ -330,6 +342,7 @@ export const creatorDirectoryData = onRequest(
   async (request, response) => {
     response.set("Content-Type", "application/json; charset=utf-8");
     response.set("X-Content-Type-Options", "nosniff");
+    response.set("X-Robots-Tag", "noindex,nofollow");
     if (request.method !== "GET" && request.method !== "HEAD") {
       response.set("Allow", "GET, HEAD");
       response.status(405).json({ error: "method-not-allowed" });
@@ -363,6 +376,7 @@ export const creatorImage = onRequest(
   async (request, response) => {
     response.set("X-Content-Type-Options", "nosniff");
     if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("X-Robots-Tag", "noindex");
       response.set("Allow", "GET, HEAD");
       response.status(405).send("Method not allowed");
       return;
@@ -376,11 +390,14 @@ export const creatorImage = onRequest(
       if (typeof creatorId !== "string") throw new Error("not-found");
       const profile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
       if (!isPublicCreatorProfile(profile) || !profile.imagePresent) throw new Error("not-found");
+      const robots = mediaRobots(isCreatorProfileIndexEligible(profile));
+      if (robots) response.set("X-Robots-Tag", robots);
       const [bytes] = await getStorage().bucket().file(`creator-public/${creatorId}/avatar.webp`).download();
       response.set("Content-Type", "image/webp");
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
       response.status(200).send(request.method === "HEAD" ? undefined : bytes);
     } catch {
+      response.set("X-Robots-Tag", "noindex");
       response.set("Cache-Control", "private, no-store");
       response.status(404).send("Not found");
     }
@@ -393,6 +410,7 @@ export const creatorCover = onRequest(
   async (request, response) => {
     response.set("X-Content-Type-Options", "nosniff");
     if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("X-Robots-Tag", "noindex");
       response.set("Allow", "GET, HEAD");
       response.status(405).send("Method not allowed");
       return;
@@ -406,11 +424,14 @@ export const creatorCover = onRequest(
       if (typeof creatorId !== "string") throw new Error("not-found");
       const profile = parseCreatorProfileInput((await db.collection("creatorProfiles").doc(creatorId).get()).data());
       if (!isPublicCreatorProfile(profile) || !profile.coverPresent) throw new Error("not-found");
+      const robots = mediaRobots(isCreatorProfileIndexEligible(profile));
+      if (robots) response.set("X-Robots-Tag", robots);
       const [bytes] = await getStorage().bucket().file(`creator-public/${creatorId}/cover.webp`).download();
       response.set("Content-Type", "image/webp");
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
       response.status(200).send(request.method === "HEAD" ? undefined : bytes);
     } catch {
+      response.set("X-Robots-Tag", "noindex");
       response.set("Cache-Control", "private, no-store");
       response.status(404).send("Not found");
     }
@@ -424,6 +445,7 @@ export const creatorAttribution = onRequest(
   async (request, response) => {
     response.set("Content-Type", "application/json; charset=utf-8");
     response.set("X-Content-Type-Options", "nosniff");
+    response.set("X-Robots-Tag", "noindex,nofollow");
     const spaceId = requestRouteValue(request.path, "creator-attributions", ".json");
     if ((request.method !== "GET" && request.method !== "HEAD") || !spaceId) {
       response.status(request.method === "GET" || request.method === "HEAD" ? 404 : 405).json({ error: "not-found" });
@@ -441,6 +463,8 @@ export const creatorAttribution = onRequest(
       const profileSnapshot = await db.collection("creatorProfiles").doc(creatorId).get();
       const profile = parseCreatorProfileInput(profileSnapshot.data());
       if (!isPublicCreatorProfile(profile)) throw new Error("private-creator");
+      if (!creatorAttributionMatchesCredit(profile.displayName, delivery.creator))
+        throw new Error("creator-credit-mismatch");
       response.set("Cache-Control", "public, max-age=0, s-maxage=60, must-revalidate");
       response.status(200).json({
         schemaVersion: 1,
@@ -462,12 +486,14 @@ export const spaceCard = onRequest(
     const startedAt = Date.now();
     response.set("X-Content-Type-Options", "nosniff");
     if (request.method !== "GET" && request.method !== "HEAD") {
+      response.set("X-Robots-Tag", "noindex");
       response.set("Allow", "GET, HEAD");
       response.status(405).send("Method not allowed");
       return;
     }
     const spaceId = requestSpaceId(request.path, "space-cards");
     if (!spaceId) {
+      response.set("X-Robots-Tag", "noindex");
       response.set("Cache-Control", "private, no-store, max-age=0");
       response.status(404).send("Not found");
       return;
@@ -475,11 +501,14 @@ export const spaceCard = onRequest(
     try {
       const delivery = classifySpaceForDelivery(spaceId, await publicDeliveryManifest(spaceId));
       if (delivery.kind !== "public") {
+        response.set("X-Robots-Tag", "noindex");
         response.set("Cache-Control", "private, no-store, max-age=0");
         response.status(404).send("Not found");
         logOperation("space_card", "rejected", startedAt, { resourceRef: safeResourceRef(spaceId), delivery: delivery.kind });
         return;
       }
+      const robots = mediaRobots(delivery.indexEligible);
+      if (robots) response.set("X-Robots-Tag", robots);
       if (!delivery.coverPath) {
         response.set("Cache-Control", "public, max-age=60, s-maxage=60, must-revalidate");
         response.redirect(302, SPACE_CARD_FALLBACK);
@@ -499,6 +528,7 @@ export const spaceCard = onRequest(
       response.status(200).send(image);
       logOperation("space_card", "success", startedAt, { resourceRef: safeResourceRef(spaceId), delivery: "public" });
     } catch (error) {
+      response.set("X-Robots-Tag", "noindex");
       response.set("Cache-Control", "private, no-store, max-age=0");
       response.status(404).send("Not found");
       logOperation("space_card", "failure", startedAt, { resourceRef: safeResourceRef(spaceId), errorClass: classifyServerError(error) });
@@ -548,7 +578,7 @@ export const spaceSitemap = onRequest(
         .get();
       const creators = creatorProfiles.docs.flatMap((document) => {
         const profile = parseCreatorProfileInput(document.data());
-        if (!isPublicCreatorProfile(profile)) return [];
+        if (!isCreatorProfileIndexEligible(profile)) return [];
         const updated = timestampMilliseconds(document.data().updatedAt);
         return [{
           handle: profile.handle,

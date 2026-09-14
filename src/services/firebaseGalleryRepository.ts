@@ -123,6 +123,7 @@ type TrustedGalleryFinalization = {
   updatedAt: string;
   revision: number;
   guestPublication?: boolean;
+  discoverEligible: boolean;
 };
 
 const AMBIGUOUS_FINALIZATION_ERRORS = new Set([
@@ -189,6 +190,7 @@ function trustedFinalization(
     updatedAt: updatedAt.toISOString(),
     revision: value.revision,
     guestPublication: value.guestPublication === true,
+    discoverEligible: value.discoverEligible === true,
   };
 }
 
@@ -566,6 +568,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
             updatedAt: committed.updatedAt,
             revision: committed.revision,
             guestPublication: committed.guestPublication,
+            discoverEligible: committed.discoverEligible === true,
           };
         },
       );
@@ -586,7 +589,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         accessVersion: 1,
         exploreListed,
         creatorProfileListed,
-        discoverEligible: visibility === "public",
+        discoverEligible: publication.discoverEligible,
         revision: publication.revision,
         updatedAt: publication.updatedAt,
         lifecycleStatus: "active",
@@ -735,6 +738,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
             updatedAt: committed.updatedAt,
             revision: committed.revision,
             guestPublication: committed.guestPublication,
+            discoverEligible: committed.discoverEligible === true,
           };
         },
       );
@@ -753,7 +757,7 @@ export class FirebaseGalleryRepository implements GalleryRepository {
         accessVersion: current.accessVersion,
         exploreListed: current.exploreListed,
         creatorProfileListed: current.creatorProfileListed,
-        discoverEligible: current.visibility === "public",
+        discoverEligible: publication.discoverEligible,
         revision: publication.revision,
         updatedAt: publication.updatedAt,
         effectiveRole: role,
@@ -857,15 +861,6 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       orderBy("expiresAt", "desc"),
       limit(30),
     );
-    const legacyActive = query(
-      collection(firebaseDb, "galleries"),
-      where("schemaVersion", "in", [1, 2]),
-      where("discoverEligible", "==", true),
-      where("lifecycleStatus", "==", "active"),
-      where("expiresAt", ">", safelyActiveAt),
-      orderBy("expiresAt", "desc"),
-      limit(30),
-    );
     // Expired guest placements must not consume the entire first page. Keep
     // directory reads bounded, but continue past hidden/expired placements.
     const eligiblePages = async (base: Query<DocumentData>) => {
@@ -884,24 +879,15 @@ export class FirebaseGalleryRepository implements GalleryRepository {
       }
       return { docs };
     };
-    const snapshotResults = await Promise.allSettled([
-      eligiblePages(publicActive),
-      eligiblePages(legacyActive),
-    ]);
-    const snapshots = snapshotResults.flatMap((result) => {
-      if (result.status === "fulfilled") return [result.value];
-      console.warn("One Discover query was unavailable.", result.reason);
-      return [];
-    });
-    if (!snapshots.length) {
-      const failure = snapshotResults.find(
-        (result): result is PromiseRejectedResult => result.status === "rejected",
-      );
-      throw failure?.reason ?? new Error("Discover is unavailable.");
-    }
+    // Firestore rules are not filters. A schema-version-only legacy query can
+    // also match records with an explicit private or unlisted visibility, so it
+    // cannot be exposed to anonymous clients. Missing-visibility v1/v2 records
+    // remain compatible by direct link; an authorized migration can materialize
+    // `visibility: "public"` before restoring optional client-side placement.
+    const snapshot = await eligiblePages(publicActive);
     const items = Array.from(
       new Map(
-        snapshots.flatMap((snapshot) => snapshot.docs).map((item) => [item.id, item]),
+        snapshot.docs.map((item) => [item.id, item]),
       ).values(),
     );
     const records: GalleryRecord[] = [];

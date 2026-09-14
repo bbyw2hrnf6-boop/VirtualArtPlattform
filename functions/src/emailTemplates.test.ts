@@ -45,7 +45,7 @@ describe("LIEUVA email templates", () => {
       unsubscribeUrl: "https://aura.example/unsubscribe/token",
     });
     expect(mail.text).toContain("PLANNED, NOT ACTIVE YET");
-    expect(mail.text).toContain("without a public profile, for up to seven days in Explore");
+    expect(mail.text).toContain("request up to seven days in Explore; placement starts only after quality/safety review");
     expect(mail.text).not.toContain("Publishing uses a verified account");
     expect(mail.html).toContain("Manage subscription");
     expect(mail.html).not.toContain("Unsubscribe in one click");

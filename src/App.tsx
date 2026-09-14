@@ -149,11 +149,15 @@ const ScrollGalleryStory = lazy(() =>
   })),
 );
 const PitchSections = lazy(() =>
-  import("./features/landing/PitchSections").then((module) => ({
+  import("./features/landing/ImmediateLandingSections").then((module) => ({
     default: module.PitchSections,
   })),
 );
-const ExploreSpacesMenu = lazy(() => import("./features/landing/ExploreSpacesMenu"));
+const ExploreSpacesMenu = lazy(() =>
+  import("./features/landing/ImmediateLandingSections").then((module) => ({
+    default: module.ExploreSpacesMenu,
+  })),
+);
 const AuthActionPage = lazy(() => import("./features/account/AuthActionPage"));
 const CreatorHubPage = lazy(() => import("./features/creator/CreatorHubPage"));
 const AdminConsole = lazy(() => import("./features/admin/AdminConsole"));
@@ -587,7 +591,7 @@ function MvpDataNotice() {
             compressed artwork and covers are stored in Firebase Storage.
             You can publish a public Space as a guest using a browser-bound
             Firebase anonymous identity. No public profile is created. Guest
-            Spaces can appear in Explore for seven days from first publication;
+            Spaces may request seven days in Explore, subject to review;
             the direct link remains available until the displayed hosting expiry
             (currently a 365-day preview). Create and verify an account in the same
             browser to keep control before signing out or clearing site data.
@@ -1859,6 +1863,9 @@ function Studio({
       month: "long",
       year: "numeric",
     }).format(new Date(published.expiresAt));
+    const listingStatus = published.discoverEligible === true
+      ? "approved"
+      : "pending quality/safety review";
     const coverSrc = publishCover ?? published.coverSrc;
     return (
       <main className="publish-success">
@@ -1875,16 +1882,17 @@ function Studio({
               <em>{wasUpdate ? "now live." : "ready to share."}</em>
             </h1>
             <p>
-              {published.guestPublication
-                ? `Published as a guest, without a public profile. ${published.exploreListed
-                  ? `Explore deadline: ${new Date(guestExploreDeadline(published.publishedAt)).toLocaleString()}. ` : "Not listed in Explore. "}Your direct link stays live until ${expiry}.`
-                : published.visibility === "public" && published.exploreListed
-                ? `Your Space is shown in Explore Spaces and live until ${expiry}.`
-                : published.visibility === "public"
-                  ? `Your Space is public by direct link and live until ${expiry}.`
+              {published.visibility === "private"
+                ? `Owner and invited accounts only. Live until ${expiry}.`
                 : published.visibility === "unlisted"
-                  ? `Only people with this link can find the Space. It is live until ${expiry}.`
-                  : `Only the owner and invited accounts can enter. It is live until ${expiry}.`}
+                  ? `Direct link only. Live until ${expiry}.`
+                  : published.guestPublication
+                    ? `Guest Space; no profile. ${published.exploreListed
+                      ? `Explore ${listingStatus}; eligible until ${new Date(guestExploreDeadline(published.publishedAt)).toLocaleString()}.`
+                      : "Explore not requested."} Link live until ${expiry}.`
+                    : published.exploreListed || published.creatorProfileListed
+                      ? `Link live until ${expiry}. Listings ${listingStatus}.`
+                      : `Public link live until ${expiry}; no listings requested.`}
             </p>
             <p className="publish-success__identity">{published.title}<small>by {published.artist} · {roomTemplate.name}</small></p>
             <SpaceShareMenu
@@ -2049,7 +2057,11 @@ function Studio({
             ref={publishButton}
             className="publish-button"
             onClick={openPublishReview}
-            disabled={publishing || uploading || curating}
+            disabled={
+              publishing
+              || uploading
+              || curating
+            }
           >
             {publishStatus === "preparing"
               ? "Preparing…"
@@ -2993,6 +3005,9 @@ function PublishReviewDialog({
   const warnings = issues.filter(
     (issue) => issue.severity === "warning",
   ).length;
+  const publicReviewCopy = editing?.visibility === "public"
+    ? "This update requires a new review for search and listings."
+    : "";
   return (
     <div className="editor-modal-backdrop">
       <section
@@ -3040,8 +3055,8 @@ function PublishReviewDialog({
           <p>
             <strong>Space preview image</strong>Captured from this Studio view.
             {guestEligible || editing?.guestPublication
-              ? " Used for Explore Spaces and direct-link previews. Guest Spaces have no Creator profile."
-              : " Used for Explore Spaces, your Creator Hub profile and direct-link previews according to your placement choices."}
+              ? " Direct-link preview and, if approved, Explore. No Creator profile."
+              : " Direct-link preview and, if approved, requested listings."}
           </p>
         </div>
         {issues.length > 0 && (
@@ -3065,7 +3080,7 @@ function PublishReviewDialog({
             <span aria-hidden="true">7</span>
             <div>
               <strong>Publish as a guest. No signup needed.</strong>
-              <p>No profile. Up to 7 days in Explore from your first publication. Your link stays live during the 365-day hosting preview.</p>
+              <p>No profile. Request up to 7 days in Explore; listing starts only if approved. The link stays live during the 365-day hosting preview.</p>
               <p>Create an account in this browser to keep control and make updates. Signing into an existing account does not transfer this Space.</p>
               <button type="button" className="text-link" onClick={onOpenAccount}>Create an account instead →</button>
             </div>
@@ -3081,7 +3096,10 @@ function PublishReviewDialog({
         ) : editing ? (
           <div className="publish-edit-target">
             <strong>Same Space. Same share URL.</strong>
-            <span>{visibilityLabel[editing.visibility]} · Revision {editing.revision + 1} · Visibility, placement and expiry stay unchanged.</span>
+            <span>
+              {visibilityLabel[editing.visibility]} · Revision {editing.revision + 1} · Visibility, placements and expiry stay unchanged.
+              {publicReviewCopy ? ` ${publicReviewCopy}` : ""}
+            </span>
           </div>
         ) : <fieldset className="publish-visibility">
           <legend>Visibility and duration</legend>
@@ -3119,8 +3137,8 @@ function PublishReviewDialog({
                 onChange={(event) => onExploreListedChange(event.target.checked)}
               />
               <span>
-                <strong>Show in Explore Spaces (Main homepage)</strong>
-                {guestEligible ? "Visible for up to 7 days from first publication. Quality and safety checks still apply." : "Shows this public Space in the homepage Explore menu."}
+                <strong>Request Explore placement</strong>
+                {guestEligible ? "Up to 7 days from first publication, if approved." : "Homepage Explore request; visible only if approved."}
               </span>
             </label>
             {!guestEligible && <label>
@@ -3130,15 +3148,15 @@ function PublishReviewDialog({
                 onChange={(event) => onCreatorProfileListedChange(event.target.checked)}
               />
               <span>
-                <strong>Show in Creator Hub</strong>
-                Shows this public Space on your Creator Hub profile and in follower surfaces.
+                <strong>Request Creator Hub placement</strong>
+                Creator profile and follower request; visible only if approved.
               </span>
             </label>}
             {!guestEligible && visibility !== "public" && (
               <small>Placement becomes available when visibility is Public.</small>
             )}
             {visibility === "public" && (
-              <small>Your placement choices take effect automatically when publishing succeeds.</small>
+              <small>Placement choices save with publication; listings start only if approved.</small>
             )}
           </fieldset>
         )}
@@ -3151,7 +3169,10 @@ function PublishReviewDialog({
           <button
             className="publish-button"
             onClick={accountEligible || guestEligible ? onPublish : onOpenAccount}
-            disabled={publishing || ((accountEligible || guestEligible) && blockers > 0)}
+            disabled={
+              publishing
+              || ((accountEligible || guestEligible) && blockers > 0)
+            }
           >
             {publishStatus === "preparing"
               ? "Preparing Space preview image…"
@@ -3159,10 +3180,10 @@ function PublishReviewDialog({
                 ? "Publishing…"
                 : !accountEligible && !guestEligible
                   ? "Sign in to publish"
-                : publishStatus === "error"
+                  : publishStatus === "error"
                   ? "Retry publishing"
                   : editing
-                    ? "Update live Space"
+                    ? editing.visibility === "public" ? "Update & send for review" : "Update live Space"
                     : guestEligible ? "Publish as guest"
                     : `Publish ${visibilityLabel[visibility].toLowerCase()} Space`}
           </button>
@@ -3477,10 +3498,10 @@ function PublishedGallery({ id }: { id: string }) {
     if (loadState.status !== "ready") return;
     applyPageMetadata(publishedSpaceMetadataPolicy({
       id: loadState.gallery.id,
+      revision: loadState.gallery.revision,
       visibility: loadState.gallery.visibility,
       title: loadState.gallery.title,
       artist: loadState.gallery.artist,
-      coverSrc: loadState.gallery.coverSrc,
       indexEligible: isPublicSpaceIndexEligible(loadState.gallery),
     }));
   }, [loadState]);

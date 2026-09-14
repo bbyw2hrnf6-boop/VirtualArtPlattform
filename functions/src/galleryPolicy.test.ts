@@ -1,7 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { isGuestPublisher, normalizeMemberEmail, parseGalleryId, publicationTerms } from "./galleryPolicy.js";
+import {
+  discoveryApprovalAfterMutation,
+  isGuestPublisher,
+  normalizeMemberEmail,
+  parseGalleryId,
+  publicationTerms,
+  supportsGalleryVisibility,
+} from "./galleryPolicy.js";
 
 describe("gallery mutation policy", () => {
+  it("keeps discovery approval server-owned across publication mutations", () => {
+    expect(discoveryApprovalAfterMutation(undefined, "publication")).toBe(false);
+    expect(discoveryApprovalAfterMutation(true, "content-revision")).toBe(false);
+    expect(discoveryApprovalAfterMutation(true, "visibility")).toBe(false);
+    expect(discoveryApprovalAfterMutation(true, "lifecycle")).toBe(false);
+    expect(discoveryApprovalAfterMutation(false, "distribution")).toBe(false);
+    expect(discoveryApprovalAfterMutation(true, "distribution")).toBe(true);
+  });
+
+  it("does not promise private visibility for public-readable legacy schemas", () => {
+    expect(supportsGalleryVisibility(1)).toBe(false);
+    expect(supportsGalleryVisibility(2)).toBe(false);
+    expect(supportsGalleryVisibility(3)).toBe(true);
+    expect(supportsGalleryVisibility(undefined)).toBe(false);
+  });
+
   it("normalizes member identity without accepting malformed addresses", () => {
     expect(normalizeMemberEmail("  Artist@Example.COM ")).toBe("artist@example.com");
     expect(normalizeMemberEmail("not-an-email")).toBeNull();

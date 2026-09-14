@@ -195,13 +195,18 @@ describe("Storage authorization matrix", () => {
 
   it("mirrors public, private-member, owner, lifecycle, and legacy gallery reads", async () => {
     const expiresAtMs = futureMs();
+    const legacyMissingVisibility = galleryRecord("legacy-missing", expiresAtMs, { schemaVersion: 2 });
+    delete legacyMissingVisibility.visibility;
     await seedFirestore(environment, [
       ["galleries/public", galleryRecord("public", expiresAtMs)],
       ["galleries/unlisted", galleryRecord("unlisted", expiresAtMs, { visibility: "unlisted" })],
       ["galleries/private", galleryRecord("private", expiresAtMs, { visibility: "private" })],
       ["galleries/expired", galleryRecord("expired", now() - 60_000)],
       ["galleries/archived", galleryRecord("archived", expiresAtMs, { lifecycleStatus: "archived" })],
-      ["galleries/legacy", galleryRecord("legacy", expiresAtMs, { schemaVersion: 2, visibility: "private" })],
+      ["galleries/legacy-missing", legacyMissingVisibility],
+      ["galleries/legacy-public", galleryRecord("legacy-public", expiresAtMs, { schemaVersion: 2, visibility: "public" })],
+      ["galleries/legacy-unlisted", galleryRecord("legacy-unlisted", expiresAtMs, { schemaVersion: 2, visibility: "unlisted" })],
+      ["galleries/legacy-private", galleryRecord("legacy-private", expiresAtMs, { schemaVersion: 2, visibility: "private" })],
       [
         `galleries/private/members/${USER_EMAILS.viewer}`,
         { email: USER_EMAILS.viewer, role: "viewer", status: "active" },
@@ -210,24 +215,42 @@ describe("Storage authorization matrix", () => {
         `galleries/private/members/${USER_EMAILS.editor}`,
         { email: USER_EMAILS.editor, role: "editor", status: "revoked" },
       ],
+      [
+        `galleries/legacy-private/members/${USER_EMAILS.viewer}`,
+        { email: USER_EMAILS.viewer, role: "viewer", status: "active" },
+      ],
     ]);
-    const paths = ["public", "unlisted", "private", "expired", "archived", "legacy"]
-      .map((galleryId) => `published/${USER_IDS.owner}/${galleryId}/cover.webp`);
-    await seedStorage(environment, paths.map((path) => [path]));
+    const paths = {
+      public: `published/${USER_IDS.owner}/public/cover.webp`,
+      unlisted: `published/${USER_IDS.owner}/unlisted/cover.webp`,
+      private: `published/${USER_IDS.owner}/private/cover.webp`,
+      expired: `published/${USER_IDS.owner}/expired/cover.webp`,
+      archived: `published/${USER_IDS.owner}/archived/cover.webp`,
+      "legacy-missing": `published/${USER_IDS.owner}/legacy-missing/cover.webp`,
+      "legacy-public": `published/${USER_IDS.owner}/legacy-public/cover.webp`,
+      "legacy-unlisted": `published/${USER_IDS.owner}/legacy-unlisted/cover.webp`,
+      "legacy-private": `published/${USER_IDS.owner}/legacy-private/cover.webp`,
+    } as const;
+    await seedStorage(environment, Object.values(paths).map((path) => [path] as const));
     const contexts = authContexts(environment);
 
-    await assertSucceeds(readMetadata(contexts.anonymous, paths[0]));
-    await assertSucceeds(readMetadata(contexts.anonymous, paths[1]));
-    await assertFails(readMetadata(contexts.anonymous, paths[2]));
-    await assertSucceeds(readMetadata(contexts.viewer, paths[2]));
-    await assertFails(readMetadata(contexts.editor, paths[2]));
-    await assertSucceeds(readMetadata(contexts.owner, paths[2]));
-    await assertFails(readMetadata(contexts.outsider, paths[2]));
-    await assertFails(readMetadata(contexts.anonymous, paths[3]));
-    await assertFails(readMetadata(contexts.anonymous, paths[4]));
-    await assertSucceeds(readMetadata(contexts.owner, paths[3]));
-    await assertSucceeds(readMetadata(contexts.owner, paths[4]));
-    await assertSucceeds(readMetadata(contexts.anonymous, paths[5]));
+    await assertSucceeds(readMetadata(contexts.anonymous, paths.public));
+    await assertSucceeds(readMetadata(contexts.anonymous, paths.unlisted));
+    await assertFails(readMetadata(contexts.anonymous, paths.private));
+    await assertSucceeds(readMetadata(contexts.viewer, paths.private));
+    await assertFails(readMetadata(contexts.editor, paths.private));
+    await assertSucceeds(readMetadata(contexts.owner, paths.private));
+    await assertFails(readMetadata(contexts.outsider, paths.private));
+    await assertFails(readMetadata(contexts.anonymous, paths.expired));
+    await assertFails(readMetadata(contexts.anonymous, paths.archived));
+    await assertSucceeds(readMetadata(contexts.owner, paths.expired));
+    await assertSucceeds(readMetadata(contexts.owner, paths.archived));
+    await assertSucceeds(readMetadata(contexts.anonymous, paths["legacy-missing"]));
+    await assertSucceeds(readMetadata(contexts.anonymous, paths["legacy-public"]));
+    await assertSucceeds(readMetadata(contexts.anonymous, paths["legacy-unlisted"]));
+    await assertFails(readMetadata(contexts.anonymous, paths["legacy-private"]));
+    await assertSucceeds(readMetadata(contexts.owner, paths["legacy-private"]));
+    await assertSucceeds(readMetadata(contexts.viewer, paths["legacy-private"]));
   });
 
   it("keeps guest public media readable after Explore ends", async () => {

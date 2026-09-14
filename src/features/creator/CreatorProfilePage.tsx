@@ -14,8 +14,12 @@ import {
 import type { AccountSession } from "../../services/accountTypes";
 import { spaceCanonicalUrl } from "../../services/spaceRoutes";
 import { trackTelemetry } from "../../services/telemetry";
-import { applyPageMetadata, publicCreatorMetadataPolicy } from "../../services/pageMetadata";
-import { isDemoCreatorHandle } from "./demoCreators";
+import {
+  applyPageMetadata,
+  publicCreatorMetadataPolicy,
+  unavailableCreatorMetadataPolicy,
+} from "../../services/pageMetadata";
+import { demoCreatorPayload } from "./demoCreators";
 import "./creatorProfile.css";
 
 type LoadState =
@@ -37,17 +41,29 @@ export default function CreatorProfilePage({
   hubSession,
   onRequireAccount,
 }: CreatorProfilePageProps) {
-  const deliveredCanonical = document
-    .querySelector<HTMLLinkElement>('link[rel="canonical"]')
-    ?.href;
-  const serverState = deliveredCanonical
-    && new URL(deliveredCanonical, window.location.href).pathname === new URL(creatorProfileUrl(handle)).pathname
-      ? document.querySelector('meta[name="lieuva:creator-state"]')?.getAttribute("content")
-      : undefined;
-  const demoProfile = isDemoCreatorHandle(handle);
-  const [state, setState] = useState<LoadState>(() =>
-    serverState === "unavailable" && !demoProfile ? { status: "not-found" } : { status: "loading" },
-  );
+  const [deliveredState] = useState(() => {
+    const deliveredCanonical = document
+      .querySelector<HTMLLinkElement>('link[rel="canonical"]')
+      ?.href;
+    return {
+      handle,
+      value: deliveredCanonical
+      && new URL(deliveredCanonical, window.location.href).pathname === new URL(creatorProfileUrl(handle)).pathname
+        ? document.querySelector('meta[name="lieuva:creator-state"]')?.getAttribute("content")
+        : undefined,
+    };
+  });
+  const serverState = deliveredState.handle === handle ? deliveredState.value : undefined;
+  const demoPayload = useMemo(() => demoCreatorPayload(handle), [handle]);
+  const [remoteState, setRemoteState] = useState<{ handle: string; value: LoadState }>(() => ({
+    handle,
+    value: serverState === "unavailable" ? { status: "not-found" } : { status: "loading" },
+  }));
+  const state = useMemo<LoadState>(() => demoPayload
+    ? { status: "ready", payload: demoPayload }
+    : remoteState.handle === handle
+      ? remoteState.value
+      : { status: "loading" }, [demoPayload, handle, remoteState]);
   const [attempt, setAttempt] = useState(0);
   const [accountOpen, setAccountOpen] = useState(false);
   const [localSession, setLocalSession] = useState<AccountSession | null>(null);
@@ -56,16 +72,19 @@ export default function CreatorProfilePage({
   const session = embedded ? hubSession ?? null : localSession;
 
   useEffect(() => {
-    if (serverState === "unavailable" && !demoProfile) return;
+    if (serverState === "unavailable" || demoPayload) return;
     const controller = new AbortController();
     void loadPublicCreatorProfile(handle, controller.signal)
-      .then((payload) => setState(payload ? { status: "ready", payload } : { status: "not-found" }))
+      .then((payload) => setRemoteState({
+        handle,
+        value: payload ? { status: "ready", payload } : { status: "not-found" },
+      }))
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setState({ status: "error" });
+        setRemoteState({ handle, value: { status: "error" } });
       });
     return () => controller.abort();
-  }, [attempt, demoProfile, handle, serverState]);
+  }, [attempt, demoPayload, handle, serverState]);
 
   const profile = state.status === "ready" ? state.payload.profile : null;
   const spaces = state.status === "ready" ? state.payload.spaces : [];
@@ -85,9 +104,15 @@ export default function CreatorProfilePage({
       applyPageMetadata(publicCreatorMetadataPolicy(
         state.payload.profile,
         state.payload.spaces[0]?.coverUrl,
+        state.payload.indexEligible,
       ));
+      return;
     }
-  }, [state]);
+    // Preserve matching server metadata while its payload loads or a transient
+    // request fails. Client navigation and a confirmed 404 still fail closed.
+    if (serverState === "public" && state.status !== "not-found") return;
+    applyPageMetadata(unavailableCreatorMetadataPolicy());
+  }, [serverState, state]);
   const initials = useMemo(() => profile?.displayName
     .split(/\s+/)
     .slice(0, 2)
@@ -103,7 +128,10 @@ export default function CreatorProfilePage({
       <p className="eyebrow">Connection interrupted</p>
       <h1>Profile unavailable.</h1>
       <p>The public profile may still be live. Try again.</p>
-      <button type="button" onClick={() => { setState({ status: "loading" }); setAttempt((value) => value + 1); }}>Try again</button>
+      <button type="button" onClick={() => {
+        setRemoteState({ handle, value: { status: "loading" } });
+        setAttempt((value) => value + 1);
+      }}>Try again</button>
     </StateRoot>
   );
   if (state.status === "not-found" || !profile) return (
@@ -200,7 +228,7 @@ export default function CreatorProfilePage({
           {profile.links.length > 0 && (
             <nav className="creator-profile__links" aria-label={`${profile.displayName} links`}>
               {profile.links.map((link) => (
-                <a key={`${link.label}:${link.url}`} href={link.url} target="_blank" rel="noopener noreferrer">
+                <a key={`${link.label}:${link.url}`} href={link.url} target="_blank" rel="noopener noreferrer ugc nofollow">
                   {link.label} <span aria-hidden="true">↗</span>
                 </a>
               ))}

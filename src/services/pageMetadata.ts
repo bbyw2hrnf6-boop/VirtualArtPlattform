@@ -18,6 +18,8 @@ export type PageMetadataPolicy = {
     | "noindex,nofollow,noarchive"
     | "noindex,follow,noarchive";
   image?: string;
+  imageAlt?: string;
+  ogType?: "profile" | "website";
 };
 
 const NON_INDEXED_DESCRIPTION =
@@ -32,6 +34,7 @@ export function pageMetadataPolicy(
     canonical: HOME_CANONICAL,
     robots: "index,follow,max-image-preview:large",
     image: HOME_IMAGE,
+    imageAlt: "A contemporary immersive gallery space created for LIEUVA",
   };
   if (page === "creators") return {
     title: productTitle("Creators"),
@@ -39,6 +42,7 @@ export function pageMetadataPolicy(
     canonical: CREATOR_DIRECTORY_CANONICAL,
     robots: "index,follow,max-image-preview:large",
     image: HOME_IMAGE,
+    imageAlt: "Public Creators and Spaces in the LIEUVA Creator Hub",
   };
   if (page === "creator-hub") return {
     title: productTitle("Creator Hub"),
@@ -46,6 +50,7 @@ export function pageMetadataPolicy(
     canonical: CREATOR_HUB_CANONICAL,
     robots: "noindex,nofollow,noarchive",
     image: HOME_IMAGE,
+    imageAlt: "The personalized LIEUVA Creator Hub",
   };
   if (page === "demo") return {
     title: productTitle("Threshold — Danny Hirsch Arts"),
@@ -53,6 +58,7 @@ export function pageMetadataPolicy(
     canonical: HOME_CANONICAL,
     robots: "noindex,nofollow",
     image: `${HOME_CANONICAL}assets/demo/danny-cover.webp`,
+    imageAlt: "Threshold, the Danny Hirsch Arts reference Space",
   };
   if (page === "admin") return {
     title: productTitle("Admin Console"),
@@ -79,28 +85,30 @@ export function pageMetadataPolicy(
 
 export function publishedSpaceMetadataPolicy(space: {
   id: string;
+  revision: number;
   visibility: GalleryVisibility;
   title: string;
   artist: string;
-  coverSrc?: string;
-  indexEligible?: boolean;
+  indexEligible: boolean;
 }): PageMetadataPolicy {
   const canonical = spaceCanonicalUrl(space.id);
   if (space.visibility !== "public") return {
-    title: productTitle(space.visibility === "private" ? "Private Space" : "Shared Space"),
+    title: `LIEUVA — ${space.visibility === "private" ? "Private Space" : "Shared Space"}`,
     description: "A protected immersive Space shared through LIEUVA.",
     canonical,
-    robots: "noindex,nofollow",
+    robots: "noindex,nofollow,noarchive",
     image: HOME_IMAGE,
+    imageAlt: "LIEUVA immersive 3D presentation platform",
   };
   return {
     title: productTitle(`${space.title} — ${space.artist}`),
-    description: `Enter ${space.title}, an immersive Space by ${space.artist}, presented with LIEUVA.`,
+    description: `${space.title} by ${space.artist}. Enter this immersive 3D Space on LIEUVA.`,
     canonical,
-    robots: space.indexEligible === false
-      ? "noindex,follow,noarchive"
-      : "index,follow,max-image-preview:large",
-    image: space.coverSrc ?? `${SPACE_CARD_ENDPOINT}${encodeURIComponent(space.id)}`,
+    robots: space.indexEligible === true
+      ? "index,follow,max-image-preview:large"
+      : "noindex,follow,noarchive",
+    image: `${SPACE_CARD_ENDPOINT}${encodeURIComponent(space.id)}?v=${space.revision}`,
+    imageAlt: `${space.title}, an immersive Space by ${space.artist}`,
   };
 }
 
@@ -110,43 +118,86 @@ export function publicCreatorMetadataPolicy(profile: {
   bio?: string;
   imagePresent?: boolean;
   coverPresent?: boolean;
-}, featuredImage?: string): PageMetadataPolicy {
+}, featuredImage: string | undefined, indexEligible: boolean): PageMetadataPolicy {
   const canonical = creatorCanonicalUrl(profile.handle);
+  const description = profile.bio || `Explore public immersive Spaces by ${profile.displayName} on LIEUVA.`;
+  const image = profile.coverPresent
+    ? `${HOME_CANONICAL}creator-covers/${profile.handle}.webp`
+    : profile.imagePresent
+    ? `${HOME_CANONICAL}creator-images/${profile.handle}.webp`
+    : featuredImage || HOME_IMAGE;
   return {
     title: `${profile.displayName} — Creator | LIEUVA`,
-    description: profile.bio || `Explore public immersive Spaces by ${profile.displayName} on LIEUVA.`,
+    description,
     canonical,
-    robots: "index,follow,max-image-preview:large",
-    image: profile.coverPresent
-      ? `${HOME_CANONICAL}creator-covers/${profile.handle}.webp`
-      : profile.imagePresent
-      ? `${HOME_CANONICAL}creator-images/${profile.handle}.webp`
-      : featuredImage || HOME_IMAGE,
+    robots: indexEligible
+      ? "index,follow,max-image-preview:large"
+      : "noindex,follow,noarchive",
+    image,
+    imageAlt: `Public Creator profile for ${profile.displayName}`,
+    ogType: "profile",
   };
 }
 
-function upsertMeta(documentRef: Document, selector: string, attributes: Record<string, string>) {
-  let element = documentRef.head.querySelector<HTMLMetaElement>(selector);
+export function unavailableCreatorMetadataPolicy(): PageMetadataPolicy {
+  return {
+    title: productTitle("Creator unavailable"),
+    description: "This LIEUVA Creator profile is not public.",
+    canonical: CREATOR_DIRECTORY_CANONICAL,
+    robots: "noindex,nofollow,noarchive",
+    image: HOME_IMAGE,
+    imageAlt: "Public Creator profile for LIEUVA",
+    ogType: "profile",
+  };
+}
+
+function upsertMeta(documentRef: Document, attribute: "name" | "property", key: string, content: string) {
+  let element = documentRef.head.querySelector<HTMLMetaElement>(`meta[${attribute}="${key}"]`);
   if (!element) {
     element = documentRef.createElement("meta");
     documentRef.head.append(element);
   }
-  Object.entries(attributes).forEach(([name, value]) => element?.setAttribute(name, value));
+  element.setAttribute(attribute, key);
+  element.setAttribute("content", content);
+}
+
+function removeMeta(documentRef: Document, attribute: "name" | "property", key: string) {
+  documentRef.head.querySelector(`meta[${attribute}="${key}"]`)?.remove();
 }
 
 export function applyPageMetadata(policy: PageMetadataPolicy, documentRef = document) {
+  documentRef.head.querySelectorAll("script[data-lieuva-page-metadata]")
+    .forEach((script) => {
+      if (!policy.robots.startsWith("index,")
+        || script.getAttribute("data-lieuva-page-metadata") !== policy.canonical)
+        script.remove();
+    });
   documentRef.title = policy.title;
-  upsertMeta(documentRef, 'meta[name="description"]', { name: "description", content: policy.description });
-  upsertMeta(documentRef, 'meta[name="robots"]', { name: "robots", content: policy.robots });
-  upsertMeta(documentRef, 'meta[property="og:title"]', { property: "og:title", content: policy.title });
-  upsertMeta(documentRef, 'meta[property="og:description"]', { property: "og:description", content: policy.description });
-  upsertMeta(documentRef, 'meta[property="og:url"]', { property: "og:url", content: policy.canonical });
-  upsertMeta(documentRef, 'meta[name="twitter:title"]', { name: "twitter:title", content: policy.title });
-  upsertMeta(documentRef, 'meta[name="twitter:description"]', { name: "twitter:description", content: policy.description });
-  if (policy.image) {
-    upsertMeta(documentRef, 'meta[property="og:image"]', { property: "og:image", content: policy.image });
-    upsertMeta(documentRef, 'meta[name="twitter:image"]', { name: "twitter:image", content: policy.image });
+  const image = policy.image ?? HOME_IMAGE;
+  const imageAlt = policy.imageAlt ?? "LIEUVA immersive 3D presentation platform";
+  upsertMeta(documentRef, "name", "description", policy.description);
+  upsertMeta(documentRef, "name", "robots", policy.robots);
+  upsertMeta(documentRef, "property", "og:type", policy.ogType ?? "website");
+  upsertMeta(documentRef, "property", "og:site_name", "LIEUVA");
+  upsertMeta(documentRef, "property", "og:title", policy.title);
+  upsertMeta(documentRef, "property", "og:description", policy.description);
+  upsertMeta(documentRef, "property", "og:url", policy.canonical);
+  upsertMeta(documentRef, "property", "og:image", image);
+  upsertMeta(documentRef, "property", "og:image:secure_url", image);
+  upsertMeta(documentRef, "property", "og:image:type", image === HOME_IMAGE ? "image/jpeg" : "image/webp");
+  if (image === HOME_IMAGE) {
+    upsertMeta(documentRef, "property", "og:image:width", "1200");
+    upsertMeta(documentRef, "property", "og:image:height", "630");
+  } else {
+    removeMeta(documentRef, "property", "og:image:width");
+    removeMeta(documentRef, "property", "og:image:height");
   }
+  upsertMeta(documentRef, "property", "og:image:alt", imageAlt);
+  upsertMeta(documentRef, "name", "twitter:card", "summary_large_image");
+  upsertMeta(documentRef, "name", "twitter:title", policy.title);
+  upsertMeta(documentRef, "name", "twitter:description", policy.description);
+  upsertMeta(documentRef, "name", "twitter:image", image);
+  upsertMeta(documentRef, "name", "twitter:image:alt", imageAlt);
   let canonical = documentRef.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
   if (!canonical) {
     canonical = documentRef.createElement("link");

@@ -9,6 +9,7 @@ import {
   accountSectionUrl,
   accountSignInMethods,
   isPublicProfileSpace,
+  publicPlacementNote,
 } from "./accountPresentation";
 
 describe("account presentation", () => {
@@ -73,6 +74,16 @@ describe("account presentation", () => {
     expect(creatorSettingsSource).not.toContain("galleryRepository.updateDistribution");
     expect(creatorSettingsSource).not.toContain("updateProfileSpace");
     expect(creatorSettingsSource).toContain("Space preview image");
+    const distributionHandler = accountSource.slice(
+      accountSource.indexOf("const updateRoomDistribution"),
+      accountSource.indexOf("const exportRoom"),
+    );
+    expect(distributionHandler).toContain("await loadRooms()");
+    expect(distributionHandler).not.toContain("setRooms((current)");
+  });
+
+  it("explains pending editorial review without promising a placement-toggle workaround", () => {
+    expect(accountSource).not.toContain("Save either placement choice once");
   });
 
   it("offers one accessible filter system across the Space overview and list", () => {
@@ -95,13 +106,44 @@ describe("account presentation", () => {
       ownerId: "owner-1",
       visibility: "public",
       discoverEligible: true,
+      creatorProfileListed: true,
+      guestPublication: false,
       lifecycleStatus: "active",
       expiresAt: "2030-01-01T00:00:00.000Z",
+      title: "Material Study",
+      artist: "Field Studio",
+      artworks: [{ src: "/art.webp" }],
     } as GalleryRecord;
     expect(isPublicProfileSpace(space, "owner-1", Date.parse("2029-01-01"))).toBe(true);
     expect(isPublicProfileSpace({ ...space, discoverEligible: false }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
+    expect(isPublicProfileSpace({ ...space, creatorProfileListed: false }, "owner-1", Date.parse("2029-01-01"))).toBe(true);
+    expect(isPublicProfileSpace({ ...space, guestPublication: true }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
+    expect(isPublicProfileSpace({ ...space, artworks: [] }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
+    expect(isPublicProfileSpace({
+      ...space,
+      title: "Pavilion Test",
+      artist: "LIEUVA Sample Collection",
+    }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
     expect(isPublicProfileSpace({ ...space, visibility: "private" }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
     expect(isPublicProfileSpace({ ...space, ownerId: "other", effectiveRole: "viewer" }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
     expect(isPublicProfileSpace({ ...space, expiresAt: "2028-01-01T00:00:00.000Z" }, "owner-1", Date.parse("2029-01-01"))).toBe(false);
+  });
+
+  it("distinguishes review from Creator-fixable public placement failures", () => {
+    const space = {
+      visibility: "public",
+      lifecycleStatus: "active",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      title: "Material Study",
+      artist: "Field Studio",
+      artworks: [{ src: "/art.webp" }],
+      discoverEligible: false,
+    } as GalleryRecord;
+    const now = Date.parse("2029-01-01");
+    expect(publicPlacementNote(space, now)).toContain("await quality/safety review");
+    expect(publicPlacementNote({ ...space, title: "Untitled Space", artist: "Your name" }, now))
+      .toContain("Replace placeholder title or creator credit");
+    expect(publicPlacementNote({ ...space, artworks: [] }, now))
+      .toContain("Add a visible artwork");
   });
 });
