@@ -79,9 +79,25 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name: 'Reset settings', exact: true }).click();
     await expect(scene).toHaveAttribute('data-camera-fov', width === 390 ? '78.0' : '62.0');
     await expect(canvas).toHaveAttribute('data-walk-pace', '1.25');
+    await expect(canvas).toHaveAttribute('data-test-identity', 'persistent');
+    await expect(page.locator('.studio')).toContainText('Draft · Not live');
+    expect(errors).toEqual([]);
+  });
+
+  test(`${width}px requested lens survives an immediate Arrange round trip`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/#/create/pavilion/demo');
+    const scene = page.locator('.studio .gallery-scene');
+    await expect(scene).toHaveAttribute('data-arrival', 'ready');
+    const canvas = scene.locator('canvas');
+    await canvas.evaluate(el => { el.dataset.testIdentity = 'persistent'; });
+    await page.getByRole('button', { name: 'Walk preview', exact: true }).click();
+
     // Wheel requests a lens before easing finishes; a fast mode switch must
     // restore that requested value, not the intermediate rendered camera.
-    await page.getByRole('button', { name: 'Reset settings', exact: true }).press('Escape');
     await canvas.hover(); await page.mouse.wheel(0, 200);
     await expect.poll(async () => Number(await canvas.getAttribute('data-walk-fov'))).toBeGreaterThan(width === 390 ? 78 : 62);
     const requestedFov = Number(await canvas.getAttribute('data-walk-fov'));
