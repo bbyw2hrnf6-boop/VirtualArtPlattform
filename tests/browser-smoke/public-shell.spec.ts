@@ -31,9 +31,11 @@ test('loads the public home and Create Space shell without browser errors', asyn
   await expect(collection.getByRole('heading', { name: 'Sculpture & 3D', exact: true })).toBeVisible();
   await expect(collection.getByRole('heading', { name: 'Architecture', exact: true })).toBeVisible();
   await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(3);
-  const studioLink = collection.getByRole('link', { name: 'Create your own in Studio' });
+  await expect(collection.getByText(/Full showcases are in development; bespoke versions are available now on request\./)).toBeVisible();
+  const studioLink = collection.getByRole('link', { name: 'Explore the current Studio' });
   await expect(studioLink).toHaveAttribute('href', '#/create');
-  await expect(collection.getByRole('link', { name: 'Available on request' })).toHaveCount(2);
+  await expect(collection.getByRole('link', { name: 'Bespoke project on request' })).toHaveCount(2);
+  await expect(collection.getByText(/From a room scan, photographs or plans/)).toBeVisible();
   await expect(collection.locator('a[href^="#/create/"]')).toHaveCount(0);
 
   await studioLink.click();
@@ -59,8 +61,8 @@ test('the showcase collection stays distinct and usable on mobile', async ({ pag
   const collection = page.locator('.showcase-collection');
   await collection.scrollIntoViewIfNeeded();
   await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(3);
-  await expect(collection.getByRole('link', { name: 'Create your own in Studio' })).toHaveCount(1);
-  await expect(collection.getByRole('link', { name: 'Available on request' })).toHaveCount(2);
+  await expect(collection.getByRole('link', { name: 'Explore the current Studio' })).toHaveCount(1);
+  await expect(collection.getByRole('link', { name: 'Bespoke project on request' })).toHaveCount(2);
   await expect(collection.getByText('Contact route coming soon', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
