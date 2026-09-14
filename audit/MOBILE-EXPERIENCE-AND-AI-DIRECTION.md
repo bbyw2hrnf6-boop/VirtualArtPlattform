@@ -67,7 +67,7 @@ The implementation was inspected end to end at 390 × 844, 360 × 800 and the li
 
 | Journey area | Observed repository state | Disposition |
 | --- | --- | --- |
-| Landing handoff | The initial poster and the WebGL story previously swapped both label and destination after the mobile defer window. | The poster now offers the same “Open this Space in Studio” intent, and Data Saver keeps that actionable lightweight path. The normal progressive swap remains covered by the story smoke suite. |
+| Landing handoff | The initial poster and WebGL story previously opened or staged the illustrated White Cube directly. | Both now use the exact “Open in Studio” label and route to `#/create`, where the visitor deliberately chooses one of the three Studio templates. Neither path creates a hidden story draft; Data Saver keeps the same actionable overview route. |
 | Discovery | Search and Explore are both functional but open separate discovery surfaces with overlapping purpose. | Keep both for now; consolidate only after an information-architecture decision and search/explore task testing. |
 | Studio save confidence | Compact CSS hid the scope and left only `Ready`, `Saving…` or `Saved`, although a local draft is not necessarily live. | Fixed: scope such as `Draft · Not live` or `Changes · Not live` remains visible beside the save state. |
 | Studio canvas and sheets | At 320 × 667, opening a half-height tool sheet compressed the usable canvas to roughly 178 pixels. | Fixed: on short screens the sheet overlays the stable canvas. A browser assertion now guards the canvas height. |

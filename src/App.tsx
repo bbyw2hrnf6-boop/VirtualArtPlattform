@@ -1,5 +1,6 @@
 import { SpaceLoading } from "./components/SpaceLoading";
 import { StoryPoster } from "./features/landing/StoryPoster";
+import { ShowcaseCollection } from "./features/landing/ShowcaseCollection";
 import { consumeStudioHandoff } from './services/studioHandoff';
 import { MobileStudioTools } from './features/gallery/editor/MobileStudioTools';
 import { STUDIO_TOOL_LABELS, type StudioTool } from './features/gallery/editor/mobileStudioToolsModel';
@@ -262,6 +263,7 @@ const landingNavigate = (
   trackTelemetry(event, { source });
   navigate(path);
 };
+const openStudioOverview = () => landingNavigate("/create", "landing_create_cta_clicked", "overview");
 
 function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () => void }) {
   return (
@@ -358,12 +360,6 @@ function GlobalDirectorySearch({ open, onClose }: { open: boolean; onClose: () =
   );
 }
 
-const LANDING_WORKFLOW = [
-  ["01", "Choose a space", "Three distinct rooms. Find the setting for your work."],
-  ["02", "Make it yours", "Add your collection, choose materials and preview the visit."],
-  ["03", "Share your exhibition", "Publish with your choice of access. Invite people with one link."],
-] as const;
-
 function LandingProductProof() {
   const sectionRef = useRef<HTMLElement>(null);
   const tracked = useRef(false);
@@ -392,17 +388,8 @@ function LandingProductProof() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="landing-proof" aria-labelledby="landing-proof-title">
-      <h2 id="landing-proof-title" className="visually-hidden">From your work to an exhibition</h2>
-        <ol className="landing-proof__workflow" aria-label="How LIEUVA works">
-          {LANDING_WORKFLOW.map(([number, title, body]) => (
-            <li key={title}>
-              <span>{number}</span>
-              <div><strong>{title}</strong><p>{body}</p></div>
-            </li>
-          ))}
-        </ol>
-      <RoomShowcase embedded />
+    <section ref={sectionRef} className="landing-proof">
+      <ShowcaseCollection onOpenStudio={openStudioOverview} />
     </section>
   );
 }
@@ -434,7 +421,7 @@ function DeferredScrollStory() {
     return () => window.clearTimeout(handle);
   }, []);
   return <div className="story-deferred">
-    {!ready ? <StoryPoster /> : <Suspense fallback={<StoryPoster />}><ScrollGalleryStory /></Suspense>}
+    {!ready ? <StoryPoster onOpenStudio={openStudioOverview} /> : <Suspense fallback={<StoryPoster onOpenStudio={openStudioOverview} />}><ScrollGalleryStory onOpenStudio={openStudioOverview} /></Suspense>}
   </div>;
 }
 
@@ -480,62 +467,6 @@ function Landing() {
       </section>
       <Footer />
     </main>
-  );
-}
-
-function RoomShowcase({ embedded = false }: { embedded?: boolean }) {
-  return (
-    <div className={`room-showcase ${embedded ? "room-showcase--embedded" : ""}`} aria-labelledby="room-showcase-title">
-      <div className="room-showcase-heading">
-        <p className="eyebrow">The space collection</p>
-        <h2 id="room-showcase-title">
-          Three spaces.<br /><em>Endless possibilities.</em>
-        </h2>
-        <p>
-          Distinct architecture. Different atmospheres. Choose a room and start with sample art, or bring your own collection.
-        </p>
-      </div>
-      <div className="room-showcase-grid">
-        {TEMPLATES.map((template) => (
-          <article key={template.id}>
-            <button
-              type="button"
-              onClick={() => landingNavigate(`/create/${template.id}/demo`, "landing_create_cta_clicked", `template_${template.id}`)}
-              aria-label={`Try ${template.name} with sample artwork`}
-            >
-              <img
-                src={`./assets/templates/${template.id}-preview.webp?v=premium-v3`}
-                width="965"
-                height="752"
-                loading="lazy"
-                decoding="async"
-                alt={`${template.name} environment preview`}
-              />
-              <span>Explore this space ↗</span>
-            </button>
-            <p>
-              {template.index} · {template.label}
-            </p>
-            <h3>{template.name}</h3>
-            <p className="room-showcase-materials">{template.materialIdentity.wall} · {template.materialIdentity.floor}</p>
-            <details><summary>Space details <span aria-hidden="true">＋</span></summary><dl>
-              <div>
-                <dt>Scale</dt>
-                <dd>{template.dimensions[0]} × {template.dimensions[1]} m · {template.maxArtworks} works</dd>
-              </div>
-              <div>
-                <dt>Best for</dt>
-                <dd>{template.bestFor}</dd>
-              </div>
-              <div>
-                <dt>Materials</dt>
-                <dd>{template.materialIdentity.wall} · {template.materialIdentity.floor}</dd>
-              </div>
-            </dl></details>
-          </article>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -3787,7 +3718,7 @@ export default function App() {
           key={routeKey}
           fallback={
             route.page === "home" ? (
-              <StoryPoster />
+              <StoryPoster onOpenStudio={openStudioOverview} />
             ) : route.page === "demo" ? (
               <SpaceLoading
                 title="Threshold"

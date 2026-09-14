@@ -6,11 +6,11 @@ export function StoryPosterImage({ className }: { className?: string }) {
 }
 
 /** Actionable room imagery while the optional cinematic renderer warms up or stays disabled. */
-export function StoryPoster() {
+export function StoryPoster({ onOpenStudio }: { onOpenStudio?: () => void }) {
   return <section className="story-placeholder" aria-label="Create an immersive Space">
     <StoryPosterImage />
     <div><p>Immersive 3D presentation platform</p><h1>Give your work a place.</h1>
       <p>Choose a room. Bring your work. Share a space people can enter.</p>
-      <a href="#/create/white-cube/demo">Open this Space in Studio ↗</a></div>
+      <a href="#/create" onClick={onOpenStudio ? (event) => { event.preventDefault(); onOpenStudio(); } : undefined}>Open in Studio ↗</a></div>
   </section>;
 }

@@ -15,6 +15,7 @@ import gallerySceneSource from "../features/gallery/GalleryScene.tsx?raw";
 import demoCollectionSource from "../features/gallery/editor/demoCollection.ts?raw";
 import pitchSource from "../features/landing/PitchSections.tsx?raw";
 import scrollStorySource from "../features/landing/ScrollGalleryStory.tsx?raw";
+import showcaseSource from "../features/landing/ShowcaseCollection.tsx?raw";
 import actionErrorsSource from "../services/firebaseActionError.ts?raw";
 import firebaseRepositorySource from "../services/firebaseGalleryRepository.ts?raw";
 import publishingErrorsSource from "../services/galleryPublishingError.ts?raw";
@@ -45,6 +46,7 @@ const visibleSources = {
   "src/features/gallery/editor/demoCollection.ts": demoCollectionSource,
   "src/features/landing/PitchSections.tsx": pitchSource,
   "src/features/landing/ScrollGalleryStory.tsx": scrollStorySource,
+  "src/features/landing/ShowcaseCollection.tsx": showcaseSource,
   "src/services/firebaseActionError.ts": actionErrorsSource,
   "src/services/firebaseGalleryRepository.ts": firebaseRepositorySource,
   "src/services/galleryPublishingError.ts": publishingErrorsSource,

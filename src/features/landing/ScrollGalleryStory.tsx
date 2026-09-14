@@ -4,12 +4,10 @@ import { flushSync } from 'react-dom';
 import { GalleryScene, type GalleryPresentation, type ArtworkFocusInfo } from '../gallery/GalleryScene';
 import { STORY_DRAFT } from './storyDraft';
 import { storyPresentation, storyScrollProgress, advanceStoryProgress, filmProgress, storyFinishes, STORY_FINISHES, STORY_CHAPTERS, STORY_DURATION_MS } from './scrollStoryModel';
-import { saveGalleryDraft } from '../../services/draftStorage';
-import { stageStudioHandoff } from '../../services/studioHandoff';
 import './scrollGalleryStory.css';
 
 /** Scroll directs the real Studio renderer. No parallel room or Walk controller. */
-export function ScrollGalleryStory() {
+export function ScrollGalleryStory({ onOpenStudio }: { onOpenStudio: () => void }) {
   const sectionRef = useRef<HTMLElement>(null);
   const chapters = useRef<Array<HTMLElement | null>>([]);
   const seek = useRef<((progress: number) => void) | null>(null);
@@ -33,18 +31,6 @@ export function ScrollGalleryStory() {
   }, []);
   const [shot, setShot] = useState(0);
   const [surface, setSurface] = useState<'floor' | 'wall'>('floor');
-  const [opening, setOpening] = useState(false);
-  const [openError, setOpenError] = useState('');
-  const openStudio = async () => {
-    setOpening(true); setOpenError('');
-    try {
-      const projectId = `story-${crypto.randomUUID()}`;
-      await saveGalleryDraft(projectId, draft, 1);
-      stageStudioHandoff(projectId);
-      location.hash = `/create/white-cube/${projectId}`;
-    } catch { setOpenError('Your browser could not save this study. Try again or choose a fresh Space.'); }
-    finally { setOpening(false); }
-  };
   const explore = useRef(false);
   const [exploring, setExploring] = useState(false);
   const [focus, setFocus] = useState<ArtworkFocusInfo | null>(null);
@@ -167,8 +153,7 @@ export function ScrollGalleryStory() {
         </div>
         <button className="sgs__look" aria-pressed={exploring} onClick={() => { stopFilm(); if (!exploring) goTo(.965); explore.current = !exploring; setExploring(!exploring); }}>{exploring ? "Back to story" : "Look around"}</button>
         {exploring && <p className="sgs__walk-hint">Tap floor to move · Drag to look</p>}
-        <div className="sgs__footer"><nav className="sgs__navigation" aria-label="Space story chapters">{STORY_CHAPTERS.map((chapter, index) => <button key={chapter.label} aria-label={`Chapter ${index + 1}: ${chapter.label}`} onClick={() => goTo(index / 4 + .005)}>0{index + 1}</button>)}<button onClick={() => goTo(1.04)} aria-label="Continue below the story">Skip ↓</button></nav><button type="button" disabled={opening} onClick={() => void openStudio()}>{opening ? "Opening your Studio…" : "Open this Space in Studio"} <span>↗</span></button><small>Sample collection · The White Cube <a href="#/create">Choose a room ↗</a></small></div>
-        {openError && <p className="sgs__open-error" role="alert">{openError}</p>}
+        <div className="sgs__footer"><nav className="sgs__navigation" aria-label="Space story chapters">{STORY_CHAPTERS.map((chapter, index) => <button key={chapter.label} aria-label={`Chapter ${index + 1}: ${chapter.label}`} onClick={() => goTo(index / 4 + .005)}>0{index + 1}</button>)}<button onClick={() => goTo(1.04)} aria-label="Continue below the story">Skip ↓</button></nav><button type="button" onClick={onOpenStudio}>Open in Studio</button><small>Sample collection · The White Cube</small></div>
         <div className="sgs__timeline" aria-hidden="true"><i /></div>
         {focus && <aside className="sgs__art-info"><button onClick={() => setFocus(null)} aria-label="Close artwork information">×</button><strong>{focus.title}</strong><p>{focus.description}</p></aside>}
       </div>

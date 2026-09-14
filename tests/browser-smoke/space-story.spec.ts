@@ -86,30 +86,19 @@ test('the film can play, pause with the keyboard and continue below the story', 
   await expect.poll(() => story.evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(1);
 });
 
-test('a previewed material survives the real desktop Studio handoff', async ({ page }, testInfo) => {
+test('the story Studio action opens the template overview', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
   const story = page.locator('.sgs');
   await expect(story).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
-  const scene = story.locator('.gallery-scene');
-  await page.getByRole('button', { name: 'Chapter 3: Your atmosphere', exact: true }).click();
-  await expect(story).toHaveAttribute('data-chapter', '2');
-  await expectStoryFrame(scene, .505);
-  const beforeFinish = Number(await scene.getAttribute('data-presentation-frames'));
-  await page.getByRole('button', { name: 'Preview oak floor', exact: true }).click();
-  await expect(story.locator('.gallery-scene')).toHaveAttribute('data-floor', 'oak');
-  await expect(scene).toHaveAttribute('data-presentation-idle', 'true', { timeout: 30_000 });
-  expect(Number(await scene.getAttribute('data-presentation-frames'))).toBeGreaterThan(beforeFinish);
-  await expect.poll(() => story.evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--story-progress')))).toBeGreaterThan(.504);
-  await page.screenshot({ path: testInfo.outputPath('story-desktop-material.png') });
   await page.getByRole('button', { name: 'Chapter 4: Their experience', exact: true }).click();
   await expect(story).toHaveAttribute('data-chapter', '3');
-  await page.getByRole('button', { name: 'Show floor finishes' }).click();
-  await page.getByRole('button', { name: 'Preview oak floor', exact: true }).click();
-  await page.getByRole('button', { name: 'Open this Space in Studio' }).click();
-  await expect(page).toHaveURL(/#\/create\/white-cube\/story-/);
-  await expect(page.locator('.studio .gallery-scene')).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
-  await expect(page.locator('.studio .gallery-scene')).toHaveAttribute('data-floor', 'oak');
+  await expect(page.getByRole('button', { name: 'Open in Studio' })).toBeInViewport();
+  await page.getByRole('button', { name: 'Open in Studio' }).click();
+  await expect(page).toHaveURL(/#\/create$/);
+  await expect(page.getByRole('heading', { level: 1, name: /Choose your space/i })).toBeInViewport();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+  await expect(page.locator('.studio')).toHaveCount(0);
 });
 
 test('mobile reduced motion stays composed and offers a functioning Studio action', async ({ page }) => {
@@ -123,7 +112,7 @@ test('mobile reduced motion stays composed and offers a functioning Studio actio
   await expect(story.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Play the film · 20 sec' })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await expect(page.getByRole('button', { name: 'Open this Space in Studio' })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Open in Studio' })).toBeInViewport();
 });
 
 test('browser-reported Data Saver keeps the landing actionable without loading the WebGL story', async ({ page }) => {
@@ -136,8 +125,8 @@ test('browser-reported Data Saver keeps the landing actionable without loading t
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.locator('.story-placeholder')).toBeVisible();
-  const action = page.getByRole('link', { name: 'Open this Space in Studio' });
-  await expect(action).toHaveAttribute('href', '#/create/white-cube/demo');
+  const action = page.getByRole('link', { name: 'Open in Studio' });
+  await expect(action).toHaveAttribute('href', '#/create');
   await page.waitForTimeout(1_000);
   await expect(page.locator('.sgs')).toHaveCount(0);
 });
@@ -211,7 +200,7 @@ test('Arrange redraws camera and roof changes and resumes Walk preview', async (
 });
 
 
-test('mobile materials remain clear of the real Studio handoff', async ({ page }, testInfo) => {
+test('mobile materials remain clear of the Studio overview action', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   const story = page.locator('.sgs');
@@ -220,7 +209,7 @@ test('mobile materials remain clear of the real Studio handoff', async ({ page }
   await expect.poll(() => story.evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--story-progress')))).toBeGreaterThan(.754);
   await expectStoryFrame(story.locator('.gallery-scene'), .755);
   const finishes = await page.locator('.sgs__finish').boundingBox();
-  const studioAction = page.getByRole('button', { name: 'Open this Space in Studio' });
+  const studioAction = page.getByRole('button', { name: 'Open in Studio' });
   const action = await studioAction.boundingBox();
   expect(finishes).not.toBeNull(); expect(action).not.toBeNull();
   expect(finishes!.y + finishes!.height).toBeLessThan(action!.y);
@@ -242,9 +231,10 @@ test('mobile materials remain clear of the real Studio handoff', async ({ page }
   }, wall.toString('base64'));
   expect(wallLuminance).toBeGreaterThan(40);
   await studioAction.click();
-  const scene = page.locator('.studio .gallery-scene');
-  await expect(scene).toHaveAttribute('data-arrival', 'ready', { timeout: 30_000 });
-  await expect(scene).toHaveAttribute('data-capture-ready', 'true');
+  await expect(page).toHaveURL(/#\/create$/);
+  await expect(page.getByRole('heading', { level: 1, name: /Choose your space/i })).toBeInViewport();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+  await expect(page.locator('.studio')).toHaveCount(0);
 });
 
 test('mobile Studio materials can be applied, dismissed and undone', async ({ page }, testInfo) => {
@@ -353,7 +343,7 @@ test.describe('touch story', () => {
     await page.getByRole('button',{name:'Show floor finishes'}).tap();
     await page.getByRole('button',{name:'Preview oak floor',exact:true}).tap();
     await expect(scene).toHaveAttribute('data-floor','oak');
-    await expect(page.getByRole('button',{name:'Open this Space in Studio'})).toBeInViewport();
+    await expect(page.getByRole('button',{name:'Open in Studio'})).toBeInViewport();
     await expect(page.getByRole('progressbar')).toHaveCount(0);
     await page.getByRole('button',{name:'Look around',exact:true}).tap();
     await expect(story).toHaveAttribute('data-interactive','true');

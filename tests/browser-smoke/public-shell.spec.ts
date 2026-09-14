@@ -25,18 +25,50 @@ test('loads the public home and Create Space shell without browser errors', asyn
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
   await expect(page.getByRole('heading', { level: 2, name: /Follow\s*the work\./ })).toBeVisible();
 
-  const collection=page.locator('.room-showcase');
+  const collection=page.locator('.showcase-collection');
   await collection.scrollIntoViewIfNeeded();
-  await expect(collection.getByRole('button',{name:/with sample artwork/})).toHaveCount(3);
-  await collection.locator('summary').first().click();
-  await expect(collection.locator('details').first()).toHaveAttribute('open','');
+  await expect(collection.getByRole('heading', { name: 'Art exhibitions', exact: true })).toBeVisible();
+  await expect(collection.getByRole('heading', { name: 'Sculpture & 3D', exact: true })).toBeVisible();
+  await expect(collection.getByRole('heading', { name: 'Architecture', exact: true })).toBeVisible();
+  await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(3);
+  const studioLink = collection.getByRole('link', { name: 'Create your own in Studio' });
+  await expect(studioLink).toHaveAttribute('href', '#/create');
+  await expect(collection.getByRole('link', { name: 'Available on request' })).toHaveCount(2);
+  await expect(collection.locator('a[href^="#/create/"]')).toHaveCount(0);
 
-  await page.goto('/#/create', { waitUntil: 'domcontentloaded' });
+  await studioLink.click();
+  await expect(page).toHaveURL(/#\/create$/);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
   await expect(page).toHaveTitle(/Create a Space.*LIEUVA/);
-  await expect(page.getByRole('heading', { level: 1, name: /Choose your space/i })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: /Choose your space/i })).toBeInViewport();
   await expect(page.getByRole('button', { name: /Try the White Cube with 3 sample works/i })).toBeVisible();
 
   expect(pageErrors).toEqual([]);
+});
+
+test('the showcase collection stays distinct and usable on mobile', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'connection', {
+      configurable: true,
+      value: { saveData: true },
+    });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+  const collection = page.locator('.showcase-collection');
+  await collection.scrollIntoViewIfNeeded();
+  await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(3);
+  await expect(collection.getByRole('link', { name: 'Create your own in Studio' })).toHaveCount(1);
+  await expect(collection.getByRole('link', { name: 'Available on request' })).toHaveCount(2);
+  await expect(collection.getByText('Contact route coming soon', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  for (const action of await collection.locator('.showcase-card__action').all()) {
+    const box = await action.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
 });
 
 test('candidate CSP enforces on the bundled home and Create shells without violations', async ({ page }) => {
