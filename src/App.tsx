@@ -165,7 +165,7 @@ const CreatorHubPage = lazy(() => import("./features/creator/CreatorHubPage"));
 const AdminConsole = lazy(() => import("./features/admin/AdminConsole"));
 
 type Route = {
-  page: "home" | "obsidian" | "create" | "demo" | "gallery" | "creator" | "creators" | "creator-hub" | "data" | "auth-action" | "account" | "admin" | "space-not-found";
+  page: "home" | "sculpture-pavilion" | "obsidian" | "create" | "demo" | "gallery" | "creator" | "creators" | "creator-hub" | "data" | "auth-action" | "account" | "admin" | "space-not-found";
   id?: string;
   handle?: string;
   template?: TemplateId;
@@ -227,6 +227,7 @@ const routeFromLocation = (): Route => {
             ? `demo-${templateMatch[1]}`
             : `legacy-${templateMatch[1]}`,
     };
+  if (hash === "/showcase/sculpture-pavilion") return { page: "sculpture-pavilion" };
   if (hash === "/showcase/obsidian") return { page: "obsidian" };
   if (hash === "/demo") return { page: "demo" };
   if (hash === "/data") return { page: "data" };
@@ -3679,6 +3680,7 @@ export default function App() {
           }
         />
       );
+    if (route.page === "sculpture-pavilion") return <ObsidianPage sculpture />;
     if (route.page === "obsidian") return <ObsidianPage />;
     if (route.page === "demo") return <DannyDemoPage onNavigate={navigate} />;
     if (route.page === "data") return <MvpDataNotice />;

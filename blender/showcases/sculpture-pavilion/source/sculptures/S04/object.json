@@ -1,0 +1,20 @@
+{
+  "id": "S04",
+  "name": "Aerial Bloom",
+  "room": "B",
+  "position": [
+    17,
+    0,
+    3
+  ],
+  "dimensions": [
+    3.6,
+    2.8,
+    2.4
+  ],
+  "rotation_z": 0,
+  "material": "Amber and sage glass; bronze hub; steel cables",
+  "topology": "Zwölf Glasblätter: sechs innere aufrechte bernsteinfarbene, sechs äußere hängende salbeigrüne. Zentraler Bernsteinsamen, Bronzehalterung, drei Tragkabel. Unterkante 1.8 m, Oberkante 4.2 m.",
+  "method": "Zwei Sechserringe mit jeweils eigener Blattform. Glas als geschlossene Hülle mit echter Wandstärke. Kleine unterschiedliche Krümmungen, lesbare Halterungen. Drei Kabel bis Z=5.",
+  "views": "FRONT=-Y; BACK=+Y; LEFT=-X; RIGHT=+X; TOP=+Z; BOTTOM=-Z. Ursprung im Formzentrum."
+}

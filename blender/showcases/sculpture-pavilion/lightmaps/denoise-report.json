@@ -1,0 +1,14 @@
+{
+  "algorithm": "Blender compositor OpenImageDenoise",
+  "atlases": [
+    "A_architecture_transport.png",
+    "A_floor_transport.png",
+    "A_furniture_transport.png",
+    "B_architecture_transport.png",
+    "B_floor_transport.png",
+    "B_furniture_transport.png",
+    "C_architecture_transport.png",
+    "C_floor_transport.png",
+    "C_furniture_transport.png"
+  ]
+}

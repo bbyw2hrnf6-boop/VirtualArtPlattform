@@ -22,7 +22,8 @@ export const PERFORMANCE_TARGETS = Object.freeze({
 // pass plus cutaway orbit navigation: +5 KB aggregate JS allowance. The initial
 // public route, Studio assets and all other ceilings remain fixed.
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
-  jsGzip: 607_000,
+  // Sculpture Pavilion: 3 KB for its isolated navigation/configuration and shared viewer extension.
+  jsGzip: 610_000,
   cssGzip: 56_500,
   largestLazyGzip: 195_000,
   entryGzip: 123_000,

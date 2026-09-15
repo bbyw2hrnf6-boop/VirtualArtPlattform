@@ -69,3 +69,7 @@ npm run validate:glb -- public/assets/templates/white-cube.glb
 ```
 
 Before replacing a runtime space, visually compare Arrange, Walk, Overview, and reduced-motion fallbacks on desktop and mobile. Compress the approved GLB with Meshopt and textures with KTX2 or WebP without stripping names, extras, anchors, or animations.
+
+## Independent bespoke sculpture showcase
+
+The [Sculpture Pavilion](./showcases/sculpture-pavilion/README.md) uses its own metric Blender source and lazy GLBs. It is not a Studio template and introduces no `aura_*` metadata or publication/schema migration. Runtime nodes retain `artwork_id`, `pavilion_room` and `reflective_floor` extras; ten animation clips drive the stationary kinetic sculpture. Meshopt and quantization extensions require the viewer's existing Three.js decoder. Authoring coordinates are X east / Y north / Z up; navigation uses X east / Z south. The linked contract records baking, motion, clearance and delivery limitations.

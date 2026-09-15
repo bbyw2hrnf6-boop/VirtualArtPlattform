@@ -1,0 +1,56 @@
+[
+  {
+    "atlas": "A_floor_transport",
+    "pixels": 4096,
+    "samples": 96,
+    "seconds": 110.36
+  },
+  {
+    "atlas": "A_architecture_transport",
+    "pixels": 2048,
+    "samples": 96,
+    "seconds": 34.24
+  },
+  {
+    "atlas": "A_furniture_transport",
+    "pixels": 1024,
+    "samples": 96,
+    "seconds": 14.85
+  },
+  {
+    "atlas": "B_floor_transport",
+    "pixels": 2048,
+    "samples": 96,
+    "seconds": 41.58
+  },
+  {
+    "atlas": "B_architecture_transport",
+    "pixels": 2048,
+    "samples": 96,
+    "seconds": 39.38
+  },
+  {
+    "atlas": "B_furniture_transport",
+    "pixels": 1024,
+    "samples": 96,
+    "seconds": 16.61
+  },
+  {
+    "atlas": "C_floor_transport",
+    "pixels": 4096,
+    "samples": 96,
+    "seconds": 190.15
+  },
+  {
+    "atlas": "C_architecture_transport",
+    "pixels": 2048,
+    "samples": 96,
+    "seconds": 37.66
+  },
+  {
+    "atlas": "C_furniture_transport",
+    "pixels": 1024,
+    "samples": 96,
+    "seconds": 11.4
+  }
+]

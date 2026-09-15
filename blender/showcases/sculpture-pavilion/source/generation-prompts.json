@@ -1,0 +1,392 @@
+[
+  {
+    "id": "A-SW",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Sculpture Atrium Beneath an Elliptical Skylight.png"
+  },
+  {
+    "id": "A-SE",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Ivory Elliptical Atrium and Sculptures.png"
+  },
+  {
+    "id": "A-NE",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Skylit Atrium with Sculptures.png"
+  },
+  {
+    "id": "A-NW",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Sunlit Elliptical Atrium and Sculptures.png"
+  },
+  {
+    "id": "A-WALL-N",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Limestone Profile Beneath the Skylight.png"
+  },
+  {
+    "id": "A-WALL-E",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Limestone Head Beneath Elliptical Skylight.png"
+  },
+  {
+    "id": "A-WALL-S",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Skylit Elliptical Atrium with Three Sculptures.png"
+  },
+  {
+    "id": "A-WALL-W",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Stone head in an ivory atrium.png"
+  },
+  {
+    "id": "A-CEILING",
+    "prompt": "Camera onfloor pointsVERTICALLYUP. Full elliptical ceiling,centerellipticalrooflight,cove,spotlighttrack. ONLYceilingandupperwallrimvisible.Nosculpturesorfloor. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Ellipse20x16m,8m high,flat white ceiling with centered elliptical6x4m rooflight. Stone head center facesWEST, bronze northwest, wooden seedpod southwest. Entrypassage west, gallerypassage east, kineticpassage north.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "A-FLOOR",
+    "prompt": "Camera belowceiling pointsVERTICALLYDOWN. Entireellipticalterrazzo floor,TOPofheadcenter,bronzenorthwest,woodseedpodsouthwest,three thresholdsW/E/N. Trueoverheadview,NOceiling. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Ellipse20x16m,8m high,flat white ceiling with centered elliptical6x4m rooflight. Stone head center facesWEST, bronze northwest, wooden seedpod southwest. Entrypassage west, gallerypassage east, kineticpassage north.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "B-SW",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Warm-white hall with a ribbon skylight.png"
+  },
+  {
+    "id": "B-SE",
+    "prompt": "Camera southeast corner looking northwest diagonally. Glass flower opposite three-quarter view. Both north and west portals on two different background walls. Bench close right foreground. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room14m east-west by12m north-south,5m flat ceiling,3m rounded corners. Central suspended amber/sage glass flower3.6m wide,bottom1.8m above floor,3support cables. Roof ONLY narrow8x0.6m slit along NORTH EDGE. WESTwall wide portal to elliptical atrium, NORTHwall wide portal to kinetic hall; SOUTH/EASTwalls entirelysolid. Curved travertine bench near southeastcorner.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "B-NE",
+    "prompt": "Camera northeast looking southwest diagonally. Glass flower reverse view. SOLID southwall at left background,westportal right. Bench left middle distance. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room14m east-west by12m north-south,5m flat ceiling,3m rounded corners. Central suspended amber/sage glass flower3.6m wide,bottom1.8m above floor,3support cables. Roof ONLY narrow8x0.6m slit along NORTH EDGE. WESTwall wide portal to elliptical atrium, NORTHwall wide portal to kinetic hall; SOUTH/EASTwalls entirelysolid. Curved travertine bench near southeastcorner.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "B-NW",
+    "prompt": "Edit: CLOSE BOTH VISIBLE DOORWAYS with matching solid ivory plaster. Both background walls must be entirely blank and unbroken, zero openings, no trees, no other art. Preserve glass flower, bench, camera, ceiling and floor. Photorealistic.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "B-WALL-N",
+    "prompt": "Camera southcenter looksNORTH straight on. Northportal behind flower,westportal onleftsidewall. Bench partlyrightforeground. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room14m east-west by12m north-south,5m flat ceiling,3m rounded corners. Central suspended amber/sage glass flower3.6m wide,bottom1.8m above floor,3support cables. Roof ONLY narrow8x0.6m slit along NORTH EDGE. WESTwall wide portal to elliptical atrium, NORTHwall wide portal to kinetic hall; SOUTH/EASTwalls entirelysolid. Curved travertine bench near southeastcorner.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "B-WALL-E",
+    "prompt": "Edit: FILL the rectangular background doorway left of the flower with matching solid plaster wall. Keep only far-left opening on perpendicular side wall. Preserve flower, bench, lighting, floor and camera. No extra changes. Photorealistic.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "B-WALL-S",
+    "prompt": "Edit this interior: put the curved travertine bench on the LEFT side against the background wall. Move the side-wall doorway from far LEFT to far RIGHT edge. Main background wall stays completely solid. Flower remains same in center. This view looks south. Photorealistic.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "B-WALL-W",
+    "prompt": "Camera eastcenter looksWEST straight on. Westportal centerbackground shows ellipticalatrium. Northportal rightsidewall,benchleftforeground. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room14m east-west by12m north-south,5m flat ceiling,3m rounded corners. Central suspended amber/sage glass flower3.6m wide,bottom1.8m above floor,3support cables. Roof ONLY narrow8x0.6m slit along NORTH EDGE. WESTwall wide portal to elliptical atrium, NORTHwall wide portal to kinetic hall; SOUTH/EASTwalls entirelysolid. Curved travertine bench near southeastcorner.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "B-CEILING",
+    "prompt": "A photograph pointing VERTICALLY STRAIGHT UP at a modern museum CEILING, no floor visible at all. White plaster flat ceiling 14m by12m with softly rounded corners. ONE narrow rectangular skylight 8m long and0.6m wide near the TOP EDGE of the image, parallel to it. White solid ceiling everywhere else. Three very thin hanging suspension cables extend from a central small bronze hub toward the camera; no sculpture in frame. Discreet spotlight rails, warm cove along perimeter. Ivory white palette. True ceiling-only architectural photograph, horizontal image, photorealistic. No wall doorways visible.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "B-FLOOR",
+    "prompt": "Camera belowceiling pointsVERTICALLYDOWN. Fullroundedrectangleterrazzo floor,TOPofglassflowercenter,causticshadow,benchSOUTHEAST,thresholdsWESTandNORTH.NOceiling. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room14m east-west by12m north-south,5m flat ceiling,3m rounded corners. Central suspended amber/sage glass flower3.6m wide,bottom1.8m above floor,3support cables. Roof ONLY narrow8x0.6m slit along NORTH EDGE. WESTwall wide portal to elliptical atrium, NORTHwall wide portal to kinetic hall; SOUTH/EASTwalls entirelysolid. Curved travertine bench near southeastcorner.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "C-SW",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Kinetic sculpture before a seamless plaster wall.png"
+  },
+  {
+    "id": "C-SE",
+    "prompt": "Camera southeast looksnorthwest diagonally. View sculpture TAILthree-quarter strongly foreshortened,receding LEFT. SolidNORTHandWESTbackgrounds,zerodoors. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room24m east-west by10m north-south,roundedcorners,barrel vault6m atedges7m middle. SIXtransversewhite ribs,FIVEnarrowtransverse skylightstrips. Center7m long ashwood/bronze kinetic seed sculpture,8legs,8ribs,2ivoryleafwings,noseWEST,tailEAST. NORTH/EAST/WESTwalls completely SOLID. SOUTHlongwall exactly2wide rounded portals, southwest toatrium,southeast toglassgallery.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "C-NE",
+    "prompt": "Camera northeast lookssouthwest diagonally. Sculpture TAILthree-quarter recedesRIGHT. SOUTHbackground TWOportals separatedbysolidwall,WESTendwallsolid. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room24m east-west by10m north-south,roundedcorners,barrel vault6m atedges7m middle. SIXtransversewhite ribs,FIVEnarrowtransverse skylightstrips. Center7m long ashwood/bronze kinetic seed sculpture,8legs,8ribs,2ivoryleafwings,noseWEST,tailEAST. NORTH/EAST/WESTwalls completely SOLID. SOUTHlongwall exactly2wide rounded portals, southwest toatrium,southeast toglassgallery.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "C-NW",
+    "prompt": "Camera northwest lookssoutheast diagonally. Sculpture NOSEthree-quarter recedesLEFT. SOUTHbackground TWOportals,EASTendwallsolid. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room24m east-west by10m north-south,roundedcorners,barrel vault6m atedges7m middle. SIXtransversewhite ribs,FIVEnarrowtransverse skylightstrips. Center7m long ashwood/bronze kinetic seed sculpture,8legs,8ribs,2ivoryleafwings,noseWEST,tailEAST. NORTH/EAST/WESTwalls completely SOLID. SOUTHlongwall exactly2wide rounded portals, southwest toatrium,southeast toglassgallery.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "C-WALL-N",
+    "prompt": "Edit this image only: FILL IN BOTH DOOR OPENINGS at far left and far right with exactly matching continuous ivory plaster wall. The background wall is completely unbroken, NO doors, NO glass, NO paintings, no trees visible anywhere. Keep kinetic sculpture, camera, floor, vault and lights unchanged. Photorealistic high-detail image.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "C-WALL-E",
+    "prompt": "Camera westend looksEAST. Sculpture directly NOSEEND-ON,narrowforeshortenedbody withwingsspreadsideways. Longhalldepth,solidEASTbackground,TWOportals RIGHTsidewall. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room24m east-west by10m north-south,roundedcorners,barrel vault6m atedges7m middle. SIXtransversewhite ribs,FIVEnarrowtransverse skylightstrips. Center7m long ashwood/bronze kinetic seed sculpture,8legs,8ribs,2ivoryleafwings,noseWEST,tailEAST. NORTH/EAST/WESTwalls completely SOLID. SOUTHlongwall exactly2wide rounded portals, southwest toatrium,southeast toglassgallery.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "C-WALL-S",
+    "prompt": "Camera northcenter looksSOUTH. Sculpture REVERSEBROADSIDE,noseimageRIGHT. SOUTHbackground TWOwideportals widelyseparated,rightatrium,leftglassgallery. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room24m east-west by10m north-south,roundedcorners,barrel vault6m atedges7m middle. SIXtransversewhite ribs,FIVEnarrowtransverse skylightstrips. Center7m long ashwood/bronze kinetic seed sculpture,8legs,8ribs,2ivoryleafwings,noseWEST,tailEAST. NORTH/EAST/WESTwalls completely SOLID. SOUTHlongwall exactly2wide rounded portals, southwest toatrium,southeast toglassgallery.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "C-WALL-W",
+    "prompt": "Camera eastend looksWEST. Sculpture directly TAILEND-ON,narrowforeshortenedbody,wingssideways. SolidWESTbackground,TWOportals LEFTsidewall. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room24m east-west by10m north-south,roundedcorners,barrel vault6m atedges7m middle. SIXtransversewhite ribs,FIVEnarrowtransverse skylightstrips. Center7m long ashwood/bronze kinetic seed sculpture,8legs,8ribs,2ivoryleafwings,noseWEST,tailEAST. NORTH/EAST/WESTwalls completely SOLID. SOUTHlongwall exactly2wide rounded portals, southwest toatrium,southeast toglassgallery.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "C-CEILING",
+    "prompt": "Camera onfloor pointsVERTICALLYUP. Fullbarrelvault,SIXtransverseribs,FIVEnarrowtransverserooflightstrips,spotlights. ONLYceilingvisible,nofloororsculpture. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room24m east-west by10m north-south,roundedcorners,barrel vault6m atedges7m middle. SIXtransversewhite ribs,FIVEnarrowtransverse skylightstrips. Center7m long ashwood/bronze kinetic seed sculpture,8legs,8ribs,2ivoryleafwings,noseWEST,tailEAST. NORTH/EAST/WESTwalls completely SOLID. SOUTHlongwall exactly2wide rounded portals, southwest toatrium,southeast toglassgallery.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "C-FLOOR",
+    "prompt": "Camera belowceiling pointsVERTICALLYDOWN. Fulllongroundedrectanglefloor,TOPofkineticsculpturecenter east-west axis,noseWEST,twoivorywings. TWOthresholdsSOUTHedge,otheredgesclosed.NOceiling. Create ONE high-detail photorealistic architectural image, landscape, highest native resolution. Warm white organic plaster, soft rounded corners, pale ivory terrazzo floor, restrained warm cove light, daylight from ROOF ONLY, no facade windows, no people or text. Sculpture reference defines the object, not the camera. Room24m east-west by10m north-south,roundedcorners,barrel vault6m atedges7m middle. SIXtransversewhite ribs,FIVEnarrowtransverse skylightstrips. Center7m long ashwood/bronze kinetic seed sculpture,8legs,8ribs,2ivoryleafwings,noseWEST,tailEAST. NORTH/EAST/WESTwalls completely SOLID. SOUTHlongwall exactly2wide rounded portals, southwest toatrium,southeast toglassgallery.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "S01-HERO",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Serene Seven-Root Limestone Head.png"
+  },
+  {
+    "id": "S01-FRONT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Serene Limestone Head with Root Lattice.png"
+  },
+  {
+    "id": "S01-BACK",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Back View of a Seven-Root Limestone Head.png"
+  },
+  {
+    "id": "S01-LEFT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Serene Limestone Head with Seven Roots.png"
+  },
+  {
+    "id": "S01-RIGHT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Smooth right-profile limestone sculpture.png"
+  },
+  {
+    "id": "S01-TOP",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Serene ivory head with seven-root lattice.png"
+  },
+  {
+    "id": "S01-BOTTOM",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Underside view of rooted stone head.png"
+  },
+  {
+    "id": "S02-HERO",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Flowing bronze ribbons around an oval core.png"
+  },
+  {
+    "id": "S02-FRONT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Abstract bronze ribbon sculpture.png"
+  },
+  {
+    "id": "S02-BACK",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Bronze ribbon sculpture, back view.png"
+  },
+  {
+    "id": "S02-LEFT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Left-profile bronze ribbon sculpture.png"
+  },
+  {
+    "id": "S02-RIGHT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Bronze ribbons around an oval core.png"
+  },
+  {
+    "id": "S02-TOP",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Top-Down Bronze Ribbon Sculpture.png"
+  },
+  {
+    "id": "S02-BOTTOM",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Suspended Bronze Ribbons from Below.png"
+  },
+  {
+    "id": "S03-HERO",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Twisting Ashwood Seedpod Sculpture.png"
+  },
+  {
+    "id": "S03-FRONT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Five-lobed ash wood seed pod.png"
+  },
+  {
+    "id": "S03-BACK",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Five-lobed ashwood sculpture, back view.png"
+  },
+  {
+    "id": "S03-LEFT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Five-lobed ash wood seed pod(1).png"
+  },
+  {
+    "id": "S03-RIGHT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Five-Lobed Ash Wood Sculpture Profile.png"
+  },
+  {
+    "id": "S03-TOP",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Top-Down Ashwood Seed-Pod Sculpture.png"
+  },
+  {
+    "id": "S03-BOTTOM",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Underside view of a five-lobed ash sculpture.png"
+  },
+  {
+    "id": "S04-HERO",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Suspended amber twelve-petal glass bloom.png"
+  },
+  {
+    "id": "S04-FRONT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Suspended twelve-petal amber glass flower.png"
+  },
+  {
+    "id": "S04-BACK",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Suspended amber glass flower, rear view.png"
+  },
+  {
+    "id": "S04-LEFT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Suspended amber-sage glass flower.png"
+  },
+  {
+    "id": "S04-RIGHT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Suspended amber-sage glass flower sculpture.png"
+  },
+  {
+    "id": "S04-TOP",
+    "prompt": "Camera ABOVE this exact glass sculpture looking VERTICALLY STRAIGHT DOWN. TOPVIEW of12petals arrangedasflower: sixsageouter droopingpetals,sixamberinneruprightpetals,centralamberseed,bronzehub,3supportcables. Radial flowerplan silhouette,NOTFRONT VIEW. Neutralstudiobackground,wholeobject,detailedphotorealglass,notext.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "S04-BOTTOM",
+    "prompt": "Camera BELOW this exact glass sculpture, LOOK STRAIGHT UP. Show UNDERSIDE of central bronze hub andattachments of12glasspetals,6sage outerand6amberinner petals,amberseedabovehub,3supportcables. Neutralstudio background,wholeobject,margins,photorealglasscaustics,detailedsingleimage,notext.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "S05-HERO",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Kinetic Ashwood Seed Sculpture.png"
+  },
+  {
+    "id": "S05-FRONT",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Winged seed automaton, end-on view.png"
+  },
+  {
+    "id": "S05-BACK",
+    "prompt": null,
+    "note": "Recovered prior generated reference; original generation prompt was removed by workspace maintenance.",
+    "source_name": "Kinetic seed sculpture, tail-end view.png"
+  },
+  {
+    "id": "S05-LEFT",
+    "prompt": "Exact SIDE profile of the entire7m long sculpture,nose pointsLEFT,bodyhorizontal. Same exact original kinetic sculpture as reference. Pale ashwood seed-shaped spine,8ribs,8bronzelegs,fourpairs,2translucentivoryleafwings,noface,noeyes. Neutralwarmgray studio background,wholeobjectwithmargins,photoreal macrodetail,highquality,landscapeimage,notext.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "S05-RIGHT",
+    "prompt": "Opposite exact SIDEprofile,nose pointsRIGHT,view other flank,bodyhorizontal. Same exact original kinetic sculpture as reference. Pale ashwood seed-shaped spine,8ribs,8bronzelegs,fourpairs,2translucentivoryleafwings,noface,noeyes. Neutralwarmgray studio background,wholeobjectwithmargins,photoreal macrodetail,highquality,landscapeimage,notext.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "S05-TOP",
+    "prompt": "Camera directly ABOVE pointing STRAIGHTDOWN, fullplanview of spine,8transverse ribs,8legs and2leafwings, noseLEFT. Same exact original kinetic sculpture as reference. Pale ashwood seed-shaped spine,8ribs,8bronzelegs,fourpairs,2translucentivoryleafwings,noface,noeyes. Neutralwarmgray studio background,wholeobjectwithmargins,photoreal macrodetail,highquality,landscapeimage,notext.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  },
+  {
+    "id": "S05-BOTTOM",
+    "prompt": "Camera BELOW sculpture lookingup to UNDERSIDE, showcomplete undersideofspine,bronzelinkages,all8legsandfeet,twowingattachments. Same exact original kinetic sculpture as reference. Pale ashwood seed-shaped spine,8ribs,8bronzelegs,fourpairs,2translucentivoryleafwings,noface,noeyes. Neutralwarmgray studio background,wholeobjectwithmargins,photoreal macrodetail,highquality,landscapeimage,notext.",
+    "note": "Built-in image generation; original output copied unchanged.",
+    "source_name": null
+  }
+]

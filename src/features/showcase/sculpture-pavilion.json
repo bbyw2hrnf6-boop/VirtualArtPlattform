@@ -1,0 +1,88 @@
+{
+  "rooms": [
+    {
+      "id": "A",
+      "name": "Sculpture Atrium",
+      "start": [
+        -7,
+        1.75,
+        -1.8
+      ],
+      "look": [
+        1,
+        1.75,
+        0
+      ]
+    },
+    {
+      "id": "B",
+      "name": "Glass Gallery",
+      "start": [
+        13,
+        1.75,
+        2.5
+      ],
+      "look": [
+        17,
+        2.7,
+        0
+      ]
+    },
+    {
+      "id": "C",
+      "name": "Kinetic Hall",
+      "start": [
+        1,
+        1.75,
+        -12
+      ],
+      "look": [
+        8,
+        1.8,
+        -15
+      ]
+    }
+  ],
+  "artworks": [
+    {
+      "id": "S01",
+      "title": "Rooted Silence",
+      "room": "A",
+      "image": "/assets/showcases/sculpture-pavilion/objects/S01.webp",
+      "width": 2,
+      "height": 3.2
+    },
+    {
+      "id": "S02",
+      "title": "Tidal Bronze",
+      "room": "A",
+      "image": "/assets/showcases/sculpture-pavilion/objects/S02.webp",
+      "width": 1.45,
+      "height": 2.45
+    },
+    {
+      "id": "S03",
+      "title": "Growth Fold",
+      "room": "A",
+      "image": "/assets/showcases/sculpture-pavilion/objects/S03.webp",
+      "width": 1.3,
+      "height": 2.2
+    },
+    {
+      "id": "S04",
+      "title": "Aerial Bloom",
+      "room": "B",
+      "image": "/assets/showcases/sculpture-pavilion/objects/S04.webp",
+      "width": 3.6,
+      "height": 2.4
+    },
+    {
+      "id": "S05",
+      "title": "Gentle Engine",
+      "room": "C",
+      "image": "/assets/showcases/sculpture-pavilion/objects/S05.webp",
+      "width": 7,
+      "height": 3.2
+    }
+  ]
+}

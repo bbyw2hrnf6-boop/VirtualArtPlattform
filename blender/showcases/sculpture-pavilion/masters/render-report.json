@@ -1,0 +1,23 @@
+[
+  {
+    "camera": "Cover",
+    "width": 3840,
+    "height": 2160,
+    "samples": 256,
+    "seconds": 590.1
+  },
+  {
+    "camera": "B-SW",
+    "width": 3840,
+    "height": 2160,
+    "samples": 256,
+    "seconds": 655.03
+  },
+  {
+    "camera": "C-SE",
+    "width": 3840,
+    "height": 2160,
+    "samples": 256,
+    "seconds": 658.41
+  }
+]

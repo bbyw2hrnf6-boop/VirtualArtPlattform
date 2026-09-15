@@ -1,0 +1,20 @@
+{
+  "id": "S02",
+  "name": "Tidal Bronze",
+  "room": "A",
+  "position": [
+    -3,
+    4,
+    0.15
+  ],
+  "dimensions": [
+    1.45,
+    1.25,
+    2.45
+  ],
+  "rotation_z": 30,
+  "material": "Satin champagne bronze; subtle green recessed patina",
+  "topology": "Drei dicke fließende Bronzebänder, am Fuß und oben verbunden. Zwei übereinanderliegende tropfenförmige Durchblicke, asymmetrische S-Silhouette.",
+  "method": "Drei breite Bandflächen entlang Bézierkurven, reale Dicke und runde Kanten. Die beiden negativen Räume zuerst abstimmen; Fuß oval und flach.",
+  "views": "FRONT=-Y; BACK=+Y; LEFT=-X; RIGHT=+X; TOP=+Z; BOTTOM=-Z."
+}

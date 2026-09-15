@@ -1,0 +1,20 @@
+{
+  "id": "S01",
+  "name": "Rooted Silence",
+  "room": "A",
+  "position": [
+    1,
+    0,
+    0.18
+  ],
+  "dimensions": [
+    2,
+    1.85,
+    3.2
+  ],
+  "rotation_z": -90,
+  "material": "Ivory porous limestone",
+  "topology": "Ruhiger androgyner Kopf, geschlossene Augen, kurzer Hals. Anatomisch linke Wange geht in sieben Hauptwurzeln über, jede einmal verzweigt; offenes Wurzelgeflecht hinten. Rechte Wange glatt. Kein Körper.",
+  "method": "Kopf und Hals sculpten. Sieben verjüngte Kurven mit kleineren Ästen an linke Schädelschale anschließen. Durchblicke offen halten, Übergänge verschmelzen. Poren als feine Normal-/Displacement-Struktur.",
+  "views": "FRONT=-Y; BACK=+Y; anatomisch LEFT=+X (Wurzeln); RIGHT=-X (glatt); TOP=+Z; BOTTOM=-Z."
+}

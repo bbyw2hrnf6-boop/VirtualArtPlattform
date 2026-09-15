@@ -26,7 +26,7 @@ const NON_INDEXED_DESCRIPTION =
   "Create, manage and share immersive 3D presentations with LIEUVA.";
 
 export function pageMetadataPolicy(
-  page: "home" | "obsidian" | "creators" | "creator-hub" | "create" | "demo" | "data" | "account" | "admin" | "auth-action" | "space-not-found" | "other",
+  page: "home" | "sculpture-pavilion" | "obsidian" | "creators" | "creator-hub" | "create" | "demo" | "data" | "account" | "admin" | "auth-action" | "space-not-found" | "other",
 ): PageMetadataPolicy {
   if (page === "home") return {
     title: productTitle(),
@@ -52,6 +52,13 @@ export function pageMetadataPolicy(
     image: HOME_IMAGE,
     imageAlt: "The personalized LIEUVA Creator Hub",
   };
+  if (page === "sculpture-pavilion") return {
+    title: productTitle("Sculpture Pavilion — Future Nature"),
+    description: "Five sculptures. Three sunlit rooms. Explore stone, bronze, wood and glass in a bespoke LIEUVA pavilion.",
+    canonical: HOME_CANONICAL, robots: "noindex,nofollow",
+    image: `${HOME_CANONICAL}assets/showcases/sculpture-pavilion/cover.webp`,
+    imageAlt: "Sculpture Pavilion, an ivory atrium beneath an elliptical skylight",
+  };
   if (page === "obsidian") return {
     title: productTitle("Obsidian — Three connected galleries"),
     description: "Explore eleven visions of nature in a bespoke three-room LIEUVA exhibition.",
@@ -74,7 +81,7 @@ export function pageMetadataPolicy(
     canonical: `${HOME_CANONICAL}admin/overview`,
     robots: "noindex,nofollow,noarchive",
   };
-  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "creators" | "creator-hub" | "demo" | "obsidian" | "admin">, string> = {
+  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "creators" | "creator-hub" | "demo" | "obsidian" | "sculpture-pavilion" | "admin">, string> = {
     create: "Create a Space",
     data: "Data and rights",
     account: "Your Projects and account",

@@ -1,13 +1,19 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { ObsidianControls, ObsidianMode } from './ObsidianScene';
-import data from './obsidian.json';
+import obsidian from './obsidian.json';
+import pavilion from './sculpture-pavilion.json';
 import { VisitorControls } from '../gallery/VisitorControls';
 import '../../styles/visitorControls.css';
 import './obsidian.css';
 
-const Scene = lazy(() => import('./ObsidianScene'));
+const ObsidianScene = lazy(() => import('./ObsidianScene'));
 
-export default function ObsidianPage() {
+const SculptureScene = lazy(() => import('./SculptureScene'));
+
+export default function ObsidianPage({ sculpture = false }: { sculpture?: boolean }) {
+  const data = sculpture ? pavilion : obsidian;
+  const title = sculpture ? 'Sculpture Pavilion' : 'Obsidian';
+  const Scene = sculpture ? SculptureScene : ObsidianScene;
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const controls = useRef<ObsidianControls | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -34,19 +40,19 @@ export default function ObsidianPage() {
       <a href="#/" aria-label="LIEUVA home">LIEUVA <span>/ SHOWCASE</span></a>
       <a href="#/">← Back to LIEUVA</a>
     </header>
-    <section className="obsidian__stage" aria-label="Obsidian exhibition preview">
-      {status !== 'ready' && <img className="obsidian__poster" src="/assets/showcases/obsidian/cover.webp" alt="Obsidian: warm pools of light, botanical art, walnut portals and honed black limestone." fetchPriority="high" />}
+    <section className="obsidian__stage" aria-label={`${title} exhibition preview`}>
+      {status !== 'ready' && <img className="obsidian__poster" src={`/assets/showcases/${sculpture ? "sculpture-pavilion" : "obsidian"}/cover.webp`} alt={sculpture ? "Sculpture Pavilion: ivory atrium, bronze ribbons, carved stone and pale ash beneath an oval skylight." : "Obsidian: warm pools of light, botanical art, walnut portals and honed black limestone."} fetchPriority="high" />}
       {active && <Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} /></Suspense>}
       {status !== 'ready' && <div className="obsidian__entrance">
         <p className="obsidian__eyebrow">A LIEUVA bespoke exhibition</p>
-        <h1>Obsidian.</h1>
-        <p>Three rooms. Eleven visions of nature.<br />An exhibition in light, stone and living matter.</p>
+        <h1>{title}.</h1>
+        <p>{sculpture ? "Three rooms. Five sculptural encounters." : "Three rooms. Eleven visions of nature."}<br />{sculpture ? "Stone, bronze, ash and glass. Nature in another form." : "An exhibition in light, stone and living matter."}</p>
         <button className="obsidian__enter" disabled={status === 'loading'} onClick={() => { setStatus('loading'); setActive(true); }}>{status === 'loading' ? 'Preparing your visit…' : status === 'error' ? 'Try the exhibition again ↗' : 'Enter the exhibition ↗'}</button>
         <p className="obsidian__status" role="status">{status === 'error' ? 'The 3D view could not load. You can still explore every artwork below.' : saver ? 'Data Saver is on. Browse the artworks below, or choose to load the 3D exhibition.' : 'Explore freely on desktop or mobile.'}</p>
         <a href="#obsidian-collection" onClick={e => { e.preventDefault(); document.getElementById("obsidian-collection")?.scrollIntoView(); }}>View the collection ↓</a>
       </div>}
       {status === 'ready' && <>
-        <div className="obsidian__room-label"><span>{String(room+1).padStart(2,'0')} / OBSIDIAN</span><h1>{data.rooms[room].name}</h1></div>
+        <div className="obsidian__room-label"><span>{String(room+1).padStart(2,'0')} / {title.toUpperCase()}</span><h1>{data.rooms[room].name}</h1></div>
         <label className="obsidian__room-picker">Room
           <select aria-label="Exhibition room" value={room} onChange={event => controls.current?.room(Number(event.target.value))}>
             {data.rooms.map((r, i) => <option key={r.id} value={i}>{String(i+1).padStart(2,'0')} / {r.name}</option>)}
@@ -67,12 +73,12 @@ export default function ObsidianPage() {
       </>}
     </section>
     <section className="obsidian__collection" id="obsidian-collection" aria-labelledby="obsidian-collection-heading">
-      <div className="obsidian__collection-intro"><p className="obsidian__eyebrow">The collection / 11 works</p><h2 id="obsidian-collection-heading">Nature, imagined.</h2><p>A journey through botanical origins, living matter and future nature. The supplied collection consists of AI-generated artworks.</p></div>
+      <div className="obsidian__collection-intro"><p className="obsidian__eyebrow">The collection / {data.artworks.length} works</p><h2 id="obsidian-collection-heading">Nature, imagined.</h2><p>{sculpture ? "Five sculptures modelled in Blender from the supplied AI-generated concepts. An exploration of organic form, daylight and gentle movement." : "A journey through botanical origins, living matter and future nature. The supplied collection consists of AI-generated artworks."}</p></div>
       {data.rooms.map(r => <section key={r.id} aria-labelledby={`collection-${r.id}`}><h3 id={`collection-${r.id}`}>{r.name}</h3><div className="obsidian__art-grid">{data.artworks.filter(a => a.room === r.id).map(a => <button key={a.id} onClick={() => setSelected(a.id)}><img src={a.image} alt={a.title} width={Math.round(a.width*400)} height={Math.round(a.height*400)} loading="lazy" /><span>{a.title}</span><small>{a.width.toFixed(1)} × {a.height.toFixed(1)} m · View artwork ↗</small></button>)}</div></section>)}
-      <footer><p>OBSIDIAN is an individually authored LIEUVA showcase.<br />This exhibition is separate from the room templates available in Studio.</p><a href="#/">Back to LIEUVA ↗</a></footer>
+      <footer><p>{title} is an individually authored LIEUVA showcase.<br />This exhibition is separate from the room templates available in Studio.</p><a href="#/">Back to LIEUVA ↗</a></footer>
     </section>
     <dialog className="obsidian__art-dialog" ref={dialog} onCancel={() => setSelected(null)} onClose={() => setSelected(null)} aria-label={current?.title ?? 'Artwork'}>
-      {current && <><button className="obsidian__close" onClick={() => setSelected(null)} autoFocus aria-label="Close artwork">×</button><img src={current.image} alt={current.title} /><div><p>{current.id} / AI-generated artwork</p><h2>{current.title}</h2><p>{current.width.toFixed(1)} × {current.height.toFixed(1)} m</p></div></>}
+      {current && <><button className="obsidian__close" onClick={() => setSelected(null)} autoFocus aria-label="Close artwork">×</button><img src={current.image} alt={current.title} /><div><p>{current.id} / {sculpture ? "3D reconstruction from an AI-generated concept" : "AI-generated artwork"}</p><h2>{current.title}</h2><p>{current.width.toFixed(1)} × {current.height.toFixed(1)} m</p></div></>}
     </dialog>
   </main>;
 }

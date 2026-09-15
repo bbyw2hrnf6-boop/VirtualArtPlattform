@@ -2,8 +2,7 @@
 
 This is a bespoke, read-only three-room exhibition at `/#/showcase/obsidian`.
 It is not a Studio template, publication, Firebase record or replacement for the
-Danny reference. The homepage's Art exhibitions image and “Explore Obsidian” action both open it. Sculpture and
-Architecture retain their future-showcase state.
+Danny reference. The homepage's Art exhibitions image and “Explore Obsidian” action both open it. The neighboring Sculpture & 3D card opens the separate [Sculpture Pavilion](../sculpture-pavilion/README.md); Architecture retains its future-showcase state.
 
 ## Source and geometry
 
@@ -88,9 +87,9 @@ GLB is 11.6 MB; mobile is 8.5 MB. Both contain 90,660 triangles. Estimated decod
 RGBA texture storage with mipmaps is 445 MB / 147 MB respectively, before reflection
 targets, framebuffers and transient decoding memory. Physical iOS/Android
 performance still needs review. The aggregate compressed-JS release allowance
-is 607 KB, including the existing 5 KB allocation for the shared walking and
-reflection boundary. This iteration retains that ceiling, as well as the entry,
-largest-lazy-chunk, CSS and Studio asset ceilings. Only one
+is 610 KB, including the existing 5 KB allocation for the shared walking and
+reflection boundary and the separate 3 KB Sculpture Pavilion route/navigation
+allowance. Entry, largest-lazy-chunk, CSS and Studio asset ceilings are unchanged. Only one
 additional scene pass runs per visible moving frame, and no reflection work runs
 while idle/hidden or in Overview. The 2048/1024 reflection targets intentionally
 process about 78% more pixels than the previous 1536/768 targets, without
