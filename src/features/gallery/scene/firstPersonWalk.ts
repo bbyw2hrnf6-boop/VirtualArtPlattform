@@ -176,12 +176,13 @@ export function createFirstPersonWalk(
   const previous = new THREE.Vector3();
   const update = () => {
     const now = performance.now();
-    const delta = Math.min((now - previousTime) / 1000, 0.05);
+    const elapsed = Math.max(0, (now - previousTime) / 1000);
+    const delta = Math.min(elapsed, 0.05);
     previousTime = now;
     camera.fov = THREE.MathUtils.lerp(
       camera.fov,
       targetFov,
-      1 - Math.exp(-11 * delta),
+      1 - Math.exp(-11 * elapsed),
     );
     camera.updateProjectionMatrix();
     if (!enabled) return;
@@ -223,7 +224,10 @@ export function createFirstPersonWalk(
           .multiplyScalar(Math.min(2.2 * pace, Math.max(0.55, distance * 1.35)));
     }
     const response = desired.lengthSq() > velocity.lengthSq() ? 7.4 : 10.8;
-    velocity.lerp(desired, 1 - Math.exp(-response * delta));
+    // Braking/zoom settle in real time even when software rendering stalls.
+    // Translation and active acceleration retain the collision-safe 50 ms cap.
+    const dampingTime = desired.lengthSq() === 0 ? elapsed : delta;
+    velocity.lerp(desired, 1 - Math.exp(-response * dampingTime));
     previous.copy(camera.position);
     camera.position.addScaledVector(velocity, delta);
     const current = bounds();

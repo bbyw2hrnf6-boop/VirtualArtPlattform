@@ -9,10 +9,15 @@ export default defineConfig({
   // Pixel baselines are platform-specific even with pinned Chromium,
   // SwiftShader and bundled fonts. Never compare macOS goldens on Linux CI.
   snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}-{platform}{ext}',
-  fullyParallel: false,
+  // Isolated page/context fixtures allow even test-level sharding across runners.
+  fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   workers: 1,
+  // Stop after the first exhausted retry; never spend another 20 minutes
+  // testing a production artifact that can no longer be released.
+  maxFailures: process.env.CI ? 1 : 0,
+  globalTimeout: process.env.CI ? 25 * 60_000 : 0,
   // These are functional checks of the full-quality production scene, not GPU
   // speed benchmarks. Linux software rendering can block a browser query for
   // 6–8 seconds; the default 5-second assertion would fail before it returns.

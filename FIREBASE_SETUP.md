@@ -695,7 +695,12 @@ Configure the external trust once:
 Main `Verify` compiles and browser-smokes the exact release, generates and
 validates `functions/functions.yaml`, runs the Firestore/Storage emulator
 authorization matrix, and uploads separate digest-bound application and policy
-artifacts.
+artifacts. The application artifact is initially a candidate: four one-worker
+Chromium shards download and verify the same manifest/digest, then serve its
+unchanged `dist` without rebuilding. Only success of the entire Verify run
+(including all four shards) permits the existing deployment resolver to promote
+it. Each shard stops at its first exhausted retry and has an 11-minute test
+limit, 12-minute step limit and 15-minute job limit; matrix failure cancels siblings.
 Within the production release, only the protected deploy job receives
 `id-token: write`; it deploys Functions and Hosting together without checkout,
 application dependency installation, predeploy hooks, or a rebuild. It installs

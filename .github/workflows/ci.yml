@@ -93,6 +93,7 @@ jobs:
         run: ./node_modules/.bin/playwright install --with-deps chromium
 
       - name: Smoke the preview build in Chromium
+        timeout-minutes: 27
         if: github.event_name != 'push' || github.ref != 'refs/heads/main'
         run: npm run test:browser-smoke
 
@@ -263,21 +264,6 @@ jobs:
       - name: Build the production-configured Hosting artifact
         run: npm run build
 
-      - name: Install the locked Chromium browser
-        run: ./node_modules/.bin/playwright install --with-deps chromium
-
-      - name: Smoke the exact production artifact in Chromium
-        run: npm run test:browser-smoke
-
-      - name: Retain failed production browser diagnostics
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: browser-smoke-production-${{ github.run_id }}-${{ github.run_attempt }}
-          path: artifacts/playwright-results/
-          if-no-files-found: ignore
-          retention-days: 7
-
       - name: Install and verify the locked Firebase CLI
         run: |
           node firebase-cli/validate-lock.mjs
@@ -328,3 +314,76 @@ jobs:
         env:
           ARTIFACT_ID: ${{ steps.upload-release.outputs.artifact-id }}
           ARTIFACT_DIGEST: ${{ steps.upload-release.outputs.artifact-digest }}
+
+  production-browser:
+    name: Production Chromium (${{ matrix.shard }}/4)
+    needs: production-artifact
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: true
+      matrix:
+        shard: [1, 2, 3, 4]
+    permissions:
+      contents: read
+    env:
+      CI: "true"
+      NODE_VERSION: 22.23.2
+      NPM_VERSION: 10.9.8
+      FIREBASE_CLI_VERSION: 15.30.0
+      FIREBASE_PROJECT_ID: virtualartplattform
+      LIEUVA_PRODUCTION_ORIGIN: https://lieuva.com
+      WP2_MAIL_MODE: disabled
+      VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
+      VITE_TELEMETRY_MODE: functions
+      VITE_TELEMETRY_ENVIRONMENT: production
+      AURA_PUBLIC_APP_URL: ${{ vars.AURA_PUBLIC_APP_URL }}
+      AURA_REPLY_TO: ${{ vars.AURA_REPLY_TO }}
+      AURA_LEGAL_FOOTER: ${{ vars.AURA_LEGAL_FOOTER }}
+    steps:
+      - name: Check out the matching browser tests
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Use the pinned Node.js toolchain
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Download the exact production candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: lieuva-production-${{ github.sha }}-${{ github.run_id }}
+          path: artifacts/wp2-release
+          digest-mismatch: error
+
+      - name: Verify candidate identity and prepare its Hosting files
+        run: |
+          test "$(node --version)" = "v${NODE_VERSION}"
+          test "$(npm --version)" = "$NPM_VERSION"
+          node scripts/wp2-release-artifact.mjs verify \
+            --commit-sha "$GITHUB_SHA" \
+            --node-version "$NODE_VERSION" \
+            --firebase-cli-version "$FIREBASE_CLI_VERSION" \
+            --mail-mode "$WP2_MAIL_MODE" \
+            --project-id "$FIREBASE_PROJECT_ID" \
+            --origin "$LIEUVA_PRODUCTION_ORIGIN"
+          cp -R artifacts/wp2-release/dist dist
+          npm ci
+          ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Smoke the exact production artifact in Chromium
+        timeout-minutes: 12
+        run: npm run test:browser-smoke -- --shard=${{ matrix.shard }}/4 --global-timeout=660000
+
+      - name: Retain failed production browser diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-smoke-production-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: artifacts/playwright-results/
+          if-no-files-found: ignore
+          retention-days: 7

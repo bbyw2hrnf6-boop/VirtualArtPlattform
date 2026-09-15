@@ -26,7 +26,7 @@ function harness() {
     const e = Object.assign(new Event(type, { cancelable: true }), values);
     canvas.dispatchEvent(e); return e;
   };
-  const frames = (count: number) => { for (let i = 0; i < count; i++) { now += 1000 / 60; walk.update(); } };
+  const frames = (count: number, milliseconds = 1000 / 60) => { for (let i = 0; i < count; i++) { now += milliseconds; walk.update(); } };
   return { canvas, camera, walk, event, frames, onIntent, onEscape };
 }
 
@@ -92,6 +92,22 @@ describe('shared first-person visitor movement', () => {
     walk.dispose();
     event('keydown', { code: 'KeyW' });
     expect(walk.needsUpdate()).toBe(false);
+  });
+
+  it('settles braking and zoom after slow frames without taking an unsafe movement step', () => {
+    const { camera, walk, event, frames } = harness();
+    event('keydown', { code: 'KeyW' }); frames(60);
+    const before = camera.position.clone();
+    frames(1, 3_000);
+    expect(camera.position.distanceTo(before)).toBeLessThanOrEqual(2.3 * .05);
+    event('keyup', { code: 'KeyW' });
+    event('wheel', { deltaY: 700 });
+    const released = camera.position.clone();
+    frames(1, 3_000);
+    expect(walk.needsUpdate()).toBe(false);
+    expect(camera.position.distanceTo(released)).toBeLessThan(.001);
+    expect(camera.fov).toBeCloseTo(walk.preferredFov(), 3);
+    walk.dispose();
   });
 
   it('shares lateral touch walking, target cancellation and session zoom limits', () => {

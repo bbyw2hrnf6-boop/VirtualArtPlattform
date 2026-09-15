@@ -150,7 +150,22 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       mats.forEach(m => { Object.values(m).forEach(v => { if (v instanceof THREE.Texture) textures.add(v); }); m.dispose(); });
       textures.forEach(t => t.dispose());
     };
+    let previousActiveFrame = 0, slowFrames = 0, reducedResolution = false;
     function render() {
+      const now = performance.now();
+      // Sustained frame cost, not device/CI detection. Keep source textures and
+      // baked lighting; reduce raster work on genuinely slow graphics devices.
+      if (!reducedResolution && previousActiveFrame && now - previousActiveFrame > 150) {
+        if (++slowFrames >= 3) {
+          reducedResolution = true;
+          renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
+          if (reflection) {
+            reflection.getRenderTarget().samples = 0;
+            reflection.getRenderTarget().setSize(512, 512);
+            (reflection.material as THREE.ShaderMaterial).uniforms.texel.value.set(1 / 512, 1 / 512);
+          }
+        }
+      } else slowFrames = 0;
       raf = 0;
       if (disposed || document.hidden) return;
       // Orbit owns the camera in Overview; Walk must not apply its FOV easing.
@@ -170,6 +185,8 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       renderer.render(scene, camera);
       const moving = !paused && (mode === 'walk' ? walk.needsUpdate() : orbitMoving);
       host.dataset.idle = String(!moving);
+      host.dataset.resolution = reducedResolution ? 'balanced' : 'full';
+      previousActiveFrame = moving ? now : 0;
       if (moving) schedule();
     }
     const resize = new ResizeObserver(() => {
