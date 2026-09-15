@@ -93,8 +93,8 @@
     },
     {
       "path": "blender/showcases/sculpture-pavilion/source/planning/floor-plan.svg",
-      "bytes": 109035,
-      "sha256": "797bb1325180076cea514137eee5c9eaeab85ed8b2500d2a6711d36fc3a1abb6"
+      "bytes": 105888,
+      "sha256": "e262108ea296e3d56dd2c491f0434bb42a97da283855bd084c937aa12845f84e"
     },
     {
       "path": "blender/showcases/sculpture-pavilion/source/planning/layout.json",
@@ -108,8 +108,8 @@
     },
     {
       "path": "blender/showcases/sculpture-pavilion/source/planning/roof-plan.svg",
-      "bytes": 62003,
-      "sha256": "d6e7f7db996b20d754bbd2a83aa42a9d1554b59e82abd0f3250770d8595afaea"
+      "bytes": 60316,
+      "sha256": "e668bf6a9f8379ae45f81eeee0c48fcaf8eb69c7bf1c27741d9a28629ac38db7"
     },
     {
       "path": "blender/showcases/sculpture-pavilion/source/planning/sections.png",
@@ -118,8 +118,8 @@
     },
     {
       "path": "blender/showcases/sculpture-pavilion/source/planning/sections.svg",
-      "bytes": 50102,
-      "sha256": "9291fbb8834030bda3956eb158a4639b521dd9ec615678f4bdc3fb0904bbb263"
+      "bytes": 49101,
+      "sha256": "14076958a4fd7fbfdcf3abe810711f3447384cd73e87b2e6522a7fab29497557"
     },
     {
       "path": "blender/showcases/sculpture-pavilion/source/sculptures/S01/BACK.png",
