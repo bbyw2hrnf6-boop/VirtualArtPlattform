@@ -174,17 +174,7 @@ export function createFirstPersonWalk(
   const desired = new THREE.Vector3();
   const velocity = new THREE.Vector3();
   const previous = new THREE.Vector3();
-  const update = () => {
-    const now = performance.now();
-    const elapsed = Math.max(0, (now - previousTime) / 1000);
-    const delta = Math.min(elapsed, 0.05);
-    previousTime = now;
-    camera.fov = THREE.MathUtils.lerp(
-      camera.fov,
-      targetFov,
-      1 - Math.exp(-11 * elapsed),
-    );
-    camera.updateProjectionMatrix();
+  const advance = (delta: number, elapsed: number) => {
     if (!enabled) return;
     const turnDirection =
       (keys.has("ArrowLeft") ? 1 : 0) - (keys.has("ArrowRight") ? 1 : 0);
@@ -257,6 +247,18 @@ export function createFirstPersonWalk(
       }
     } else blockedFrames = 0;
   };
+  const update = () => {
+    const now = performance.now();
+    const elapsed = Math.max(0, (now - previousTime) / 1000);
+    previousTime = now;
+    camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 1 - Math.exp(-11 * elapsed));
+    camera.updateProjectionMatrix();
+    // Catch up slow frames in collision-checked steps, rather than discarding
+    // all but 50 ms of movement. Bound catch-up after suspension to 250 ms.
+    const duration = Math.min(elapsed, .25);
+    const steps = Math.max(1, Math.ceil(duration / .05));
+    for (let i = 0; i < steps; i++) advance(duration / steps, elapsed / steps);
+  };
   const moveTo = (point: THREE.Vector3) => {
     const current = bounds();
     const candidate = point.clone();
@@ -273,12 +275,14 @@ export function createFirstPersonWalk(
     candidate.y = eyeHeight;
     const path = findPath ? findPath(camera.position, candidate) : [candidate];
     if (!path?.length) return false;
+    previousTime = performance.now();
     destinations = path;
     blockedFrames = 0;
     return true;
   };
   const setEnabled = (value: boolean) => {
     enabled = value;
+    previousTime = performance.now();
     preferences?.show(value);
     keys.clear();
     touches.clear();

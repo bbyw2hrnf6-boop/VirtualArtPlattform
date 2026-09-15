@@ -11,7 +11,7 @@ vi.mock('./walkPreferences', async importOriginal => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-function harness() {
+function harness(collision?: (next: THREE.Vector3, previous: THREE.Vector3) => void) {
   let now = 0;
   vi.spyOn(performance, 'now').mockImplementation(() => now);
   const canvas = Object.assign(new EventTarget(), {
@@ -21,7 +21,7 @@ function harness() {
   const camera = new THREE.PerspectiveCamera(62);
   camera.position.set(0, 1.75, 0);
   const onIntent = vi.fn(), onEscape = vi.fn();
-  const walk = createFirstPersonWalk(camera, canvas, () => ({ minX: -20, maxX: 20, minZ: -20, maxZ: 20 }), undefined, undefined, onIntent, onEscape);
+  const walk = createFirstPersonWalk(camera, canvas, () => ({ minX: -20, maxX: 20, minZ: -20, maxZ: 20 }), collision, undefined, onIntent, onEscape);
   const event = (type: string, values: Record<string, unknown> = {}) => {
     const e = Object.assign(new Event(type, { cancelable: true }), values);
     canvas.dispatchEvent(e); return e;
@@ -95,11 +95,14 @@ describe('shared first-person visitor movement', () => {
   });
 
   it('settles braking and zoom after slow frames without taking an unsafe movement step', () => {
-    const { camera, walk, event, frames } = harness();
+    const steps: number[] = [];
+    const { camera, walk, event, frames } = harness((next, previous) => { steps.push(next.distanceTo(previous)); });
     event('keydown', { code: 'KeyW' }); frames(60);
     const before = camera.position.clone();
     frames(1, 3_000);
-    expect(camera.position.distanceTo(before)).toBeLessThanOrEqual(2.3 * .05);
+    expect(Math.max(...steps)).toBeLessThanOrEqual(2.3 * .05 + 1e-9);
+    expect(camera.position.distanceTo(before)).toBeGreaterThan(.5);
+    expect(camera.position.distanceTo(before)).toBeLessThanOrEqual(2.3 * .25 + 1e-9);
     event('keyup', { code: 'KeyW' });
     event('wheel', { deltaY: 700 });
     const released = camera.position.clone();
@@ -107,6 +110,11 @@ describe('shared first-person visitor movement', () => {
     expect(walk.needsUpdate()).toBe(false);
     expect(camera.position.distanceTo(released)).toBeLessThan(.001);
     expect(camera.fov).toBeCloseTo(walk.preferredFov(), 3);
+    const target = camera.position.clone().add(new THREE.Vector3(0, 0, -5));
+    walk.moveTo(target); frames(30, 1_000);
+    expect(camera.position.distanceTo(target)).toBeLessThan(.2);
+    expect(walk.hasDestination()).toBe(false);
+    expect(walk.needsUpdate()).toBe(false);
     walk.dispose();
   });
 

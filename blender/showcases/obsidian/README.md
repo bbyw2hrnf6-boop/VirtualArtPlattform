@@ -59,7 +59,7 @@ requested. Data Saver can stay on the poster/directory. The renderer stops when
 idle or hidden and is disposed when leaving. No automatic camera motion occurs.
 The same `firstPersonWalk.ts` controller drives Studio, public Spaces and this
 showcase: 1.75 m eye height, accelerated 2.3 m/s walking with smooth braking,
-Movement keeps its 50 ms collision-safe step; braking and FOV easing use actual elapsed time so stalled renders do not prolong them.
+Movement catches up at most 250 ms per frame using collision-checked substeps of at most 50 ms; braking and FOV easing use actual elapsed time so stalled renders do not prolong them.
 WASD translation, E/↑ look up and Q/↓ look down, left/right arrow turning,
 touch drag, floor-tap paths, 40–90° wheel/pinch/tap FOV and 0.5–2× session pace.
 Keyboard and pointer looking preserve a floor route; manual WASD movement
