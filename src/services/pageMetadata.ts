@@ -26,7 +26,7 @@ const NON_INDEXED_DESCRIPTION =
   "Create, manage and share immersive 3D presentations with LIEUVA.";
 
 export function pageMetadataPolicy(
-  page: "home" | "creators" | "creator-hub" | "create" | "demo" | "data" | "account" | "admin" | "auth-action" | "space-not-found" | "other",
+  page: "home" | "obsidian" | "creators" | "creator-hub" | "create" | "demo" | "data" | "account" | "admin" | "auth-action" | "space-not-found" | "other",
 ): PageMetadataPolicy {
   if (page === "home") return {
     title: productTitle(),
@@ -52,6 +52,14 @@ export function pageMetadataPolicy(
     image: HOME_IMAGE,
     imageAlt: "The personalized LIEUVA Creator Hub",
   };
+  if (page === "obsidian") return {
+    title: productTitle("Obsidian — Three connected galleries"),
+    description: "Explore eleven visions of nature in a bespoke three-room LIEUVA exhibition.",
+    canonical: HOME_CANONICAL,
+    robots: "noindex,nofollow",
+    image: `${HOME_CANONICAL}assets/showcases/obsidian/cover.webp`,
+    imageAlt: "Obsidian, a bespoke LIEUVA exhibition in stone, walnut and warm light",
+  };
   if (page === "demo") return {
     title: productTitle("Threshold — Danny Hirsch Arts"),
     description: "Enter Threshold, the authored Danny Hirsch Arts reference Space presented in LIEUVA.",
@@ -66,7 +74,7 @@ export function pageMetadataPolicy(
     canonical: `${HOME_CANONICAL}admin/overview`,
     robots: "noindex,nofollow,noarchive",
   };
-  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "creators" | "creator-hub" | "demo" | "admin">, string> = {
+  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "creators" | "creator-hub" | "demo" | "obsidian" | "admin">, string> = {
     create: "Create a Space",
     data: "Data and rights",
     account: "Your Projects and account",

@@ -1,0 +1,182 @@
+[
+  {
+    "camera": "R1-SW",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R1-SE",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R1-NE",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R1-NW",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R1-WALL-N",
+    "width": 720,
+    "height": 305,
+    "samples": 24
+  },
+  {
+    "camera": "R1-WALL-E",
+    "width": 720,
+    "height": 440,
+    "samples": 24
+  },
+  {
+    "camera": "R1-WALL-S",
+    "width": 720,
+    "height": 305,
+    "samples": 24
+  },
+  {
+    "camera": "R1-WALL-W",
+    "width": 720,
+    "height": 440,
+    "samples": 24
+  },
+  {
+    "camera": "R1-CEILING",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R1-FLOOR",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R2-SW",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R2-SE",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R2-NE",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R2-NW",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R2-WALL-N",
+    "width": 720,
+    "height": 360,
+    "samples": 24
+  },
+  {
+    "camera": "R2-WALL-E",
+    "width": 720,
+    "height": 440,
+    "samples": 24
+  },
+  {
+    "camera": "R2-WALL-S",
+    "width": 720,
+    "height": 360,
+    "samples": 24
+  },
+  {
+    "camera": "R2-WALL-W",
+    "width": 720,
+    "height": 440,
+    "samples": 24
+  },
+  {
+    "camera": "R2-CEILING",
+    "width": 720,
+    "height": 576,
+    "samples": 24
+  },
+  {
+    "camera": "R2-FLOOR",
+    "width": 720,
+    "height": 576,
+    "samples": 24
+  },
+  {
+    "camera": "R3-SW",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R3-SE",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R3-NE",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R3-NW",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R3-WALL-N",
+    "width": 720,
+    "height": 305,
+    "samples": 24
+  },
+  {
+    "camera": "R3-WALL-E",
+    "width": 720,
+    "height": 440,
+    "samples": 24
+  },
+  {
+    "camera": "R3-WALL-S",
+    "width": 720,
+    "height": 305,
+    "samples": 24
+  },
+  {
+    "camera": "R3-WALL-W",
+    "width": 720,
+    "height": 440,
+    "samples": 24
+  },
+  {
+    "camera": "R3-CEILING",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  },
+  {
+    "camera": "R3-FLOOR",
+    "width": 720,
+    "height": 480,
+    "samples": 24
+  }
+]

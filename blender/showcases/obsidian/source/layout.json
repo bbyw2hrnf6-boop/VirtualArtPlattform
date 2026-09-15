@@ -1,0 +1,1451 @@
+{
+  "project": "OBSIDIAN — Three Connected Galleries",
+  "version": "2.0",
+  "units": "meters",
+  "design_status": "Three-room expansion of the selected Obsidian direction. This exact layout supersedes the previous single-room plan.",
+  "coordinate_system": {
+    "origin": "southwest at X=0, Y=0, Z=0 finished floor",
+    "x": "east",
+    "y": "north",
+    "z": "up"
+  },
+  "geometry_priority": "layout.json and plan.svg govern geometry. Generated perspective images are art-direction references and may vary. Resolve every conflict in favor of this layout.",
+  "dimensions_note": "Bounds are architectural wall-reference planes, not structural wall centerlines. Structural thickness is deliberately unspecified. Keep the visible finished planes, opening sizes and artwork coordinates fixed when adding backing thickness.",
+  "envelope_reference_bounds_xyz_m": [
+    0,
+    0,
+    0,
+    34,
+    8,
+    4.5
+  ],
+  "rooms": [
+    {
+      "id": "R1",
+      "name": "Botanical Origins",
+      "bounds_xy_m": [
+        0,
+        0,
+        12,
+        8
+      ],
+      "width_x_m": 12,
+      "depth_y_m": 8,
+      "floor_z_m": 0,
+      "ceiling_z_m": 4.5,
+      "windows": [],
+      "skylights": [],
+      "ceiling_type": "flat, opaque charcoal ceiling"
+    },
+    {
+      "id": "R2",
+      "name": "Living Matter",
+      "bounds_xy_m": [
+        12,
+        0,
+        22,
+        8
+      ],
+      "width_x_m": 10,
+      "depth_y_m": 8,
+      "floor_z_m": 0,
+      "ceiling_z_m": 4.5,
+      "windows": [],
+      "skylights": [],
+      "ceiling_type": "flat, opaque charcoal ceiling"
+    },
+    {
+      "id": "R3",
+      "name": "Future Nature",
+      "bounds_xy_m": [
+        22,
+        0,
+        34,
+        8
+      ],
+      "width_x_m": 12,
+      "depth_y_m": 8,
+      "floor_z_m": 0,
+      "ceiling_z_m": 4.5,
+      "windows": [],
+      "skylights": [],
+      "ceiling_type": "flat, opaque charcoal ceiling"
+    }
+  ],
+  "portals": [
+    {
+      "id": "P1",
+      "connects_rooms": [
+        "R1",
+        "R2"
+      ],
+      "wall_plane_x_m": 12,
+      "span_y_m": [
+        2.5,
+        5.5
+      ],
+      "width_m": 3,
+      "height_m": 3.2,
+      "base_z_m": 0,
+      "shape": "open rectangle",
+      "doors": false,
+      "arches": false,
+      "lining": "dark walnut",
+      "floor_transition": "continuous flush black-limestone grid, no threshold"
+    },
+    {
+      "id": "P2",
+      "connects_rooms": [
+        "R2",
+        "R3"
+      ],
+      "wall_plane_x_m": 22,
+      "span_y_m": [
+        2.5,
+        5.5
+      ],
+      "width_m": 3,
+      "height_m": 3.2,
+      "base_z_m": 0,
+      "shape": "open rectangle",
+      "doors": false,
+      "arches": false,
+      "lining": "dark walnut",
+      "floor_transition": "continuous flush black-limestone grid, no threshold"
+    }
+  ],
+  "entry": {
+    "id": "ENTRY",
+    "room_id": "R1",
+    "wall": "west",
+    "plane_x_m": 0,
+    "span_y_m": [
+      3,
+      5
+    ],
+    "width_m": 2,
+    "height_m": 2.8,
+    "base_z_m": 0,
+    "type": "flush double door",
+    "leaf_width_m": 1,
+    "material": "dark walnut",
+    "render_state": "closed",
+    "outside_view_visible": false
+  },
+  "materials": {
+    "walls": {
+      "base": "charcoal mineral plaster",
+      "finish": "matte",
+      "east_west_accents": "dark walnut flanking portals/entrance; do not cover artwork with timber battens"
+    },
+    "floor": {
+      "name": "black limestone",
+      "finish": "satin",
+      "slab_dimensions_m": [
+        1,
+        1
+      ],
+      "joint_width_m": 0.002,
+      "grid_origin_xy_m": [
+        0,
+        0
+      ],
+      "roughness_reference_range": [
+        0.32,
+        0.45
+      ],
+      "veining": "restrained thin pale mineral veins",
+      "continuous_across_portals": true
+    },
+    "ceiling": {
+      "name": "charcoal",
+      "finish": "matte",
+      "geometry": "flat, opaque, uninterrupted except artificial lighting"
+    },
+    "skirting": {
+      "material": "dark bronze",
+      "height_m": 0.1,
+      "note": "stop at door and portal openings"
+    },
+    "frames": {
+      "material": "dark bronze",
+      "visible_width_m": 0.02
+    }
+  },
+  "lighting": {
+    "daylight": false,
+    "windows": false,
+    "skylights": false,
+    "cove": {
+      "temperature_K": 2700,
+      "type": "concealed continuous warm ceiling perimeter",
+      "room_ids": [
+        "R1",
+        "R2",
+        "R3"
+      ]
+    },
+    "art_spots": {
+      "temperature_K": 3000,
+      "type": "discreet black adjustable museum spotlights on restrained black tracks"
+    },
+    "fixture_note": "Place individual spots to illuminate the mapped artwork; preserve source image detail. Exact luminaire count and wattage are render tuning, not invented architectural geometry."
+  },
+  "furniture": [
+    {
+      "id": "BENCH-R1",
+      "room_id": "R1",
+      "center_xy_m": [
+        6.0,
+        4
+      ],
+      "center_xyz_m": [
+        6.0,
+        4,
+        0.225
+      ],
+      "dimensions_xyz_m": [
+        3.2,
+        0.75,
+        0.45
+      ],
+      "long_axis": "X",
+      "base_material": "dark walnut",
+      "cushion_material": "taupe leather",
+      "height_note": "0.45 m total finished height, including cushion"
+    },
+    {
+      "id": "BENCH-R2",
+      "room_id": "R2",
+      "center_xy_m": [
+        17.0,
+        4
+      ],
+      "center_xyz_m": [
+        17.0,
+        4,
+        0.225
+      ],
+      "dimensions_xyz_m": [
+        3.2,
+        0.75,
+        0.45
+      ],
+      "long_axis": "X",
+      "base_material": "dark walnut",
+      "cushion_material": "taupe leather",
+      "height_note": "0.45 m total finished height, including cushion"
+    },
+    {
+      "id": "BENCH-R3",
+      "room_id": "R3",
+      "center_xy_m": [
+        28.0,
+        4
+      ],
+      "center_xyz_m": [
+        28.0,
+        4,
+        0.225
+      ],
+      "dimensions_xyz_m": [
+        3.2,
+        0.75,
+        0.45
+      ],
+      "long_axis": "X",
+      "base_material": "dark walnut",
+      "cushion_material": "taupe leather",
+      "height_note": "0.45 m total finished height, including cushion"
+    }
+  ],
+  "artworks": [
+    {
+      "id": "A01",
+      "title": "Canopy of Tomorrow",
+      "room_id": "R1",
+      "wall": "north",
+      "wall_plane_center_xyz_m": [
+        6,
+        8,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        6.0,
+        7.97,
+        1.8
+      ],
+      "front_normal_xyz": [
+        0,
+        -1,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        3.6,
+        2.4
+      ],
+      "bottom_z_m": 0.6,
+      "top_z_m": 3.0,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/A01.png",
+      "source_texture_path": "../Obsidian-Gallery-Reference/artworks/A01.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "A02",
+      "title": "Mycelium Intelligence",
+      "room_id": "R1",
+      "wall": "south",
+      "wall_plane_center_xyz_m": [
+        3,
+        0,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        3.0,
+        0.03,
+        1.8
+      ],
+      "front_normal_xyz": [
+        0,
+        1,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        1.6,
+        2.2
+      ],
+      "bottom_z_m": 0.7,
+      "top_z_m": 2.9,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/A02.png",
+      "source_texture_path": "../Obsidian-Gallery-Reference/artworks/A02.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "A03",
+      "title": "Glass Fern",
+      "room_id": "R1",
+      "wall": "south",
+      "wall_plane_center_xyz_m": [
+        9,
+        0,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        9.0,
+        0.03,
+        1.8
+      ],
+      "front_normal_xyz": [
+        0,
+        1,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        1.6,
+        2.2
+      ],
+      "bottom_z_m": 0.7,
+      "top_z_m": 2.9,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/A03.png",
+      "source_texture_path": "../Obsidian-Gallery-Reference/artworks/A03.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "A04",
+      "title": "Seed of Light",
+      "room_id": "R1",
+      "wall": "west",
+      "wall_plane_center_xyz_m": [
+        0,
+        6.5,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        0.03,
+        6.5,
+        1.8
+      ],
+      "front_normal_xyz": [
+        1,
+        0,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        1.6,
+        1.6
+      ],
+      "bottom_z_m": 1.0,
+      "top_z_m": 2.6,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/A04.png",
+      "source_texture_path": "../Obsidian-Gallery-Reference/artworks/A04.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "B01",
+      "title": "Tidal Memory",
+      "room_id": "R2",
+      "wall": "north",
+      "wall_plane_center_xyz_m": [
+        17,
+        8,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        17.0,
+        7.97,
+        1.8
+      ],
+      "front_normal_xyz": [
+        0,
+        -1,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        3.6,
+        2.4
+      ],
+      "bottom_z_m": 0.6,
+      "top_z_m": 3.0,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/B01.png",
+      "source_texture_path": "../Obsidian-Gallery-Reference/artworks/B01.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "B02",
+      "title": "Terra Bloom",
+      "room_id": "R2",
+      "wall": "south",
+      "wall_plane_center_xyz_m": [
+        15,
+        0,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        15.0,
+        0.03,
+        1.8
+      ],
+      "front_normal_xyz": [
+        0,
+        1,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        1.6,
+        2.2
+      ],
+      "bottom_z_m": 0.7,
+      "top_z_m": 2.9,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/B02.png",
+      "source_texture_path": "../Obsidian-Gallery-Reference/artworks/B02.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "B03",
+      "title": "Rooted Consciousness",
+      "room_id": "R2",
+      "wall": "south",
+      "wall_plane_center_xyz_m": [
+        19,
+        0,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        19.0,
+        0.03,
+        1.8
+      ],
+      "front_normal_xyz": [
+        0,
+        1,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        1.6,
+        2.2
+      ],
+      "bottom_z_m": 0.7,
+      "top_z_m": 2.9,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/B03.png",
+      "source_texture_path": "../Obsidian-Gallery-Reference/artworks/B03.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "B04",
+      "title": "Living Stone",
+      "room_id": "R3",
+      "wall": "east",
+      "wall_plane_center_xyz_m": [
+        34,
+        4,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        33.97,
+        4.0,
+        1.8
+      ],
+      "front_normal_xyz": [
+        -1,
+        0,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        2.4,
+        2.4
+      ],
+      "bottom_z_m": 0.6,
+      "top_z_m": 3.0,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/B04.png",
+      "source_texture_path": "../Obsidian-Gallery-Reference/artworks/B04.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "C01",
+      "title": "Symbiotic Horizons",
+      "room_id": "R3",
+      "wall": "north",
+      "wall_plane_center_xyz_m": [
+        28,
+        8,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        28.0,
+        7.97,
+        1.8
+      ],
+      "front_normal_xyz": [
+        0,
+        -1,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        3.6,
+        2.4
+      ],
+      "bottom_z_m": 0.6,
+      "top_z_m": 3.0,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/C01.png",
+      "source_texture_path": "artworks/C01.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "C02",
+      "title": "Nocturnal Orchid",
+      "room_id": "R3",
+      "wall": "south",
+      "wall_plane_center_xyz_m": [
+        25,
+        0,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        25.0,
+        0.03,
+        1.8
+      ],
+      "front_normal_xyz": [
+        0,
+        1,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        1.6,
+        2.2
+      ],
+      "bottom_z_m": 0.7,
+      "top_z_m": 2.9,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/C02.png",
+      "source_texture_path": "artworks/C02.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    },
+    {
+      "id": "C03",
+      "title": "Breathing Coral",
+      "room_id": "R3",
+      "wall": "south",
+      "wall_plane_center_xyz_m": [
+        31,
+        0,
+        1.8
+      ],
+      "image_plane_center_xyz_m": [
+        31.0,
+        0.03,
+        1.8
+      ],
+      "front_normal_xyz": [
+        0,
+        1,
+        0
+      ],
+      "image_dimensions_wh_m": [
+        1.6,
+        2.2
+      ],
+      "bottom_z_m": 0.7,
+      "top_z_m": 2.9,
+      "visible_frame_width_m": 0.02,
+      "frame_material": "dark bronze",
+      "texture_path": "artworks/C03.png",
+      "source_texture_path": "artworks/C03.png",
+      "texture_fit": "preserve image aspect; negligible <0.2% ratio differences may be fitted; do not crop subject or add generative details"
+    }
+  ],
+  "cameras": [
+    {
+      "id": "R1-SW",
+      "room_id": "R1",
+      "type": "corner perspective",
+      "position_m": [
+        1,
+        1,
+        1.65
+      ],
+      "target_m": [
+        11,
+        7,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R1-SE",
+      "room_id": "R1",
+      "type": "corner perspective",
+      "position_m": [
+        11,
+        1,
+        1.65
+      ],
+      "target_m": [
+        1,
+        7,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R1-NE",
+      "room_id": "R1",
+      "type": "corner perspective",
+      "position_m": [
+        11,
+        7,
+        1.65
+      ],
+      "target_m": [
+        1,
+        1,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R1-NW",
+      "room_id": "R1",
+      "type": "corner perspective",
+      "position_m": [
+        1,
+        7,
+        1.65
+      ],
+      "target_m": [
+        11,
+        1,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R1-WALL-N",
+      "room_id": "R1",
+      "type": "complete wall inspection",
+      "position_m": [
+        6.0,
+        0.7,
+        2.25
+      ],
+      "target_m": [
+        6.0,
+        8,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 13,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 13,
+      "render_aspect_ratio": "26:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R1-WALL-E",
+      "room_id": "R1",
+      "type": "complete wall inspection",
+      "position_m": [
+        0.7,
+        4,
+        2.25
+      ],
+      "target_m": [
+        12,
+        4,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 9,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 9,
+      "render_aspect_ratio": "18:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R1-WALL-S",
+      "room_id": "R1",
+      "type": "complete wall inspection",
+      "position_m": [
+        6.0,
+        7.3,
+        2.25
+      ],
+      "target_m": [
+        6.0,
+        0,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 13,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 13,
+      "render_aspect_ratio": "26:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R1-WALL-W",
+      "room_id": "R1",
+      "type": "complete wall inspection",
+      "position_m": [
+        11.3,
+        4,
+        2.25
+      ],
+      "target_m": [
+        0,
+        4,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 9,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 9,
+      "render_aspect_ratio": "18:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R1-CEILING",
+      "room_id": "R1",
+      "type": "complete ceiling inspection",
+      "position_m": [
+        6.0,
+        4,
+        0.3
+      ],
+      "target_m": [
+        6.0,
+        4,
+        4.5
+      ],
+      "world_up_xyz": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 14,
+      "framing_height_m": 9.333333,
+      "blender_orthographic_scale_m": 14,
+      "render_aspect_ratio": "12:8",
+      "include_furniture": false,
+      "framing_note": "Look vertically up at the underside. North is screen-up, east is screen-left. Hide furniture and wall geometry that blocks the complete ceiling; show cove and all tracks. Inspection view layers must not delete geometry from the finished scene."
+    },
+    {
+      "id": "R1-FLOOR",
+      "room_id": "R1",
+      "type": "complete floor inspection",
+      "position_m": [
+        6.0,
+        4,
+        4.3
+      ],
+      "target_m": [
+        6.0,
+        4,
+        0
+      ],
+      "world_up_xyz": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 14,
+      "framing_height_m": 9.333333,
+      "blender_orthographic_scale_m": 14,
+      "render_aspect_ratio": "12:8",
+      "include_furniture": false,
+      "framing_note": "Look vertically down. North is screen-up, east screen-right. Hide benches only for this inspection view so every slab is visible. Inspection view layers must not delete geometry from the finished scene."
+    },
+    {
+      "id": "R2-SW",
+      "room_id": "R2",
+      "type": "corner perspective",
+      "position_m": [
+        13,
+        1,
+        1.65
+      ],
+      "target_m": [
+        21,
+        7,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R2-SE",
+      "room_id": "R2",
+      "type": "corner perspective",
+      "position_m": [
+        21,
+        1,
+        1.65
+      ],
+      "target_m": [
+        13,
+        7,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R2-NE",
+      "room_id": "R2",
+      "type": "corner perspective",
+      "position_m": [
+        21,
+        7,
+        1.65
+      ],
+      "target_m": [
+        13,
+        1,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R2-NW",
+      "room_id": "R2",
+      "type": "corner perspective",
+      "position_m": [
+        13,
+        7,
+        1.65
+      ],
+      "target_m": [
+        21,
+        1,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R2-WALL-N",
+      "room_id": "R2",
+      "type": "complete wall inspection",
+      "position_m": [
+        17.0,
+        0.7,
+        2.25
+      ],
+      "target_m": [
+        17.0,
+        8,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 11,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 11,
+      "render_aspect_ratio": "22:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R2-WALL-E",
+      "room_id": "R2",
+      "type": "complete wall inspection",
+      "position_m": [
+        12.7,
+        4,
+        2.25
+      ],
+      "target_m": [
+        22,
+        4,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 9,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 9,
+      "render_aspect_ratio": "18:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R2-WALL-S",
+      "room_id": "R2",
+      "type": "complete wall inspection",
+      "position_m": [
+        17.0,
+        7.3,
+        2.25
+      ],
+      "target_m": [
+        17.0,
+        0,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 11,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 11,
+      "render_aspect_ratio": "22:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R2-WALL-W",
+      "room_id": "R2",
+      "type": "complete wall inspection",
+      "position_m": [
+        21.3,
+        4,
+        2.25
+      ],
+      "target_m": [
+        12,
+        4,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 9,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 9,
+      "render_aspect_ratio": "18:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R2-CEILING",
+      "room_id": "R2",
+      "type": "complete ceiling inspection",
+      "position_m": [
+        17.0,
+        4,
+        0.3
+      ],
+      "target_m": [
+        17.0,
+        4,
+        4.5
+      ],
+      "world_up_xyz": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 12,
+      "framing_height_m": 9.6,
+      "blender_orthographic_scale_m": 12,
+      "render_aspect_ratio": "10:8",
+      "include_furniture": false,
+      "framing_note": "Look vertically up at the underside. North is screen-up, east is screen-left. Hide furniture and wall geometry that blocks the complete ceiling; show cove and all tracks. Inspection view layers must not delete geometry from the finished scene."
+    },
+    {
+      "id": "R2-FLOOR",
+      "room_id": "R2",
+      "type": "complete floor inspection",
+      "position_m": [
+        17.0,
+        4,
+        4.3
+      ],
+      "target_m": [
+        17.0,
+        4,
+        0
+      ],
+      "world_up_xyz": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 12,
+      "framing_height_m": 9.6,
+      "blender_orthographic_scale_m": 12,
+      "render_aspect_ratio": "10:8",
+      "include_furniture": false,
+      "framing_note": "Look vertically down. North is screen-up, east screen-right. Hide benches only for this inspection view so every slab is visible. Inspection view layers must not delete geometry from the finished scene."
+    },
+    {
+      "id": "R3-SW",
+      "room_id": "R3",
+      "type": "corner perspective",
+      "position_m": [
+        23,
+        1,
+        1.65
+      ],
+      "target_m": [
+        33,
+        7,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R3-SE",
+      "room_id": "R3",
+      "type": "corner perspective",
+      "position_m": [
+        33,
+        1,
+        1.65
+      ],
+      "target_m": [
+        23,
+        7,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R3-NE",
+      "room_id": "R3",
+      "type": "corner perspective",
+      "position_m": [
+        33,
+        7,
+        1.65
+      ],
+      "target_m": [
+        23,
+        1,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R3-NW",
+      "room_id": "R3",
+      "type": "corner perspective",
+      "position_m": [
+        23,
+        7,
+        1.65
+      ],
+      "target_m": [
+        33,
+        1,
+        1.65
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "perspective",
+      "focal_length_start_mm": 22,
+      "sensor_width_mm": 36,
+      "render_aspect_ratio": "3:2",
+      "include_furniture": true,
+      "framing_note": "Lock this camera position. Begin at 22 mm, then widen only enough to include wall intersections, ceiling and floor; keep verticals straight. No geometry changes."
+    },
+    {
+      "id": "R3-WALL-N",
+      "room_id": "R3",
+      "type": "complete wall inspection",
+      "position_m": [
+        28.0,
+        0.7,
+        2.25
+      ],
+      "target_m": [
+        28.0,
+        8,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 13,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 13,
+      "render_aspect_ratio": "26:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R3-WALL-E",
+      "room_id": "R3",
+      "type": "complete wall inspection",
+      "position_m": [
+        22.7,
+        4,
+        2.25
+      ],
+      "target_m": [
+        34,
+        4,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 9,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 9,
+      "render_aspect_ratio": "18:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R3-WALL-S",
+      "room_id": "R3",
+      "type": "complete wall inspection",
+      "position_m": [
+        28.0,
+        7.3,
+        2.25
+      ],
+      "target_m": [
+        28.0,
+        0,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 13,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 13,
+      "render_aspect_ratio": "26:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R3-WALL-W",
+      "room_id": "R3",
+      "type": "complete wall inspection",
+      "position_m": [
+        33.3,
+        4,
+        2.25
+      ],
+      "target_m": [
+        22,
+        4,
+        2.25
+      ],
+      "world_up_xyz": [
+        0,
+        0,
+        1
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 9,
+      "framing_height_m": 5.5,
+      "blender_orthographic_scale_m": 9,
+      "render_aspect_ratio": "18:11",
+      "include_furniture": true,
+      "framing_note": "Whole wall from floor to ceiling, including portal/door if present. Show bench in the main reference: broadside in north/south views, end-on in east/west views. Optionally create an additional clear orthographic overlay by hiding furniture and obstructing foreground geometry in an inspection view layer. The main scene stays unchanged."
+    },
+    {
+      "id": "R3-CEILING",
+      "room_id": "R3",
+      "type": "complete ceiling inspection",
+      "position_m": [
+        28.0,
+        4,
+        0.3
+      ],
+      "target_m": [
+        28.0,
+        4,
+        4.5
+      ],
+      "world_up_xyz": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 14,
+      "framing_height_m": 9.333333,
+      "blender_orthographic_scale_m": 14,
+      "render_aspect_ratio": "12:8",
+      "include_furniture": false,
+      "framing_note": "Look vertically up at the underside. North is screen-up, east is screen-left. Hide furniture and wall geometry that blocks the complete ceiling; show cove and all tracks. Inspection view layers must not delete geometry from the finished scene."
+    },
+    {
+      "id": "R3-FLOOR",
+      "room_id": "R3",
+      "type": "complete floor inspection",
+      "position_m": [
+        28.0,
+        4,
+        4.3
+      ],
+      "target_m": [
+        28.0,
+        4,
+        0
+      ],
+      "world_up_xyz": [
+        0,
+        1,
+        0
+      ],
+      "projection": "orthographic",
+      "sensor_fit": "HORIZONTAL",
+      "framing_width_m": 14,
+      "framing_height_m": 9.333333,
+      "blender_orthographic_scale_m": 14,
+      "render_aspect_ratio": "12:8",
+      "include_furniture": false,
+      "framing_note": "Look vertically down. North is screen-up, east screen-right. Hide benches only for this inspection view so every slab is visible. Inspection view layers must not delete geometry from the finished scene."
+    }
+  ],
+  "required_deliverables": {
+    "minimum_views": 30,
+    "per_room": [
+      "SW",
+      "SE",
+      "NE",
+      "NW",
+      "WALL-N",
+      "WALL-E",
+      "WALL-S",
+      "WALL-W",
+      "CEILING",
+      "FLOOR"
+    ],
+    "final_camera_render_note": "For mutually consistent reconstruction references, render these exact cameras from one Blender scene after the modeled layout is fixed."
+  },
+  "art_direction": "Original AI art with a nature touch: foliage, fungi, roots, water, mineral growth, bioluminescence and imagined future ecosystems. Use the supplied artwork textures rather than approximating the paintings from gallery views."
+}

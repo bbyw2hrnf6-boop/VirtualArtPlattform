@@ -1,0 +1,644 @@
+{
+  "project": "OBSIDIAN — Three Connected Galleries",
+  "version": "2.0",
+  "content_note": "Photorealistic AI references, not renders from an existing reconstructed Blender model. layout.json governs geometry.",
+  "image_handling": "All supplied view and artwork PNGs are copied byte-for-byte with no image edits.",
+  "counts": {
+    "rooms": 3,
+    "room_views": 30,
+    "artwork_originals": 11
+  },
+  "documents": [
+    "plan.svg",
+    "plan.png",
+    "layout.json",
+    "blender-brief.md",
+    "README.md",
+    "index.html"
+  ],
+  "plan_image": {
+    "path": "plan.png",
+    "pixel_width": 1900,
+    "pixel_height": 1300,
+    "color_mode": "RGBA",
+    "bytes": 289332,
+    "sha256": "c7c320a4e179034aaa27079f7b9c86f36da58fc5453ccc46415f90f80f6585ea"
+  },
+  "views": [
+    {
+      "id": "R1-SW",
+      "room_id": "R1",
+      "view_key": "SW",
+      "label": "Raum 1 · Südwestecke – Wald und Durchgang",
+      "path": "views/R1/SW.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2439745,
+      "sha256": "fc82fd16dc5869fd56452f23bdfedc4abe5468b59a9ba7fe16797a4ebdb95965"
+    },
+    {
+      "id": "R1-SE",
+      "room_id": "R1",
+      "view_key": "SE",
+      "label": "R1 · Südostecke – Eingang und Waldwand",
+      "path": "views/R1/SE.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2435405,
+      "sha256": "6476b096363dd2cbc6728bf603859ef4c358a7a15556ba81bf04ed8fbc3e4681"
+    },
+    {
+      "id": "R1-NE",
+      "room_id": "R1",
+      "view_key": "NE",
+      "label": "R1 · Nordostecke – Farn, Myzel und Eingang",
+      "path": "views/R1/NE.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2465935,
+      "sha256": "6dec83e00ab4edefaeb027ed480ed19b46865e677ac328f20b2b14baf417b475"
+    },
+    {
+      "id": "R1-NW",
+      "room_id": "R1",
+      "view_key": "NW",
+      "label": "R1 · Nordwestecke – Kunstwand und Verbindung zu Raum 2",
+      "path": "views/R1/NW.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2503165,
+      "sha256": "24cc50f3686ded4d3d203c862f2790d0d23d0de6b28fc7611d696e10cd356881"
+    },
+    {
+      "id": "R1-WALL-N",
+      "room_id": "R1",
+      "view_key": "WALL-N",
+      "label": "R1 · Nordwand frontal – Canopy of Tomorrow",
+      "path": "views/R1/WALL-N.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2444070,
+      "sha256": "c8666451d54f7b4051c4ccc9cc6b5f21a0a9901b2ff9764c81dcb1084e163c85"
+    },
+    {
+      "id": "R1-WALL-E",
+      "room_id": "R1",
+      "view_key": "WALL-E",
+      "label": "R1 · Ostwand frontal – Blick durch alle drei Räume",
+      "path": "views/R1/WALL-E.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2062055,
+      "sha256": "e49d6d3feb8bdccd01b97bcc2c40df283494158a175f30dcba5c8ace88418330"
+    },
+    {
+      "id": "R1-WALL-S",
+      "room_id": "R1",
+      "view_key": "WALL-S",
+      "label": "R1 · Südwand frontal – Glass Fern und Mycelium",
+      "path": "views/R1/WALL-S.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2101659,
+      "sha256": "37d0df140c8884d0eae9827dbb0146737d4be16d0da505a5b632b617dcdfc470"
+    },
+    {
+      "id": "R1-WALL-W",
+      "room_id": "R1",
+      "view_key": "WALL-W",
+      "label": "R1 · Westwand frontal – Haupteingang und Seed of Light",
+      "path": "views/R1/WALL-W.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2178307,
+      "sha256": "e45363132a6feffded26fd12ac928f875cd29e6ac9389031643609378da34e4b"
+    },
+    {
+      "id": "R1-CEILING",
+      "room_id": "R1",
+      "view_key": "CEILING",
+      "label": "R1 · Decke vollständig – Lichtschienen und umlaufende Lichtfuge",
+      "path": "views/R1/CEILING.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 1922610,
+      "sha256": "6cef2ffbc1cad6a487d462ae0923e97a344bd410e962dccf554d579113f2cb1f"
+    },
+    {
+      "id": "R1-FLOOR",
+      "room_id": "R1",
+      "view_key": "FLOOR",
+      "label": "R1 · Boden vollständig – Steinraster, Bank und Übergang",
+      "path": "views/R1/FLOOR.png",
+      "pixel_width": 1536,
+      "pixel_height": 1024,
+      "color_mode": "RGB",
+      "bytes": 2720430,
+      "sha256": "2fa7ca26aa75acd35b22fb4bb9abfc86c9aad302b1b9baf8b1f3ad2341e8559f"
+    },
+    {
+      "id": "R2-SW",
+      "room_id": "R2",
+      "view_key": "SW",
+      "label": "Raum 2 · Südwestecke – Meer und Übergang",
+      "path": "views/R2/SW.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2336687,
+      "sha256": "4b28e0ecf7d5038d5ac31ded27e614ee6826d61b2e8516eb3b08ef73cb71a66a"
+    },
+    {
+      "id": "R2-SE",
+      "room_id": "R2",
+      "view_key": "SE",
+      "label": "Raum 2 · Südostecke – Meer und Rückweg zu Raum 1",
+      "path": "views/R2/SE.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2422836,
+      "sha256": "536b1623ce327abae2706b13494f179e4cd22f19c24c9dc0b98fe23a3b3246cd"
+    },
+    {
+      "id": "R2-NE",
+      "room_id": "R2",
+      "view_key": "NE",
+      "label": "Raum 2 · Nordostecke – Botanische Kunst und Rückweg",
+      "path": "views/R2/NE.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2422629,
+      "sha256": "9294b93f0b97fa8d384d487d55c57afb5080e099573d3b5c2ae515aff20c3d33"
+    },
+    {
+      "id": "R2-NW",
+      "room_id": "R2",
+      "view_key": "NW",
+      "label": "Raum 2 · Nordwestecke – Botanische Kunst und Übergang zu Raum 3",
+      "path": "views/R2/NW.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2323946,
+      "sha256": "3ddf69a23d1f0735006fcf72ed8e89dbffe0a0273747d2bb6b45ca47e8da1852"
+    },
+    {
+      "id": "R2-WALL-N",
+      "room_id": "R2",
+      "view_key": "WALL-N",
+      "label": "Raum 2 · Nordwand – Tidal Memory",
+      "path": "views/R2/WALL-N.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2347617,
+      "sha256": "380b203f176fd9b88879de799cac0d1f38150e3dabc9dfc995c3066874203b75"
+    },
+    {
+      "id": "R2-WALL-E",
+      "room_id": "R2",
+      "view_key": "WALL-E",
+      "label": "Raum 2 · Ostwand – Durchgang zu Raum 3",
+      "path": "views/R2/WALL-E.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2187112,
+      "sha256": "b3043ec3d4e2b2ef343119288c3ae4ca4c68f9cc5ecaee6c504e70d01946f2fb"
+    },
+    {
+      "id": "R2-WALL-S",
+      "room_id": "R2",
+      "view_key": "WALL-S",
+      "label": "Raum 2 · Südwand – Blüte und botanisches Porträt",
+      "path": "views/R2/WALL-S.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2330097,
+      "sha256": "77ce84c892b1770587a37f8b0c6b65570aefe21c37e2832a38826fcad65c0299"
+    },
+    {
+      "id": "R2-WALL-W",
+      "room_id": "R2",
+      "view_key": "WALL-W",
+      "label": "Raum 2 · Westwand – Rückweg zu Raum 1",
+      "path": "views/R2/WALL-W.png",
+      "pixel_width": 1671,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2086406,
+      "sha256": "08f41441f041f450ad7e05b95522395886060a53f2f58b26f211535dcba8cecc"
+    },
+    {
+      "id": "R2-CEILING",
+      "room_id": "R2",
+      "view_key": "CEILING",
+      "label": "Raum 2 · Decke – Lichtschienen und umlaufende Lichtfuge",
+      "path": "views/R2/CEILING.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2057376,
+      "sha256": "f2fae53219066c2841e314a7d2de351665185f37ad2ccd107eee6c9ed1401d19"
+    },
+    {
+      "id": "R2-FLOOR",
+      "room_id": "R2",
+      "view_key": "FLOOR",
+      "label": "Raum 2 · Boden – Steinplatten und Bankposition",
+      "path": "views/R2/FLOOR.png",
+      "pixel_width": 1402,
+      "pixel_height": 1122,
+      "color_mode": "RGB",
+      "bytes": 2587527,
+      "sha256": "c391c4e85806d2c4eaed507223a4eb08b95a9c0ae2c2b7692bfaa2a07d4a569d"
+    },
+    {
+      "id": "R3-SW",
+      "room_id": "R3",
+      "view_key": "SW",
+      "label": "Raum 3 · Südwestecke – Alpenwald und Living Stone",
+      "path": "views/R3/SW.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2358484,
+      "sha256": "d074e630c0122714b0b19196b1c2e9c0183301424a68a2aa301da9cfbe16ffe0"
+    },
+    {
+      "id": "R3-SE",
+      "room_id": "R3",
+      "view_key": "SE",
+      "label": "Raum 3 · Südostecke – Durchgang und Alpenwald",
+      "path": "views/R3/SE.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2307939,
+      "sha256": "bf72aabf34beecb21708c07c9b7c179263b5cf32fb9aafc2873011e7537cc771"
+    },
+    {
+      "id": "R3-NE",
+      "room_id": "R3",
+      "view_key": "NE",
+      "label": "Raum 3 · Nordostecke – Naturporträts und Durchgang",
+      "path": "views/R3/NE.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2196847,
+      "sha256": "1d62fe83ed584a28eb2a3f315334548e14c21961acf086dcfddc1d4b5d1c0a7b"
+    },
+    {
+      "id": "R3-NW",
+      "room_id": "R3",
+      "view_key": "NW",
+      "label": "Raum 3 · Nordwestecke – Living Stone und Naturporträts",
+      "path": "views/R3/NW.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2392402,
+      "sha256": "2c7269e7710e2f886ee3b5e925313710ee4ada16b3d34b52deb6d9ceca3380d6"
+    },
+    {
+      "id": "R3-WALL-N",
+      "room_id": "R3",
+      "view_key": "WALL-N",
+      "label": "Raum 3 · Nordwand – Symbiotic Horizons",
+      "path": "views/R3/WALL-N.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2220878,
+      "sha256": "39061b6d674737ee5addf1d2a340be94d1864a0b9b8549bda69f7aa69ce228eb"
+    },
+    {
+      "id": "R3-WALL-E",
+      "room_id": "R3",
+      "view_key": "WALL-E",
+      "label": "Raum 3 · Ostwand – geschlossene Living-Stone-Wand",
+      "path": "views/R3/WALL-E.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2134748,
+      "sha256": "6825d7f524a1c2517fb851acd0ce4a4950248f0c19b62d0f6b0b27341bc33049"
+    },
+    {
+      "id": "R3-WALL-S",
+      "room_id": "R3",
+      "view_key": "WALL-S",
+      "label": "Raum 3 · Südwand – Orchidee und Korallen",
+      "path": "views/R3/WALL-S.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2268944,
+      "sha256": "597e67ed735c0cff02f68a8b31ddd1d5cccc640b65e2cf924e64d905f04b21b8"
+    },
+    {
+      "id": "R3-WALL-W",
+      "room_id": "R3",
+      "view_key": "WALL-W",
+      "label": "Raum 3 · Westwand – Verbindung zu Raum 2",
+      "path": "views/R3/WALL-W.png",
+      "pixel_width": 1672,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 2034810,
+      "sha256": "d2b07b9fd2d4d1e44db148c2766fc3610e3caa731735a656fa13715444779375"
+    },
+    {
+      "id": "R3-CEILING",
+      "room_id": "R3",
+      "view_key": "CEILING",
+      "label": "Raum 3 · Decke – Lichtschienen und umlaufende Lichtfuge",
+      "path": "views/R3/CEILING.png",
+      "pixel_width": 1671,
+      "pixel_height": 941,
+      "color_mode": "RGB",
+      "bytes": 1951115,
+      "sha256": "96038d75d3db12b756839e7eb7d193373329b71f8d276146308b9f6fb8fa3966"
+    },
+    {
+      "id": "R3-FLOOR",
+      "room_id": "R3",
+      "view_key": "FLOOR",
+      "label": "Raum 3 · Boden – Plattenraster und Sitzbank von oben",
+      "path": "views/R3/FLOOR.png",
+      "pixel_width": 1536,
+      "pixel_height": 1024,
+      "color_mode": "RGB",
+      "bytes": 2459300,
+      "sha256": "10e919e079c4c418d6e14b51b1a3d4704044bf03edf0a616b0e77bb98dd7bf64"
+    }
+  ],
+  "artworks": [
+    {
+      "id": "A01",
+      "title": "Canopy of Tomorrow",
+      "path": "artworks/A01.png",
+      "placement": {
+        "room_id": "R1",
+        "wall": "north",
+        "wall_plane_center_xyz_m": [
+          6,
+          8,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          3.6,
+          2.4
+        ]
+      },
+      "pixel_width": 1536,
+      "pixel_height": 1024,
+      "color_mode": "RGB",
+      "bytes": 3544574,
+      "sha256": "07865f886e950f0e183b1c446fc1c57e1e561e3491d8a2afe2daded65bad8a52"
+    },
+    {
+      "id": "A02",
+      "title": "Mycelium Intelligence",
+      "path": "artworks/A02.png",
+      "placement": {
+        "room_id": "R1",
+        "wall": "south",
+        "wall_plane_center_xyz_m": [
+          3,
+          0,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          1.6,
+          2.2
+        ]
+      },
+      "pixel_width": 1070,
+      "pixel_height": 1470,
+      "color_mode": "RGB",
+      "bytes": 3385425,
+      "sha256": "1be0fee352da765dfa8fb4cc69a6f88f81cbb879c3e5fd0146d527dc33c087af"
+    },
+    {
+      "id": "A03",
+      "title": "Glass Fern",
+      "path": "artworks/A03.png",
+      "placement": {
+        "room_id": "R1",
+        "wall": "south",
+        "wall_plane_center_xyz_m": [
+          9,
+          0,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          1.6,
+          2.2
+        ]
+      },
+      "pixel_width": 1070,
+      "pixel_height": 1470,
+      "color_mode": "RGB",
+      "bytes": 2903663,
+      "sha256": "3507ec37649d50e56fef7b6a2e35215f417b78f2fb4b9151db662943ea550b06"
+    },
+    {
+      "id": "A04",
+      "title": "Seed of Light",
+      "path": "artworks/A04.png",
+      "placement": {
+        "room_id": "R1",
+        "wall": "west",
+        "wall_plane_center_xyz_m": [
+          0,
+          6.5,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          1.6,
+          1.6
+        ]
+      },
+      "pixel_width": 1254,
+      "pixel_height": 1254,
+      "color_mode": "RGB",
+      "bytes": 3267943,
+      "sha256": "a1a2168047d458ebf1a180650fdd37423f723a8e7a2391a77304c525dcbbb6dd"
+    },
+    {
+      "id": "B01",
+      "title": "Tidal Memory",
+      "path": "artworks/B01.png",
+      "placement": {
+        "room_id": "R2",
+        "wall": "north",
+        "wall_plane_center_xyz_m": [
+          17,
+          8,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          3.6,
+          2.4
+        ]
+      },
+      "pixel_width": 1536,
+      "pixel_height": 1024,
+      "color_mode": "RGB",
+      "bytes": 3442034,
+      "sha256": "9f21fba9be6b1d17c91c7a7b45126d3649246e1b86e99d8b9da70e963676ab5b"
+    },
+    {
+      "id": "B02",
+      "title": "Terra Bloom",
+      "path": "artworks/B02.png",
+      "placement": {
+        "room_id": "R2",
+        "wall": "south",
+        "wall_plane_center_xyz_m": [
+          15,
+          0,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          1.6,
+          2.2
+        ]
+      },
+      "pixel_width": 1070,
+      "pixel_height": 1470,
+      "color_mode": "RGB",
+      "bytes": 3243787,
+      "sha256": "8d5e49147a2c9088af06f21109e121cc12a106a17488e4093b024a0617bdbe1e"
+    },
+    {
+      "id": "B03",
+      "title": "Rooted Consciousness",
+      "path": "artworks/B03.png",
+      "placement": {
+        "room_id": "R2",
+        "wall": "south",
+        "wall_plane_center_xyz_m": [
+          19,
+          0,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          1.6,
+          2.2
+        ]
+      },
+      "pixel_width": 1070,
+      "pixel_height": 1470,
+      "color_mode": "RGB",
+      "bytes": 3062308,
+      "sha256": "fa18095b01fde4ffbd0d4014bead49fad2c21241f8d5176d20175979f8e8a3c8"
+    },
+    {
+      "id": "B04",
+      "title": "Living Stone",
+      "path": "artworks/B04.png",
+      "placement": {
+        "room_id": "R3",
+        "wall": "east",
+        "wall_plane_center_xyz_m": [
+          34,
+          4,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          2.4,
+          2.4
+        ]
+      },
+      "pixel_width": 1254,
+      "pixel_height": 1254,
+      "color_mode": "RGB",
+      "bytes": 3588287,
+      "sha256": "5453250fcc9bbc4bbea7a03496735b4e0c984d29004c95804facc005a51c18bb"
+    },
+    {
+      "id": "C01",
+      "title": "Symbiotic Horizons",
+      "path": "artworks/C01.png",
+      "placement": {
+        "room_id": "R3",
+        "wall": "north",
+        "wall_plane_center_xyz_m": [
+          28,
+          8,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          3.6,
+          2.4
+        ]
+      },
+      "pixel_width": 1536,
+      "pixel_height": 1024,
+      "color_mode": "RGB",
+      "bytes": 3606519,
+      "sha256": "360a7a69e62c9485e0058fa0ad299a1b9bc218fcab4016a7def2024f2a30f1f1"
+    },
+    {
+      "id": "C02",
+      "title": "Nocturnal Orchid",
+      "path": "artworks/C02.png",
+      "placement": {
+        "room_id": "R3",
+        "wall": "south",
+        "wall_plane_center_xyz_m": [
+          25,
+          0,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          1.6,
+          2.2
+        ]
+      },
+      "pixel_width": 1070,
+      "pixel_height": 1470,
+      "color_mode": "RGB",
+      "bytes": 2658341,
+      "sha256": "481299291174a7e321f02b8ce28beb89c0f9af9a3c8082dd6ff151bf05be7b4f"
+    },
+    {
+      "id": "C03",
+      "title": "Breathing Coral",
+      "path": "artworks/C03.png",
+      "placement": {
+        "room_id": "R3",
+        "wall": "south",
+        "wall_plane_center_xyz_m": [
+          31,
+          0,
+          1.8
+        ],
+        "image_dimensions_wh_m": [
+          1.6,
+          2.2
+        ]
+      },
+      "pixel_width": 1070,
+      "pixel_height": 1470,
+      "color_mode": "RGB",
+      "bytes": 3149979,
+      "sha256": "0c66802ecd164c0e1b7cea3e67387f7ec5a3df20ee3f0030ee60b3926a25a775"
+    }
+  ]
+}

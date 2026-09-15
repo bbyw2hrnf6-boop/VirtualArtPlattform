@@ -1,0 +1,14 @@
+{
+  "algorithm": "Blender compositor OpenImageDenoise",
+  "atlases": [
+    "R1_architecture_baked.png",
+    "R1_floor_baked.png",
+    "R1_furniture_baked.png",
+    "R2_architecture_baked.png",
+    "R2_floor_baked.png",
+    "R2_furniture_baked.png",
+    "R3_architecture_baked.png",
+    "R3_floor_baked.png",
+    "R3_furniture_baked.png"
+  ]
+}

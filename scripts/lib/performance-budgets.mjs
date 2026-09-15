@@ -15,9 +15,12 @@ export const PERFORMANCE_TARGETS = Object.freeze({
 // Session-only view/pace controls and accessible Arrange zoom deliberately add
 // 1KB to the aggregate feature allowance; entry/lazy-chunk/CSS ceilings and the
 // tighter product targets are unchanged. See the mobile camera contract.
+// The independently lazy Obsidian showcase deliberately adds 6 KB JS and
+// 2 KB CSS to aggregate allowances. Public-entry, largest-chunk and every
+// Studio asset budget stay unchanged; see blender/showcases/obsidian/README.md.
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
-  jsGzip: 596_000,
-  cssGzip: 54_500,
+  jsGzip: 602_000,
+  cssGzip: 56_500,
   largestLazyGzip: 195_000,
   entryGzip: 123_000,
   entryCssGzip: 32_500,

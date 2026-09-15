@@ -9,6 +9,7 @@ type ShowcaseItem = {
 const SHOWCASES: readonly ShowcaseItem[] = [
   {
     id: "art-exhibitions",
+    sceneHref: "#/showcase/obsidian",
     meta: "01 / Art & culture",
     title: "Art exhibitions",
     description: "Bespoke exhibition worlds shaped around art, story and atmosphere.",
@@ -36,7 +37,7 @@ export function ShowcaseCollection({ onOpenStudio }: { onOpenStudio: () => void 
           <span>See what’s possible.</span>
           <em>Art. Objects. Architecture.</em>
         </h2>
-        <p>Three next-level showroom concepts. Full showcases are in development; bespoke versions are available now on request.</p>
+        <p>Enter Obsidian, our first bespoke exhibition. Discover what individually authored worlds can become.</p>
       </header>
 
       <div className="showcase-collection__grid">
@@ -45,7 +46,7 @@ export function ShowcaseCollection({ onOpenStudio }: { onOpenStudio: () => void 
           const actionLabel = studio ? "Explore the current Studio" : "Bespoke project on request";
           return <article className="showcase-card" key={showcase.id}>
             <a className={`showcase-card__media showcase-card__media--${showcase.id}`} href={showcase.sceneHref}>
-              <span className="showcase-card__composition" aria-hidden="true"><i /><i /><i /></span>
+              {showcase.sceneHref ? <img src="/assets/showcases/obsidian/cover.webp" alt="Obsidian: three connected galleries in walnut, stone and warm light" loading="lazy" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} /> : <span className="showcase-card__composition" aria-hidden="true"><i /><i /><i /></span>}
               <span className="showcase-card__status">{showcase.sceneHref ? `Enter ${showcase.title} ↗` : "Showcase coming soon"}</span>
             </a>
             <p className="showcase-card__meta">{showcase.meta}</p>

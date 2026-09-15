@@ -19,6 +19,7 @@ This directory contains current state and durable operational contracts. It is n
 - [`WP2-DETERMINISTIC-RELEASE-GATE.md`](./WP2-DETERMINISTIC-RELEASE-GATE.md) — immutable production-release procedure.
 - [`WP3-DATA-SECURITY-LIFECYCLE.md`](./WP3-DATA-SECURITY-LIFECYCLE.md) and [`WP3-FIREBASE-POLICY-GATE.md`](./WP3-FIREBASE-POLICY-GATE.md) — lifecycle and policy-release controls.
 - [`premium-glb-measurements.json`](./premium-glb-measurements.json) — intentionally refreshed measurements for the six current premium-v3 exports.
+- [Obsidian showcase contract](../blender/showcases/obsidian/README.md) — independent Blender source, baked visitor runtime, original artwork provenance and reproduction steps.
 
 The retained `WP` labels match active release/operator terminology and script names; they are not the current product roadmap.
 

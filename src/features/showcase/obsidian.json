@@ -1,0 +1,231 @@
+{
+  "rooms": [
+    {
+      "id": "R1",
+      "name": "Botanical Origins",
+      "start": [
+        1.5,
+        1.65,
+        -1.5
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "Living Matter",
+      "start": [
+        13.5,
+        1.65,
+        -1.5
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "Future Nature",
+      "start": [
+        23.5,
+        1.65,
+        -1.5
+      ]
+    }
+  ],
+  "artworks": [
+    {
+      "id": "A01",
+      "title": "Canopy of Tomorrow",
+      "room": "R1",
+      "image": "/assets/showcases/obsidian/artworks/A01.webp",
+      "position": [
+        6.0,
+        1.8,
+        -7.97
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "width": 3.6,
+      "height": 2.4
+    },
+    {
+      "id": "A02",
+      "title": "Mycelium Intelligence",
+      "room": "R1",
+      "image": "/assets/showcases/obsidian/artworks/A02.webp",
+      "position": [
+        3.0,
+        1.8,
+        -0.03
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "width": 1.6,
+      "height": 2.2
+    },
+    {
+      "id": "A03",
+      "title": "Glass Fern",
+      "room": "R1",
+      "image": "/assets/showcases/obsidian/artworks/A03.webp",
+      "position": [
+        9.0,
+        1.8,
+        -0.03
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "width": 1.6,
+      "height": 2.2
+    },
+    {
+      "id": "A04",
+      "title": "Seed of Light",
+      "room": "R1",
+      "image": "/assets/showcases/obsidian/artworks/A04.webp",
+      "position": [
+        0.03,
+        1.8,
+        -6.5
+      ],
+      "normal": [
+        1,
+        0,
+        0
+      ],
+      "width": 1.6,
+      "height": 1.6
+    },
+    {
+      "id": "B01",
+      "title": "Tidal Memory",
+      "room": "R2",
+      "image": "/assets/showcases/obsidian/artworks/B01.webp",
+      "position": [
+        17.0,
+        1.8,
+        -7.97
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "width": 3.6,
+      "height": 2.4
+    },
+    {
+      "id": "B02",
+      "title": "Terra Bloom",
+      "room": "R2",
+      "image": "/assets/showcases/obsidian/artworks/B02.webp",
+      "position": [
+        15.0,
+        1.8,
+        -0.03
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "width": 1.6,
+      "height": 2.2
+    },
+    {
+      "id": "B03",
+      "title": "Rooted Consciousness",
+      "room": "R2",
+      "image": "/assets/showcases/obsidian/artworks/B03.webp",
+      "position": [
+        19.0,
+        1.8,
+        -0.03
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "width": 1.6,
+      "height": 2.2
+    },
+    {
+      "id": "B04",
+      "title": "Living Stone",
+      "room": "R3",
+      "image": "/assets/showcases/obsidian/artworks/B04.webp",
+      "position": [
+        33.97,
+        1.8,
+        -4.0
+      ],
+      "normal": [
+        -1,
+        0,
+        0
+      ],
+      "width": 2.4,
+      "height": 2.4
+    },
+    {
+      "id": "C01",
+      "title": "Symbiotic Horizons",
+      "room": "R3",
+      "image": "/assets/showcases/obsidian/artworks/C01.webp",
+      "position": [
+        28.0,
+        1.8,
+        -7.97
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ],
+      "width": 3.6,
+      "height": 2.4
+    },
+    {
+      "id": "C02",
+      "title": "Nocturnal Orchid",
+      "room": "R3",
+      "image": "/assets/showcases/obsidian/artworks/C02.webp",
+      "position": [
+        25.0,
+        1.8,
+        -0.03
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "width": 1.6,
+      "height": 2.2
+    },
+    {
+      "id": "C03",
+      "title": "Breathing Coral",
+      "room": "R3",
+      "image": "/assets/showcases/obsidian/artworks/C03.webp",
+      "position": [
+        31.0,
+        1.8,
+        -0.03
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ],
+      "width": 1.6,
+      "height": 2.2
+    }
+  ]
+}

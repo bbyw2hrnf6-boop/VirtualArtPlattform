@@ -1,0 +1,373 @@
+{
+  "showcase": "Obsidian",
+  "studio_template": false,
+  "source_version": "2.0",
+  "exports": [
+    {
+      "path": "public/assets/showcases/obsidian/obsidian-desktop.glb",
+      "bytes": 10795172,
+      "sha256": "cf6f44109f55e47530781c69d6749c7aaca115c97a8181f693890e77f3341208",
+      "meshes": 46,
+      "materials": 22,
+      "triangles": 90660,
+      "artwork_ids": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "C01",
+        "C02",
+        "C03"
+      ],
+      "image_dimensions": [
+        [
+          1536,
+          1024
+        ],
+        [
+          1070,
+          1470
+        ],
+        [
+          1070,
+          1470
+        ],
+        [
+          1254,
+          1254
+        ],
+        [
+          1536,
+          1024
+        ],
+        [
+          1070,
+          1470
+        ],
+        [
+          1070,
+          1470
+        ],
+        [
+          1254,
+          1254
+        ],
+        [
+          1536,
+          1024
+        ],
+        [
+          1070,
+          1470
+        ],
+        [
+          1070,
+          1470
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "estimated_RGBA_texture_bytes_with_mips": 243267072
+    },
+    {
+      "path": "public/assets/showcases/obsidian/obsidian-mobile.glb",
+      "bytes": 8215548,
+      "sha256": "1959efd224b25f24aa62378ba88785dd4f40fe7d1f96ff5285041b02d7c932f3",
+      "meshes": 46,
+      "materials": 22,
+      "triangles": 90660,
+      "artwork_ids": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "C01",
+        "C02",
+        "C03"
+      ],
+      "image_dimensions": [
+        [
+          1024,
+          683
+        ],
+        [
+          745,
+          1024
+        ],
+        [
+          745,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          683
+        ],
+        [
+          745,
+          1024
+        ],
+        [
+          745,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          683
+        ],
+        [
+          745,
+          1024
+        ],
+        [
+          745,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "estimated_RGBA_texture_bytes_with_mips": 97118891
+    }
+  ],
+  "cover": {
+    "path": "public/assets/showcases/obsidian/cover.webp",
+    "bytes": 205350,
+    "sha256": "c04bb4b94107e5accf51a76565b7a3e5a2a08970995ffb34e199206318ca445e"
+  },
+  "artworks": [
+    {
+      "id": "A01",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/A01.png",
+        "bytes": 3544574,
+        "sha256": "07865f886e950f0e183b1c446fc1c57e1e561e3491d8a2afe2daded65bad8a52"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/A01.webp",
+        "bytes": 753310,
+        "sha256": "86eaace7fb6120a6156dc515a7293e11e520c71d9f6df93ffdde9a2bfedecba7"
+      }
+    },
+    {
+      "id": "A02",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/A02.png",
+        "bytes": 3385425,
+        "sha256": "1be0fee352da765dfa8fb4cc69a6f88f81cbb879c3e5fd0146d527dc33c087af"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/A02.webp",
+        "bytes": 760300,
+        "sha256": "91cb1c96037ff64c1c04a3d5e86547f4113da2b614563dd7280567b34ebef5cb"
+      }
+    },
+    {
+      "id": "A03",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/A03.png",
+        "bytes": 2903663,
+        "sha256": "3507ec37649d50e56fef7b6a2e35215f417b78f2fb4b9151db662943ea550b06"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/A03.webp",
+        "bytes": 578402,
+        "sha256": "c2481fa3717fc911dce8266381a6e79013da63157831d49e7f98b6526f97e15c"
+      }
+    },
+    {
+      "id": "A04",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/A04.png",
+        "bytes": 3267943,
+        "sha256": "a1a2168047d458ebf1a180650fdd37423f723a8e7a2391a77304c525dcbbb6dd"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/A04.webp",
+        "bytes": 706366,
+        "sha256": "8c0c08cb4ab56df3d17614fe76048ede9579b6145bcb6fa41dbcb79cb6289895"
+      }
+    },
+    {
+      "id": "B01",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/B01.png",
+        "bytes": 3442034,
+        "sha256": "9f21fba9be6b1d17c91c7a7b45126d3649246e1b86e99d8b9da70e963676ab5b"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/B01.webp",
+        "bytes": 720344,
+        "sha256": "0cfd82937bfea0084d76934038a47bb34a4ad1570cdaa21c1c298263a4fc3cc4"
+      }
+    },
+    {
+      "id": "B02",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/B02.png",
+        "bytes": 3243787,
+        "sha256": "8d5e49147a2c9088af06f21109e121cc12a106a17488e4093b024a0617bdbe1e"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/B02.webp",
+        "bytes": 709392,
+        "sha256": "c3ccb15c99a47b4591da77357353ccfd4b4e828fb94dd267461ea92ec48fdd2a"
+      }
+    },
+    {
+      "id": "B03",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/B03.png",
+        "bytes": 3062308,
+        "sha256": "fa18095b01fde4ffbd0d4014bead49fad2c21241f8d5176d20175979f8e8a3c8"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/B03.webp",
+        "bytes": 631136,
+        "sha256": "8b1d5f58b98502c05099e79e0438f14d1d9ff0b67379a202ab574eb9f1697ac7"
+      }
+    },
+    {
+      "id": "B04",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/B04.png",
+        "bytes": 3588287,
+        "sha256": "5453250fcc9bbc4bbea7a03496735b4e0c984d29004c95804facc005a51c18bb"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/B04.webp",
+        "bytes": 850450,
+        "sha256": "fe5a43021301f254da4094db858c41f51168d8195da9611f2c2cbb51d21a83af"
+      }
+    },
+    {
+      "id": "C01",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/C01.png",
+        "bytes": 3606519,
+        "sha256": "360a7a69e62c9485e0058fa0ad299a1b9bc218fcab4016a7def2024f2a30f1f1"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/C01.webp",
+        "bytes": 778380,
+        "sha256": "f16435230a4efba0857915dcf73e0468b99d61f8007b2f4be6d70985302ef0fc"
+      }
+    },
+    {
+      "id": "C02",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/C02.png",
+        "bytes": 2658341,
+        "sha256": "481299291174a7e321f02b8ce28beb89c0f9af9a3c8082dd6ff151bf05be7b4f"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/C02.webp",
+        "bytes": 493378,
+        "sha256": "2f6e6505c0c55fc8f04bbe4c36aa00e2c65a8a2695c9ad02c56850a5fbde809a"
+      }
+    },
+    {
+      "id": "C03",
+      "original": {
+        "path": "blender/showcases/obsidian/source/artworks/C03.png",
+        "bytes": 3149979,
+        "sha256": "0c66802ecd164c0e1b7cea3e67387f7ec5a3df20ee3f0030ee60b3926a25a775"
+      },
+      "delivery": {
+        "path": "public/assets/showcases/obsidian/artworks/C03.webp",
+        "bytes": 680882,
+        "sha256": "78dfcd92ec61eb82c455c00e9097054bc8bfcc5aef5cfb96f5189cb1dc67b362"
+      }
+    }
+  ],
+  "proof_camera_count": 30,
+  "masters": [
+    {
+      "path": "blender/showcases/obsidian/masters/R1-SW.png",
+      "bytes": 46228857,
+      "sha256": "d3c3f89f53af066eac243b06a8e6c1d203b84f3f2399ef853be2735068a9d87e"
+    }
+  ]
+}

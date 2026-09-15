@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1300" viewBox="0 0 1900 1300">
+<rect width="1900" height="1300" fill="#f4f1e9"/>
+<style>text{font-family:Arial,sans-serif;fill:#222422}.title{font-family:Georgia,serif;font-weight:400}.muted{fill:#686c64}.small{font-size:18px}.body{font-size:21px}.micro{font-size:15px}.dim{font-size:20px;fill:#5d6359}.room{font-size:25px;font-weight:600}.id{font-size:18px;font-weight:700;fill:#897335}</style>
+<text x="95" y="72" class="small" text-anchor="start" >LIEUVA  /  ARCHITECTURAL REFERENCE  /  02</text>
+<text x="95" y="144" class="title" text-anchor="start" font-size="55">Obsidian. Three connected galleries.</text>
+<text x="95" y="193" class="body" text-anchor="start" >Verbindlicher Grundriss · Meter · ohne Fenster und Oberlichter · 34 × 8 m · Deckenhöhe 4,50 m</text>
+<line x1="95" y1="221" x2="1805" y2="221" stroke="#b6b9ad" stroke-width="1" />
+<line x1="125" y1="263" x2="1757" y2="263" stroke="#7f867a" stroke-width="1.2" />
+<line x1="125" y1="257" x2="125" y2="269" stroke="#7f867a" stroke-width="1.2" />
+<line x1="1757" y1="257" x2="1757" y2="269" stroke="#7f867a" stroke-width="1.2" />
+<text x="941.0" y="251" class="dim" text-anchor="middle" >34,00 m gesamt</text>
+<line x1="125" y1="311" x2="701" y2="311" stroke="#7f867a" stroke-width="1.2" />
+<line x1="125" y1="305" x2="125" y2="317" stroke="#7f867a" stroke-width="1.2" />
+<line x1="701" y1="305" x2="701" y2="317" stroke="#7f867a" stroke-width="1.2" />
+<text x="413.0" y="299" class="dim" text-anchor="middle" >12,00 m</text>
+<rect x="125" y="330" width="576" height="384" fill="#dfdfd7" stroke="none" stroke-width="1" rx="0"/>
+<line x1="701" y1="311" x2="1181" y2="311" stroke="#7f867a" stroke-width="1.2" />
+<line x1="701" y1="305" x2="701" y2="317" stroke="#7f867a" stroke-width="1.2" />
+<line x1="1181" y1="305" x2="1181" y2="317" stroke="#7f867a" stroke-width="1.2" />
+<text x="941.0" y="299" class="dim" text-anchor="middle" >10,00 m</text>
+<rect x="701" y="330" width="480" height="384" fill="#dfdfd7" stroke="none" stroke-width="1" rx="0"/>
+<line x1="1181" y1="311" x2="1757" y2="311" stroke="#7f867a" stroke-width="1.2" />
+<line x1="1181" y1="305" x2="1181" y2="317" stroke="#7f867a" stroke-width="1.2" />
+<line x1="1757" y1="305" x2="1757" y2="317" stroke="#7f867a" stroke-width="1.2" />
+<text x="1469.0" y="299" class="dim" text-anchor="middle" >12,00 m</text>
+<rect x="1181" y="330" width="576" height="384" fill="#dfdfd7" stroke="none" stroke-width="1" rx="0"/>
+<line x1="125" y1="330" x2="125" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="173" y1="330" x2="173" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="221" y1="330" x2="221" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="269" y1="330" x2="269" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="317" y1="330" x2="317" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="365" y1="330" x2="365" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="413" y1="330" x2="413" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="461" y1="330" x2="461" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="509" y1="330" x2="509" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="557" y1="330" x2="557" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="605" y1="330" x2="605" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="653" y1="330" x2="653" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="701" y1="330" x2="701" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="749" y1="330" x2="749" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="797" y1="330" x2="797" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="845" y1="330" x2="845" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="893" y1="330" x2="893" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="941" y1="330" x2="941" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="989" y1="330" x2="989" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1037" y1="330" x2="1037" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1085" y1="330" x2="1085" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1133" y1="330" x2="1133" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1181" y1="330" x2="1181" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1229" y1="330" x2="1229" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1277" y1="330" x2="1277" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1325" y1="330" x2="1325" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1373" y1="330" x2="1373" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1421" y1="330" x2="1421" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1469" y1="330" x2="1469" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1517" y1="330" x2="1517" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1565" y1="330" x2="1565" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1613" y1="330" x2="1613" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1661" y1="330" x2="1661" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1709" y1="330" x2="1709" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="1757" y1="330" x2="1757" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="714" x2="1757" y2="714" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="666" x2="1757" y2="666" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="618" x2="1757" y2="618" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="570" x2="1757" y2="570" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="522" x2="1757" y2="522" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="474" x2="1757" y2="474" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="426" x2="1757" y2="426" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="378" x2="1757" y2="378" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="330" x2="1757" y2="330" stroke="#c7cabe" stroke-width="0.7" />
+<line x1="125" y1="714" x2="1757" y2="714" stroke="#282c28" stroke-width="8" />
+<line x1="125" y1="330" x2="1757" y2="330" stroke="#282c28" stroke-width="8" />
+<line x1="125" y1="714" x2="125" y2="570" stroke="#6b503a" stroke-width="10" />
+<line x1="125" y1="474" x2="125" y2="330" stroke="#6b503a" stroke-width="10" />
+<line x1="701" y1="714" x2="701" y2="594.0" stroke="#6b503a" stroke-width="10" />
+<line x1="701" y1="450.0" x2="701" y2="330" stroke="#6b503a" stroke-width="10" />
+<line x1="692" y1="594.0" x2="710" y2="594.0" stroke="#a7874e" stroke-width="6" />
+<line x1="692" y1="450.0" x2="710" y2="450.0" stroke="#a7874e" stroke-width="6" />
+<text x="701" y="529" class="id" text-anchor="middle" >P1</text>
+<text x="701" y="554" class="micro" text-anchor="middle" >3,00 m</text>
+<line x1="1181" y1="714" x2="1181" y2="594.0" stroke="#6b503a" stroke-width="10" />
+<line x1="1181" y1="450.0" x2="1181" y2="330" stroke="#6b503a" stroke-width="10" />
+<line x1="1172" y1="594.0" x2="1190" y2="594.0" stroke="#a7874e" stroke-width="6" />
+<line x1="1172" y1="450.0" x2="1190" y2="450.0" stroke="#a7874e" stroke-width="6" />
+<text x="1181" y="529" class="id" text-anchor="middle" >P2</text>
+<text x="1181" y="554" class="micro" text-anchor="middle" >3,00 m</text>
+<line x1="1757" y1="714" x2="1757" y2="330" stroke="#6b503a" stroke-width="10" />
+<line x1="125" y1="570" x2="125" y2="474" stroke="#9b7756" stroke-width="5" />
+<line x1="118.28" y1="522" x2="131.72" y2="522" stroke="#393d34" stroke-width="2" />
+<text x="38" y="507" class="micro" text-anchor="start" >ENTRY</text>
+<text x="38" y="529" class="micro" text-anchor="start" >2,00 m</text>
+<text x="38" y="551" class="micro" text-anchor="start" >zu</text>
+<line x1="326.6" y1="338" x2="499.4" y2="338" stroke="#ac8e43" stroke-width="6" />
+<text x="413" y="367" class="id" text-anchor="middle" >A01</text>
+<line x1="230.6" y1="706" x2="307.4" y2="706" stroke="#ac8e43" stroke-width="6" />
+<text x="269" y="692" class="id" text-anchor="middle" >A02</text>
+<line x1="518.6" y1="706" x2="595.4" y2="706" stroke="#ac8e43" stroke-width="6" />
+<text x="557" y="692" class="id" text-anchor="middle" >A03</text>
+<line x1="133" y1="363.6" x2="133" y2="440.4" stroke="#ac8e43" stroke-width="6" />
+<text x="145" y="409.0" class="id" text-anchor="start" >A04</text>
+<line x1="854.6" y1="338" x2="1027.4" y2="338" stroke="#ac8e43" stroke-width="6" />
+<text x="941" y="367" class="id" text-anchor="middle" >B01</text>
+<line x1="806.6" y1="706" x2="883.4" y2="706" stroke="#ac8e43" stroke-width="6" />
+<text x="845" y="692" class="id" text-anchor="middle" >B02</text>
+<line x1="998.6" y1="706" x2="1075.4" y2="706" stroke="#ac8e43" stroke-width="6" />
+<text x="1037" y="692" class="id" text-anchor="middle" >B03</text>
+<line x1="1749" y1="464.4" x2="1749" y2="579.6" stroke="#ac8e43" stroke-width="6" />
+<text x="1737" y="529" class="id" text-anchor="end" >B04</text>
+<line x1="1382.6" y1="338" x2="1555.4" y2="338" stroke="#ac8e43" stroke-width="6" />
+<text x="1469" y="367" class="id" text-anchor="middle" >C01</text>
+<line x1="1286.6" y1="706" x2="1363.4" y2="706" stroke="#ac8e43" stroke-width="6" />
+<text x="1325" y="692" class="id" text-anchor="middle" >C02</text>
+<line x1="1574.6" y1="706" x2="1651.4" y2="706" stroke="#ac8e43" stroke-width="6" />
+<text x="1613" y="692" class="id" text-anchor="middle" >C03</text>
+<rect x="336.2" y="504.0" width="153.60000000000002" height="36.0" fill="#776350" stroke="#433e32" stroke-width="1.5" rx="4"/>
+<text x="413.0" y="529" class="micro" text-anchor="middle" fill="#ffffff">BANK</text>
+<text x="413.0" y="453" class="room" text-anchor="middle" >R1  Botanical Origins</text>
+<text x="413.0" y="589" class="small" text-anchor="middle" >12 × 8 m  /  H 4,50 m</text>
+<line x1="173" y1="666" x2="196.1523089942387" y2="652.1086146034568" stroke="#396664" stroke-width="2" />
+<circle cx="173" cy="666" r="5" fill="#396664"/>
+<text x="183" y="654" class="micro" text-anchor="start" >R1-SW</text>
+<line x1="653" y1="666" x2="629.8476910057614" y2="652.1086146034568" stroke="#396664" stroke-width="2" />
+<circle cx="653" cy="666" r="5" fill="#396664"/>
+<text x="643" y="654" class="micro" text-anchor="end" >R1-SE</text>
+<line x1="653" y1="378" x2="629.8476910057614" y2="391.8913853965432" stroke="#396664" stroke-width="2" />
+<circle cx="653" cy="378" r="5" fill="#396664"/>
+<text x="643" y="400" class="micro" text-anchor="end" >R1-NE</text>
+<line x1="173" y1="378" x2="196.1523089942387" y2="391.8913853965432" stroke="#396664" stroke-width="2" />
+<circle cx="173" cy="378" r="5" fill="#396664"/>
+<text x="183" y="400" class="micro" text-anchor="start" >R1-NW</text>
+<rect x="864.2" y="504.0" width="153.60000000000002" height="36.0" fill="#776350" stroke="#433e32" stroke-width="1.5" rx="4"/>
+<text x="941.0" y="529" class="micro" text-anchor="middle" fill="#ffffff">BANK</text>
+<text x="941.0" y="453" class="room" text-anchor="middle" >R2  Living Matter</text>
+<text x="941.0" y="589" class="small" text-anchor="middle" >10 × 8 m  /  H 4,50 m</text>
+<line x1="749" y1="666" x2="770.6" y2="649.8" stroke="#396664" stroke-width="2" />
+<circle cx="749" cy="666" r="5" fill="#396664"/>
+<text x="759" y="654" class="micro" text-anchor="start" >R2-SW</text>
+<line x1="1133" y1="666" x2="1111.4" y2="649.8" stroke="#396664" stroke-width="2" />
+<circle cx="1133" cy="666" r="5" fill="#396664"/>
+<text x="1123" y="654" class="micro" text-anchor="end" >R2-SE</text>
+<line x1="1133" y1="378" x2="1111.4" y2="394.2" stroke="#396664" stroke-width="2" />
+<circle cx="1133" cy="378" r="5" fill="#396664"/>
+<text x="1123" y="400" class="micro" text-anchor="end" >R2-NE</text>
+<line x1="749" y1="378" x2="770.6" y2="394.2" stroke="#396664" stroke-width="2" />
+<circle cx="749" cy="378" r="5" fill="#396664"/>
+<text x="759" y="400" class="micro" text-anchor="start" >R2-NW</text>
+<rect x="1392.2" y="504.0" width="153.60000000000002" height="36.0" fill="#776350" stroke="#433e32" stroke-width="1.5" rx="4"/>
+<text x="1469.0" y="529" class="micro" text-anchor="middle" fill="#ffffff">BANK</text>
+<text x="1469.0" y="453" class="room" text-anchor="middle" >R3  Future Nature</text>
+<text x="1469.0" y="589" class="small" text-anchor="middle" >12 × 8 m  /  H 4,50 m</text>
+<line x1="1229" y1="666" x2="1252.1523089942386" y2="652.1086146034568" stroke="#396664" stroke-width="2" />
+<circle cx="1229" cy="666" r="5" fill="#396664"/>
+<text x="1239" y="654" class="micro" text-anchor="start" >R3-SW</text>
+<line x1="1709" y1="666" x2="1685.8476910057614" y2="652.1086146034568" stroke="#396664" stroke-width="2" />
+<circle cx="1709" cy="666" r="5" fill="#396664"/>
+<text x="1699" y="654" class="micro" text-anchor="end" >R3-SE</text>
+<line x1="1709" y1="378" x2="1685.8476910057614" y2="391.8913853965432" stroke="#396664" stroke-width="2" />
+<circle cx="1709" cy="378" r="5" fill="#396664"/>
+<text x="1699" y="400" class="micro" text-anchor="end" >R3-NE</text>
+<line x1="1229" y1="378" x2="1252.1523089942386" y2="391.8913853965432" stroke="#396664" stroke-width="2" />
+<circle cx="1229" cy="378" r="5" fill="#396664"/>
+<text x="1239" y="400" class="micro" text-anchor="start" >R3-NW</text>
+<line x1="1800" y1="330" x2="1800" y2="714" stroke="#7f867a" stroke-width="1.2" />
+<line x1="1793" y1="330" x2="1807" y2="330" stroke="#7f867a" stroke-width="1.2" />
+<line x1="1793" y1="714" x2="1807" y2="714" stroke="#7f867a" stroke-width="1.2" />
+<text x="1820" y="522" class="dim" text-anchor="middle" transform="rotate(90 1820 522)">8,00 m</text>
+<text x="1715" y="784" class="small" text-anchor="middle" >N</text>
+<line x1="1715" y1="807" x2="1715" y2="790" stroke="#222422" stroke-width="2" />
+<path d="M1710 793 L1715 783 L1720 793" fill="none" stroke="#222422" stroke-width="2"/>
+<text x="1670" y="836" class="micro" text-anchor="start" >W ← X → E</text>
+<text x="95" y="775" class="body" text-anchor="start" >P1 / P2  Offene rechteckige Durchgänge, je 3,00 × 3,20 m; bündiger Boden; Walnusslaibung.</text>
+<text x="95" y="810" class="body" text-anchor="start" >Eingang 2,00 × 2,80 m, geschlossene Walnuss-Doppeltür. Alle Kunstwerke: Bildmitte Z = 1,80 m.</text>
+<line x1="95" y1="859" x2="1805" y2="859" stroke="#b6b9ad" stroke-width="1" />
+<text x="95" y="908" class="small" text-anchor="start" >11 ORIGINAL AI ARTWORKS</text>
+<text x="95" y="950" class="id" text-anchor="start" >A01</text>
+<text x="152" y="950" class="body" text-anchor="start" >Canopy of Tomorrow</text>
+<text x="152" y="967" class="micro" text-anchor="start" fill="#686c64">3,6 × 2,4 m  ·  R1 / Nord</text>
+<text x="95" y="986" class="id" text-anchor="start" >A02</text>
+<text x="152" y="986" class="body" text-anchor="start" >Mycelium Intelligence</text>
+<text x="152" y="1003" class="micro" text-anchor="start" fill="#686c64">1,6 × 2,2 m  ·  R1 / Süd</text>
+<text x="95" y="1022" class="id" text-anchor="start" >A03</text>
+<text x="152" y="1022" class="body" text-anchor="start" >Glass Fern</text>
+<text x="152" y="1039" class="micro" text-anchor="start" fill="#686c64">1,6 × 2,2 m  ·  R1 / Süd</text>
+<text x="95" y="1058" class="id" text-anchor="start" >A04</text>
+<text x="152" y="1058" class="body" text-anchor="start" >Seed of Light</text>
+<text x="152" y="1075" class="micro" text-anchor="start" fill="#686c64">1,6 × 1,6 m  ·  R1 / West</text>
+<text x="672" y="950" class="id" text-anchor="start" >B01</text>
+<text x="729" y="950" class="body" text-anchor="start" >Tidal Memory</text>
+<text x="729" y="967" class="micro" text-anchor="start" fill="#686c64">3,6 × 2,4 m  ·  R2 / Nord</text>
+<text x="672" y="986" class="id" text-anchor="start" >B02</text>
+<text x="729" y="986" class="body" text-anchor="start" >Terra Bloom</text>
+<text x="729" y="1003" class="micro" text-anchor="start" fill="#686c64">1,6 × 2,2 m  ·  R2 / Süd</text>
+<text x="672" y="1022" class="id" text-anchor="start" >B03</text>
+<text x="729" y="1022" class="body" text-anchor="start" >Rooted Consciousness</text>
+<text x="729" y="1039" class="micro" text-anchor="start" fill="#686c64">1,6 × 2,2 m  ·  R2 / Süd</text>
+<text x="1215" y="950" class="id" text-anchor="start" >B04</text>
+<text x="1272" y="950" class="body" text-anchor="start" >Living Stone</text>
+<text x="1272" y="967" class="micro" text-anchor="start" fill="#686c64">2,4 × 2,4 m  ·  R3 / Ost</text>
+<text x="1215" y="986" class="id" text-anchor="start" >C01</text>
+<text x="1272" y="986" class="body" text-anchor="start" >Symbiotic Horizons</text>
+<text x="1272" y="1003" class="micro" text-anchor="start" fill="#686c64">3,6 × 2,4 m  ·  R3 / Nord</text>
+<text x="1215" y="1022" class="id" text-anchor="start" >C02</text>
+<text x="1272" y="1022" class="body" text-anchor="start" >Nocturnal Orchid</text>
+<text x="1272" y="1039" class="micro" text-anchor="start" fill="#686c64">1,6 × 2,2 m  ·  R3 / Süd</text>
+<text x="1215" y="1058" class="id" text-anchor="start" >C03</text>
+<text x="1272" y="1058" class="body" text-anchor="start" >Breathing Coral</text>
+<text x="1272" y="1075" class="micro" text-anchor="start" fill="#686c64">1,6 × 2,2 m  ·  R3 / Süd</text>
+<line x1="95" y1="1118" x2="1805" y2="1118" stroke="#b6b9ad" stroke-width="1" />
+<text x="95" y="1160" class="small" text-anchor="start" >30 KAMERAS</text>
+<text x="95" y="1193" class="body" text-anchor="start" >Je Raum: SW · SE · NE · NW · Wand N · E · S · W · Decke · Boden</text>
+<text x="95" y="1224" class="small" text-anchor="start" >Eckkameras: 1 m Wandabstand, Augenhöhe 1,65 m. Alle Koordinaten und Projektionen stehen in layout.json.</text>
+<text x="95" y="1270" class="small" text-anchor="start" >PLAN VOR BILD  —  KI-Ansichten sind Gestaltungsreferenzen. Dieser Grundriss und die JSON-Daten bestimmen die Blender-Geometrie.</text>
+</svg>

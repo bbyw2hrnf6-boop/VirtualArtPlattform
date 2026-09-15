@@ -1,0 +1,47 @@
+[
+  {
+    "mesh": "R1_architecture_baked",
+    "size": 2048,
+    "seconds": 71.59
+  },
+  {
+    "mesh": "R1_floor_baked",
+    "size": 2048,
+    "seconds": 84.43
+  },
+  {
+    "mesh": "R1_furniture_baked",
+    "size": 1024,
+    "seconds": 44.09
+  },
+  {
+    "mesh": "R2_architecture_baked",
+    "size": 2048,
+    "seconds": 139.92
+  },
+  {
+    "mesh": "R2_floor_baked",
+    "size": 2048,
+    "seconds": 115.83
+  },
+  {
+    "mesh": "R2_furniture_baked",
+    "size": 1024,
+    "seconds": 51.07
+  },
+  {
+    "mesh": "R3_architecture_baked",
+    "size": 2048,
+    "seconds": 145.85
+  },
+  {
+    "mesh": "R3_floor_baked",
+    "size": 2048,
+    "seconds": 134.03
+  },
+  {
+    "mesh": "R3_furniture_baked",
+    "size": 1024,
+    "seconds": 51.87
+  }
+]

@@ -97,3 +97,10 @@ The separate Blender camera study and three QA stills were regenerated against a
 1,729 runtime camera samples. Its retained beauty staging differs from the editable
 three-work browser draft; the README makes that boundary explicit. Existing 4K
 masters, runtime GLBs, PBR images and material closeups were not replaced.
+
+
+## Obsidian bespoke showcase · 2026-09-15
+
+The project owner supplied the `Obsidian-Three-Rooms` reference package and explicitly requested use of its eleven artworks in this LIEUVA showcase. The package declares those works and its room references to be AI-generated. The provider/model is not specified; no additional provenance is inferred. Original artwork PNGs are retained byte-for-byte in `blender/showcases/obsidian/source/artworks/`, with the supplied checksum index and layout. Full-resolution WebP encoding derivatives ship under `public/assets/showcases/obsidian/artworks/`; no image content is regenerated or artist attribution invented.
+
+`blender/showcases/obsidian/build.py` reconstructs original metric geometry and procedural materials from the supplied plan. Packed Blender sources, lightmaps and Cycles masters are retained there. The showroom GLBs and cover are derived from that reconstructed scene, not from the supplied perspective reference images. Online Blender documentation and Reddit discussion informed technique only; no external image, model, HDRI or material asset was downloaded. No standalone resale, reuse, sublicensing or training license for these assets is declared.
