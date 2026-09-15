@@ -2,6 +2,7 @@ import { VisitorWalkControls } from './VisitorWalkControls';
 import { useEffect, useState, type CSSProperties, type RefObject } from "react";
 import { VISITOR_KEYBOARD_HINT } from "./visitorKeyboard";
 import type { VisitorTourState } from "./visitorTourState";
+import { IDLE_VISITOR_TOUR } from "./visitorTourState";
 
 export type VisitorModeOption<TMode extends string> = {
   value: TMode;
@@ -13,21 +14,24 @@ type VisitorControlsProps<TMode extends string> = {
   mode: TMode;
   modeOptions: VisitorModeOption<TMode>[];
   onModeChange: (mode: TMode) => void;
-  tour: VisitorTourState;
-  tourAvailable: boolean;
-  onStartOrSkipTour: () => void;
-  onPauseOrResumeTour: () => void;
-  onStepTour: (direction: -1 | 1) => void;
-  onSmartView: () => void;
-  smartViewLabel: string;
+  tour?: VisitorTourState;
+  tourAvailable?: boolean;
+  onStartOrSkipTour?: () => void;
+  onPauseOrResumeTour?: () => void;
+  onStepTour?: (direction: -1 | 1) => void;
+  onSmartView?: () => void;
+  smartViewLabel?: string;
   onResetView: () => void;
   artworkCount?: number;
   artworkDirectoryExpanded?: boolean;
+  artworkDirectoryId?: string;
+  artworkDirectoryDialog?: boolean;
   artworkDirectoryUnavailable?: boolean;
   artworkButtonRef?: RefObject<HTMLButtonElement | null>;
   onOpenArtworkDirectory?: () => void;
   compactLabel?: string;
   firstEntryHint?: boolean;
+  showHelp?: boolean;
   onTouchMove?: (direction?: "forward" | "backward" | "left" | "right") => void;
 };
 
@@ -37,8 +41,8 @@ export function VisitorControls<TMode extends string>({
   mode,
   modeOptions,
   onModeChange,
-  tour,
-  tourAvailable,
+  tour = IDLE_VISITOR_TOUR,
+  tourAvailable = false,
   onStartOrSkipTour,
   onPauseOrResumeTour,
   onStepTour,
@@ -47,17 +51,20 @@ export function VisitorControls<TMode extends string>({
   onResetView,
   artworkCount = 0,
   artworkDirectoryExpanded = false,
+  artworkDirectoryId = 'artwork-directory',
+  artworkDirectoryDialog = true,
   artworkDirectoryUnavailable = false,
   artworkButtonRef,
   onOpenArtworkDirectory,
   compactLabel = "Space controls",
   firstEntryHint = false,
+  showHelp = true,
   onTouchMove,
 }: VisitorControlsProps<TMode>) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [showHint, setShowHint] = useState(() =>
     Boolean(
-      firstEntryHint &&
+      showHelp && firstEntryHint &&
       typeof sessionStorage !== "undefined" &&
       !sessionStorage.getItem(VISITOR_HINT_KEY),
     ),
@@ -95,8 +102,9 @@ export function VisitorControls<TMode extends string>({
         ))}
       </div>
 
-      <div className="visitor-controls__actions" role="group" aria-label="Camera and tour controls">
-        <button
+      <div className="visitor-controls__actions" role="group" aria-label="Camera and tour controls"
+        style={!onStartOrSkipTour || !onSmartView || !showHelp ? { gridTemplateColumns: 'none', gridAutoFlow: 'column', gridAutoColumns: 'minmax(0, 1fr)' } : undefined}>
+        {onStartOrSkipTour && <button
           type="button"
           data-visitor-tour-control
           className={`visitor-controls__tour${tourRunning ? " is-active" : ""}`}
@@ -113,8 +121,8 @@ export function VisitorControls<TMode extends string>({
                 : "Switch to Walk"}
           </small>
           <i aria-hidden="true" />
-        </button>
-        <button
+        </button>}
+        {onSmartView && <button
           type="button"
           data-visitor-smart-view
           disabled={!tourAvailable || tourRunning}
@@ -122,7 +130,7 @@ export function VisitorControls<TMode extends string>({
         >
           <span>Focus view</span>
           <small>{smartViewLabel}</small>
-        </button>
+        </button>}
         <button type="button" data-visitor-reset-view onClick={onResetView}>
           <span>Reset view</span>
           <small>Return to start</small>
@@ -132,9 +140,9 @@ export function VisitorControls<TMode extends string>({
             ref={artworkButtonRef}
             type="button"
             className={artworkDirectoryUnavailable ? "is-fallback" : ""}
-            aria-controls="artwork-directory"
-            aria-haspopup="dialog"
-            aria-expanded={artworkDirectoryExpanded}
+            aria-controls={artworkDirectoryId}
+            aria-haspopup={artworkDirectoryDialog ? 'dialog' : undefined}
+            aria-expanded={artworkDirectoryDialog ? artworkDirectoryExpanded : undefined}
             aria-label={`Open artwork list, ${artworkCount} work${artworkCount === 1 ? "" : "s"}${artworkDirectoryUnavailable ? ". The 3D view is unavailable." : ""}`}
             onClick={onOpenArtworkDirectory}
           >
@@ -142,7 +150,7 @@ export function VisitorControls<TMode extends string>({
             <small>{artworkCount} listed</small>
           </button>
         )}
-        <button
+        {showHelp && <button
           type="button"
           className="visitor-controls__help-trigger"
           aria-expanded={helpOpen}
@@ -151,14 +159,14 @@ export function VisitorControls<TMode extends string>({
         >
           <span>Controls</span>
           <small>How to explore</small>
-        </button>
+        </button>}
       </div>
 
       {onTouchMove && mode === "walk" && (
         <VisitorWalkControls onTouchMove={onTouchMove} />
       )}
 
-      {(helpOpen || showHint) && (
+      {showHelp && (helpOpen || showHint) && (
         <aside id="visitor-controls-help" className="visitor-controls__help" role="note">
           <button type="button" aria-label="Close control guide" onClick={() => { setHelpOpen(false); setShowHint(false); }}>×</button>
           <strong>Explore at your pace.</strong>
@@ -170,13 +178,13 @@ export function VisitorControls<TMode extends string>({
 
       {tourRunning && (
         <div className="visitor-controls__tour-nav" role="group" aria-label="Guided tour playback">
-          <button type="button" onClick={() => onStepTour(-1)} aria-label="Previous tour stop">
+          <button type="button" onClick={() => onStepTour?.(-1)} aria-label="Previous tour stop">
             ← <span>Previous</span>
           </button>
           <button type="button" onClick={onPauseOrResumeTour}>
             {tour.status === "paused" ? "Resume" : "Pause"}
           </button>
-          <button type="button" onClick={() => onStepTour(1)} aria-label="Next tour stop">
+          <button type="button" onClick={() => onStepTour?.(1)} aria-label="Next tour stop">
             <span>Next</span> →
           </button>
         </div>

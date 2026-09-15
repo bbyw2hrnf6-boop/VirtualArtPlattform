@@ -1,8 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { ObsidianControls, ObsidianMode } from './ObsidianScene';
 import data from './obsidian.json';
-import { VisitorWalkControls } from '../gallery/VisitorWalkControls';
-import { VISITOR_KEYBOARD_HINT } from '../gallery/visitorKeyboard';
+import { VisitorControls } from '../gallery/VisitorControls';
 import '../../styles/visitorControls.css';
 import './obsidian.css';
 
@@ -16,12 +15,15 @@ export default function ObsidianPage() {
   const [status, setStatus] = useState('idle');
   const [room, setRoom] = useState(0);
   const [mode, setMode] = useState<ObsidianMode>('walk');
-  const [help, setHelp] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const ready = useCallback(() => { setRoom(0); setMode('walk'); setStatus('ready'); }, []);
   const failed = useCallback(() => { setStatus('error'); setActive(false); }, []);
   const artwork = useCallback((id: string) => setSelected(id), []);
   const current = data.artworks.find(a => a.id === selected);
+  const browseCollection = () => {
+    setActive(false); setStatus('idle');
+    document.getElementById('obsidian-collection')?.scrollIntoView();
+  };
   useEffect(() => {
     controls.current?.pause(Boolean(selected));
     if (selected) dialog.current?.showModal(); else dialog.current?.close();
@@ -45,18 +47,23 @@ export default function ObsidianPage() {
       </div>}
       {status === 'ready' && <>
         <div className="obsidian__room-label"><span>{String(room+1).padStart(2,'0')} / OBSIDIAN</span><h1>{data.rooms[room].name}</h1></div>
-        <div className="obsidian__visit-controls">
-          <nav aria-label="Exhibition rooms">{data.rooms.map((r, i) => <button key={r.id} aria-current={room === i ? 'true' : undefined} onClick={() => { controls.current?.room(i); }}>{String(i+1).padStart(2,'0')}<span>{r.name}</span></button>)}</nav>
-          <div className="obsidian__view-controls" role="group" aria-label="View mode">
-            {(['walk', 'overview'] as const).map(value => <button key={value} aria-pressed={mode === value} onClick={() => controls.current?.mode(value)}>{value === 'walk' ? 'Walk' : 'Overview'}</button>)}
-            <button onClick={() => controls.current?.reset()}>Reset view</button>
-            <button aria-expanded={help} aria-controls="obsidian-controls-help" onClick={() => setHelp(value => !value)}>Controls</button>
-          </div>
-          {mode === 'walk' && <VisitorWalkControls onTouchMove={direction => controls.current?.move(direction)} />}
-          {mode === 'overview' && <div className="obsidian__zoom" role="group" aria-label="Overview zoom"><button aria-label="Zoom out" onClick={() => controls.current?.zoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => controls.current?.zoom(1)}>+</button></div>}
-          {help && <aside id="obsidian-controls-help" className="obsidian__help"><button aria-label="Close control guide" onClick={() => setHelp(false)}>×</button><strong>Explore at your pace.</strong><span>{VISITOR_KEYBOARD_HINT}</span><p>Drag to look · Tap the floor to walk · Pinch or scroll to zoom.</p><p>Hold the arrows to walk on mobile. Overview lets you orbit and zoom out. Select any artwork to inspect it.</p></aside>}
-          <a href="#obsidian-collection" onClick={e => { e.preventDefault(); setActive(false); setStatus('idle'); document.getElementById("obsidian-collection")?.scrollIntoView(); }}>Browse the collection ↓</a>
-        </div>
+        <label className="obsidian__room-picker">Room
+          <select aria-label="Exhibition room" value={room} onChange={event => controls.current?.room(Number(event.target.value))}>
+            {data.rooms.map((r, i) => <option key={r.id} value={i}>{String(i+1).padStart(2,'0')} / {r.name}</option>)}
+          </select>
+        </label>
+        <VisitorControls<ObsidianMode>
+          mode={mode}
+          modeOptions={[{value:'walk',label:'Walk',icon:'↟'}, {value:'overview',label:'Overview',icon:'◇'}]}
+          onModeChange={value => controls.current?.mode(value)}
+          onResetView={() => controls.current?.reset()}
+          onOpenArtworkDirectory={browseCollection}
+          artworkCount={data.artworks.length}
+          artworkDirectoryId="obsidian-collection"
+          artworkDirectoryDialog={false}
+          showHelp={false}
+        />
+        <div className="arrange-zoom obsidian__zoom" role="group" aria-label="Camera zoom"><button aria-label="Zoom out" onClick={() => controls.current?.zoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => controls.current?.zoom(1)}>+</button></div>
       </>}
     </section>
     <section className="obsidian__collection" id="obsidian-collection" aria-labelledby="obsidian-collection-heading">

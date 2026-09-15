@@ -5,8 +5,8 @@
   "exports": [
     {
       "path": "public/assets/showcases/obsidian/obsidian-desktop.glb",
-      "bytes": 11631788,
-      "sha256": "a9fd48496896ce34669ffe642439edd4633d97e3d084c416ae69840fb066f505",
+      "bytes": 11631660,
+      "sha256": "d008645d14aeb2481e2b2e3a26d6798ef5e95224fe6a73773bdbf6d1a62d5d5f",
       "meshes": 46,
       "materials": 22,
       "triangles": 90660,
@@ -109,8 +109,8 @@
     },
     {
       "path": "public/assets/showcases/obsidian/obsidian-mobile.glb",
-      "bytes": 8480584,
-      "sha256": "53b37a54e443d0cee081fb51394deb1261a9268f1b07a4e3725e56ab173f9f39",
+      "bytes": 8482532,
+      "sha256": "eb71bfbf2f9aa626063ed3be47d8f2460b433654f2d6d0476c6d8d31d68990b8",
       "meshes": 46,
       "materials": 22,
       "triangles": 90660,

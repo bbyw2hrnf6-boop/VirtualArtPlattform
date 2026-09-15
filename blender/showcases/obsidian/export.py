@@ -2,6 +2,7 @@
 Load obsidian.blend before running. The editable source is never modified.
 """
 import bpy
+import argparse
 import json
 import sys
 import time
@@ -13,7 +14,20 @@ OUT=ROOT/'public/assets/showcases/obsidian'
 MAPS=HERE/'lightmaps/raw'
 MAPS.mkdir(parents=True,exist_ok=True)
 scene=bpy.context.scene
-scene.cycles.samples=48
+parser=argparse.ArgumentParser()
+parser.add_argument('--samples',type=int,default=128)
+parser.add_argument('--device',choices=['CPU','METAL'],default='CPU')
+parser.add_argument('--reuse-architecture',action='store_true')
+options=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
+if options.samples<1:parser.error('--samples must be positive')
+if options.device=='METAL':
+    preferences=bpy.context.preferences.addons['cycles'].preferences
+    preferences.compute_device_type='METAL';preferences.get_devices()
+    if not any(d.type=='METAL' for d in preferences.devices):raise RuntimeError('Metal device unavailable')
+    for device in preferences.devices:device.use=device.type=='METAL'
+    scene.cycles.device='GPU'
+else:scene.cycles.device='CPU'
+scene.cycles.samples=options.samples
 scene.cycles.use_adaptive_sampling=False
 scene.render.bake.use_pass_direct=True
 scene.render.bake.use_pass_indirect=True
@@ -52,16 +66,16 @@ for room in ['R1','R2','R3']:
             t=m.node_tree.nodes.new('ShaderNodeTexImage');t.image=image;t.select=True;m.node_tree.nodes.active=t
         print(f'BAKING {o.name} {size}',flush=True);start=time.time()
         raw = MAPS/f'{o.name}.png'
-        if '--reuse-architecture' in sys.argv and group != 'floor' and raw.exists():
+        reused=options.reuse_architecture and group != 'floor' and raw.exists()
+        if reused:
             # Identical mesh join/UV packing; reuse unchanged transport only.
             image.filepath = str(raw); image.source = 'FILE'; image.reload()
         else:
-            scene.cycles.samples = 64 if group == 'floor' else 48
             bpy.ops.object.bake(type='DIFFUSE')
-        if not ('--reuse-architecture' in sys.argv and group != 'floor' and raw.exists()):
+        if not reused:
             image.filepath_raw=str(raw);image.file_format='PNG';image.save()
         pending.append((o,image))
-        report.append({'mesh':o.name,'size':size,'samples':64 if group=='floor' else 48,'reused':'--reuse-architecture' in sys.argv and group!='floor' and raw.exists(),'seconds':round(time.time()-start,2)})
+        report.append({'mesh':o.name,'size':size,'samples':None if reused else options.samples,'device':options.device,'reused':reused,'seconds':round(time.time()-start,2)})
         print(f'BAKED {o.name} {report[-1]["seconds"]}s',flush=True)
 
 # Only replace shaders after every transport bake; emissive replacements would

@@ -34,7 +34,9 @@ export function createFirstPersonWalk(
         onUserIntent?.();
         return;
       }
-      destinations = [];
+      // Looking remains independent of a floor route. Only manual translation
+      // replaces that route, so visitors can inspect art while walking to it.
+      if (["KeyW", "KeyA", "KeyS", "KeyD"].includes(event.code)) destinations = [];
       keys.add(event.code);
       onUserIntent?.();
       event.preventDefault();
@@ -51,6 +53,8 @@ export function createFirstPersonWalk(
   let pointerId = -1;
   let lastX = 0;
   let lastY = 0;
+  let startX = 0;
+  let startY = 0;
   let yaw = camera.rotation.y;
   let pitch = camera.rotation.x;
   let eyeHeight = camera.position.y;
@@ -107,8 +111,8 @@ export function createFirstPersonWalk(
     dragging = true;
     dragged = false;
     pointerId = event.pointerId;
-    lastX = event.clientX;
-    lastY = event.clientY;
+    startX = lastX = event.clientX;
+    startY = lastY = event.clientY;
     if (event.isTrusted) canvas.setPointerCapture(event.pointerId);
     canvas.classList.add("is-looking");
   };
@@ -130,7 +134,8 @@ export function createFirstPersonWalk(
     if (!dragging || event.pointerId !== pointerId) return;
     const dx = event.clientX - lastX;
     const dy = event.clientY - lastY;
-    if (Math.abs(dx) + Math.abs(dy) > 2) dragged = true;
+    if (!dragged && Math.hypot(event.clientX - startX, event.clientY - startY) < (event.pointerType === "touch" ? 8 : 4)) return;
+    dragged = true;
     const lookSensitivity = event.pointerType === "touch" ? 0.00245 : 0.0028;
     yaw -= dx * lookSensitivity;
     pitch -= dy * lookSensitivity;
@@ -140,6 +145,7 @@ export function createFirstPersonWalk(
     lastY = event.clientY;
   };
   const pointerUp = (event: PointerEvent) => {
+    if (event.type === "pointercancel") dragged = true;
     if (event.pointerType === "touch") {
       touches.delete(event.pointerId);
       lastPinchDistance = touches.size >= 2 ? pinchDistance() : 0;
@@ -290,7 +296,9 @@ export function createFirstPersonWalk(
   };
   const consumeClick = () => {
     const isClick = !dragged && enabled;
-    dragged = false;
+    // Consume once per gesture, including the second finger of a pinch and
+    // browser-generated compatibility clicks after touch pointerup.
+    dragged = true;
     return isClick;
   };
   const syncFromCamera = () => {
@@ -303,6 +311,7 @@ export function createFirstPersonWalk(
   };
   return {
     preferredFov: () => preferences?.fov() ?? 62,
+    zoom: (direction: -1 | 1) => { if (enabled) { changeFov(targetFov - direction * 8); onUserIntent?.(); } },
     update,
     lookAt,
     moveTo,
@@ -310,6 +319,7 @@ export function createFirstPersonWalk(
     setTouchMovement,
     syncFromCamera,
     consumeClick,
+    destination: () => destinations.at(-1)?.clone(),
     hasDestination: () => destinations.length > 0,
     // Demand-rendered visitors need the same easing as the continuously drawn
     // Studio scene, including the final braking and FOV interpolation frames.
@@ -331,4 +341,3 @@ export function createFirstPersonWalk(
     },
   };
 }
-

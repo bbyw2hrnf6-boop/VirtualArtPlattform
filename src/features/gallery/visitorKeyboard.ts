@@ -19,11 +19,11 @@ export const VISITOR_LOOK_CODES: ReadonlySet<string> = new Set([
 ]);
 
 export const VISITOR_KEYBOARD_HINT =
-  "W/S move · A/D strafe · Q/E or ↑↓ look · ←→ turn";
+  "W/S move · A/D strafe · E/↑ look up · Q/↓ look down · ←→ turn";
 
 export function visitorLookDirection(keys: Pick<ReadonlySet<string>, "has">) {
   return (
-    (keys.has("KeyQ") || keys.has("ArrowUp") ? 1 : 0) -
-    (keys.has("KeyE") || keys.has("ArrowDown") ? 1 : 0)
+    (keys.has("KeyE") || keys.has("ArrowUp") ? 1 : 0) -
+    (keys.has("KeyQ") || keys.has("ArrowDown") ? 1 : 0)
   );
 }

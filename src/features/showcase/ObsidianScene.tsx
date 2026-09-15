@@ -6,7 +6,6 @@ import { createFirstPersonWalk } from '../gallery/scene/firstPersonWalk';
 import { fitArrangeCamera, arrangeZoomLimit } from '../gallery/scene/arrangeCamera';
 import { defaultWalkFov } from '../gallery/scene/walkPreferences';
 import { VISITOR_KEYBOARD_HINT } from '../gallery/visitorKeyboard';
-import type { WalkDirection } from '../gallery/VisitorWalkControls';
 import { createObsidianNavigation, obsidianBounds } from './navigation';
 import { createFloorReflection, installOverviewCutaway } from './floorReflection';
 import data from './obsidian.json';
@@ -14,7 +13,6 @@ import data from './obsidian.json';
 export type ObsidianMode = 'walk' | 'overview';
 export interface ObsidianControls {
   room(index: number): void;
-  move(direction?: WalkDirection): void;
   mode(value: ObsidianMode): void;
   reset(): void;
   zoom(direction: -1 | 1): void;
@@ -48,6 +46,12 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     host.append(canvas);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#100e0b');
+    const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({
+      color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide, depthWrite: false,
+    }));
+    walkMarker.rotation.x = -Math.PI / 2;
+    walkMarker.visible = false;
+    scene.add(walkMarker);
     const camera = new THREE.PerspectiveCamera(defaultWalkFov(compact), 1, .04, 180);
     camera.position.set(1.5, 1.75, -1.5);
     camera.lookAt(5, 1.75, -3.6);
@@ -108,6 +112,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       orbit.enabled = !paused && overview.value; walk.setEnabled(!paused && !overview.value);
       if (reflection) reflection.visible = !overview.value;
       onMode(next); schedule();
+      canvas.focus({ preventScroll: true });
     };
     const resetWalk = (index: number) => {
       const room = data.rooms[index]; if (!room) return;
@@ -117,6 +122,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       camera.lookAt(camera.position.clone().add(new THREE.Vector3(3.5, 0, -2.1)));
       walk.syncFromCamera(); walk.setEnabled(!paused);
       currentRoom = index; onRoom(index); schedule();
+      canvas.focus({ preventScroll: true });
     };
     const pause = (value: boolean) => {
       paused = value;
@@ -126,10 +132,9 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     };
     controlsRef.current = {
       room: resetWalk,
-      move: direction => { walk.setTouchMovement(direction); schedule(); },
       mode: switchMode,
       reset: () => { if (mode === 'overview') fitOverview(); else resetWalk(currentRoom); schedule(); },
-      zoom: direction => { if (mode !== 'overview') return;
+      zoom: direction => { if (mode === 'walk') { walk.zoom(direction); canvas.focus({ preventScroll: true }); schedule(); return; }
         const offset = camera.position.clone().sub(orbit.target);
         offset.setLength(THREE.MathUtils.clamp(offset.length() * (direction > 0 ? 1 / 1.3 : 1.3), orbit.minDistance, orbit.maxDistance));
         camera.position.copy(orbit.target).add(offset); orbit.update(); schedule();
@@ -155,8 +160,11 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       if (mode === 'walk' && room !== currentRoom) { currentRoom = room; onRoom(room); }
       host.dataset.position = camera.position.toArray().map(v => v.toFixed(3)).join(',');
       host.dataset.fov = camera.fov.toFixed(2);
+      host.dataset.pitch = camera.rotation.x.toFixed(4);
+      host.dataset.yaw = camera.rotation.y.toFixed(4);
       host.dataset.mode = mode;
       host.dataset.destination = String(walk.hasDestination());
+      walkMarker.visible = mode === 'walk' && walk.hasDestination();
       host.dataset.frames = String(++frames);
       host.dataset.reflection = reflection?.visible ? 'planar' : 'off';
       renderer.render(scene, camera);
@@ -171,14 +179,30 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       camera.updateProjectionMatrix(); schedule();
     });
     resize.observe(host);
-    const click = (event: MouseEvent) => {
+    let lastTouchActivationAt = -Infinity;
+    const click = (event: MouseEvent | PointerEvent) => {
+      // Match Space touch activation: use pointerup, then suppress the browser's
+      // compatibility click. A pinch/drag is consumed once by the controller.
+      if (event.type === 'pointerup') {
+        if (!(event instanceof PointerEvent) || event.pointerType !== 'touch') return;
+        lastTouchActivationAt = performance.now();
+      } else if (performance.now() - lastTouchActivationAt < 700) return;
       if (event.button !== 0 || paused || !model || mode !== 'walk' || !walk.consumeClick()) return;
       const rect = canvas.getBoundingClientRect();
       ray.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1), camera);
       const hit = ray.intersectObject(model, true)[0];
       if (hit?.object.userData.artwork_id) { pause(true); onArtwork(hit.object.userData.artwork_id); }
-      else if (hit?.object.userData.reflective_floor && Math.abs(hit.point.y) < .02) {
-        walk.moveTo(hit.point); schedule();
+      else if (hit?.object.userData.reflective_floor && hit.point.y < .02) {
+        // Include the recessed grout at -5 cm; it belongs to the same walkable
+        // floor and must not turn a visible joint into an unresponsive target.
+        if (walk.moveTo(hit.point)) {
+          // Display the reachable endpoint, including the visitor's wall clearance.
+          const target = walk.destination()!;
+          target.y = .018;
+          walkMarker.position.copy(target);
+          host.dataset.target = target.toArray().map(v => v.toFixed(3)).join(',');
+        }
+        schedule();
       }
     };
     const lost = (event: Event) => { event.preventDefault(); pause(true); onError(); };
@@ -186,6 +210,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     const visibility = () => { blur(); if (!document.hidden) schedule(); };
     // Pointer look and pinch mutate camera state inside the shared controller.
     canvas.addEventListener('pointermove', schedule); canvas.addEventListener('click', click);
+    canvas.addEventListener('pointerup', click);
     canvas.addEventListener('pointercancel', blur); canvas.addEventListener('blur', blur);
     canvas.addEventListener('webglcontextlost', lost);
     window.addEventListener('blur', blur); document.addEventListener('visibilitychange', visibility);
@@ -208,15 +233,18 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         scene.add(model);
         reflection = createFloorReflection(compact); scene.add(reflection);
         host.dataset.ready = 'true'; walk.setEnabled(true); schedule(); onReady();
+        canvas.focus({ preventScroll: true });
       }).catch(error => { if (!disposed && error.name !== 'AbortError') onError(); });
     return () => {
       disposed = true; abort.abort(); cancelAnimationFrame(raf); resize.disconnect(); controlsRef.current = null;
       canvas.removeEventListener('pointermove', schedule); canvas.removeEventListener('click', click);
+      canvas.removeEventListener('pointerup', click);
       canvas.removeEventListener('pointercancel', blur); canvas.removeEventListener('blur', blur);
       canvas.removeEventListener('webglcontextlost', lost);
       window.removeEventListener('blur', blur); document.removeEventListener('visibilitychange', visibility);
       walk.dispose(); orbit.dispose();
       if (model) disposeModel(model);
+      walkMarker.geometry.dispose(); walkMarker.material.dispose();
       reflection?.geometry.dispose(); reflection?.dispose(); renderer.dispose(); canvas.remove();
     };
   }, [controlsRef, onReady, onError, onRoom, onArtwork, onMode]);

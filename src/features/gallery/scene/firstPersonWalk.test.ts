@@ -31,6 +31,47 @@ function harness() {
 }
 
 describe('shared first-person visitor movement', () => {
+  it('reaches a floor target while arrow keys, E/Q and pointer drag independently change the view', () => {
+    const { camera, walk, event, frames } = harness();
+    walk.moveTo(new THREE.Vector3(0, 0, -5));
+    event('keydown', { code: 'KeyE' }); frames(15); event('keyup', { code: 'KeyE' });
+    expect(camera.rotation.x).toBeGreaterThan(.2);
+    expect(walk.hasDestination()).toBe(true);
+    expect(walk.destination()?.toArray()).toEqual([0, 1.75, -5]);
+    event('keydown', { code: 'KeyQ' }); frames(30); event('keyup', { code: 'KeyQ' });
+    expect(camera.rotation.x).toBeLessThan(-.2);
+    event('keydown', { code: 'ArrowLeft' }); frames(15); event('keyup', { code: 'ArrowLeft' });
+    expect(camera.rotation.y).toBeGreaterThan(.3);
+    event('pointerdown', { button: 0, pointerId: 1, clientX: 100, clientY: 100 });
+    event('pointermove', { pointerId: 1, clientX: 180, clientY: 60 });
+    event('pointerup', { pointerId: 1 });
+    expect(walk.consumeClick()).toBe(false);
+    expect(walk.hasDestination()).toBe(true);
+    frames(300);
+    expect(walk.hasDestination()).toBe(false);
+    expect(camera.position.distanceTo(new THREE.Vector3(0, 1.75, -5))).toBeLessThan(.2);
+    expect(walk.needsUpdate()).toBe(false);
+    walk.dispose();
+  });
+
+  it('tolerates touch jitter, consumes taps once and rejects cumulative drags and cancellations', () => {
+    const { walk, event, camera } = harness();
+    const down = () => event('pointerdown', { button: 0, pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 });
+    const move = (x: number) => event('pointermove', { pointerId: 1, pointerType: 'touch', clientX: x, clientY: 100 });
+    down(); move(103);
+    event('pointerup', { pointerId: 1, pointerType: 'touch' });
+    expect(camera.rotation.y).toBe(0);
+    expect(walk.consumeClick()).toBe(true);
+    expect(walk.consumeClick()).toBe(false);
+    down(); for (let x = 101; x <= 112; x++) move(x);
+    event('pointerup', { pointerId: 1, pointerType: 'touch' });
+    expect(camera.rotation.y).toBeLessThan(-.02);
+    expect(walk.consumeClick()).toBe(false);
+    down(); event('pointercancel', { pointerId: 1, pointerType: 'touch' });
+    expect(walk.consumeClick()).toBe(false);
+    walk.dispose();
+  });
+
   it('accelerates, brakes to an idle frame, and keeps arrow-look distinct from walking', () => {
     const { camera, walk, event, frames, onIntent, onEscape } = harness();
     expect(event('keydown', { code: 'KeyW' }).defaultPrevented).toBe(true);

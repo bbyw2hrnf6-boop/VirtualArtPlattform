@@ -4,7 +4,7 @@ import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
 /** One clipped planar pass for the continuous floor. Diffuse transport and
  * contact shadows stay in the Cycles bake; only the moving glossy lobe is added. */
 export function createFloorReflection(compact: boolean) {
-  const size = compact ? 768 : 1536;
+  const size = compact ? 1024 : 2048;
   const floor = new Reflector(new THREE.PlaneGeometry(33.98, 7.98), {
     textureWidth: size, textureHeight: size, multisample: compact ? 0 : 2,
     clipBias: .001,
@@ -33,9 +33,10 @@ export function createFloorReflection(compact: boolean) {
           vec2 uv = reflectionUv.xy / reflectionUv.w;
           vec3 eye = normalize(cameraPosition - floorWorld);
           float grazing = 1.0 - clamp(eye.y, 0.0, 1.0);
-          // A small, resolution-independent roughness kernel softens distant
-          // highlights without turning the entire stone surface into a mirror.
-          vec2 radius = texel * mix(1.5, 4.0, grazing);
+          // Subtle, world-anchored polishing variation keeps the glossy lobe
+          // attached to the stone rather than swimming as the camera moves.
+          float polish = .5 + .5 * sin(floorWorld.x * 3.7 + sin(floorWorld.z * 2.1)) * sin(floorWorld.z * 4.3);
+          vec2 radius = texel * mix(2.0, 5.0, grazing) * mix(.8, 1.2, polish);
           vec3 light = texture2D(tDiffuse, uv).rgb * .28;
           light += texture2D(tDiffuse, uv + vec2(radius.x, 0.0)).rgb * .12;
           light += texture2D(tDiffuse, uv - vec2(radius.x, 0.0)).rgb * .12;
@@ -47,7 +48,7 @@ export function createFloorReflection(compact: boolean) {
           light += texture2D(tDiffuse, uv + vec2(-radius.x, radius.y)).rgb * .06;
           vec2 grid = abs(fract(floorWorld.xz + .5) - .5);
           float joint = smoothstep(.0008, .002 + max(fwidth(grid.x), fwidth(grid.y)), min(grid.x, grid.y));
-          float fresnel = .08 + .65 * pow(grazing, 4.0);
+          float fresnel = (.08 + .65 * pow(grazing, 4.0)) * mix(.94, 1.0, polish);
           gl_FragColor = vec4(light, fresnel * joint);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
