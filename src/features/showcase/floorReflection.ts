@@ -1,0 +1,82 @@
+import * as THREE from 'three';
+import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
+
+/** One clipped planar pass for the continuous floor. Diffuse transport and
+ * contact shadows stay in the Cycles bake; only the moving glossy lobe is added. */
+export function createFloorReflection(compact: boolean) {
+  const size = compact ? 768 : 1536;
+  const floor = new Reflector(new THREE.PlaneGeometry(33.98, 7.98), {
+    textureWidth: size, textureHeight: size, multisample: compact ? 0 : 2,
+    clipBias: .001,
+    shader: {
+      name: 'Obsidian honed stone reflection',
+      uniforms: {
+        color: { value: new THREE.Color(1, 1, 1) },
+        tDiffuse: { value: null }, textureMatrix: { value: new THREE.Matrix4() },
+        texel: { value: new THREE.Vector2(1 / size, 1 / size) },
+      },
+      vertexShader: `
+        uniform mat4 textureMatrix;
+        varying vec4 reflectionUv;
+        varying vec3 floorWorld;
+        void main() {
+          reflectionUv = textureMatrix * vec4(position, 1.0);
+          floorWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec2 texel;
+        varying vec4 reflectionUv;
+        varying vec3 floorWorld;
+        void main() {
+          vec2 uv = reflectionUv.xy / reflectionUv.w;
+          vec3 eye = normalize(cameraPosition - floorWorld);
+          float grazing = 1.0 - clamp(eye.y, 0.0, 1.0);
+          // A small, resolution-independent roughness kernel softens distant
+          // highlights without turning the entire stone surface into a mirror.
+          vec2 radius = texel * mix(1.5, 4.0, grazing);
+          vec3 light = texture2D(tDiffuse, uv).rgb * .28;
+          light += texture2D(tDiffuse, uv + vec2(radius.x, 0.0)).rgb * .12;
+          light += texture2D(tDiffuse, uv - vec2(radius.x, 0.0)).rgb * .12;
+          light += texture2D(tDiffuse, uv + vec2(0.0, radius.y)).rgb * .12;
+          light += texture2D(tDiffuse, uv - vec2(0.0, radius.y)).rgb * .12;
+          light += texture2D(tDiffuse, uv + radius).rgb * .06;
+          light += texture2D(tDiffuse, uv - radius).rgb * .06;
+          light += texture2D(tDiffuse, uv + vec2(radius.x, -radius.y)).rgb * .06;
+          light += texture2D(tDiffuse, uv + vec2(-radius.x, radius.y)).rgb * .06;
+          vec2 grid = abs(fract(floorWorld.xz + .5) - .5);
+          float joint = smoothstep(.0008, .002 + max(fwidth(grid.x), fwidth(grid.y)), min(grid.x, grid.y));
+          float fresnel = .08 + .65 * pow(grazing, 4.0);
+          gl_FragColor = vec4(light, fresnel * joint);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+    },
+  });
+  floor.name = 'Obsidian planar floor reflection';
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(17, .002, -4);
+  const material = floor.material as THREE.ShaderMaterial;
+  material.transparent = true;
+  material.depthWrite = false;
+  return floor;
+}
+
+/** The overview cuts away the ceiling and only the exterior sides facing the
+ * camera. Walking uses the original closed Blender envelope and its baked light. */
+export function installOverviewCutaway(material: THREE.Material, overview: { value: boolean }) {
+  material.onBeforeCompile = shader => {
+    shader.uniforms.obsidianOverview = overview;
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 obsidianWorld;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nobsidianWorld = (modelMatrix * vec4(transformed, 1.)).xyz;');
+    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nuniform bool obsidianOverview;\nvarying vec3 obsidianWorld;')
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+        if (obsidianOverview && (obsidianWorld.y > 3.7 ||
+          (cameraPosition.z > -4. && obsidianWorld.z > -.2) ||
+          (cameraPosition.z <= -4. && obsidianWorld.z < -7.8) ||
+          (cameraPosition.x > 17. && obsidianWorld.x > 33.8) ||
+          (cameraPosition.x <= 17. && obsidianWorld.x < .2))) discard;`);
+  };
+  material.customProgramCacheKey = () => 'obsidian-cutaway-v1';
+}

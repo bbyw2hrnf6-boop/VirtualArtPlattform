@@ -391,7 +391,7 @@ function LandingProductProof() {
 
   return (
     <section ref={sectionRef} className="landing-proof">
-      <ShowcaseCollection onOpenStudio={openStudioOverview} />
+      <ShowcaseCollection />
     </section>
   );
 }

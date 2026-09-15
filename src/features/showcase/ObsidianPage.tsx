@@ -1,6 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import type { ObsidianControls } from './ObsidianScene';
+import type { ObsidianControls, ObsidianMode } from './ObsidianScene';
 import data from './obsidian.json';
+import { VisitorWalkControls } from '../gallery/VisitorWalkControls';
+import { VISITOR_KEYBOARD_HINT } from '../gallery/visitorKeyboard';
+import '../../styles/visitorControls.css';
 import './obsidian.css';
 
 const Scene = lazy(() => import('./ObsidianScene'));
@@ -12,12 +15,15 @@ export default function ObsidianPage() {
   const [active, setActive] = useState(false);
   const [status, setStatus] = useState('idle');
   const [room, setRoom] = useState(0);
+  const [mode, setMode] = useState<ObsidianMode>('walk');
+  const [help, setHelp] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const ready = useCallback(() => { setRoom(0); setStatus('ready'); }, []);
+  const ready = useCallback(() => { setRoom(0); setMode('walk'); setStatus('ready'); }, []);
   const failed = useCallback(() => { setStatus('error'); setActive(false); }, []);
   const artwork = useCallback((id: string) => setSelected(id), []);
   const current = data.artworks.find(a => a.id === selected);
   useEffect(() => {
+    controls.current?.pause(Boolean(selected));
     if (selected) dialog.current?.showModal(); else dialog.current?.close();
   }, [selected]);
   const saver = typeof navigator !== 'undefined' && (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
@@ -28,7 +34,7 @@ export default function ObsidianPage() {
     </header>
     <section className="obsidian__stage" aria-label="Obsidian exhibition preview">
       {status !== 'ready' && <img className="obsidian__poster" src="/assets/showcases/obsidian/cover.webp" alt="Obsidian: warm pools of light, botanical art, walnut portals and honed black limestone." fetchPriority="high" />}
-      {active && <Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} /></Suspense>}
+      {active && <Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} /></Suspense>}
       {status !== 'ready' && <div className="obsidian__entrance">
         <p className="obsidian__eyebrow">A LIEUVA bespoke exhibition</p>
         <h1>Obsidian.</h1>
@@ -41,8 +47,14 @@ export default function ObsidianPage() {
         <div className="obsidian__room-label"><span>{String(room+1).padStart(2,'0')} / OBSIDIAN</span><h1>{data.rooms[room].name}</h1></div>
         <div className="obsidian__visit-controls">
           <nav aria-label="Exhibition rooms">{data.rooms.map((r, i) => <button key={r.id} aria-current={room === i ? 'true' : undefined} onClick={() => { controls.current?.room(i); }}>{String(i+1).padStart(2,'0')}<span>{r.name}</span></button>)}</nav>
-          <div className="obsidian__movement" aria-label="Walking controls">{[['arrowleft','Turn left','↶'],['w','Walk forward','↑'],['s','Walk backward','↓'],['arrowright','Turn right','↷']].map(([key,label,glyph]) => <button key={key} aria-label={label} onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); controls.current?.move(key,true); }} onPointerUp={() => controls.current?.move(key,false)} onPointerCancel={() => controls.current?.move(key,false)} onLostPointerCapture={() => controls.current?.move(key,false)} onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); controls.current?.move(key,true); } }} onKeyUp={() => controls.current?.move(key,false)} onBlur={() => controls.current?.move(key,false)}>{glyph}</button>)}</div>
-          <p>Drag to look · Hold arrows to walk · Tap art to view</p>
+          <div className="obsidian__view-controls" role="group" aria-label="View mode">
+            {(['walk', 'overview'] as const).map(value => <button key={value} aria-pressed={mode === value} onClick={() => controls.current?.mode(value)}>{value === 'walk' ? 'Walk' : 'Overview'}</button>)}
+            <button onClick={() => controls.current?.reset()}>Reset view</button>
+            <button aria-expanded={help} aria-controls="obsidian-controls-help" onClick={() => setHelp(value => !value)}>Controls</button>
+          </div>
+          {mode === 'walk' && <VisitorWalkControls onTouchMove={direction => controls.current?.move(direction)} />}
+          {mode === 'overview' && <div className="obsidian__zoom" role="group" aria-label="Overview zoom"><button aria-label="Zoom out" onClick={() => controls.current?.zoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => controls.current?.zoom(1)}>+</button></div>}
+          {help && <aside id="obsidian-controls-help" className="obsidian__help"><button aria-label="Close control guide" onClick={() => setHelp(false)}>×</button><strong>Explore at your pace.</strong><span>{VISITOR_KEYBOARD_HINT}</span><p>Drag to look · Tap the floor to walk · Pinch or scroll to zoom.</p><p>Hold the arrows to walk on mobile. Overview lets you orbit and zoom out. Select any artwork to inspect it.</p></aside>}
           <a href="#obsidian-collection" onClick={e => { e.preventDefault(); setActive(false); setStatus('idle'); document.getElementById("obsidian-collection")?.scrollIntoView(); }}>Browse the collection ↓</a>
         </div>
       </>}

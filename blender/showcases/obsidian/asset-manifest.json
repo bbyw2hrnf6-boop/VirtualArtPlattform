@@ -5,8 +5,8 @@
   "exports": [
     {
       "path": "public/assets/showcases/obsidian/obsidian-desktop.glb",
-      "bytes": 10795172,
-      "sha256": "cf6f44109f55e47530781c69d6749c7aaca115c97a8181f693890e77f3341208",
+      "bytes": 11631788,
+      "sha256": "a9fd48496896ce34669ffe642439edd4633d97e3d084c416ae69840fb066f505",
       "meshes": 46,
       "materials": 22,
       "triangles": 90660,
@@ -73,8 +73,8 @@
           2048
         ],
         [
-          2048,
-          2048
+          4096,
+          4096
         ],
         [
           1024,
@@ -85,8 +85,8 @@
           2048
         ],
         [
-          2048,
-          2048
+          4096,
+          4096
         ],
         [
           1024,
@@ -97,20 +97,20 @@
           2048
         ],
         [
-          2048,
-          2048
+          4096,
+          4096
         ],
         [
           1024,
           1024
         ]
       ],
-      "estimated_RGBA_texture_bytes_with_mips": 243267072
+      "estimated_RGBA_texture_bytes_with_mips": 444593664
     },
     {
       "path": "public/assets/showcases/obsidian/obsidian-mobile.glb",
-      "bytes": 8215548,
-      "sha256": "1959efd224b25f24aa62378ba88785dd4f40fe7d1f96ff5285041b02d7c932f3",
+      "bytes": 8480584,
+      "sha256": "53b37a54e443d0cee081fb51394deb1261a9268f1b07a4e3725e56ab173f9f39",
       "meshes": 46,
       "materials": 22,
       "triangles": 90660,
@@ -177,8 +177,8 @@
           1024
         ],
         [
-          1024,
-          1024
+          2048,
+          2048
         ],
         [
           1024,
@@ -189,8 +189,8 @@
           1024
         ],
         [
-          1024,
-          1024
+          2048,
+          2048
         ],
         [
           1024,
@@ -201,15 +201,15 @@
           1024
         ],
         [
-          1024,
-          1024
+          2048,
+          2048
         ],
         [
           1024,
           1024
         ]
       ],
-      "estimated_RGBA_texture_bytes_with_mips": 97118891
+      "estimated_RGBA_texture_bytes_with_mips": 147450539
     }
   ],
   "cover": {

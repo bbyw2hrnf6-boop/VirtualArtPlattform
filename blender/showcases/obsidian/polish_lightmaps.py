@@ -63,8 +63,9 @@ bpy.ops.file.make_paths_relative()
 bpy.ops.wm.save_as_mainfile(filepath=str(HERE / 'obsidian-runtime.blend'))
 bpy.ops.export_scene.gltf(filepath=str(OUT/'obsidian-desktop.glb'), export_format='GLB', use_selection=True, export_extras=True, export_image_format='JPEG', export_jpeg_quality=94, export_cameras=False, export_lights=False)
 for image in bpy.data.images:
-    if image.size[0] > 1024 or image.size[1] > 1024:
-        ratio = 1024 / max(image.size)
+    cap = 2048 if '_floor_baked' in image.name else 1024
+    if image.size[0] > cap or image.size[1] > cap:
+        ratio = cap / max(image.size)
         image.scale(round(image.size[0]*ratio), round(image.size[1]*ratio))
 bpy.ops.export_scene.gltf(filepath=str(OUT/'obsidian-mobile.glb'), export_format='GLB', use_selection=True, export_extras=True, export_image_format='JPEG', export_jpeg_quality=88, export_cameras=False, export_lights=False)
 (HERE / 'lightmaps/denoise-report.json').write_text(json.dumps({'algorithm': 'Blender compositor OpenImageDenoise', 'atlases': report}, indent=2) + '\n')

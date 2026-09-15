@@ -2,7 +2,7 @@
 
 This is a bespoke, read-only three-room exhibition at `/#/showcase/obsidian`.
 It is not a Studio template, publication, Firebase record or replacement for the
-Danny reference. The homepage's Art exhibitions image opens it. Sculpture and
+Danny reference. The homepage's Art exhibitions image and “Explore Obsidian” action both open it. Sculpture and
 Architecture retain their future-showcase state.
 
 ## Source and geometry
@@ -36,31 +36,49 @@ all original physical shaders active until every bake completes.
 `polish_lightmaps.py` applies Blender's OpenImageDenoise compositor to the raw
 linear-light transport, then encodes the delivery textures without applying a
 second AgX transform. It never filters the original artwork textures. The browser
-uses these baked diffuse textures with three room-local reflection probes for
-the floor's view-dependent specular lobe. It is not live path tracing: floor
-reflections are an approximation, and fixture/light edits require a new bake.
+uses these baked diffuse textures with a single clipped planar reflection pass
+for the continuous floor. The reflected camera moves with the visitor; a small
+roughness kernel, grazing-angle weighting and metric joint mask soften the
+stone's glossy lobe while retaining baked contact shadows. Targets are 1536 px
+on desktop and 768 px on mobile, with 2×/no MSAA respectively. This is not live
+path tracing: glossy roughness is approximate and fixture/light edits require a
+new Cycles bake.
 The Cycles beauty render and browser presentation are separate deliverables.
 Artwork textures remain independent, at their supplied aspect ratios. Browsing
 the directory loads full-resolution WebP delivery derivatives; original PNGs
 remain in the source and packed Blender file.
 
-Desktop uses 2048 px architecture/floor atlases and 1024 px furniture atlases.
-Mobile caps all maps at 1024 px. The visitor explicitly enters before the GLB is
+Desktop uses native 4096 px floor bakes (64 samples), 2048 px architecture and
+1024 px furniture. Mobile retains 2048 px floors and caps other maps at 1024 px.
+These are re-baked from the physical scene, not enlarged old textures. Browser
+DPR is capped at 2, with a desktop minimum of 1.5 for thin-edge supersampling;
+texture anisotropy is capped at the device's supported 16×. The visitor explicitly enters before the GLB is
 requested. Data Saver can stay on the poster/directory. The renderer stops when
 idle or hidden and is disposed when leaving. No automatic camera motion occurs.
-Keyboard movement is scoped to the focused scene; touch movement uses held
-44 px controls. Collision checks use the fixed closed shell, portals and benches
-with small substeps to prevent tunnelling. Room buttons change viewpoint without
-an automatic flight. Every artwork remains available without WebGL.
+The same `firstPersonWalk.ts` controller drives Studio, public Spaces and this
+showcase: 1.75 m eye height, accelerated 2.3 m/s walking with smooth braking,
+WASD translation, arrow/Q/E look, touch drag, floor-tap paths, held 48 px mobile
+arrows, 40–90° wheel/pinch FOV and 0.5–2× session pace. Movement stays scoped to
+the focused canvas. The shared visibility-graph planner routes through the fixed
+portals and around benches; collision substeps prevent tunnelling. Overview uses
+OrbitControls and the existing aspect-aware camera fitting, with roof/facing-wall
+cutaway, orbit/pan and zoom. Returning to Walk restores the previous pose and
+preferred FOV in the same renderer. Room/reset buttons change viewpoint without
+an automatic flight. Artwork dialogs, window blur and hidden pages stop movement.
+Every artwork remains available without WebGL.
 
 This experiment deliberately has a separate asset allowance from Studio's
 editable-room budgets, as requested by the owner. Existing Studio GLB validators
 and quality gates are retained. Exact exported bytes and source checksums are
 recorded in [`asset-manifest.json`](./asset-manifest.json). The current desktop
-GLB is 10.8 MB; mobile is 8.2 MB. Both contain 90,660 triangles. Estimated decoded
-RGBA texture storage with mipmaps is 243 MB / 97 MB respectively, before reflection
+GLB is 11.6 MB; mobile is 8.5 MB. Both contain 90,660 triangles. Estimated decoded
+RGBA texture storage with mipmaps is 445 MB / 147 MB respectively, before reflection
 targets, framebuffers and transient decoding memory. Physical iOS/Android
-performance still needs review.
+performance still needs review. This requested quality iteration deliberately
+adds 5 KB to the aggregate compressed-JS release allowance (607 KB); the entry,
+largest-lazy-chunk, CSS and Studio asset ceilings remain unchanged. Only one
+additional scene pass runs per visible moving frame, and no reflection work runs
+while idle/hidden or in Overview.
 
 ## Reproduce
 
@@ -74,6 +92,10 @@ From the repository root, using the installed Blender 5.2 LTS:
 /Applications/Blender.app/Contents/MacOS/Blender -b blender/showcases/obsidian/obsidian.blend --python blender/showcases/obsidian/render_views.py -- --proofs
 python3 blender/showcases/obsidian/manifest.py
 ```
+
+For a floor-only quality iteration, `export.py -- --reuse-architecture` reuses
+the unchanged raw architecture/furniture atlases after identical UV packing.
+Run `polish_lightmaps.py` afterwards to restore the denoised delivery atlases.
 
 After the beauty master finishes, run `prepare_images.py` with a Python runtime
 containing Pillow, then rerun `manifest.py`. It encodes a 1920 × 1280 WebP cover

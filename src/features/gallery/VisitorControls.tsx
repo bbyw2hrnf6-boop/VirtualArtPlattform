@@ -1,4 +1,5 @@
-import { useEffect, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
+import { VisitorWalkControls } from './VisitorWalkControls';
+import { useEffect, useState, type CSSProperties, type RefObject } from "react";
 import { VISITOR_KEYBOARD_HINT } from "./visitorKeyboard";
 import type { VisitorTourState } from "./visitorTourState";
 
@@ -71,19 +72,6 @@ export function VisitorControls<TMode extends string>({
   const progressStyle = {
     "--visitor-tour-progress": String(Math.max(0, Math.min(1, tour.progress))),
   } as CSSProperties;
-  const startTouchMove = (
-    direction: "forward" | "backward" | "left" | "right",
-    event: ReactPointerEvent<HTMLButtonElement>,
-  ) => {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    onTouchMove?.(direction);
-  };
-  const stopTouchMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (event.currentTarget.hasPointerCapture?.(event.pointerId))
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    onTouchMove?.();
-  };
 
   return (
     <section
@@ -167,22 +155,7 @@ export function VisitorControls<TMode extends string>({
       </div>
 
       {onTouchMove && mode === "walk" && (
-        <div className="visitor-controls__mobile-move" role="group" aria-label="Walk controls">
-          {(["forward", "left", "backward", "right"] as const).map((direction) => (
-            <button
-              key={direction}
-              type="button"
-              className={`is-${direction}`}
-              aria-label={`Move ${direction}`}
-              onPointerDown={(event) => startTouchMove(direction, event)}
-              onPointerUp={stopTouchMove}
-              onPointerCancel={stopTouchMove}
-            >
-              <span aria-hidden="true">{{ forward: "↑", backward: "↓", left: "←", right: "→" }[direction]}</span>
-            </button>
-          ))}
-          <small>Hold to walk</small>
-        </div>
+        <VisitorWalkControls onTouchMove={onTouchMove} />
       )}
 
       {(helpOpen || showHint) && (

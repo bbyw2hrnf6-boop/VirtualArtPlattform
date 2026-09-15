@@ -5,12 +5,13 @@ import { ShowcaseCollection } from "./ShowcaseCollection";
 
 describe("LIEUVA showcase collection", () => {
   it("opens Obsidian separately from Studio and keeps the other showcases pending", () => {
-    const html = renderToStaticMarkup(createElement(ShowcaseCollection, { onOpenStudio: () => undefined }));
+    const html = renderToStaticMarkup(createElement(ShowcaseCollection));
     expect(html).toContain("Enter Obsidian, our first bespoke exhibition.");
     expect(html.match(/class="showcase-card"/g)).toHaveLength(3);
     expect(html.match(/class="showcase-card__status"/g)).toHaveLength(3);
-    expect(html).toContain('href="#/create"');
-    expect(html).toContain('href="#/showcase/obsidian"');
+    expect(html).not.toContain('href="#/create"');
+    expect(html.match(/href="#\/showcase\/obsidian"/g)).toHaveLength(2);
+    expect(html).toContain('aria-label="Explore Obsidian: Art exhibitions"');
     expect(html.match(/Showcase coming soon/g)).toHaveLength(2);
     expect(html.match(/href="#bespoke-projects"/g)).toHaveLength(2);
     expect(html).not.toMatch(/href="#\/create\/(?:white-cube|nocturne|pavilion)/);

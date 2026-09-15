@@ -2,46 +2,64 @@
   {
     "mesh": "R1_architecture_baked",
     "size": 2048,
-    "seconds": 71.59
+    "seconds": 0.44,
+    "samples": 48,
+    "reused": true
   },
   {
     "mesh": "R1_floor_baked",
-    "size": 2048,
-    "seconds": 84.43
+    "size": 4096,
+    "seconds": 365.23,
+    "samples": 64,
+    "reused": false
   },
   {
     "mesh": "R1_furniture_baked",
     "size": 1024,
-    "seconds": 44.09
+    "seconds": 0.1,
+    "samples": 48,
+    "reused": true
   },
   {
     "mesh": "R2_architecture_baked",
     "size": 2048,
-    "seconds": 139.92
+    "seconds": 0.39,
+    "samples": 48,
+    "reused": true
   },
   {
     "mesh": "R2_floor_baked",
-    "size": 2048,
-    "seconds": 115.83
+    "size": 4096,
+    "seconds": 420.56,
+    "samples": 64,
+    "reused": false
   },
   {
     "mesh": "R2_furniture_baked",
     "size": 1024,
-    "seconds": 51.07
+    "seconds": 0.14,
+    "samples": 48,
+    "reused": true
   },
   {
     "mesh": "R3_architecture_baked",
     "size": 2048,
-    "seconds": 145.85
+    "seconds": 0.5,
+    "samples": 48,
+    "reused": true
   },
   {
     "mesh": "R3_floor_baked",
-    "size": 2048,
-    "seconds": 134.03
+    "size": 4096,
+    "seconds": 445.42,
+    "samples": 64,
+    "reused": false
   },
   {
     "mesh": "R3_furniture_baked",
     "size": 1024,
-    "seconds": 51.87
+    "seconds": 0.09,
+    "samples": 48,
+    "reused": true
   }
 ]

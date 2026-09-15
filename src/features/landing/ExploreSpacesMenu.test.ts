@@ -31,7 +31,7 @@ describe("landing Space discovery contract", () => {
   });
 
   it("keeps the independent showcase collection in the product-proof section", () => {
-    expect(appSource).toContain("<ShowcaseCollection onOpenStudio={openStudioOverview} />");
+    expect(appSource).toContain("<ShowcaseCollection />");
     expect(appSource.match(/<ShowcaseCollection/g)).toHaveLength(1);
     expect(appSource).not.toContain("room-showcase--embedded");
   });

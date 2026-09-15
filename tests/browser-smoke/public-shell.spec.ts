@@ -13,7 +13,8 @@ const enforcePolicy = typeof candidatePolicy === 'string'
       .join('; ')
   : '';
 
-test('loads the public home and Create Space shell without browser errors', async ({ page }) => {
+test('opens Obsidian from the homepage action and loads the Create Space shell without browser errors', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
@@ -32,13 +33,21 @@ test('loads the public home and Create Space shell without browser errors', asyn
   await expect(collection.getByRole('heading', { name: 'Architecture', exact: true })).toBeVisible();
   await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(2);
   await expect(collection.getByText(/Enter Obsidian, our first bespoke exhibition\./)).toBeVisible();
-  const studioLink = collection.getByRole('link', { name: 'Explore the current Studio' });
-  await expect(studioLink).toHaveAttribute('href', '#/create');
+  const exhibitionLink = collection.getByRole('link', { name: 'Explore Obsidian: Art exhibitions', exact: true });
+  await expect(exhibitionLink).toHaveAttribute('href', '#/showcase/obsidian');
   await expect(collection.getByRole('link', { name: 'Bespoke project on request' })).toHaveCount(2);
   await expect(collection.getByText(/From a room scan, photographs or plans/)).toBeVisible();
   await expect(collection.locator('a[href^="#/create/"]')).toHaveCount(0);
 
-  await studioLink.click();
+  await collection.locator('.showcase-card__media').first().scrollIntoViewIfNeeded();
+  await page.screenshot({ path: info.outputPath('homepage-showcases-desktop.png') });
+  await exhibitionLink.click();
+  await expect(page).toHaveURL(/#\/showcase\/obsidian$/);
+  await expect(page.getByRole('heading', { name: 'Obsidian.', exact: true })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Enter the exhibition' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+
+  await page.goto('/#/create', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveURL(/#\/create$/);
   await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
   await expect(page).toHaveTitle(/Create a Space.*LIEUVA/);
@@ -48,7 +57,7 @@ test('loads the public home and Create Space shell without browser errors', asyn
   expect(pageErrors).toEqual([]);
 });
 
-test('the showcase collection stays distinct and usable on mobile', async ({ page }) => {
+test('the showcase collection stays distinct and opens Obsidian from its preview on mobile', async ({ page }, info) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'connection', {
       configurable: true,
@@ -61,7 +70,7 @@ test('the showcase collection stays distinct and usable on mobile', async ({ pag
   const collection = page.locator('.showcase-collection');
   await collection.scrollIntoViewIfNeeded();
   await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(2);
-  await expect(collection.getByRole('link', { name: 'Explore the current Studio' })).toHaveCount(1);
+  await expect(collection.getByRole('link', { name: 'Explore Obsidian: Art exhibitions', exact: true })).toHaveAttribute('href', '#/showcase/obsidian');
   await expect(collection.getByRole('link', { name: 'Bespoke project on request' })).toHaveCount(2);
   await expect(collection.getByText('Contact route coming soon', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -71,6 +80,12 @@ test('the showcase collection stays distinct and usable on mobile', async ({ pag
     expect(box).not.toBeNull();
     expect(box!.height).toBeGreaterThanOrEqual(44);
   }
+  await collection.locator('.showcase-card').first().screenshot({ path: info.outputPath('homepage-obsidian-mobile.png') });
+  await collection.getByRole('link', { name: /Enter Obsidian/ }).click();
+  await expect(page).toHaveURL(/#\/showcase\/obsidian$/);
+  await expect(page.getByRole('heading', { name: 'Obsidian.', exact: true })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Enter the exhibition' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
 });
 
 test('candidate CSP enforces on the bundled home and Create shells without violations', async ({ page }) => {

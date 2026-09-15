@@ -18,8 +18,11 @@ export const PERFORMANCE_TARGETS = Object.freeze({
 // The independently lazy Obsidian showcase deliberately adds 6 KB JS and
 // 2 KB CSS to aggregate allowances. Public-entry, largest-chunk and every
 // Studio asset budget stay unchanged; see blender/showcases/obsidian/README.md.
+// Obsidian shares the existing walk controller and adds a planar reflection
+// pass plus cutaway orbit navigation: +5 KB aggregate JS allowance. The initial
+// public route, Studio assets and all other ceilings remain fixed.
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
-  jsGzip: 602_000,
+  jsGzip: 607_000,
   cssGzip: 56_500,
   largestLazyGzip: 195_000,
   entryGzip: 123_000,

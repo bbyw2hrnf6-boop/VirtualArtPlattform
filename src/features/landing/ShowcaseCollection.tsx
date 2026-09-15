@@ -28,7 +28,7 @@ const SHOWCASES: readonly ShowcaseItem[] = [
   },
 ] as const;
 
-export function ShowcaseCollection({ onOpenStudio }: { onOpenStudio: () => void }) {
+export function ShowcaseCollection() {
   return (
     <section className="showcase-collection" aria-labelledby="showcase-collection-title">
       <header className="showcase-collection__intro">
@@ -42,21 +42,19 @@ export function ShowcaseCollection({ onOpenStudio }: { onOpenStudio: () => void 
 
       <div className="showcase-collection__grid">
         {SHOWCASES.map((showcase) => {
-          const studio = showcase.id === "art-exhibitions";
-          const actionLabel = studio ? "Explore the current Studio" : "Bespoke project on request";
+          const actionLabel = showcase.sceneHref ? "Explore Obsidian" : "Bespoke project on request";
           return <article className="showcase-card" key={showcase.id}>
             <a className={`showcase-card__media showcase-card__media--${showcase.id}`} href={showcase.sceneHref}>
               {showcase.sceneHref ? <img src="/assets/showcases/obsidian/cover.webp" alt="Obsidian: three connected galleries in walnut, stone and warm light" loading="lazy" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} /> : <span className="showcase-card__composition" aria-hidden="true"><i /><i /><i /></span>}
-              <span className="showcase-card__status">{showcase.sceneHref ? `Enter ${showcase.title} ↗` : "Showcase coming soon"}</span>
+              <span className="showcase-card__status">{showcase.sceneHref ? "Enter Obsidian ↗" : "Showcase coming soon"}</span>
             </a>
             <p className="showcase-card__meta">{showcase.meta}</p>
             <h3>{showcase.title}</h3>
             <p className="showcase-card__description">{showcase.description}</p>
             <a
-              className={`showcase-card__action${studio ? " showcase-card__action--studio" : ""}`}
-              href={studio ? "#/create" : "#bespoke-projects"}
+              className={`showcase-card__action${showcase.sceneHref ? " showcase-card__action--available" : ""}`}
+              href={showcase.sceneHref ?? "#bespoke-projects"}
               aria-label={`${actionLabel}: ${showcase.title}`}
-              onClick={studio ? (event) => { event.preventDefault(); onOpenStudio(); } : undefined}
             >
               {actionLabel}
             </a>

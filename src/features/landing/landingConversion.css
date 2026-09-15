@@ -38,7 +38,7 @@
 .showcase-card__description{margin:8px 0 13px;color:#6a6d64;font-size:13px;line-height:1.55}
 .showcase-card__action{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;min-height:48px;border-top:1px solid #c4c5bb;color:#22251e;font-size:12px;text-decoration:none}
 .showcase-card__action:before{content:'';width:7px;height:7px;border:1px solid #777a71;border-radius:50%}
-.showcase-card__action--studio:before{border-color:#a7c91b;background:#b5d927;box-shadow:0 0 0 4px #b5d9271f}
+.showcase-card__action--available:before{border-color:#a7c91b;background:#b5d927;box-shadow:0 0 0 4px #b5d9271f}
 .showcase-card__action:after{content:'→';font-size:17px}
 
 .bespoke-projects{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(28px,6vw,96px);align-items:center;margin-top:clamp(58px,7vw,96px);padding:clamp(32px,4vw,58px);background:linear-gradient(120deg,#121510,#34392d);color:#f1efe6}
