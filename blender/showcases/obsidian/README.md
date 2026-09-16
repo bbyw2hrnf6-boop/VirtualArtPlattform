@@ -40,7 +40,7 @@ for the continuous floor. The reflected camera moves with the visitor; a small
 roughness kernel, grazing-angle weighting and metric joint mask soften the
 stone's glossy lobe while retaining baked contact shadows. Subtle polishing
 variation stays anchored to world coordinates. Targets are 2048 px
-on desktop and 1024 px on mobile, with 2×/no MSAA respectively. After three consecutive active frames exceed 150 ms, the session switches to a 512 px reflection without MSAA and raster DPR at most 1. This measured slow-GPU fallback preserves source textures and baked lighting, trading supersampling/reflection sharpness for responsiveness. It uses no CI or user-agent override. This is not live
+on desktop and 1024 px on mobile, with 2×/no MSAA respectively. Two initial bounded frames calibrate the shared viewer before full quality is restored on fast GPUs. Slow frame delivery retains at most 600,000 canvas pixels, a 512 px reflection without MSAA and 4× anisotropy; two later queued frames above 150 ms also trigger this fallback. Idle time is excluded. This measured slow-GPU fallback preserves source textures and baked lighting, trading supersampling/reflection sharpness for responsiveness. It uses no CI or user-agent override. This is not live
 path tracing: glossy roughness is approximate and fixture/light edits require a
 new Cycles bake.
 The Cycles beauty render and browser presentation are separate deliverables.

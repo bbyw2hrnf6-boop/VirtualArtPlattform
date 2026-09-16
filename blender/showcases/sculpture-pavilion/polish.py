@@ -3,13 +3,14 @@
 Run against sculpture-runtime.blend after export.py. Source art is never filtered.
 Raw transport bakes remain in lightmaps/raw for repeatable comparisons.
 """
-import json
+import json, argparse, sys, subprocess, tempfile
 from pathlib import Path
 import bpy
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[2] / 'public/assets/showcases/sculpture-pavilion'
 source_scene = bpy.context.scene
+p=argparse.ArgumentParser();p.add_argument('--architecture-only',action='store_true');p.add_argument('--image-python',default='python3');args=p.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 polish = bpy.data.scenes.new('Atlas denoising')
 polish.render.engine = 'CYCLES'
 polish.cycles.samples = 1
@@ -35,6 +36,8 @@ tree.links.new(denoise.outputs['Image'], output_node.inputs['Image'])
 
 report = []
 for raw in sorted((HERE / 'lightmaps/raw').glob('*_transport.png')):
+    if args.architecture_only and '_architecture_' not in raw.name:
+        continue
     image = bpy.data.images.load(str(raw), check_existing=False)
     input_node.image = image
     polish.render.resolution_x, polish.render.resolution_y = image.size
@@ -42,6 +45,16 @@ for raw in sorted((HERE / 'lightmaps/raw').glob('*_transport.png')):
     final = HERE / 'lightmaps' / raw.name
     polish.render.filepath = str(final)
     bpy.ops.render.render(scene=polish.name, write_still=True)
+    if '_architecture_' in raw.name:
+        # OIDN leaves noisy strips near a lightmap's black island boundaries.
+        # Filter only those edges, within each UV island, then rebuild padding.
+        mesh = bpy.data.objects[raw.stem].data
+        mesh.calc_loop_triangles()
+        uv = mesh.uv_layers.active.data
+        with tempfile.TemporaryDirectory(prefix='pavilion-atlas-') as temp:
+            coordinates = Path(temp) / 'uv.json'
+            coordinates.write_text(json.dumps([[list(uv[i].uv) for i in t.loops] for t in mesh.loop_triangles]))
+            subprocess.run([args.image_python, str(HERE / 'atlas_edges.py'), str(final), str(coordinates)], check=True)
     for material in bpy.data.materials:
         if not material.use_nodes:
             continue
@@ -61,6 +74,9 @@ for obj in source_scene.objects:
 bpy.context.preferences.filepaths.save_version = 0
 bpy.ops.file.make_paths_relative()
 bpy.ops.wm.save_as_mainfile(filepath=str(HERE / 'sculpture-runtime.blend'))
+for image in bpy.data.images:
+    if image.name.startswith(('S01_', 'S02_', 'S03_', 'S05_')) and '_albedo' in image.name:
+        image.scale(2048, 2048)
 bpy.ops.export_scene.gltf(filepath=str(OUT/'sculpture-pavilion-desktop.glb'), export_format='GLB', use_selection=True, export_extras=True, export_image_format='JPEG', export_jpeg_quality=94, export_cameras=False, export_lights=False, export_animations=True, export_force_sampling=True)
 for image in bpy.data.images:
     cap = 2048 if '_floor_' in image.name else 1024
@@ -68,4 +84,4 @@ for image in bpy.data.images:
         ratio = cap / max(image.size)
         image.scale(round(image.size[0]*ratio), round(image.size[1]*ratio))
 bpy.ops.export_scene.gltf(filepath=str(OUT/'sculpture-pavilion-mobile.glb'), export_format='GLB', use_selection=True, export_extras=True, export_image_format='JPEG', export_jpeg_quality=88, export_cameras=False, export_lights=False, export_animations=True, export_force_sampling=True)
-(HERE / 'lightmaps/denoise-report.json').write_text(json.dumps({'algorithm': 'Blender compositor OpenImageDenoise', 'atlases': report}, indent=2) + '\n')
+(HERE / 'lightmaps/denoise-report.json').write_text(json.dumps({'algorithm': 'Blender compositor OpenImageDenoise; architecture UV-island edge filtering and 32 px rebuilt dilation', 'atlases': report}, indent=2) + '\n')

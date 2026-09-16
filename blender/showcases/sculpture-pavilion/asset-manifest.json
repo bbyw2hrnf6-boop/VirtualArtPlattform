@@ -3,12 +3,12 @@
   "runtime": [
     {
       "path": "public/assets/showcases/sculpture-pavilion/sculpture-pavilion-desktop.glb",
-      "bytes": 8570320,
-      "sha256": "3681a29c7eeb6aa9a73808f01e7f6ad0ed3cbf4c7a122a58b0da2758bfcacea6",
-      "triangles": 614476,
+      "bytes": 11061776,
+      "sha256": "7a8a26923c7dfdb34035b35de793b6524aa660fde9964d376b316ba2b9582db3",
+      "triangles": 748883,
       "meshes": 30,
       "animations": 10,
-      "decodedTextureMiBIncludingMipmaps": 453.3,
+      "decodedTextureMiBIncludingMipmaps": 901.3,
       "requiredExtensions": [
         "EXT_meshopt_compression",
         "KHR_mesh_quantization"
@@ -16,9 +16,9 @@
     },
     {
       "path": "public/assets/showcases/sculpture-pavilion/sculpture-pavilion-mobile.glb",
-      "bytes": 5794772,
-      "sha256": "d3fe0155fb423eacac9c244abf872f8343de9ef3a801cb7a47b679b05348dd47",
-      "triangles": 614476,
+      "bytes": 6493524,
+      "sha256": "7531e79ca592c4c39fdff0033af1f5121a00588a6fecc7f3da536adcbe9c4ff1",
+      "triangles": 748883,
       "meshes": 30,
       "animations": 10,
       "decodedTextureMiBIncludingMipmaps": 149.3,
@@ -31,23 +31,23 @@
   "images": [
     {
       "path": "public/assets/showcases/sculpture-pavilion/cover.webp",
-      "bytes": 94392,
-      "sha256": "3171dca0eab38964b51e8f8cd535a722109de7981a495728e3322beb6c2a7d8b"
+      "bytes": 92728,
+      "sha256": "d650ab9195224f259812ba8d76a96a8be8e3424385c87485613b44904e69075f"
     },
     {
       "path": "public/assets/showcases/sculpture-pavilion/objects/S01.webp",
-      "bytes": 142822,
-      "sha256": "b2283222540c67a17e2b5a1d0e46280bd9000a0aff11266b0738087e7dc2da4f"
+      "bytes": 797526,
+      "sha256": "687134e41ac81711db9fe6c7810c29af1be14a8330f4e4200462d50e2f991fa2"
     },
     {
       "path": "public/assets/showcases/sculpture-pavilion/objects/S02.webp",
-      "bytes": 136828,
-      "sha256": "19c2cf043e0a2fee5f70466f6d801ae8566955728f5ccecd25dd903c292361fd"
+      "bytes": 636036,
+      "sha256": "62c3ca31a72c9a3253e784b0cad6a90bb27c7494f0ea8783fef2ce4949ccd728"
     },
     {
       "path": "public/assets/showcases/sculpture-pavilion/objects/S03.webp",
-      "bytes": 121690,
-      "sha256": "edc0b248889b128a8f6061db67f056f8d869f8b35ea90cdb474d196b7540c9c2"
+      "bytes": 580352,
+      "sha256": "08a2b18f41d29248ac24429f411d90c33df8d4109d81aad79b7ec7f8b5a35029"
     },
     {
       "path": "public/assets/showcases/sculpture-pavilion/objects/S04.webp",
@@ -56,8 +56,8 @@
     },
     {
       "path": "public/assets/showcases/sculpture-pavilion/objects/S05.webp",
-      "bytes": 58646,
-      "sha256": "8a35a39e828f1405b780ae21f2eb4a79250441300bd39438da852dd28411459a"
+      "bytes": 555802,
+      "sha256": "9e2849c75f7dee6f022dba7bd4393404a1a0a86c58932bfd5b72a18862bfae88"
     }
   ],
   "sources": [
@@ -500,33 +500,33 @@
   "masters": [
     {
       "path": "blender/showcases/sculpture-pavilion/masters/B-SW.png",
-      "bytes": 38891847,
-      "sha256": "43a4b8fe7c6607334980377fea0b94f1022d7ca569b3edac94cb23c0ff30c8fe"
+      "bytes": 38626518,
+      "sha256": "9bf186047c710042be60af2230aaf89ca69453c02f571a7872f60a2d4138f56b"
     },
     {
       "path": "blender/showcases/sculpture-pavilion/masters/C-SE.png",
-      "bytes": 38269677,
-      "sha256": "f9c67e22501675886b09af494bf05068c7a1fbcdbced60ac2e3e84121922a0ff"
+      "bytes": 38202437,
+      "sha256": "247c60def05f4ed9862ef810b13f2fa9e316281ffcc545def9dd54c9818aea07"
     },
     {
       "path": "blender/showcases/sculpture-pavilion/masters/Cover.png",
-      "bytes": 40536546,
-      "sha256": "310777c4eb163ecc9959eb755f5a67753720d37947f0c27f16dabb6b58a9089f"
+      "bytes": 40505325,
+      "sha256": "4a66eff1db383bb9685ff120c841ee3a63d056b44a321b06d0ae9304bc24bd7b"
     },
     {
       "path": "blender/showcases/sculpture-pavilion/masters/objects/S01-Portrait.png",
-      "bytes": 10366777,
-      "sha256": "89dc101f6ef40f6876365bb9572ad66e68b3c64587bb01245bb00a36a3024c4b"
+      "bytes": 63886708,
+      "sha256": "49610f54ffcdcebcbfee8b8702df8dde7a35548657f86e7086ab94cde64bf10f"
     },
     {
       "path": "blender/showcases/sculpture-pavilion/masters/objects/S02-Portrait.png",
-      "bytes": 9774235,
-      "sha256": "4bcfb26822bdff402b17938d21e330718d1429d710e834d6f41048f528b38454"
+      "bytes": 58986867,
+      "sha256": "0337d63ea98dedde4becec3bb0f12d83c4747c92635a1ac6e7a6f3eea5a39ca2"
     },
     {
       "path": "blender/showcases/sculpture-pavilion/masters/objects/S03-Portrait.png",
-      "bytes": 9778458,
-      "sha256": "0961fe1ca8b7ba28d08be77ed4eb09919217829f35254d941424e9016c02d117"
+      "bytes": 59674340,
+      "sha256": "5c1ed4f3bffd27b2989bcc9611b9a6bab80c9ca9fa736d2e5e6272ad935b28a3"
     },
     {
       "path": "blender/showcases/sculpture-pavilion/masters/objects/S04-Portrait.png",
@@ -535,8 +535,8 @@
     },
     {
       "path": "blender/showcases/sculpture-pavilion/masters/objects/S05-Portrait.png",
-      "bytes": 3945364,
-      "sha256": "dcad940baf4cf37727ab2e4296f49796b5cf87f7ed1bfea3f93c451a5f0e2781"
+      "bytes": 43782348,
+      "sha256": "5a9f0dc60dcc4773c6fd19e81d14e8c12d9cc67bfdd31d33bf24da92d91e1dfb"
     }
   ]
 }

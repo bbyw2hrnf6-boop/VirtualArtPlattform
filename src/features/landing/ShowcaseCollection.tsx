@@ -22,7 +22,7 @@ const SHOWCASES: readonly ShowcaseItem[] = [
   {
     id: "sculpture-3d",
     sceneHref: "#/showcase/sculpture-pavilion", sceneName: "Sculpture Pavilion",
-    cover: "/assets/showcases/sculpture-pavilion/cover.webp",
+    cover: "/assets/showcases/sculpture-pavilion/cover.webp?v=2",
     alt: "Sculpture Pavilion: original sculptural forms beneath an elliptical skylight",
     meta: "02 / Objects & form",
     title: "Sculpture & 3D",

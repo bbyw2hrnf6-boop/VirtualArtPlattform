@@ -1,9 +1,30 @@
 [
   {
+    "camera": "S01-Portrait",
+    "width": 3034,
+    "height": 4096,
+    "samples": 256,
+    "seconds": 931.78
+  },
+  {
     "camera": "S02-Portrait",
-    "width": 1200,
-    "height": 1620,
-    "samples": 128,
-    "seconds": 91.35
+    "width": 3034,
+    "height": 4096,
+    "samples": 256,
+    "seconds": 848.48
+  },
+  {
+    "camera": "S03-Portrait",
+    "width": 3034,
+    "height": 4096,
+    "samples": 256,
+    "seconds": 838.58
+  },
+  {
+    "camera": "S05-Portrait",
+    "width": 4096,
+    "height": 2304,
+    "samples": 256,
+    "seconds": 637.71
   }
 ]

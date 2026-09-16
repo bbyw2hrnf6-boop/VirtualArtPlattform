@@ -19,6 +19,7 @@ export interface ShowcaseSceneConfig {
   navigation: () => Pick<ReturnType<typeof createObsidianNavigation>, 'resolve' | 'findPath'>;
   roomAt: (position: THREE.Vector3) => number;
   sculpture?: boolean;
+  assetVersion?: string;
 }
 const obsidianConfig: ShowcaseSceneConfig = {
   id: 'obsidian', title: 'Obsidian', rooms: data.rooms, bounds: obsidianBounds,
@@ -51,9 +52,6 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); }
     catch { onError(); return; }
     const compact = matchMedia('(max-width: 767px), (pointer: coarse)').matches;
-    // Retain detail on high-density phones; desktop supersampling also sharpens
-    // thin bronze frames on ordinary 1× displays. Assets stay lazy and separate.
-    renderer.setPixelRatio(Math.min(Math.max(devicePixelRatio, compact ? 1 : 1.5), 2));
     renderer.toneMapping = THREE.AgXToneMapping;
     renderer.toneMappingExposure = 1;
     const canvas = renderer.domElement;
@@ -71,14 +69,15 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     const camera = new THREE.PerspectiveCamera(defaultWalkFov(compact), 1, .04, 180);
     camera.position.fromArray(config.rooms[0].start);
     camera.lookAt(new THREE.Vector3().fromArray(config.rooms[0].look ?? [5,1.75,-3.6]));
-    let currentRoom = 0, raf = 0, frames = 0, paused = false;
+    let currentRoom = 0, raf = 0, frames = 0, paused = false, scheduledAt = 0;
     let mode: ObsidianMode = 'walk';
     let model: THREE.Group | undefined;
+    const modelTextures = new Set<THREE.Texture>();
     let reflection: ReturnType<typeof createFloorReflection> | undefined;
     const overview = { value: false };
     const savedWalk = { position: camera.position.clone(), quaternion: camera.quaternion.clone() };
     const ray = new THREE.Raycaster();
-    const schedule = () => { if (!disposed && !raf && !document.hidden) raf = requestAnimationFrame(render); };
+    const schedule = () => { if (!disposed && !raf && !document.hidden) { scheduledAt = performance.now(); raf = requestAnimationFrame(render); } };
     const navigation = config.navigation();
     const walk = createFirstPersonWalk(camera, canvas, () => config.bounds,
       navigation.resolve, navigation.findPath, schedule, () => canvas.blur());
@@ -168,21 +167,33 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     let mixer: THREE.AnimationMixer | undefined, environment: THREE.WebGLRenderTarget | undefined;
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     let animationTime = performance.now();
-    let previousActiveFrame = 0, slowFrames = 0, reducedResolution = false;
+    let slowFrames = 0, reducedResolution = false, warmupFrames = 3;
+    const balancedPixelRatio = () => Math.min(devicePixelRatio, 1, Math.sqrt(600_000 / Math.max(1, host.clientWidth * host.clientHeight)));
+    const quality = (full: boolean) => {
+      renderer.setPixelRatio(full ? Math.min(Math.max(devicePixelRatio, compact ? 1 : 1.5), 2) : balancedPixelRatio());
+      const size = full ? compact ? 1024 : 2048 : 512;
+      if (reflection) {
+        reflection.getRenderTarget().samples = full && !compact ? 2 : 0;
+        reflection.getRenderTarget().setSize(size, size);
+        (reflection.material as THREE.ShaderMaterial).uniforms.texel.value.set(1 / size, 1 / size);
+      }
+      const anisotropy = Math.min(full ? 16 : 4, renderer.capabilities.getMaxAnisotropy());
+      modelTextures.forEach(texture => { texture.anisotropy = anisotropy; });
+    };
     function render() {
       const now = performance.now();
-      // Sustained frame cost, not device/CI detection. Keep source textures and
-      // baked lighting; reduce raster work on genuinely slow graphics devices.
-      if (!reducedResolution && previousActiveFrame && now - previousActiveFrame > 150) {
-        if (++slowFrames >= 3) {
-          reducedResolution = true;
-          renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
-          if (reflection) {
-            reflection.getRenderTarget().samples = 0;
-            reflection.getRenderTarget().setSize(512, 512);
-            (reflection.material as THREE.ShaderMaterial).uniforms.texel.value.set(1 / 512, 1 / 512);
-          }
+      // Calibrate with two bounded frames before supersampling. A full-size
+      // first reflection can block a software GPU before adaptation can run.
+      // Queue latency excludes idle time and applies to every device equally.
+      if (model && warmupFrames) {
+        if (warmupFrames < 3 && now - scheduledAt > 150) slowFrames++;
+        if (--warmupFrames === 0) {
+          reducedResolution = slowFrames > 0;
+          if (!reducedResolution) quality(true);
+          slowFrames = 0;
         }
+      } else if (!reducedResolution && model && now - scheduledAt > 150) {
+        if (++slowFrames >= 2) { reducedResolution = true; quality(false); }
       } else slowFrames = 0;
       raf = 0;
       if (disposed || document.hidden) return;
@@ -205,14 +216,14 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       animationTime = now; host.dataset.animation = animate ? 'playing' : 'paused';
       if(mixer)host.dataset.animationTime=mixer.time.toFixed(3);
       renderer.render(scene, camera);
-      const moving = animate || (!paused && (mode === 'walk' ? walk.needsUpdate() : orbitMoving));
+      const moving = Boolean(warmupFrames && model) || animate || (!paused && (mode === 'walk' ? walk.needsUpdate() : orbitMoving));
       host.dataset.idle = String(!moving);
-      host.dataset.resolution = reducedResolution ? 'balanced' : 'full';
-      previousActiveFrame = moving ? now : 0;
+      host.dataset.resolution = warmupFrames ? 'warming' : reducedResolution ? 'balanced' : 'full';
       if (moving) schedule();
     }
     const resize = new ResizeObserver(() => {
       if (!host.clientWidth || !host.clientHeight) return;
+      if (warmupFrames || reducedResolution) renderer.setPixelRatio(balancedPixelRatio());
       renderer.setSize(host.clientWidth, host.clientHeight); camera.aspect = host.clientWidth / host.clientHeight;
       if (mode === 'overview') fitOverview();
       camera.updateProjectionMatrix(); schedule();
@@ -255,7 +266,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     motion.addEventListener('change', schedule);
     window.addEventListener('blur', blur); document.addEventListener('visibilitychange', visibility);
     const abort = new AbortController();
-    fetch(`/assets/showcases/${config.id}/${config.id}-${compact ? 'mobile' : 'desktop'}.glb`, { signal: abort.signal })
+    fetch(`/assets/showcases/${config.id}/${config.id}-${compact ? 'mobile' : 'desktop'}.glb${config.assetVersion ?? ''}`, { signal: abort.signal })
       .then(response => { if (!response.ok) throw new Error('Missing showcase'); return response.arrayBuffer(); })
       .then(buffer => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buffer, `/assets/showcases/${config.id}/`))
       .then(gltf => {
@@ -272,9 +283,9 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           }
         });
         materials.forEach(material => {
+          Object.values(material).forEach(value => { if (value instanceof THREE.Texture) modelTextures.add(value); });
           // Cut roofs, glazing and coves together; retain full-height sculptures.
           if (!config.sculpture || !artworkMaterials.has(material)) installOverviewCutaway(material, overview, config.sculpture ? 1 : undefined);
-          Object.values(material).forEach(value => { if (value instanceof THREE.Texture) value.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy()); });
         });
         scene.add(model);
         if (config.sculpture) {
@@ -301,6 +312,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           if(gltf.animations.length){mixer=new THREE.AnimationMixer(model);gltf.animations.forEach(clip=>mixer!.clipAction(clip).play());}
         } else reflection = createFloorReflection(compact);
         scene.add(reflection);
+        quality(false);
         host.dataset.ready = 'true'; walk.setEnabled(true); schedule(); onReady();
         canvas.focus({ preventScroll: true });
       }).catch(error => { if (!disposed && error.name !== 'AbortError') onError(); });

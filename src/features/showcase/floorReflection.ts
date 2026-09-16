@@ -25,6 +25,7 @@ export function createFloorReflection(compact: boolean, options?: { geometry: TH
           floorWorld = (modelMatrix * vec4(position, 1.0)).xyz;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }`,
+      // World-anchored polishing variation keeps highlights attached to stone.
       fragmentShader: `
         uniform sampler2D tDiffuse;
         uniform bool seamless;
@@ -35,8 +36,6 @@ export function createFloorReflection(compact: boolean, options?: { geometry: TH
           vec2 uv = reflectionUv.xy / reflectionUv.w;
           vec3 eye = normalize(cameraPosition - floorWorld);
           float grazing = 1.0 - clamp(eye.y, 0.0, 1.0);
-          // Subtle, world-anchored polishing variation keeps the glossy lobe
-          // attached to the stone rather than swimming as the camera moves.
           float polish = .5 + .5 * sin(floorWorld.x * 3.7 + sin(floorWorld.z * 2.1)) * sin(floorWorld.z * 4.3);
           vec2 radius = texel * mix(2.0, 5.0, grazing) * mix(.8, 1.2, polish);
           vec3 light = texture2D(tDiffuse, uv).rgb * .28;

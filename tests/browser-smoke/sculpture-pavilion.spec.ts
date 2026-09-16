@@ -11,7 +11,9 @@ for (const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
       await page.goto('/#/showcase/sculpture-pavilion');
       await expect(page.getByRole('heading',{name:'Sculpture Pavilion.',exact:true})).toBeVisible();
       await expect(page.locator('.obsidian__poster')).toHaveJSProperty('naturalWidth',1920);
+      const modelRequest=page.waitForRequest(/sculpture-pavilion-(desktop|mobile)\.glb\?v=2$/);
       await page.getByRole('button',{name:'Enter the exhibition'}).click();
+      expect((await modelRequest).url()).toContain(`${mobile?'mobile':'desktop'}.glb?v=2`);
       const scene=page.locator('.obsidian__scene'),canvas=scene.locator('canvas');
       await expect(scene).toHaveAttribute('data-ready','true',{timeout:60_000});
       await expect(canvas).toBeFocused();
@@ -39,6 +41,9 @@ for (const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
       }
       await expect(scene).not.toHaveAttribute('data-position',start!);
       await expect(scene).toHaveAttribute('data-destination','false',{timeout:60_000});
+      // Arrival starts the controller's final deceleration; capture the pose
+      // only after it settles so Overview restores the same stationary view.
+      await expect(scene).toHaveAttribute('data-idle','true');
       const pose=await scene.getAttribute('data-position');
       await page.getByRole('button',{name:'Overview',exact:true}).click();
       await expect(scene).toHaveAttribute('data-mode','overview');
@@ -72,7 +77,7 @@ for (const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
   });
 }
 test('Sculpture Pavilion keeps five object portraits available without its WebGL model',async({page})=>{
-  await page.route('**/sculpture-pavilion-*.glb',r=>r.abort());
+  await page.route('**/sculpture-pavilion-*.glb*',r=>r.abort());
   await page.goto('/#/showcase/sculpture-pavilion');await page.getByRole('button',{name:'Enter the exhibition'}).click();
   await expect(page.getByRole('status')).toContainText('The 3D view could not load');
   await expect(page.locator('.obsidian__art-grid button')).toHaveCount(5);

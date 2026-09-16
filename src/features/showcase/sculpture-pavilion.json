@@ -48,7 +48,7 @@
       "id": "S01",
       "title": "Rooted Silence",
       "room": "A",
-      "image": "/assets/showcases/sculpture-pavilion/objects/S01.webp",
+      "image": "/assets/showcases/sculpture-pavilion/objects/S01.webp?v=2",
       "width": 2,
       "height": 3.2
     },
@@ -56,7 +56,7 @@
       "id": "S02",
       "title": "Tidal Bronze",
       "room": "A",
-      "image": "/assets/showcases/sculpture-pavilion/objects/S02.webp",
+      "image": "/assets/showcases/sculpture-pavilion/objects/S02.webp?v=2",
       "width": 1.45,
       "height": 2.45
     },
@@ -64,7 +64,7 @@
       "id": "S03",
       "title": "Growth Fold",
       "room": "A",
-      "image": "/assets/showcases/sculpture-pavilion/objects/S03.webp",
+      "image": "/assets/showcases/sculpture-pavilion/objects/S03.webp?v=2",
       "width": 1.3,
       "height": 2.2
     },
@@ -80,7 +80,7 @@
       "id": "S05",
       "title": "Gentle Engine",
       "room": "C",
-      "image": "/assets/showcases/sculpture-pavilion/objects/S05.webp",
+      "image": "/assets/showcases/sculpture-pavilion/objects/S05.webp?v=2",
       "width": 7,
       "height": 3.2
     }

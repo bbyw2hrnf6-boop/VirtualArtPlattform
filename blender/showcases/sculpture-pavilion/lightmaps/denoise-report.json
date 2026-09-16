@@ -1,14 +1,8 @@
 {
-  "algorithm": "Blender compositor OpenImageDenoise",
+  "algorithm": "Blender compositor OpenImageDenoise; architecture UV-island edge filtering and 32 px rebuilt dilation",
   "atlases": [
     "A_architecture_transport.png",
-    "A_floor_transport.png",
-    "A_furniture_transport.png",
     "B_architecture_transport.png",
-    "B_floor_transport.png",
-    "B_furniture_transport.png",
-    "C_architecture_transport.png",
-    "C_floor_transport.png",
-    "C_furniture_transport.png"
+    "C_architecture_transport.png"
   ]
 }

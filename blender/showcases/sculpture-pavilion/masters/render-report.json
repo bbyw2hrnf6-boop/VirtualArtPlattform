@@ -4,20 +4,20 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 590.1
+    "seconds": 602.19
   },
   {
     "camera": "B-SW",
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 655.03
+    "seconds": 596.05
   },
   {
     "camera": "C-SE",
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 658.41
+    "seconds": 531.79
   }
 ]

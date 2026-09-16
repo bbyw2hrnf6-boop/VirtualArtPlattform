@@ -107,13 +107,14 @@ def flat(name,polys,z,m,thick=0):
  if thick:mod=o.modifiers.new('Real slab thickness','SOLIDIFY');mod.thickness=thick
  return o
 
-def inroom(x,y):
- for id,r in P['rooms'].items():
-  poly=r['boundary'];inside=False
-  for (ax,ay),(bx,by) in zip(poly,poly[1:]):
-   if (ay>y)!=(by>y) and x<(bx-ax)*(y-ay)/(by-ay)+ax:inside=not inside
-  if inside:return True
- return False
+envelopes={}
+def finish_wall(wall):
+ bm=bmesh.new();bm.from_mesh(wall.data)
+ for f in bm.faces:f.smooth=True
+ for e in bm.edges:e.smooth=e.is_manifold and e.calc_face_angle()<math.radians(35)
+ bm.to_mesh(wall.data);bm.free()
+ bevel(wall,.018,4);wall.modifiers[-1].harden_normals=True
+ wall.modifiers.new('Weighted architectural normals','WEIGHTED_NORMAL').keep_sharp=True
 
 for spec in L['rooms']:
  room=spec['id'];r=P['rooms'][room];group='floor';o=flat(room+' terrazzo floor',r['floor'],0,terrazzo,.18);o['reflective_floor']=True
@@ -126,13 +127,13 @@ for spec in L['rooms']:
  bpy.ops.object.select_all(action='DESELECT');wall.select_set(True);bpy.context.view_layer.objects.active=wall;bpy.ops.object.modifier_apply(modifier=sol.name)
  for c in L['connectors']:
   x0,y0,x1,y1=c['bounds']
-  cutter=box('Temporary portal cutter',((x0+x1)/2,(y0+y1)/2,(c['height']-1)/2),(x1-x0,y1-y0,c['height']+1),plaster,.4)
+  # Cut a rectangular opening. Rounding the cutting solid in all three axes
+  # leaves recessed slivers behind the reveal where it meets a curved wall.
+  cutter=box('Temporary portal cutter',((x0+x1)/2,(y0+y1)/2,(c['height']-1)/2),(x1-x0,y1-y0,c['height']+1),plaster)
   bpy.context.view_layer.objects.active=cutter
   for mod in list(cutter.modifiers):bpy.ops.object.modifier_apply(modifier=mod.name)
   bpy.context.view_layer.objects.active=wall;mod=wall.modifiers.new('Clear '+c['id']+' passage','BOOLEAN');mod.operation='DIFFERENCE';mod.solver='EXACT';mod.object=cutter;bpy.ops.object.modifier_apply(modifier=mod.name);bpy.data.objects.remove(cutter,do_unlink=True)
- bevel(wall,.025,3)
- # Hard roof/portal normals, continuous smooth curvature along the walls.
- wall.modifiers.new('Weighted architectural normals','WEIGHTED_NORMAL')
+ envelopes[room]=wall
  roof=flat(room+' opaque roof',r['ceiling'],lambda x,y:height(room,x,y),plaster,.22);roof['overview_hide']=True
  gl=flat(room+' roof glazing',r['glass'],lambda x,y:height(room,x,y)+.15,glass,.024);gl['overview_hide']=True
  # A concealed warm architectural line follows the upper perimeter.
@@ -157,18 +158,43 @@ for spec in L['rooms']:
   for x in [-1,7,15]:
    for y in [11,19]:light('Kinetic accent',(x,y,5.7),(8,15,1.3),180,.3,kind='SPOT')
 
+# A and B touch at their inner boundaries, so their 300 mm wall volumes
+# overlap. Union those volumes before edge finishing; overlapping portal
+# return faces otherwise remain even when the connecting shell is correct.
+wa=envelopes['A'];wb=envelopes['B'];bpy.context.view_layer.objects.active=wa
+mod=wa.modifiers.new('Watertight Atrium Gallery junction','BOOLEAN');mod.operation='UNION';mod.solver='EXACT';mod.object=wb;bpy.ops.object.modifier_apply(modifier=mod.name)
+bpy.data.objects.remove(wb,do_unlink=True)
+# Separate delivery batches at existing polygon boundaries without introducing
+# caps or duplicate faces. They still form the same continuous wall volume.
+data=wa.data.copy();wb=bpy.data.objects.new('B curved envelope with clear portals',data);s.collection.objects.link(wb);wb['pavilion_room']='B';wb['pavilion_group']='architecture';envelopes['B']=wb
+for ob,keep_b in [(wa,False),(wb,True)]:
+ bm=bmesh.new();bm.from_mesh(ob.data)
+ bmesh.ops.delete(bm,geom=[f for f in bm.faces if (f.calc_center_median().x>=9.85)!=keep_b],context='FACES')
+ bm.to_mesh(ob.data);bm.free()
+for wall in envelopes.values():finish_wall(wall)
+
 for c in L['connectors']:
  group='floor';room='A' if c['id'] in ['AB','AC','ENTRY'] else 'B';r=P['connectors'][c['id']];o=flat(c['id']+' threshold',r['floor'],0,terrazzo,.18);o['reflective_floor']=True
- group='architecture';o=flat(c['id']+' passage ceiling',r['floor'],c['height'],plaster,.2);o['overview_hide']=True
- for poly in r['parts']:
+ group='architecture';shell=flat(c['id']+' continuous passage ceiling and sides',r['shell_ceiling'],c['height'],plaster);parts=[shell]
+ for poly in r['shell_parts']:
   for a0,b0 in zip(poly,poly[1:]):
    cx=(a0[0]+b0[0])/2;cy=(a0[1]+b0[1])/2
-   # Boundary edges lying inside/on an adjoining room are open.
-   if any(inroom(cx+dx,cy+dy) for dx,dy in [(.03,0),(-.03,0),(0,.03),(0,-.03)]):continue
-   o=mesh(c['id']+' passage side',[(a0[0],a0[1],0),(b0[0],b0[1],0),(b0[0],b0[1],c['height']),(a0[0],a0[1],c['height'])],[(0,1,2,3)],plaster);m=o.modifiers.new('Passage shell','SOLIDIFY');m.thickness=.3;bevel(o,.045)
+   # Only the longitudinal straight edges are walls; curved ends meet the
+   # room's existing return. ENTRY also has a closed outer end.
+   x0,y0,x1,y1=c['bounds'];eps=.0001
+   side=(abs(cy-y0)<eps or abs(cy-y1)<eps) if c['id'] in ['AB','ENTRY'] else (abs(cx-x0)<eps or abs(cx-x1)<eps)
+   if not side and not(c['id']=='ENTRY' and abs(cx-x0)<eps):continue
+   parts.append(mesh(c['id']+' passage side',[(a0[0],a0[1],0),(b0[0],b0[1],0),(b0[0],b0[1],c['height']),(a0[0],a0[1],c['height'])],[(0,1,2,3)],plaster))
+ # One welded shell: separate bevelled boards exposed daylight at every corner.
+ bpy.ops.object.select_all(action='DESELECT')
+ for o in parts:o.select_set(True)
+ bpy.context.view_layer.objects.active=shell;bpy.ops.object.join()
+ bm=bmesh.new();bm.from_mesh(shell.data);bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=.0001);bm.to_mesh(shell.data);bm.free()
+ m=shell.modifiers.new('Continuous 300 mm passage shell','SOLIDIFY');m.thickness=.3;m.use_even_offset=True
  if c['id']!='ENTRY':
   x0,y0,x1,y1=c['bounds'];light('Portal pool',((x0+x1)/2,(y0+y1)/2,c['height']-.12),((x0+x1)/2,(y0+y1)/2,0),90,1)
-box('Closed flush entrance',(-12.96,0,1.74),(.07,2.98,3.48),plaster,.018);bar('Door pull',(-12.89,.28,1.12),(-12.89,.28,1.52),.014,bronze)
+room='A';group='architecture'
+box('Closed flush entrance',(-12.96,0,1.74),(.07,2.98,3.48),plaster,.006);bar('Door pull',(-12.89,.28,1.12),(-12.89,.28,1.52),.014,bronze)
 # One gently curved bench, exactly as planned.
 room='B';group='furniture';vs=[];fs=[]
 for i in range(49):

@@ -41,7 +41,7 @@ export default function ObsidianPage({ sculpture = false }: { sculpture?: boolea
       <a href="#/">← Back to LIEUVA</a>
     </header>
     <section className="obsidian__stage" aria-label={`${title} exhibition preview`}>
-      {status !== 'ready' && <img className="obsidian__poster" src={`/assets/showcases/${sculpture ? "sculpture-pavilion" : "obsidian"}/cover.webp`} alt={sculpture ? "Sculpture Pavilion: ivory atrium, bronze ribbons, carved stone and pale ash beneath an oval skylight." : "Obsidian: warm pools of light, botanical art, walnut portals and honed black limestone."} fetchPriority="high" />}
+      {status !== 'ready' && <img className="obsidian__poster" src={`/assets/showcases/${sculpture ? "sculpture-pavilion" : "obsidian"}/cover.webp${sculpture ? "?v=2" : ""}`} alt={sculpture ? "Sculpture Pavilion: ivory atrium, bronze ribbons, carved stone and pale ash beneath an oval skylight." : "Obsidian: warm pools of light, botanical art, walnut portals and honed black limestone."} fetchPriority="high" />}
       {active && <Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} /></Suspense>}
       {status !== 'ready' && <div className="obsidian__entrance">
         <p className="obsidian__eyebrow">A LIEUVA bespoke exhibition</p>

@@ -25,6 +25,9 @@ for id,p in rooms.items():
  result['rooms'][id]={'boundary':list(p.exterior.coords),'floor':faces(p),'ceiling':faces(p.difference(holes[id])),'glass':faces(holes[id])}
 for id,p in connectors.items():
  q=p.difference(unary_union(list(rooms.values())))
- result['connectors'][id]={'floor':faces(q),'parts':[list(g.exterior.coords) for g in ([q] if q.geom_type=='Polygon' else q.geoms)]}
+ # The room wall already contains the 300 mm portal return. Starting passage
+ # boards at the inner room boundary duplicated that return and self-shadowed.
+ shell=p.difference(unary_union([r.buffer(.3,join_style=2) for r in rooms.values()]))
+ result['connectors'][id]={'floor':faces(q),'parts':[list(g.exterior.coords) for g in ([q] if q.geom_type=='Polygon' else q.geoms)],'shell_ceiling':faces(shell),'shell_parts':[list(g.exterior.coords) for g in ([shell] if shell.geom_type=='Polygon' else shell.geoms)]}
 (H/'plan-mesh.json').write_text(json.dumps(result,separators=(',',':'))+'\n')
 print('Prepared area',round(union.area),'m²')
