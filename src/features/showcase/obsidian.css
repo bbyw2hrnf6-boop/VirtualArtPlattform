@@ -67,3 +67,7 @@
   .obsidian__zoom { bottom:92px; }
   .obsidian__scene .walk-preferences { top:24px; }
 }
+
+.forest-house__photos { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:36px; margin-bottom:64px; }
+.forest-house__photos figure { margin:0; }.forest-house__photos img { width:100%;height:auto;display:block; }.forest-house__photos figcaption { font:30px/1.2 Instrument,serif; margin-top:16px; }
+@media(max-width:700px) { .forest-house__photos { grid-template-columns:1fr;gap:28px; } }

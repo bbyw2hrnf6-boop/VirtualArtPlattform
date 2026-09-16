@@ -30,6 +30,9 @@ const SHOWCASES: readonly ShowcaseItem[] = [
   },
   {
     id: "architecture",
+    sceneHref: "#/showcase/forest-fold-house", sceneName: "Forest Fold House",
+    cover: "/assets/showcases/forest-fold-house/cover.webp",
+    alt: "Forest Fold House: two planted stone wings and one glass bridge above a woodland watercourt",
     meta: "03 / Spaces & living",
     title: "Architecture",
     description: "Real or imagined rooms, homes and buildings rebuilt as walkable digital experiences.",
@@ -45,7 +48,7 @@ export function ShowcaseCollection() {
           <span>See what’s possible.</span>
           <em>Art. Objects. Architecture.</em>
         </h2>
-        <p>Enter Obsidian and Sculpture Pavilion, our bespoke exhibitions. Discover what individually authored worlds can become.</p>
+        <p>Enter Obsidian, Sculpture Pavilion and Forest Fold House. Discover what individually authored worlds can become.</p>
       </header>
 
       <div className="showcase-collection__grid">

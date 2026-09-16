@@ -1,0 +1,66 @@
+[
+  {
+    "source": "C01-afternoon.png",
+    "sha256": "c3684e5c7e85319f0859e8a6f66a92cd3d5951848b55e079c9a6e1826696b3e4",
+    "output": "cover.webp",
+    "bytes": 485682,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "source": "C07-afternoon.png",
+    "sha256": "1c8fc4beb03abd7394d2f6a9dea192ec0566e7990cdf009b829f723e9c9ff6a1",
+    "output": "C07.webp",
+    "bytes": 146744,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "source": "C08-afternoon.png",
+    "sha256": "670b0605a23267c6c3616f32c92ffb679e6944accda0bdb91ec8d8d3f1721614",
+    "output": "C08.webp",
+    "bytes": 324266,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "source": "C09-afternoon.png",
+    "sha256": "58e3b2833bdcb85f45a92e5b00f998f046f4ba4d682f7fd1179f5627370c13c0",
+    "output": "C09.webp",
+    "bytes": 97402,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "source": "C10-afternoon.png",
+    "sha256": "6bfdd4558bb6ee080b2c8a68b3dbc99e3571751793a16604c980aced6f394eb5",
+    "output": "C10.webp",
+    "bytes": 395884,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "source": "C11-afternoon.png",
+    "sha256": "9f4e8e7c3cbd0f7fa0f01e35184fb9161543262c122bf3a7ab0232062ca61c8e",
+    "output": "C11.webp",
+    "bytes": 139546,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "source": "C12-afternoon.png",
+    "sha256": "ba7b4820bf2a78ff89a47927d99aa75d6be88971642386900c17d7168b168ce8",
+    "output": "C12.webp",
+    "bytes": 238826,
+    "width": 1920,
+    "height": 1080
+  },
+  {
+    "source": "C13-afternoon.png",
+    "sha256": "71a0c50f6b63fcadeafc9c5db50f77b53c95903ba611ee5014c72cd26e72fb27",
+    "output": "C13.webp",
+    "bytes": 82358,
+    "width": 1920,
+    "height": 1080
+  }
+]

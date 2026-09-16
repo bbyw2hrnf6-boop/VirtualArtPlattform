@@ -1,0 +1,884 @@
+{
+  "project": "Forest Fold House",
+  "revision": "1.0",
+  "date": "2026-09-16",
+  "purpose": "Digital architecture concept and Blender reconstruction specification",
+  "authority_order": [
+    "data/scene.json",
+    "dimensioned plans",
+    "docs and schedules",
+    "generated concept photographs"
+  ],
+  "units": "metres",
+  "coordinate_system": {
+    "x": "east",
+    "y": "north",
+    "z": "up",
+    "origin": "ground-floor finished level in courtyard"
+  },
+  "levels": {
+    "L0": 0.0,
+    "L1": 3.4,
+    "ceiling_L0": 3.05,
+    "ceiling_L1": 6.45,
+    "roof_slab_top": 6.8,
+    "parapet_top": 7.15,
+    "pond_surface": -0.18,
+    "pond_bed": -0.55
+  },
+  "gross_concept_area_m2": 173.4,
+  "gross_area_formula": "2*(7*8 + 5*5.5) + 4*1.6; not a measured legal living area",
+  "shell": {
+    "wall_thickness": 0.3,
+    "partition_thickness": 0.12,
+    "slab_depth": 0.35,
+    "frame_face": 0.045,
+    "glazing_recess": 0.12,
+    "shadow_gap": 0.015,
+    "corner_bevel": 0.006
+  },
+  "wings": [
+    {
+      "id": "W",
+      "name": "West main wing",
+      "bounds_xy": [
+        -8,
+        -4,
+        -1,
+        4
+      ],
+      "floors": [
+        0,
+        3.4
+      ]
+    },
+    {
+      "id": "E",
+      "name": "East retreat wing",
+      "bounds_xy": [
+        3,
+        -1.5,
+        8,
+        4
+      ],
+      "floors": [
+        0,
+        3.4
+      ]
+    }
+  ],
+  "bridge": {
+    "id": "BR01",
+    "bounds_xy": [
+      -1,
+      -0.1,
+      3,
+      1.5
+    ],
+    "floor_z": 3.4,
+    "ceiling_z": 5.9,
+    "roof_z": 6.08,
+    "clear_width": 1.4,
+    "floor_material": "M03",
+    "frame_material": "M04",
+    "side_glazing": true,
+    "roof_glazing": true,
+    "notes": "Single enclosed upper bridge. Four metre span. No second upper bridge."
+  },
+  "stairs": {
+    "id": "ST01",
+    "bounds_xy": [
+      -7.7,
+      -0.8,
+      -5.5,
+      3.7
+    ],
+    "type": "U stair",
+    "rise": 3.4,
+    "risers": 20,
+    "riser_height": 0.17,
+    "flight_width": 1.0,
+    "central_gap": 0.2,
+    "tread_depth": 0.278,
+    "risers_per_flight": 10,
+    "half_landing_depth": 1.0,
+    "landing_y": [
+      -0.8,
+      0.2
+    ],
+    "north_arrival_landing_y": [
+      2.7,
+      3.7
+    ],
+    "first_flight": "west flight travels south from north bottom entry",
+    "second_flight": "east flight travels north to upper arrival",
+    "upper_landing_and_entry_connection": "North of stair bay; door D01 opens into adjacent hall, not over stairs",
+    "rail_height": 1.05,
+    "rail_material": "M04"
+  },
+  "zones": [
+    {
+      "id": "L0-LIVING",
+      "level": "L0",
+      "name": "Wohnen / Essen",
+      "polygon": [
+        [
+          -7.7,
+          -3.7
+        ],
+        [
+          -1.3,
+          -3.7
+        ],
+        [
+          -1.3,
+          0.2
+        ],
+        [
+          -5.5,
+          0.2
+        ],
+        [
+          -5.5,
+          -0.9
+        ],
+        [
+          -7.7,
+          -0.9
+        ]
+      ],
+      "floor": "M05",
+      "ceiling": "M03",
+      "walls": "M03/M02/glazing"
+    },
+    {
+      "id": "L0-KITCHEN",
+      "level": "L0",
+      "name": "Küche",
+      "bounds_xy": [
+        -5.4,
+        0.2,
+        -1.3,
+        2.1
+      ],
+      "floor": "M05",
+      "ceiling": "M03",
+      "walls": "oak cabinets"
+    },
+    {
+      "id": "L0-HALL",
+      "level": "L0",
+      "name": "Treppe / Zugang",
+      "bounds_xy": [
+        -5.4,
+        2.1,
+        -4.3,
+        3.7
+      ],
+      "floor": "M05",
+      "ceiling": "M03"
+    },
+    {
+      "id": "L0-WC",
+      "level": "L0",
+      "name": "WC",
+      "bounds_xy": [
+        -4.2,
+        2.2,
+        -1.3,
+        3.7
+      ],
+      "floor": "M05",
+      "ceiling": "M02"
+    },
+    {
+      "id": "L0-LOUNGE",
+      "level": "L0",
+      "name": "Wasserlounge",
+      "bounds_xy": [
+        3.3,
+        -1.2,
+        7.7,
+        3.7
+      ],
+      "floor": "M05",
+      "ceiling": "M03",
+      "walls": "M01 north/east, M03 west"
+    },
+    {
+      "id": "L1-BED",
+      "level": "L1",
+      "name": "Schlafzimmer",
+      "polygon": [
+        [
+          -7.7,
+          -3.7
+        ],
+        [
+          -1.3,
+          -3.7
+        ],
+        [
+          -1.3,
+          -0.1
+        ],
+        [
+          -5.5,
+          -0.1
+        ],
+        [
+          -5.5,
+          -0.9
+        ],
+        [
+          -7.7,
+          -0.9
+        ]
+      ],
+      "floor": "M03",
+      "ceiling": "M03",
+      "walls": "M03 headboard/M02/glazing"
+    },
+    {
+      "id": "L1-HALL-S",
+      "level": "L1",
+      "name": "Verteiler",
+      "bounds_xy": [
+        -5.4,
+        0,
+        -1.3,
+        1.4
+      ],
+      "floor": "M03",
+      "ceiling": "M03"
+    },
+    {
+      "id": "L1-HALL-N",
+      "level": "L1",
+      "name": "Eingang",
+      "bounds_xy": [
+        -5.4,
+        1.4,
+        -4.1,
+        3.7
+      ],
+      "floor": "M03",
+      "ceiling": "M03"
+    },
+    {
+      "id": "L1-BATH",
+      "level": "L1",
+      "name": "Duschbad",
+      "bounds_xy": [
+        -4,
+        1.5,
+        -1.3,
+        3.7
+      ],
+      "floor": "M05",
+      "ceiling": "M02",
+      "notes": "Compact 2.7 x 2.2m, walk-in shower, no bathtub, vanity, toilet"
+    },
+    {
+      "id": "L1-STUDIO",
+      "level": "L1",
+      "name": "Atelier / Arbeitszimmer",
+      "bounds_xy": [
+        3.3,
+        -1.2,
+        7.7,
+        3.7
+      ],
+      "floor": "M03",
+      "ceiling": "M03",
+      "walls": "M03 library north/M02 east/glazing south"
+    }
+  ],
+  "openings": [
+    {
+      "id": "W-L0-S",
+      "wing": "W",
+      "side": "S",
+      "level": "L0",
+      "along_start": -7.45,
+      "along_end": -1.4,
+      "z_bottom": 0.05,
+      "z_top": 2.95,
+      "type": "glazing",
+      "note": ""
+    },
+    {
+      "id": "W-L0-W",
+      "wing": "W",
+      "side": "W",
+      "level": "L0",
+      "along_start": -3.4,
+      "along_end": -0.4,
+      "z_bottom": 0.05,
+      "z_top": 2.95,
+      "type": "glazing",
+      "note": ""
+    },
+    {
+      "id": "E-L0-S",
+      "wing": "E",
+      "side": "S",
+      "level": "L0",
+      "along_start": 3.4,
+      "along_end": 7.6,
+      "z_bottom": 0.05,
+      "z_top": 2.95,
+      "type": "glazing",
+      "note": ""
+    },
+    {
+      "id": "W-L1-S",
+      "wing": "W",
+      "side": "S",
+      "level": "L1",
+      "along_start": -7.45,
+      "along_end": -1.4,
+      "z_bottom": 3.4499999999999997,
+      "z_top": 6.35,
+      "type": "glazing",
+      "note": ""
+    },
+    {
+      "id": "W-L1-W",
+      "wing": "W",
+      "side": "W",
+      "level": "L1",
+      "along_start": -3.4,
+      "along_end": -0.4,
+      "z_bottom": 3.4499999999999997,
+      "z_top": 6.35,
+      "type": "glazing",
+      "note": ""
+    },
+    {
+      "id": "E-L1-S",
+      "wing": "E",
+      "side": "S",
+      "level": "L1",
+      "along_start": 3.4,
+      "along_end": 7.6,
+      "z_bottom": 3.4499999999999997,
+      "z_top": 6.35,
+      "type": "glazing",
+      "note": ""
+    },
+    {
+      "id": "W-L0-E",
+      "wing": "W",
+      "side": "E",
+      "level": "L0",
+      "along_start": -3.4,
+      "along_end": -0.2,
+      "z_bottom": 0.05,
+      "z_top": 2.95,
+      "type": "glazing",
+      "note": ""
+    },
+    {
+      "id": "D02",
+      "wing": "W",
+      "side": "E",
+      "level": "L0",
+      "along_start": 0.25,
+      "along_end": 1.3,
+      "z_bottom": 0,
+      "z_top": 2.5,
+      "type": "door",
+      "note": "Ground route to lounge"
+    },
+    {
+      "id": "D03",
+      "wing": "E",
+      "side": "W",
+      "level": "L0",
+      "along_start": 0.25,
+      "along_end": 1.3,
+      "z_bottom": 0,
+      "z_top": 2.5,
+      "type": "door",
+      "note": "Lounge entry from dry courtyard"
+    },
+    {
+      "id": "D01",
+      "wing": "W",
+      "side": "N",
+      "level": "L1",
+      "along_start": -5.3,
+      "along_end": -4.25,
+      "z_bottom": 3.4,
+      "z_top": 5.9,
+      "type": "door",
+      "note": "Main upper entry"
+    },
+    {
+      "id": "D04",
+      "wing": "W",
+      "side": "E",
+      "level": "L1",
+      "along_start": 0.05,
+      "along_end": 1.35,
+      "z_bottom": 3.4,
+      "z_top": 5.9,
+      "type": "door",
+      "note": "Bridge west end"
+    },
+    {
+      "id": "D05",
+      "wing": "E",
+      "side": "W",
+      "level": "L1",
+      "along_start": 0.05,
+      "along_end": 1.35,
+      "z_bottom": 3.4,
+      "z_top": 5.9,
+      "type": "door",
+      "note": "Bridge east end"
+    },
+    {
+      "id": "BATH-N",
+      "wing": "W",
+      "side": "N",
+      "level": "L1",
+      "along_start": -3.6,
+      "along_end": -1.8,
+      "z_bottom": 5.25,
+      "z_top": 6.1,
+      "type": "frosted",
+      "note": ""
+    },
+    {
+      "id": "STUDIO-E",
+      "wing": "E",
+      "side": "E",
+      "level": "L1",
+      "along_start": -0.8,
+      "along_end": 2.7,
+      "z_bottom": 3.45,
+      "z_top": 6.35,
+      "type": "glazing",
+      "note": ""
+    },
+    {
+      "id": "STUDIO-N",
+      "wing": "E",
+      "side": "N",
+      "level": "L1",
+      "along_start": 6.7,
+      "along_end": 7.1,
+      "z_bottom": 3.6,
+      "z_top": 6.25,
+      "type": "slit",
+      "note": ""
+    }
+  ],
+  "landscape": {
+    "terrain_extent_xy": [
+      -22,
+      -22,
+      22,
+      18
+    ],
+    "rear_terrain_level": 3.4,
+    "front_terrain_level": -0.2,
+    "rear_slope_start_y": 2.0,
+    "rear_slope_end_y": 6.5,
+    "pond_polygon": [
+      [
+        -1.1,
+        -6.8
+      ],
+      [
+        6.9,
+        -6.8
+      ],
+      [
+        8.5,
+        -5.4
+      ],
+      [
+        8.5,
+        -1.6
+      ],
+      [
+        3,
+        -1.6
+      ],
+      [
+        3,
+        0.0
+      ],
+      [
+        0.4,
+        0.0
+      ],
+      [
+        0.4,
+        -3.8
+      ],
+      [
+        -1.1,
+        -3.8
+      ]
+    ],
+    "dry_path_polygon": [
+      [
+        -1.3,
+        0.1
+      ],
+      [
+        3.2,
+        0.1
+      ],
+      [
+        3.2,
+        1.5
+      ],
+      [
+        -1.3,
+        1.5
+      ]
+    ],
+    "west_terrace_bounds": [
+      -8.4,
+      -5.4,
+      -0.9,
+      -4.0
+    ],
+    "lounge_threshold_bounds": [
+      3,
+      -2.4,
+      8,
+      -1.5
+    ],
+    "waterfall": {
+      "x": 8.25,
+      "y_range": [
+        -3.5,
+        -2.3
+      ],
+      "top_z": 2.2,
+      "bottom_z": -0.18,
+      "width": 1.2,
+      "notes": "Small recirculating sheet on separate east retaining cheek, not full storey waterfall"
+    },
+    "planting": "Beech woodland, moss boulders, ferns, grasses, white flowering perennials and loose violet flowers. Art direction palette, not a horticultural planting specification.",
+    "roof": {
+      "non_walkable": true,
+      "substrate_visual_depth": 0.22,
+      "edge_setback": 0.35,
+      "maintenance_strip_width": 0.35,
+      "plant_height": [
+        0.15,
+        0.7
+      ],
+      "notes": "2 percent visual fall toward concealed rear drainage; no standing roof water"
+    }
+  },
+  "navigation": {
+    "camera_eye_height": 1.7,
+    "player_radius": 0.25,
+    "min_route_clear_width": 1.0,
+    "spawn_xyz": [
+      -4.75,
+      3.0,
+      5.1
+    ],
+    "route": [
+      "upper entry",
+      "upper hall",
+      "bridge",
+      "studio",
+      "bridge",
+      "hall",
+      "stairs",
+      "living",
+      "dry courtyard path",
+      "water lounge"
+    ],
+    "water_collision": true,
+    "roof_access": false,
+    "flight": false,
+    "notes": "All routes via doors and ground or stairs. No teleport required. External slope stair optional scenic branch."
+  },
+  "limits": {
+    "exactly_two_floors": true,
+    "no_underwater_room": true,
+    "not_construction_documents": true,
+    "image_geometry_is_illustrative": true
+  },
+  "interior_partitions": [
+    {
+      "level": "L0",
+      "from": [
+        -7.7,
+        -0.85
+      ],
+      "to": [
+        -5.45,
+        -0.85
+      ],
+      "door_gaps": []
+    },
+    {
+      "level": "L1",
+      "from": [
+        -7.7,
+        -0.85
+      ],
+      "to": [
+        -5.45,
+        -0.85
+      ],
+      "door_gaps": []
+    },
+    {
+      "level": "L1",
+      "from": [
+        -5.45,
+        -0.85
+      ],
+      "to": [
+        -5.45,
+        2.7
+      ],
+      "door_gaps": []
+    },
+    {
+      "level": "L0",
+      "from": [
+        -5.45,
+        -0.8
+      ],
+      "to": [
+        -5.45,
+        2.7
+      ],
+      "door_gaps": []
+    },
+    {
+      "level": "L0",
+      "from": [
+        -4.25,
+        2.15
+      ],
+      "to": [
+        -1.3,
+        2.15
+      ],
+      "door_gaps": [],
+      "axis": "x"
+    },
+    {
+      "level": "L0",
+      "from": [
+        -4.25,
+        2.15
+      ],
+      "to": [
+        -4.25,
+        3.7
+      ],
+      "door_gaps": [
+        [
+          2.6,
+          3.45
+        ]
+      ],
+      "axis": "y"
+    },
+    {
+      "level": "L1",
+      "from": [
+        -5.5,
+        -0.05
+      ],
+      "to": [
+        -1.3,
+        -0.05
+      ],
+      "door_gaps": [
+        [
+          -4.5,
+          -3.5
+        ]
+      ],
+      "axis": "x"
+    },
+    {
+      "level": "L1",
+      "from": [
+        -4.05,
+        1.45
+      ],
+      "to": [
+        -1.3,
+        1.45
+      ],
+      "door_gaps": [
+        [
+          -3.9,
+          -3.0
+        ]
+      ],
+      "axis": "x"
+    },
+    {
+      "level": "L1",
+      "from": [
+        -4.05,
+        1.45
+      ],
+      "to": [
+        -4.05,
+        3.7
+      ],
+      "door_gaps": []
+    }
+  ],
+  "materials_file": "materials.json",
+  "lighting": {
+    "fixture_positions": [
+      {
+        "id": "LX01",
+        "type": "recessed_spot",
+        "position_xyz": [
+          -6,
+          -3,
+          3.02
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX02",
+        "type": "recessed_spot",
+        "position_xyz": [
+          -3,
+          -3,
+          3.02
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX03",
+        "type": "recessed_spot",
+        "position_xyz": [
+          -6,
+          -0.2,
+          3.02
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX04",
+        "type": "recessed_spot",
+        "position_xyz": [
+          -3,
+          0.6,
+          3.02
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX05",
+        "type": "recessed_spot",
+        "position_xyz": [
+          4.3,
+          0.0,
+          3.02
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX06",
+        "type": "recessed_spot",
+        "position_xyz": [
+          6.8,
+          0.0,
+          3.02
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX07",
+        "type": "recessed_spot",
+        "position_xyz": [
+          4.3,
+          2.5,
+          3.02
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX08",
+        "type": "recessed_spot",
+        "position_xyz": [
+          6.8,
+          2.5,
+          3.02
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX09",
+        "type": "recessed_spot",
+        "position_xyz": [
+          -6,
+          -3,
+          6.42
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX10",
+        "type": "recessed_spot",
+        "position_xyz": [
+          -3,
+          -3,
+          6.42
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX11",
+        "type": "recessed_spot",
+        "position_xyz": [
+          4.3,
+          0,
+          6.42
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      },
+      {
+        "id": "LX12",
+        "type": "recessed_spot",
+        "position_xyz": [
+          6.8,
+          0,
+          6.42
+        ],
+        "color_kelvin": 3000,
+        "beam_degrees": 45
+      }
+    ],
+    "day": "southwest low warm sun with neutral sky fill",
+    "overcast": "soft neutral sky; retain contact shadows",
+    "evening": "3000K interiors,2700K concealed path light; avoid unmotivated area glows",
+    "notes": "Brightness determined by exposure and render tests, not arbitrary emission multipliers."
+  }
+}

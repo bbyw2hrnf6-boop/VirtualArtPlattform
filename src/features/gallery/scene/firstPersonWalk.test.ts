@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { createFirstPersonWalk } from './firstPersonWalk';
+import { createForestNavigation, forestBounds } from '../../showcase/forestNavigation';
+import { forestRooms } from '../../showcase/forestRooms';
 
 vi.mock('./walkPreferences', async importOriginal => {
   const actual = await importOriginal<typeof import('./walkPreferences')>();
@@ -11,7 +13,7 @@ vi.mock('./walkPreferences', async importOriginal => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-function harness(collision?: (next: THREE.Vector3, previous: THREE.Vector3) => void) {
+function harness(collision?: (next: THREE.Vector3, previous: THREE.Vector3) => void, surfaceEyeHeight?: number, findPath?: (from:THREE.Vector3,to:THREE.Vector3)=>THREE.Vector3[]|null) {
   let now = 0;
   vi.spyOn(performance, 'now').mockImplementation(() => now);
   const canvas = Object.assign(new EventTarget(), {
@@ -21,7 +23,7 @@ function harness(collision?: (next: THREE.Vector3, previous: THREE.Vector3) => v
   const camera = new THREE.PerspectiveCamera(62);
   camera.position.set(0, 1.75, 0);
   const onIntent = vi.fn(), onEscape = vi.fn();
-  const walk = createFirstPersonWalk(camera, canvas, () => ({ minX: -20, maxX: 20, minZ: -20, maxZ: 20 }), collision, undefined, onIntent, onEscape);
+  const walk = createFirstPersonWalk(camera, canvas, () => surfaceEyeHeight ? forestBounds : ({ minX: -20, maxX: 20, minZ: -20, maxZ: 20 }), collision, findPath, onIntent, onEscape, true, 1, surfaceEyeHeight);
   const event = (type: string, values: Record<string, unknown> = {}) => {
     const e = Object.assign(new Event(type, { cancelable: true }), values);
     canvas.dispatchEvent(e); return e;
@@ -31,6 +33,31 @@ function harness(collision?: (next: THREE.Vector3, previous: THREE.Vector3) => v
 }
 
 describe('shared first-person visitor movement', () => {
+  it('follows the real house stair route down and back up with normal walking inertia',()=>{
+    const nav=createForestNavigation();
+    const {camera,walk,frames}=harness(nav.resolve,1.7,nav.findPath);
+    camera.position.set(...forestRooms[0].start as [number,number,number]);walk.syncFromCamera();
+    for(const room of [forestRooms[5],forestRooms[0]]){
+      const target=new THREE.Vector3(...room.start);
+      expect(walk.moveTo(target.clone().add(new THREE.Vector3(0,-1.7,0)))).toBe(true);
+      for(let i=0;i<6000&&walk.needsUpdate();i++)frames(1);
+      expect(camera.position.distanceTo(target),room.id).toBeLessThan(.2);
+      expect(walk.hasDestination()).toBe(false);
+    }
+    walk.dispose();
+  },30000);
+  it('preserves a terrain resolver height across frames and targets the clicked floor level',()=>{
+    const {camera,walk,frames,event}=harness(next=>{next.y=1.7-next.z*.5;},1.7);
+    camera.position.y=1.7;walk.syncFromCamera();
+    expect(walk.moveTo(new THREE.Vector3(0,2,-4))).toBe(true);
+    expect(walk.destination()?.y).toBeCloseTo(3.7);
+    event('keydown',{code:'KeyE'});frames(20);event('keyup',{code:'KeyE'});
+    frames(350);
+    expect(camera.position.z).toBeCloseTo(-4,0);
+    expect(camera.position.y).toBeCloseTo(3.7,0);
+    expect(camera.rotation.x).toBeGreaterThan(.2);
+    expect(walk.hasDestination()).toBe(false);walk.dispose();
+  });
   it('reaches a floor target while arrow keys, E/Q and pointer drag independently change the view', () => {
     const { camera, walk, event, frames } = harness();
     walk.moveTo(new THREE.Vector3(0, 0, -5));

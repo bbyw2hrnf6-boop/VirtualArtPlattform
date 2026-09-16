@@ -1,0 +1,93 @@
+[
+  {
+    "group": "W0_furniture",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 39.58
+  },
+  {
+    "group": "W1_furniture",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 52.89
+  },
+  {
+    "group": "E1_furniture",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 37.07
+  },
+  {
+    "group": "E0_furniture",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 66.48
+  },
+  {
+    "group": "W0",
+    "resolution": 4096,
+    "samples": 128,
+    "seconds": 151.46
+  },
+  {
+    "group": "W0_walk",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 60.33
+  },
+  {
+    "group": "W1",
+    "resolution": 4096,
+    "samples": 128,
+    "seconds": 134.54
+  },
+  {
+    "group": "W1_walk",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 26.68
+  },
+  {
+    "group": "exterior",
+    "resolution": 1024,
+    "samples": 128,
+    "seconds": 17.46
+  },
+  {
+    "group": "E0",
+    "resolution": 4096,
+    "samples": 128,
+    "seconds": 195.57
+  },
+  {
+    "group": "E0_walk",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 74.24
+  },
+  {
+    "group": "E1",
+    "resolution": 4096,
+    "samples": 128,
+    "seconds": 199.09
+  },
+  {
+    "group": "E1_walk",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 47.42
+  },
+  {
+    "group": "bridge_walk",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 99.04
+  },
+  {
+    "group": "stairs_walk",
+    "resolution": 2048,
+    "samples": 128,
+    "seconds": 65.91,
+    "refinement": "Removed unsupported LX03 in stair void; retained upper circulation diffuser"
+  }
+]

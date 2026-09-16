@@ -22,8 +22,9 @@ export const PERFORMANCE_TARGETS = Object.freeze({
 // pass plus cutaway orbit navigation: +5 KB aggregate JS allowance. The initial
 // public route, Studio assets and all other ceilings remain fixed.
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
-  // Sculpture Pavilion: 3 KB for its isolated navigation/configuration and shared viewer extension.
-  jsGzip: 610_000,
+  // Forest Fold House: explicit +6 KB for its lazy page, multi-level graph and shared height-aware visitor.
+  // See blender/showcases/forest-fold-house/README.md; entry and Studio ceilings stay fixed.
+  jsGzip: 616_000,
   cssGzip: 56_500,
   largestLazyGzip: 195_000,
   entryGzip: 123_000,

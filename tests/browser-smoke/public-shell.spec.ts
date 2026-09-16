@@ -31,11 +31,11 @@ test('opens Obsidian from the homepage action and loads the Create Space shell w
   await expect(collection.getByRole('heading', { name: 'Art exhibitions', exact: true })).toBeVisible();
   await expect(collection.getByRole('heading', { name: 'Sculpture & 3D', exact: true })).toBeVisible();
   await expect(collection.getByRole('heading', { name: 'Architecture', exact: true })).toBeVisible();
-  await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(1);
-  await expect(collection.getByText(/Enter Obsidian and Sculpture Pavilion/)).toBeVisible();
+  await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(0);
+  await expect(collection.getByText(/Enter Obsidian, Sculpture Pavilion and Forest Fold House/)).toBeVisible();
   const exhibitionLink = collection.getByRole('link', { name: 'Explore Obsidian: Art exhibitions', exact: true });
   await expect(exhibitionLink).toHaveAttribute('href', '#/showcase/obsidian');
-  await expect(collection.getByRole('link', { name: 'Bespoke project on request' })).toHaveCount(1);
+  await expect(collection.getByRole('link', { name: 'Explore Forest Fold House: Architecture' })).toHaveAttribute('href', '#/showcase/forest-fold-house');
   await expect(collection.getByText(/From a room scan, photographs or plans/)).toBeVisible();
   await expect(collection.locator('a[href^="#/create/"]')).toHaveCount(0);
 
@@ -44,6 +44,10 @@ test('opens Obsidian from the homepage action and loads the Create Space shell w
   await collection.getByRole('link', { name: 'Explore Sculpture Pavilion: Sculpture & 3D', exact: true }).click();
   await expect(page).toHaveURL(/#\/showcase\/sculpture-pavilion$/);
   await expect(page.getByRole('heading', { name: 'Sculpture Pavilion.', exact: true })).toBeInViewport();
+  await page.goto('/');
+  await collection.getByRole('link', { name: 'Explore Forest Fold House: Architecture', exact: true }).click();
+  await expect(page).toHaveURL(/#\/showcase\/forest-fold-house$/);
+  await expect(page.getByRole('button', { name: 'Enter the house' })).toBeInViewport();
   await page.goto('/');
   await exhibitionLink.click();
   await expect(page).toHaveURL(/#\/showcase\/obsidian$/);
@@ -73,9 +77,9 @@ test('the showcase collection stays distinct and opens Obsidian from its preview
 
   const collection = page.locator('.showcase-collection');
   await collection.scrollIntoViewIfNeeded();
-  await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(1);
+  await expect(collection.getByText('Showcase coming soon', { exact: true })).toHaveCount(0);
   await expect(collection.getByRole('link', { name: 'Explore Obsidian: Art exhibitions', exact: true })).toHaveAttribute('href', '#/showcase/obsidian');
-  await expect(collection.getByRole('link', { name: 'Bespoke project on request' })).toHaveCount(1);
+  await expect(collection.getByRole('link', { name: 'Explore Forest Fold House: Architecture' })).toHaveAttribute('href', '#/showcase/forest-fold-house');
   await expect(collection.getByText('Contact route coming soon', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 

@@ -1,0 +1,261 @@
+{
+  "showcase": "forest-fold-house",
+  "source": "forest-fold-house.blend",
+  "sourceSha256": "d8b1e8b27ff4629745aaf959eb82f76b190a647a7dc20eba1d0f7d34de59e665",
+  "models": {
+    "forest-fold-house-desktop.glb": {
+      "bytes": 38239712,
+      "sha256": "08cf019e3c97dbdc06ca64b5ee5a5ee5fdc23757666a0164220b4b65ade06edd",
+      "triangles": 2359796,
+      "primitives": 30,
+      "materials": 29,
+      "decodedRgbaMipBytesEstimate": 587202560,
+      "textures": [
+        {
+          "name": "bridge_walk",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0_furniture",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "E0_walk",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E1_furniture",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E1",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "E1_walk",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "exterior",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "stairs_walk",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W0_furniture",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W0",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "W0_walk",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W1_furniture",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W1",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "W1_walk",
+          "width": 2048,
+          "height": 2048
+        }
+      ],
+      "extensionsRequired": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ]
+    },
+    "forest-fold-house-mobile.glb": {
+      "bytes": 34344900,
+      "sha256": "9d0754a24d65162116144338486332a7d4915da6950f0a1594852956c7249bae",
+      "triangles": 2359796,
+      "primitives": 30,
+      "materials": 29,
+      "decodedRgbaMipBytesEstimate": 83886080,
+      "textures": [
+        {
+          "name": "bridge_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_furniture",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_furniture",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "exterior",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "stairs_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W0_furniture",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W0",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W0_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W1_furniture",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W1",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W1_walk",
+          "width": 1024,
+          "height": 1024
+        }
+      ],
+      "extensionsRequired": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ]
+    }
+  },
+  "images": [
+    {
+      "name": "C01-afternoon.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 46569061,
+      "sha256": "c3684e5c7e85319f0859e8a6f66a92cd3d5951848b55e079c9a6e1826696b3e4"
+    },
+    {
+      "name": "C01-evening.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 39005605,
+      "sha256": "4332896fce4ae5aeb02bc47e162ae5e6fe94d7db65a47e726a304583b251f226"
+    },
+    {
+      "name": "C01-overcast.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 46510875,
+      "sha256": "521bac22df3dd597c7ad7b7cc474d31b24944003c7739ab9b0bca7346bfaaf2b"
+    },
+    {
+      "name": "C07-afternoon.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 39565997,
+      "sha256": "1c8fc4beb03abd7394d2f6a9dea192ec0566e7990cdf009b829f723e9c9ff6a1"
+    },
+    {
+      "name": "C08-afternoon.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 43676637,
+      "sha256": "670b0605a23267c6c3616f32c92ffb679e6944accda0bdb91ec8d8d3f1721614"
+    },
+    {
+      "name": "C09-afternoon.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 38042431,
+      "sha256": "58e3b2833bdcb85f45a92e5b00f998f046f4ba4d682f7fd1179f5627370c13c0"
+    },
+    {
+      "name": "C10-afternoon.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 44097628,
+      "sha256": "6bfdd4558bb6ee080b2c8a68b3dbc99e3571751793a16604c980aced6f394eb5"
+    },
+    {
+      "name": "C11-afternoon.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 39382460,
+      "sha256": "9f4e8e7c3cbd0f7fa0f01e35184fb9161543262c122bf3a7ab0232062ca61c8e"
+    },
+    {
+      "name": "C12-afternoon.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 43819917,
+      "sha256": "ba7b4820bf2a78ff89a47927d99aa75d6be88971642386900c17d7168b168ce8"
+    },
+    {
+      "name": "C13-afternoon.png",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 40327464,
+      "sha256": "71a0c50f6b63fcadeafc9c5db50f77b53c95903ba611ee5014c72cd26e72fb27"
+    }
+  ],
+  "openQualification": [
+    "Physical phone GPU, thermals and sustained frame rate",
+    "Real slow-network loading; browser emulation is not a physical-device measurement"
+  ]
+}

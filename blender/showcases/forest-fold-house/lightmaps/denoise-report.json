@@ -1,0 +1,20 @@
+{
+  "algorithm": "Blender linear-space OpenImageDenoise",
+  "atlases": [
+    "W0_furniture.png",
+    "W1_furniture.png",
+    "E1_furniture.png",
+    "E0_furniture.png",
+    "W0.png",
+    "W0_walk.png",
+    "W1.png",
+    "W1_walk.png",
+    "exterior.png",
+    "E0.png",
+    "E0_walk.png",
+    "E1.png",
+    "E1_walk.png",
+    "bridge_walk.png",
+    "stairs_walk.png"
+  ]
+}

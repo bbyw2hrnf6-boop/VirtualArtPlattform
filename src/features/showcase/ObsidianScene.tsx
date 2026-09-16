@@ -19,6 +19,8 @@ export interface ShowcaseSceneConfig {
   navigation: () => Pick<ReturnType<typeof createObsidianNavigation>, 'resolve' | 'findPath'>;
   roomAt: (position: THREE.Vector3) => number;
   sculpture?: boolean;
+  architecture?: boolean;
+  eyeHeight?: number;
   assetVersion?: string;
 }
 const obsidianConfig: ShowcaseSceneConfig = {
@@ -59,7 +61,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     canvas.setAttribute('aria-label', `Explore ${config.title}. ${VISITOR_KEYBOARD_HINT}. Drag to look, tap the floor to walk, pinch or scroll to zoom.`);
     host.append(canvas);
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(config.sculpture ? '#cac2b2' : '#100e0b');
+    scene.background = new THREE.Color(config.architecture ? '#acb7bb' : config.sculpture ? '#cac2b2' : '#100e0b');
     const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({
       color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide, depthWrite: false,
     }));
@@ -80,7 +82,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     const schedule = () => { if (!disposed && !raf && !document.hidden) { scheduledAt = performance.now(); raf = requestAnimationFrame(render); } };
     const navigation = config.navigation();
     const walk = createFirstPersonWalk(camera, canvas, () => config.bounds,
-      navigation.resolve, navigation.findPath, schedule, () => canvas.blur());
+      navigation.resolve, navigation.findPath, schedule, () => canvas.blur(), true, 1, config.eyeHeight);
     walk.setEnabled(false);
     const orbit = new OrbitControls(camera, canvas);
     // OrbitControls initializes toward its default target even while disabled.
@@ -131,7 +133,8 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     const resetWalk = (index: number) => {
       const room = config.rooms[index]; if (!room) return;
       switchMode('walk'); walk.setEnabled(false);
-      camera.position.fromArray(room.start); camera.position.y = 1.75;
+      camera.position.fromArray(room.start);
+      if (config.eyeHeight === undefined) camera.position.y = 1.75;
       camera.fov = walk.preferredFov();
       camera.lookAt(room.look ? new THREE.Vector3().fromArray(room.look) : camera.position.clone().add(new THREE.Vector3(3.5, 0, -2.1)));
       walk.syncFromCamera(); walk.setEnabled(!paused);
@@ -248,13 +251,13 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       ray.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1), camera);
       const hit = ray.intersectObject(model, true)[0];
       if (hit?.object.userData.artwork_id) { pause(true); onArtwork(hit.object.userData.artwork_id); }
-      else if (hit?.object.userData.reflective_floor && hit.point.y < .02) {
+      else if (hit && (config.architecture ? hit.object.userData.walk_surface && Boolean(hit.face && hit.face.normal.clone().applyNormalMatrix(new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld)).y > .65) : hit.object.userData.reflective_floor && hit.point.y < .02)) {
         // Include the recessed grout at -5 cm; it belongs to the same walkable
         // floor and must not turn a visible joint into an unresponsive target.
         if (walk.moveTo(hit.point)) {
           // Display the reachable endpoint, including the visitor's wall clearance.
           const target = walk.destination()!;
-          target.y = .018;
+          target.y = config.eyeHeight === undefined ? .018 : target.y - config.eyeHeight + .018;
           walkMarker.position.copy(target);
           host.dataset.target = target.toArray().map(v => v.toFixed(3)).join(',');
         }
@@ -282,6 +285,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         model.traverse(object => {
           // glTF multi-material nodes become Groups with untagged child meshes.
           object.userData.artwork_id ??= object.parent?.userData.artwork_id;
+          object.userData.walk_surface ??= object.parent?.userData.walk_surface;
           if (!(object instanceof THREE.Mesh)) return;
           for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
             materials.add(material);
@@ -291,10 +295,26 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         materials.forEach(material => {
           Object.values(material).forEach(value => { if (value instanceof THREE.Texture) modelTextures.add(value); });
           // Cut roofs, glazing and coves together; retain full-height sculptures.
-          if (!config.sculpture || !artworkMaterials.has(material)) installOverviewCutaway(material, overview, config.sculpture ? 1 : undefined);
+          if (!config.architecture && (!config.sculpture || !artworkMaterials.has(material))) installOverviewCutaway(material, overview, config.sculpture ? 1 : undefined);
         });
         scene.add(model);
-        if (config.sculpture) {
+        if (config.architecture) {
+          renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+          model.traverse(o=>{if(o instanceof THREE.Mesh){
+            const ms=Array.isArray(o.material)?o.material:[o.material];
+            o.castShadow=!ms.some(m=>m.transparent);o.receiveShadow=!o.userData.baked_diffuse;
+          }});
+          scene.add(new THREE.HemisphereLight('#f1f4e9','#6c7256',2));
+          const sun = new THREE.DirectionalLight('#ffebc5',2.5);sun.position.set(-12,18,14);
+          sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-24;sun.shadow.camera.right=24;sun.shadow.camera.top=24;sun.shadow.camera.bottom=-24;sun.shadow.camera.far=80;sun.shadow.normalBias=.025;scene.add(sun);
+          // Capture the actual house/woodland once for bronze and glass. Baked
+          // diffuse transport remains independent of this specular environment.
+          const cube=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType});
+          const probe=new THREE.CubeCamera(.1,160,cube);probe.position.set(0,3,4);probe.update(renderer,scene);
+          const pmrem=new THREE.PMREMGenerator(renderer);environment=pmrem.fromCubemap(cube.texture);scene.environment=environment.texture;pmrem.dispose();cube.dispose();
+          const shape=new THREE.Shape([[-1.1,-6.8],[6.9,-6.8],[8.5,-5.4],[8.5,-1.6],[3,-1.6],[3,0],[.4,0],[.4,-3.8],[-1.1,-3.8]].map(([x,y])=>new THREE.Vector2(x,y)));
+          reflection=createFloorReflection(compact,{geometry:new THREE.ShapeGeometry(shape),center:new THREE.Vector3(0,-.176,0),seamless:true});
+        } else if (config.sculpture) {
           // Capture the actual baked architecture once. No external HDRI and no
           // repeated environment rebuild while the visitor changes views.
           const hidden: THREE.Mesh[] = [];
@@ -317,7 +337,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           reflection=createFloorReflection(compact,{geometry:floor,center:new THREE.Vector3(0,.002,0),seamless:true});
           if(gltf.animations.length){mixer=new THREE.AnimationMixer(model);gltf.animations.forEach(clip=>mixer!.clipAction(clip).play());}
         } else reflection = createFloorReflection(compact);
-        scene.add(reflection);
+        if (reflection) scene.add(reflection);
         quality(false);
         host.dataset.ready = 'true'; walk.setEnabled(true); schedule(); onReady();
         canvas.focus({ preventScroll: true });

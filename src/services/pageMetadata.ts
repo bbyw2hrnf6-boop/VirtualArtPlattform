@@ -26,7 +26,7 @@ const NON_INDEXED_DESCRIPTION =
   "Create, manage and share immersive 3D presentations with LIEUVA.";
 
 export function pageMetadataPolicy(
-  page: "home" | "sculpture-pavilion" | "obsidian" | "creators" | "creator-hub" | "create" | "demo" | "data" | "account" | "admin" | "auth-action" | "space-not-found" | "other",
+  page: "home" | "forest-fold-house" | "sculpture-pavilion" | "obsidian" | "creators" | "creator-hub" | "create" | "demo" | "data" | "account" | "admin" | "auth-action" | "space-not-found" | "other",
 ): PageMetadataPolicy {
   if (page === "home") return {
     title: productTitle(),
@@ -51,6 +51,13 @@ export function pageMetadataPolicy(
     robots: "noindex,nofollow,noarchive",
     image: HOME_IMAGE,
     imageAlt: "The personalized LIEUVA Creator Hub",
+  };
+  if (page === "forest-fold-house") return {
+    title: productTitle("Forest Fold House"),
+    description: "Explore a compact woodland house with two furnished levels, a glass bridge and a sheltered watercourt.",
+    canonical: HOME_CANONICAL, robots: "noindex,nofollow",
+    image: `${HOME_CANONICAL}assets/showcases/forest-fold-house/cover.webp`,
+    imageAlt: "Forest Fold House, an individually authored LIEUVA architectural concept",
   };
   if (page === "sculpture-pavilion") return {
     title: productTitle("Sculpture Pavilion — Future Nature"),
@@ -81,7 +88,7 @@ export function pageMetadataPolicy(
     canonical: `${HOME_CANONICAL}admin/overview`,
     robots: "noindex,nofollow,noarchive",
   };
-  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "creators" | "creator-hub" | "demo" | "obsidian" | "sculpture-pavilion" | "admin">, string> = {
+  const labels: Record<Exclude<Parameters<typeof pageMetadataPolicy>[0], "home" | "creators" | "creator-hub" | "demo" | "obsidian" | "sculpture-pavilion" | "forest-fold-house" | "admin">, string> = {
     create: "Create a Space",
     data: "Data and rights",
     account: "Your Projects and account",

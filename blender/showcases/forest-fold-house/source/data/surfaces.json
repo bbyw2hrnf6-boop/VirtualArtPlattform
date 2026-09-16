@@ -1,0 +1,74 @@
+[
+  {
+    "space": "Wohnen / Küche L0",
+    "north": "Eicheneinbauten, Tür zum WC über westlichen Nebenflur",
+    "south": "Panoramaverglasung mit Vorhang",
+    "east": "Ravinenverglasung und D02",
+    "west": "Glas im Süden, Eichen-/Putzwand an Treppe",
+    "floor": "M05 Kalkstein 0,60 x 1,20 m",
+    "ceiling": "M03 Eiche, +3,05 m"
+  },
+  {
+    "space": "Schlafzimmer L1",
+    "north": "Abgestufte Innenwand, Eichenkopfteil, Garderobe und Tür",
+    "south": "Panoramaverglasung mit Vorhang",
+    "east": "M10 Putz / zurückhaltender Wandbereich",
+    "west": "Eckverglasung zum Wald",
+    "floor": "M03 Eichenbretter 0,16 m",
+    "ceiling": "M03 Eiche, +6,45 m"
+  },
+  {
+    "space": "Duschbad L1",
+    "north": "Hoches Mattglasfenster, Waschtisch und Dusche",
+    "south": "Putz-/Steinwand und Zugang",
+    "east": "Dusche / Wand-WC",
+    "west": "Putz, Haken und Handtuchhalter",
+    "floor": "M05 Kalkstein, Dusche eigener Ablauf",
+    "ceiling": "M10 Putz, +6,45 m"
+  },
+  {
+    "space": "Atelier L1",
+    "north": "M03 raumhohe Bibliothek; schmaler Lichtschlitz",
+    "south": "Panoramaverglasung",
+    "east": "Große Verglasung / M10 Wandfelder",
+    "west": "M10 / Eiche und Brückentür D05",
+    "floor": "M03 Eiche",
+    "ceiling": "M03 Eiche, +6,45 m"
+  },
+  {
+    "space": "Wasserlounge L0",
+    "north": "M01 Gneis, Sofa davor; keine Fenster",
+    "south": "Panoramaverglasung über Teich",
+    "east": "M01 Gneis, niedrige Eichenablage",
+    "west": "Eiche / Stein und Tür D03",
+    "floor": "M05 Kalkstein; innen trocken",
+    "ceiling": "M03 Eiche, +3,05 m"
+  },
+  {
+    "space": "Brücke L1",
+    "north": "M08 Glas / M04 Rahmen",
+    "south": "M08 Glas / M04 Rahmen",
+    "east": "Tür / Anschluss Atelier",
+    "west": "Tür / Anschluss Westflügel",
+    "floor": "M03 Eiche, +3,40 m",
+    "ceiling": "M08 Glas / M04, Unterkante +5,90 m"
+  },
+  {
+    "space": "Treppe / Eingang",
+    "north": "Ankunftspodest / oberer Eingang",
+    "south": "Zwischenpodest und geschlossene Stirnwand",
+    "east": "Offene Ankunft zum Flur, Bronze-Geländer",
+    "west": "M10 mineralischer Putz",
+    "floor": "Eichenstufen, je 0,17 m Steigung",
+    "ceiling": "Deckenöffnung nach Treppenplan"
+  },
+  {
+    "space": "WC / Service L0",
+    "north": "Waschbecken / WC / Stauraum",
+    "south": "Geschlossene Küchenrückwand",
+    "east": "Mineralischer Putz",
+    "west": "Zugang aus Nebenflur",
+    "floor": "M05 Kalkstein",
+    "ceiling": "M10 Putz, +3,05 m"
+  }
+]

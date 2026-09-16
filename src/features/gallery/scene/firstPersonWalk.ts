@@ -18,6 +18,7 @@ export function createFirstPersonWalk(
   onEscape?: () => void,
   allowWheelZoom = true,
   defaultPace = 1,
+  surfaceEyeHeight?: number,
 ) {
   const keys = new Set<string>();
   let enabled = true;
@@ -231,7 +232,9 @@ export function createFirstPersonWalk(
       current.minZ,
       current.maxZ,
     );
-    camera.position.y = eyeHeight;
+    // A multi-level collider supplies the surface height. Flat Studio rooms
+    // retain their established eye plane and movement behaviour.
+    if (surfaceEyeHeight === undefined) camera.position.y = eyeHeight;
     const moved = collision?.(camera.position, previous);
     if (moved === false && camera.position.distanceToSquared(previous) < 1e-7)
       velocity.multiplyScalar(0.18);
@@ -272,7 +275,7 @@ export function createFirstPersonWalk(
       current.minZ,
       current.maxZ,
     );
-    candidate.y = eyeHeight;
+    candidate.y = surfaceEyeHeight === undefined ? eyeHeight : point.y + surfaceEyeHeight;
     const path = findPath ? findPath(camera.position, candidate) : [candidate];
     if (!path?.length) return false;
     previousTime = performance.now();

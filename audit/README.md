@@ -19,6 +19,7 @@ This directory contains current state and durable operational contracts. It is n
 - [`WP2-DETERMINISTIC-RELEASE-GATE.md`](./WP2-DETERMINISTIC-RELEASE-GATE.md) — immutable production-release procedure.
 - [`WP3-DATA-SECURITY-LIFECYCLE.md`](./WP3-DATA-SECURITY-LIFECYCLE.md) and [`WP3-FIREBASE-POLICY-GATE.md`](./WP3-FIREBASE-POLICY-GATE.md) — lifecycle and policy-release controls.
 - [`premium-glb-measurements.json`](./premium-glb-measurements.json) — intentionally refreshed measurements for the six current premium-v3 exports.
+- [Forest Fold House showcase contract](../blender/showcases/forest-fold-house/README.md) — two-level architecture, stair navigation, source hierarchy and separate Cycles/runtime delivery.
 - [Sculpture Pavilion showcase contract](../blender/showcases/sculpture-pavilion/README.md) — metric three-room circuit, five modelled works, Cycles/PBR delivery and shared visitor behavior.
 - [Obsidian showcase contract](../blender/showcases/obsidian/README.md) — independent Blender source, baked visitor runtime, original artwork provenance and reproduction steps.
 

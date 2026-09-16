@@ -1,0 +1,66 @@
+[
+  {
+    "camera": "C01",
+    "lighting": "afternoon",
+    "width": 3840,
+    "height": 2160,
+    "samples": 128,
+    "seconds": 259.93
+  },
+  {
+    "camera": "C07",
+    "lighting": "afternoon",
+    "width": 3840,
+    "height": 2160,
+    "samples": 128,
+    "seconds": 279.64
+  },
+  {
+    "camera": "C08",
+    "lighting": "afternoon",
+    "width": 3840,
+    "height": 2160,
+    "samples": 128,
+    "seconds": 268.34
+  },
+  {
+    "camera": "C09",
+    "lighting": "afternoon",
+    "width": 3840,
+    "height": 2160,
+    "samples": 128,
+    "seconds": 315.37
+  },
+  {
+    "camera": "C10",
+    "lighting": "afternoon",
+    "width": 3840,
+    "height": 2160,
+    "samples": 128,
+    "seconds": 248.5
+  },
+  {
+    "camera": "C11",
+    "lighting": "afternoon",
+    "width": 3840,
+    "height": 2160,
+    "samples": 128,
+    "seconds": 285.36
+  },
+  {
+    "camera": "C12",
+    "lighting": "afternoon",
+    "width": 3840,
+    "height": 2160,
+    "samples": 128,
+    "seconds": 275.53
+  },
+  {
+    "camera": "C13",
+    "lighting": "afternoon",
+    "width": 3840,
+    "height": 2160,
+    "samples": 128,
+    "seconds": 272.74
+  }
+]
