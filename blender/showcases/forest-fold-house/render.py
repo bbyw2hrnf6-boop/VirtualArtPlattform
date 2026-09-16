@@ -7,6 +7,9 @@ a=p.parse_args(sys.argv[sys.argv.index('--')+1:]);s=bpy.context.scene
 prefs=bpy.context.preferences.addons['cycles'].preferences;prefs.compute_device_type='METAL';prefs.get_devices()
 for d in prefs.devices:d.use=d.type=='METAL'
 s.cycles.device='GPU';s.cycles.samples=a.samples
+# Bound Cycles' live path-state memory on the 16 GB authoring Mac. This changes
+# scheduling only: each tile retains the native resolution and sample target.
+s.cycles.use_auto_tile=True;s.cycles.tile_size=512
 s.render.resolution_x=a.width;s.render.resolution_y=round(a.width*9/16);s.render.resolution_percentage=100
 sun=bpy.data.objects['Southwest afternoon sun'];bg=s.world.node_tree.nodes['Background']
 if a.lighting=='overcast':sun.data.energy=.15;bg.inputs['Strength'].default_value=.4

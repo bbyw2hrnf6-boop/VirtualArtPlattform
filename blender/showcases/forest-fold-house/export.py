@@ -1,13 +1,14 @@
 """Bake room-scale Cycles transport; keep clear glass, water and metal view-dependent.
 Never changes the editable master. Run after the approved source build.
 """
-import bpy,json,time,runpy
+import bpy,json,time,runpy,hashlib
 from pathlib import Path
 H=Path(__file__).resolve().parent;OUT=H.parents[2]/'public/assets/showcases/forest-fold-house';MAP=H/'lightmaps';MAP.mkdir(exist_ok=True);OUT.mkdir(parents=True,exist_ok=True)
 s=bpy.context.scene;bpy.context.preferences.filepaths.save_version=0
 prefs=bpy.context.preferences.addons['cycles'].preferences;prefs.compute_device_type='METAL';prefs.get_devices()
 for d in prefs.devices:d.use=d.type=='METAL'
-s.cycles.device='GPU';s.cycles.samples=128;s.cycles.use_adaptive_sampling=False
+s.cycles.device='GPU';s.cycles.samples=256;s.cycles.use_adaptive_sampling=False
+s.cycles.use_auto_tile=True;s.cycles.tile_size=512
 s.render.bake.margin=16;s.render.bake.margin_type='EXTEND';s.render.bake.use_clear=True
 s.render.bake.use_pass_color=True;s.render.bake.use_pass_direct=True;s.render.bake.use_pass_indirect=True
 def select(obs):
@@ -29,6 +30,7 @@ for o,data in converted:
   s.collection.objects.link(replacement);bpy.data.objects.remove(o,do_unlink=True)
  else:o.modifiers.clear();o.data=data
 print('EVALUATED SOURCE',flush=True)
+bpy.data.orphans_purge(do_recursive=True)
 # Meshes only contain one authored surface shader at this stage.
 def special(o):return any(m.name.startswith(('M04','M08','M09','Blackened','3000K')) for m in o.data.materials)
 groups={}
@@ -39,27 +41,63 @@ for o in list(s.objects):
  g+= '_walk' if o.get('walk_surface') else ''
  groups.setdefault(g,[]).append(o)
 pending=[];report=[]
+# A completed atlas may be reused only for this exact source and bake revision.
+# This makes a long local GPU job resumable without mixing old/new lighting.
+source_hash=hashlib.sha256((H/'forest-fold-house.blend').read_bytes()).hexdigest()
+cache_path=MAP/'cache-v2.json'
+cache=json.loads(cache_path.read_text()) if cache_path.exists() else {}
+if cache.get('source')!=source_hash:cache={'source':source_hash,'groups':{}}
 for name,obs in groups.items():
  select(obs);bpy.ops.object.join();o=bpy.context.object;o.name=name+'_transport'
- if not o.data.uv_layers:o.data.uv_layers.new(name='Lightmap')
+ # SurfaceUV feeds the scanned shaders. A second chart receives illumination.
+ chart=o.data.uv_layers.new(name='Lightmap');o.data.uv_layers.active=chart
+ chart.active_render=True
  bpy.ops.object.mode_set(mode='EDIT');bpy.ops.mesh.select_all(action='SELECT');bpy.ops.uv.smart_project(angle_limit=1.2,island_margin=.004);bpy.ops.object.mode_set(mode='OBJECT')
  size=4096 if name in ['W0','W1','E0','E1'] else 2048 if 'furniture' in name or '_walk' in name else 1024
- im=bpy.data.images.new(o.name,width=size,height=size,alpha=False,float_buffer=False)
  for slot in o.material_slots:
   slot.material=slot.material.copy();m=slot.material
-  for n in m.node_tree.nodes:n.select=False
-  n=m.node_tree.nodes.new('ShaderNodeTexImage');n.image=im;n.select=True;m.node_tree.nodes.active=n
- print('BAKE',name,size,flush=True);start=time.monotonic();bpy.ops.object.bake(type='DIFFUSE')
- im.filepath_raw=str(MAP/(name+'.png'));im.file_format='PNG';im.save();pending.append((o,im))
- report.append({'group':name,'resolution':size,'samples':128,'seconds':round(time.monotonic()-start,2)})
+ maps={};start=time.monotonic()
+ for kind,resolution in [('DIFFUSE',size),('NORMAL',min(2048,size)),('ROUGHNESS',min(1024,size))]:
+  suffix='' if kind=='DIFFUSE' else '-'+kind.lower()
+  path=MAP/(name+suffix+'.png')
+  if name in cache['groups'] and path.exists():
+   im=bpy.data.images.load(str(path),check_existing=True)
+   if kind!='DIFFUSE':im.colorspace_settings.name='Non-Color'
+   maps[kind]=im;continue
+  im=bpy.data.images.new(o.name+suffix,width=resolution,height=resolution,alpha=False,float_buffer=False)
+  if kind!='DIFFUSE':im.colorspace_settings.name='Non-Color'
+  for m in o.data.materials:
+   for n in m.node_tree.nodes:n.select=False
+   n=m.node_tree.nodes.new('ShaderNodeTexImage');n.image=im;n.select=True;m.node_tree.nodes.active=n
+  s.cycles.samples=256 if kind=='DIFFUSE' else 1
+  s.render.bake.normal_space='TANGENT'
+  print('BAKE',name,kind,resolution,flush=True);bpy.ops.object.bake(type=kind)
+  im.filepath_raw=str(path);im.file_format='PNG';im.save();maps[kind]=im
+ pending.append((o,maps['DIFFUSE'],maps['NORMAL'],maps['ROUGHNESS']))
+ cache['groups'][name]=True;cache_path.write_text(json.dumps(cache,indent=2)+'\n')
+ report.append({'group':name,'resolution':size,'samples':256,'normalResolution':min(2048,size),'roughnessResolution':min(1024,size),'sourceSha256':source_hash,'seconds':round(time.monotonic()-start,2)})
  (H/'bake-report.json').write_text(json.dumps(report,indent=2)+'\n')
-runpy.run_path(str(H/'denoise.py'))['apply'](pending,H)
-for o,im in pending:
- m=bpy.data.materials.new(o.name);m.use_nodes=True;m.node_tree.nodes.clear();n=m.node_tree.nodes.new('ShaderNodeTexImage');n.image=im
- e=m.node_tree.nodes.new('ShaderNodeEmission');out=m.node_tree.nodes.new('ShaderNodeOutputMaterial');m.node_tree.links.new(n.outputs[0],e.inputs[0]);m.node_tree.links.new(e.outputs[0],out.inputs[0])
+if not cache.get('denoised'):
+ runpy.run_path(str(H/'denoise.py'))['apply']([(o,im) for o,im,_,_ in pending],H)
+ cache['denoised']=True;cache_path.write_text(json.dumps(cache,indent=2)+'\n')
+for o,im,normal_image,roughness_image in pending:
+ m=bpy.data.materials.new(o.name);m.use_nodes=True;m.node_tree.nodes.clear();nt=m.node_tree
+ uv=nt.nodes.new('ShaderNodeUVMap');uv.uv_map='Lightmap'
+ e=nt.nodes.new('ShaderNodeBsdfPrincipled');out=nt.nodes.new('ShaderNodeOutputMaterial');nt.links.new(e.outputs[0],out.inputs[0])
+ # Fixed diffuse GI plus moving dielectric highlights. Black diffuse avoids
+ # lighting the baked albedo twice; the normal/roughness remain view-dependent.
+ e.inputs['Base Color'].default_value=(0,0,0,1);e.inputs['Emission Strength'].default_value=1
+ for image,socket in [(im,'Emission Color'),(roughness_image,'Roughness'),(normal_image,'Normal')]:
+  n=nt.nodes.new('ShaderNodeTexImage');n.image=image;nt.links.new(uv.outputs['UV'],n.inputs['Vector'])
+  if socket=='Normal':
+   normal=nt.nodes.new('ShaderNodeNormalMap');normal.uv_map='Lightmap';nt.links.new(n.outputs['Color'],normal.inputs['Color']);nt.links.new(normal.outputs['Normal'],e.inputs[socket])
+  else:nt.links.new(n.outputs['Color'],e.inputs[socket])
  o.data.materials.clear();o.data.materials.append(m)
  for p in o.data.polygons:p.material_index=0
  o['baked_diffuse']=True
+ # Only the final atlas UV is needed by this material. Keep the delivery small.
+ for layer in list(o.data.uv_layers):
+  if layer.name!='Lightmap':o.data.uv_layers.remove(layer)
 # Browser transparent glazing: no thick screen-space refraction pass. The
 # physically refractive source remains unchanged in the master and 4K renders.
 for m in bpy.data.materials:
@@ -79,6 +117,7 @@ for key,obs in bins.items():
  if len(obs)>1:select(obs);bpy.ops.object.join();bpy.context.object.name=' / '.join(key)
 runpy.run_path(str(H/'delivery_materials.py'))['apply']()
 runpy.run_path(str(H/'validate_delivery.py'))['validate']()
+bpy.data.orphans_purge(do_recursive=True)
 select([o for o in s.objects if o.type=='MESH'])
 bpy.ops.file.pack_all();bpy.ops.wm.save_as_mainfile(filepath=str(H/'forest-runtime.blend'))
 for tier in ['desktop','mobile']:

@@ -73,3 +73,9 @@ Before replacing a runtime space, visually compare Arrange, Walk, Overview, and 
 ## Independent bespoke sculpture showcase
 
 The [Sculpture Pavilion](./showcases/sculpture-pavilion/README.md) uses its own metric Blender source and lazy GLBs. It is not a Studio template and introduces no `aura_*` metadata or publication/schema migration. Runtime nodes retain `artwork_id`, `pavilion_room` and `reflective_floor` extras; ten animation clips drive the stationary kinetic sculpture. Meshopt and quantization extensions require the viewer's existing Three.js decoder. Authoring coordinates are X east / Y north / Z up; navigation uses X east / Z south. The linked contract records baking, motion, clearance and delivery limitations.
+
+## Independent architecture showcase
+
+[Forest Fold House](./showcases/forest-fold-house/README.md) also remains outside the Studio template/publication contract. The metric source uses `SurfaceUV` for scanned finishes; a separate `Lightmap` chart receives Cycles diffuse transport, tangent normals and roughness. Joining objects must not alter source material scale. Runtime materials combine emissive diffuse transport with black-base dielectric PBR highlights to avoid applying diffuse light twice. Transparent glazing is a browser approximation; water uses the shared bounded planar reflection. Scanned foliage uses explicit alpha-tested PBR, not opaque image rectangles.
+
+Retain `walk_surface`, `forest_group` and `baked_diffuse` extras through compression. The navigation schedule and delivered stair envelope must agree. `validate_delivery.py` verifies this before export; `asset_report.py` verifies the final compressed materials, foliage masks, mobile texture caps and original asset checksums. Source provenance is in [ASSET_LICENSES.md](../ASSET_LICENSES.md).

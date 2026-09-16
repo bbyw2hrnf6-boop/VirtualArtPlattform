@@ -3,6 +3,6 @@
   "lighting": "afternoon",
   "width": 3840,
   "height": 2160,
-  "samples": 128,
-  "seconds": 259.93
+  "samples": 512,
+  "seconds": 971.24
 }

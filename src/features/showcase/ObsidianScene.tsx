@@ -304,12 +304,16 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
             const ms=Array.isArray(o.material)?o.material:[o.material];
             o.castShadow=!ms.some(m=>m.transparent);o.receiveShadow=!o.userData.baked_diffuse;
           }});
-          scene.add(new THREE.HemisphereLight('#f1f4e9','#6c7256',2));
-          const sun = new THREE.DirectionalLight('#ffebc5',2.5);sun.position.set(-12,18,14);
-          sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-24;sun.shadow.camera.right=24;sun.shadow.camera.top=24;sun.shadow.camera.bottom=-24;sun.shadow.camera.far=80;sun.shadow.normalBias=.025;scene.add(sun);
+          scene.add(new THREE.HemisphereLight('#e4edf1','#444b32',1.4));
+          // Same source direction as the Blender afternoon: Z-up to Y-up.
+          const sun = new THREE.DirectionalLight('#ffebc5',3);sun.position.set(-14,15,16);
+          sun.castShadow=true;sun.shadow.mapSize.set(compact?2048:4096,compact?2048:4096);sun.shadow.camera.left=-24;sun.shadow.camera.right=24;sun.shadow.camera.top=24;sun.shadow.camera.bottom=-24;sun.shadow.camera.far=100;sun.shadow.normalBias=.012;scene.add(sun);
+          // Static house/woodland: render this detailed map once, not on each
+          // walking frame. Camera movement does not change sun-space shadows.
+          renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
           // Capture the actual house/woodland once for bronze and glass. Baked
           // diffuse transport remains independent of this specular environment.
-          const cube=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType});
+          const cube=new THREE.WebGLCubeRenderTarget(compact?128:256,{type:THREE.HalfFloatType});
           const probe=new THREE.CubeCamera(.1,160,cube);probe.position.set(0,3,4);probe.update(renderer,scene);
           const pmrem=new THREE.PMREMGenerator(renderer);environment=pmrem.fromCubemap(cube.texture);scene.environment=environment.texture;pmrem.dispose();cube.dispose();
           const shape=new THREE.Shape([[-1.1,-6.8],[6.9,-6.8],[8.5,-5.4],[8.5,-1.6],[3,-1.6],[3,0],[.4,0],[.4,-3.8],[-1.1,-3.8]].map(([x,y])=>new THREE.Vector2(x,y)));

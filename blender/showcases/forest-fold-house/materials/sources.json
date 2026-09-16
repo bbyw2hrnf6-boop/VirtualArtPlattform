@@ -1,0 +1,545 @@
+{
+  "license": "CC0-1.0",
+  "licenseUrl": "https://polyhaven.com/license",
+  "assets": {
+    "mossy_rock": {
+      "url": "https://polyhaven.com/a/mossy_rock",
+      "authors": {
+        "Rob Tuytel": "All"
+      },
+      "physical_size": null
+    },
+    "bark_brown_02": {
+      "url": "https://polyhaven.com/a/bark_brown_02",
+      "authors": {
+        "Rob Tuytel": "All"
+      },
+      "physical_size": null
+    },
+    "forest_ground_04": {
+      "url": "https://polyhaven.com/a/forest_ground_04",
+      "authors": {
+        "Rob Tuytel": "Photography, Processing",
+        "Rico Cilliers": "Minor adjustment"
+      },
+      "physical_size": null
+    },
+    "oak_veneer_01": {
+      "url": "https://polyhaven.com/a/oak_veneer_01",
+      "authors": {
+        "Jenelle van Heerden": "All"
+      },
+      "physical_size": null
+    },
+    "rock_08": {
+      "url": "https://polyhaven.com/a/rock_08",
+      "authors": {
+        "Rob Tuytel": "All"
+      },
+      "physical_size": [
+        1500,
+        1500
+      ]
+    },
+    "fern_02": {
+      "url": "https://polyhaven.com/a/fern_02",
+      "authors": {
+        "Rob Tuytel": "scanning",
+        "Rico Cilliers": "modeling"
+      },
+      "type": "vegetation model"
+    },
+    "periwinkle_plant": {
+      "url": "https://polyhaven.com/a/periwinkle_plant",
+      "authors": {
+        "Amal Kumar": "All"
+      },
+      "type": "vegetation model"
+    },
+    "leafy_grass": {
+      "url": "https://polyhaven.com/a/leafy_grass",
+      "authors": {
+        "Charlotte Baglioni": "All"
+      }
+    },
+    "tree_small_02": {
+      "url": "https://polyhaven.com/a/tree_small_02",
+      "authors": {
+        "Rico Cilliers": "All"
+      },
+      "type": "vegetation model"
+    }
+  },
+  "files": [
+    {
+      "asset": "rock_08",
+      "channel": "Diffuse",
+      "resolution": "4k",
+      "path": "rock_08_diff_4k.jpg",
+      "size": 9919017,
+      "md5": "db91c7200ff9980ff90230164d4f388d",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rock_08/rock_08_diff_4k.jpg",
+      "sha256": "676d63d8a10dc2be8e979b9cc97fd52c276b9d355deba6465ec78b0c6ad5c84f"
+    },
+    {
+      "asset": "rock_08",
+      "channel": "nor_gl",
+      "resolution": "2k",
+      "path": "rock_08_nor_gl_2k.jpg",
+      "size": 3406692,
+      "md5": "df59e1c184c092d8d9c1b818995f9646",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_08/rock_08_nor_gl_2k.jpg",
+      "sha256": "5577d9766de427110c43b4d50be021389599421fd3f0249b1ee07e40bf27738e"
+    },
+    {
+      "asset": "rock_08",
+      "channel": "Rough",
+      "resolution": "2k",
+      "path": "rock_08_rough_2k.jpg",
+      "size": 1242781,
+      "md5": "527dbf400e08953f74bfcda8839bf7dd",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_08/rock_08_rough_2k.jpg",
+      "sha256": "7605d6f529bed165c52486d221f2778632e34012f9cb06645377e374cad0b647"
+    },
+    {
+      "asset": "rock_08",
+      "channel": "Displacement",
+      "resolution": "2k",
+      "path": "rock_08_disp_2k.jpg",
+      "size": 531552,
+      "md5": "5e074b9ec8212cc42479c7119f6c2d13",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rock_08/rock_08_disp_2k.jpg",
+      "sha256": "d4d42a7932ebee4cf450fce48825e6a52dd7873cbf1ba0512d7e5100275d8584"
+    },
+    {
+      "asset": "oak_veneer_01",
+      "channel": "Diffuse",
+      "resolution": "4k",
+      "path": "oak_veneer_01_diff_4k.jpg",
+      "size": 12587069,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/oak_veneer_01/oak_veneer_01_diff_4k.jpg",
+      "md5": "d4c13847045d1a10475a23b0787bf384",
+      "sha256": "7e8c64811e580ef6664c20524606359c739e6fe030eff5c2c06c3482ecc8b1cf"
+    },
+    {
+      "asset": "oak_veneer_01",
+      "channel": "nor_gl",
+      "resolution": "2k",
+      "path": "oak_veneer_01_nor_gl_2k.jpg",
+      "size": 2429019,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/oak_veneer_01/oak_veneer_01_nor_gl_2k.jpg",
+      "md5": "a6b8dd99a4407aa5dd24d5eee25492d3",
+      "sha256": "e74a9d3ddcd86473a21815a28464f4dac4ceb8f86e7f170226dede8ed70d8eb9"
+    },
+    {
+      "asset": "oak_veneer_01",
+      "channel": "Rough",
+      "resolution": "2k",
+      "path": "oak_veneer_01_rough_2k.jpg",
+      "size": 3968436,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/oak_veneer_01/oak_veneer_01_rough_2k.jpg",
+      "md5": "cacab0148320161ceced18ae909e3ada",
+      "sha256": "5c81718ee172299c44e0754fadbe652758b6feed05a8fd88be6efff5aa70ca1e"
+    },
+    {
+      "asset": "oak_veneer_01",
+      "channel": "Displacement",
+      "resolution": "2k",
+      "path": "oak_veneer_01_disp_2k.jpg",
+      "size": 72499,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/oak_veneer_01/oak_veneer_01_disp_2k.jpg",
+      "md5": "6982aa32d3b152f0edd1fb5f56eab221",
+      "sha256": "a6770b37d3d5580e2cc24b46a1aab7b3bbd0ea61cd6658d251b61449b0c9363b"
+    },
+    {
+      "asset": "forest_ground_04",
+      "channel": "Diffuse",
+      "resolution": "2k",
+      "path": "forest_ground_04_diff_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forest_ground_04/forest_ground_04_diff_2k.jpg",
+      "size": 4529321,
+      "md5": "f6ce9c8af4316c2627a4b3fbab8ad944",
+      "sha256": "24b8aaf4c8547305d80b0e029ec365219ab1b90748d4ca5651bdc9e75bfde5e6"
+    },
+    {
+      "asset": "forest_ground_04",
+      "channel": "nor_gl",
+      "resolution": "2k",
+      "path": "forest_ground_04_nor_gl_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forest_ground_04/forest_ground_04_nor_gl_2k.jpg",
+      "size": 5288849,
+      "md5": "5fa9256955e7bfa40a0269b4965ce646",
+      "sha256": "b37ac799ed410976541e0011c246fca254e74eaa3f096ae7a7d74178db5a6d9b"
+    },
+    {
+      "asset": "forest_ground_04",
+      "channel": "Rough",
+      "resolution": "2k",
+      "path": "forest_ground_04_rough_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forest_ground_04/forest_ground_04_rough_2k.jpg",
+      "size": 2509805,
+      "md5": "81daa9a1d8b35dd9ffdff3aa7a74fbd9",
+      "sha256": "24194662948424c323c75e0918461ad9d38bc0a275022000144f248b3efb4119"
+    },
+    {
+      "asset": "forest_ground_04",
+      "channel": "Displacement",
+      "resolution": "2k",
+      "path": "forest_ground_04_disp_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/forest_ground_04/forest_ground_04_disp_2k.jpg",
+      "size": 696276,
+      "md5": "2d342b36619dc1a4e4afcd3bfc256dfe",
+      "sha256": "2ab943aedc87e4f258db43365c65d9cb834923c85817bc8fc8262397014a35a5"
+    },
+    {
+      "asset": "bark_brown_02",
+      "channel": "Diffuse",
+      "resolution": "2k",
+      "path": "bark_brown_02_diff_2k.jpg",
+      "size": 2356592,
+      "md5": "11a2a6039bb5b93f12dcf1689838545b",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/bark_brown_02/bark_brown_02_diff_2k.jpg",
+      "sha256": "285051e34826ace29f4ab438ad35cc1201b2aae0a6157a5f3c0bf6667bbc539e"
+    },
+    {
+      "asset": "bark_brown_02",
+      "channel": "nor_gl",
+      "resolution": "2k",
+      "path": "bark_brown_02_nor_gl_2k.jpg",
+      "size": 3707907,
+      "md5": "39db6c4574fb58de1ad164442e9d6287",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/bark_brown_02/bark_brown_02_nor_gl_2k.jpg",
+      "sha256": "aaba4529c3167a7811b4dbf5b4327d054a166c2fc8ea08ebd249a2692adace41"
+    },
+    {
+      "asset": "bark_brown_02",
+      "channel": "Rough",
+      "resolution": "2k",
+      "path": "bark_brown_02_rough_2k.jpg",
+      "size": 1236654,
+      "md5": "1c17004a7262d26d3867198a8fd0e8c1",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/bark_brown_02/bark_brown_02_rough_2k.jpg",
+      "sha256": "adafcab150c1ca99150c77198329e251437dc00fa1f66019f75624366926996e"
+    },
+    {
+      "asset": "bark_brown_02",
+      "channel": "Displacement",
+      "resolution": "2k",
+      "path": "bark_brown_02_disp_2k.jpg",
+      "size": 534990,
+      "md5": "03119b2b95dc7e8e8821cbccc2d1e5e4",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/bark_brown_02/bark_brown_02_disp_2k.jpg",
+      "sha256": "bbcbba94be86527048d658974e43046a53bf2ada01aa8dd991c85d5069b48b23"
+    },
+    {
+      "asset": "mossy_rock",
+      "channel": "Diffuse",
+      "resolution": "2k",
+      "path": "mossy_rock_diff_2k.jpg",
+      "size": 4535360,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_rock/mossy_rock_diff_2k.jpg",
+      "md5": "8e55bbeeef1db0d2d0cae85515812c46",
+      "sha256": "98ecbd1d19953433f5909b79958992b1da2b45addbee772d1d4c27287f368499"
+    },
+    {
+      "asset": "mossy_rock",
+      "channel": "nor_gl",
+      "resolution": "2k",
+      "path": "mossy_rock_nor_gl_2k.jpg",
+      "size": 4033031,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_rock/mossy_rock_nor_gl_2k.jpg",
+      "md5": "e6b611c8a6f8e3276e7f5491c8e66a0f",
+      "sha256": "78c05b52eb78617fcce4fde7a9ac4872a9725fb2d13aff33248cbdb9c6330563"
+    },
+    {
+      "asset": "mossy_rock",
+      "channel": "Rough",
+      "resolution": "2k",
+      "path": "mossy_rock_rough_2k.jpg",
+      "size": 3205806,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_rock/mossy_rock_rough_2k.jpg",
+      "md5": "0b4bbecd6af36e343d05ed11914bb18f",
+      "sha256": "341c4f85e9b350738d30e82e616177316cc5fcbc3e8b5ee9777db47dfc5e6b7a"
+    },
+    {
+      "asset": "mossy_rock",
+      "channel": "Displacement",
+      "resolution": "2k",
+      "path": "mossy_rock_disp_2k.jpg",
+      "size": 644550,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_rock/mossy_rock_disp_2k.jpg",
+      "md5": "d22857010ae3d07e42c5548126cf386c",
+      "sha256": "cc9a0ef96a0912c93fc8447f9a702a00fe3c442c36ed5999dbac5f7013ac5dde"
+    },
+    {
+      "asset": "fern_02",
+      "channel": "model",
+      "resolution": "2k",
+      "path": "fern_02/fern_02_2k.blend",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/blend/2k/fern_02/fern_02_2k.blend",
+      "size": 262018,
+      "md5": "fa04e3968d9dbfba0fac542b8381788c",
+      "sha256": "cf721e00ed5bb72f0b9c3fb59b8febc7b2b9b2082f162d5a80ba3a11e4e7028d"
+    },
+    {
+      "asset": "fern_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "fern_02/textures/fern_02_diff_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/fern_02/fern_02_diff_2k.jpg",
+      "size": 993703,
+      "md5": "ba8bbb9dc9ff55bdc081565cd926d776",
+      "sha256": "9ee18172170728050871772e2cd6d8d37b52f9138e61b49b04486623f9caf84b"
+    },
+    {
+      "asset": "fern_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "fern_02/textures/fern_02_nor_gl_2k.exr",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/exr/2k/fern_02/fern_02_nor_gl_2k.exr",
+      "size": 2895843,
+      "md5": "4e1fa9220f53965604b406ba28e223b3",
+      "sha256": "2787b69707c37a4b90627085f36e818b13816c6587aa0d06c5c6d004ccde7557"
+    },
+    {
+      "asset": "fern_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "fern_02/textures/fern_02_rough_2k.exr",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/exr/2k/fern_02/fern_02_rough_2k.exr",
+      "size": 901394,
+      "md5": "beb315edeb84760a46dcc3d223b609fd",
+      "sha256": "877fd64af4d815a2522700c676b2c32c6f075ce8bca59c6a2d267309b2fca550"
+    },
+    {
+      "asset": "fern_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "fern_02/textures/fern_02_alpha_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/fern_02/fern_02_alpha_2k.png",
+      "size": 230089,
+      "md5": "ff18f7e8e869c58eac8f9c7d7c519f4a",
+      "sha256": "f51eb9b8f9f4b25a882f8fe12d1ef53ba69448bac7e71396ec1f05b684e9ea75"
+    },
+    {
+      "asset": "periwinkle_plant",
+      "channel": "model",
+      "resolution": "2k",
+      "path": "periwinkle_plant/periwinkle_plant_2k.blend",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/blend/2k/periwinkle_plant/periwinkle_plant_2k.blend",
+      "size": 1681322,
+      "md5": "3b1bdfd52a141ee74baed9690af5d07a",
+      "sha256": "e9fc4300a8be05a9e7ec4423c239e9af37a2f3e4be9e6175a19ba82e1ffafd8a"
+    },
+    {
+      "asset": "periwinkle_plant",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "periwinkle_plant/textures/periwinkle_plant_diff_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/periwinkle_plant/periwinkle_plant_diff_2k.jpg",
+      "size": 1025276,
+      "md5": "b09235daae59c35d2053c69d7f07ef5d",
+      "sha256": "015ae7b001fa72a2be9a4297590e30d9e29ec4d686ca1f19d8a313671ac3d137"
+    },
+    {
+      "asset": "periwinkle_plant",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "periwinkle_plant/textures/periwinkle_plant_disp_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/periwinkle_plant/periwinkle_plant_disp_2k.png",
+      "size": 4535665,
+      "md5": "702f88b3a020438cce2fd7a31586bd54",
+      "sha256": "a250a419e036265f81d0308ae91fc09087c5a83badfa684e843376e80f83c6c9"
+    },
+    {
+      "asset": "periwinkle_plant",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "periwinkle_plant/textures/periwinkle_plant_nor_gl_2k.exr",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/exr/2k/periwinkle_plant/periwinkle_plant_nor_gl_2k.exr",
+      "size": 2614895,
+      "md5": "cdac16e0dcc5e46e4b694685462ccc9d",
+      "sha256": "6020c6645f6c3ea5eeec709d9b9b222bacccd406936346a8201a7e7161c69f0d"
+    },
+    {
+      "asset": "periwinkle_plant",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "periwinkle_plant/textures/periwinkle_plant_opacity_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/periwinkle_plant/periwinkle_plant_opacity_2k.png",
+      "size": 195845,
+      "md5": "63e47a58bf56a98091302ccc1dd45413",
+      "sha256": "969a29f3c44bd9be704e7acc22746785ac7ca26746eec7c157c9c7d1bee2e841"
+    },
+    {
+      "asset": "periwinkle_plant",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "periwinkle_plant/textures/periwinkle_plant_rough_2k.exr",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/exr/2k/periwinkle_plant/periwinkle_plant_rough_2k.exr",
+      "size": 543847,
+      "md5": "2e40eccfd56f06ea9a485d66fe68a51f",
+      "sha256": "696fd66e5105193d3808e1966c7404e0171efffc7f96cce131621bcaa2fecdf0"
+    },
+    {
+      "asset": "periwinkle_plant",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "periwinkle_plant/textures/periwinkle_plant_translucency_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/periwinkle_plant/periwinkle_plant_translucency_2k.png",
+      "size": 18487011,
+      "md5": "bab89fb8338673469c1241a73a8775b3",
+      "sha256": "196ab842b29575688a77e5fcbf5163fb3393d6406ce73a956e5ffd34f139c469"
+    },
+    {
+      "asset": "leafy_grass",
+      "channel": "Diffuse",
+      "resolution": "2k",
+      "path": "leafy_grass_diff_2k.jpg",
+      "size": 4766204,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/leafy_grass/leafy_grass_diff_2k.jpg",
+      "md5": "8014f4dace676a62ed71b3dd76119dae",
+      "sha256": "8e1c6d21365d4b89bc5a35ab664da98a78dbc3ab9ba6100474881c8619a5b113"
+    },
+    {
+      "asset": "leafy_grass",
+      "channel": "nor_gl",
+      "resolution": "2k",
+      "path": "leafy_grass_nor_gl_2k.jpg",
+      "size": 6047262,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/leafy_grass/leafy_grass_nor_gl_2k.jpg",
+      "md5": "ea5e91abe01dc5e5d7028c68c3bc9194",
+      "sha256": "df0cf0ce96e653f033e5b934d5b12995464bda027aa53bd12e329be889aa9f45"
+    },
+    {
+      "asset": "leafy_grass",
+      "channel": "Rough",
+      "resolution": "2k",
+      "path": "leafy_grass_rough_2k.jpg",
+      "size": 2274652,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/leafy_grass/leafy_grass_rough_2k.jpg",
+      "md5": "b5c551ed91162aab5afbfb03b73ae3f5",
+      "sha256": "34e1733bf4064b6950a575ff57e78c8b7ff71b63749eb48a49221bd65de6fb4f"
+    },
+    {
+      "asset": "leafy_grass",
+      "channel": "Displacement",
+      "resolution": "2k",
+      "path": "leafy_grass_disp_2k.jpg",
+      "size": 2545281,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/leafy_grass/leafy_grass_disp_2k.jpg",
+      "md5": "9c0a5f6c375be590bda0c28e2c1dfa2a",
+      "sha256": "de34be0f135a3c92fe6e55cca9501a4cc40e02e84de9cc4c7fefded1da5bd3f3"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model",
+      "resolution": "2k",
+      "path": "tree_small_02/tree_small_02_2k.blend",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/blend/2k/tree_small_02/tree_small_02_2k.blend",
+      "size": 63805237,
+      "md5": "275e188d4703c819877e803317b592c1",
+      "sha256": "3c28e4ebded582d6539afeac7e5ccce6cb950830a94f1fe38135a45264145de5"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_branch_diff_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/tree_small_02/tree_small_02_branch_diff_2k.png",
+      "size": 2714537,
+      "md5": "d2ef708e997a1c7fe0cb200f071f12dc",
+      "sha256": "553d0cdbc12b63be3bd85756713f95bec5cdf8cc57dae74d3f19d8df13ac126c"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_branch_nor_gl_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/tree_small_02/tree_small_02_branch_nor_gl_2k.png",
+      "size": 15596069,
+      "md5": "6f35092dfd9b83419cd5e315b6715e87",
+      "sha256": "a8aa5f945a5977d82111f1f397a525acb8103d108d86bf09087be4d7d1f976d6"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_branch_rough_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/tree_small_02/tree_small_02_branch_rough_2k.png",
+      "size": 835917,
+      "md5": "9850c2d4ac13de854135e854dbd89b75",
+      "sha256": "2acfc7ebd7269e65917d0535c463bcf4adf44627b3c34f528e2b1623cb2a5b9c"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_diff_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/tree_small_02/tree_small_02_diff_2k.jpg",
+      "size": 3170612,
+      "md5": "ff4d82640b7e0daaec0b71bfc1cef76c",
+      "sha256": "4ab3210b6ec6bb1181145500bca71d1c1f81ead6baaa8600f5979c2cec50c6a4"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_leaves_alpha_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/tree_small_02/tree_small_02_leaves_alpha_2k.png",
+      "size": 636661,
+      "md5": "4d94de8e4677e92ce6d812871f9cf541",
+      "sha256": "566484c7047ce67af5a4435c1e4da2b773578d73f83ae45dfad0fd442df7b9d5"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_leaves_diff_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/tree_small_02/tree_small_02_leaves_diff_2k.png",
+      "size": 7729923,
+      "md5": "02180efde7be35883f91d5b1dccd42a8",
+      "sha256": "da46f05805bbc3b608051b66ee9e2b3705108de3c897ea998ab98e0360dc2b72"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_leaves_nor_gl_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/tree_small_02/tree_small_02_leaves_nor_gl_2k.png",
+      "size": 18978122,
+      "md5": "a885502e1381a3aee02fdaebf71d71f1",
+      "sha256": "01c79158aa9287cc5db2d1c660a578de9d0a1a522877f9ca40c5be6b36bdc7bf"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_leaves_rough_2k.png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/2k/tree_small_02/tree_small_02_leaves_rough_2k.png",
+      "size": 2953248,
+      "md5": "1b06e94155066c11a720f339e1934173",
+      "sha256": "5e7fee2eb56afa1265178bb2bf9267dba12c95149d9e2068adfc1ebf2d44d082"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_nor_gl_2k.exr",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/exr/2k/tree_small_02/tree_small_02_nor_gl_2k.exr",
+      "size": 9058409,
+      "md5": "fe8712ad5e02029d09c17c32daff6a03",
+      "sha256": "2cba0db5ecc512414822d21f508a7d9df05716e28cec3e185c694ff6e36fd6ce"
+    },
+    {
+      "asset": "tree_small_02",
+      "channel": "model texture",
+      "resolution": "2k",
+      "path": "tree_small_02/textures/tree_small_02_rough_2k.exr",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/exr/2k/tree_small_02/tree_small_02_rough_2k.exr",
+      "size": 3573742,
+      "md5": "904fcc1121dcccf4fac98687c5fe6d3d",
+      "sha256": "486cda88e05f1fa0d63a49122b016287d61683921cf60fa465dd0bd53114b092"
+    }
+  ]
+}

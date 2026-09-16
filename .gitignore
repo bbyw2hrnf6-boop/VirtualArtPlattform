@@ -38,3 +38,4 @@ blender/production/v3/*-r*-*.png
 
 # Forest delivery intermediate; rebuild from the retained master and lightmaps.
 blender/showcases/forest-fold-house/forest-runtime.blend
+blender/showcases/forest-fold-house/lightmaps/cache-v2.json

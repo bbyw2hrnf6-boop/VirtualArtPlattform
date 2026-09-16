@@ -10,8 +10,24 @@ for path in sorted(OUT.glob('*.glb')):
   v=j['bufferViews'][im['bufferView']];a=v.get('byteOffset',0);p=Image.open(io.BytesIO(binary[a:a+v['byteLength']]))
   textures.append({'name':im.get('name',''),'width':p.width,'height':p.height})
  ps=[p for m in j['meshes'] for p in m['primitives']]
+ # A successful export must retain the improvement, not silently fall back to
+ # unlit room colours or solid rectangular vegetation cards.
+ baked=[m for m in j['materials'] if m.get('name','').endswith('_transport')]
+ assert len(baked)==15, f'Missing room transport materials in {path.name}'
+ for material in baked:
+  assert 'emissiveTexture' in material and 'normalTexture' in material, material['name']
+  assert 'metallicRoughnessTexture' in material['pbrMetallicRoughness'], material['name']
+  assert 'KHR_materials_unlit' not in material.get('extensions',{}), material['name']
+ for name in ['fern_02','periwinkle_plant','tree_small_02_leaves']:
+  material=next(m for m in j['materials'] if m.get('name')==name)
+  assert material.get('alphaMode')=='MASK' and 'baseColorTexture' in material['pbrMetallicRoughness'], name
+ if 'mobile' in path.name:assert all(max(t['width'],t['height'])<=1024 for t in textures), 'Mobile texture cap exceeded'
  report['models'][path.name]={'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest(),'triangles':sum(j['accessors'][p['indices']]['count']//3 for p in ps),'primitives':len(ps),'materials':len(j['materials']),'decodedRgbaMipBytesEstimate':round(sum(p['width']*p['height']*4*4/3 for p in textures)),'textures':textures,'extensionsRequired':j.get('extensionsRequired',[])}
 for path in sorted((H/'masters').glob('C*.png')):
  im=Image.open(path);small=im.convert('RGB').resize((1,1));assert max(small.getpixel((0,0)))>10, f'Black render: {path}'
  report['images'].append({'name':path.name,'width':im.width,'height':im.height,'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+manifest=json.loads((H/'materials/sources.json').read_text())
+for source in manifest['files']:
+ assert hashlib.sha256((H/'materials'/source['path']).read_bytes()).hexdigest()==source['sha256'], source['path']
+report['sourceAssets']={'license':manifest['license'],'count':len(manifest['assets']),'manifest':'materials/sources.json'}
 (H/'asset-report.json').write_text(json.dumps(report,indent=2)+'\n')

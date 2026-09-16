@@ -78,7 +78,7 @@ def box(name,loc,size,material,bevel=.006):
  x,y,z=[v/2 for v in size]
  o=mesh(name,[(-x,-y,-z),(x,-y,-z),(x,y,-z),(-x,y,-z),(-x,-y,z),(x,-y,z),(x,y,z),(-x,y,z)],[(3,2,1,0),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)],material);o.location=loc
  if bevel:
-  mod=o.modifiers.new('True edge radius','BEVEL');mod.width=min(bevel,min(size)/3);mod.segments=3
+  mod=o.modifiers.new('True edge radius','BEVEL');mod.width=min(bevel,min(size)/3);mod.segments=5
   mod=o.modifiers.new('Corner normals','WEIGHTED_NORMAL')
  return o
 def rect(name,bounds,z,depth,material,walk=False):
@@ -106,7 +106,12 @@ def cushion(name,pos,size,material):
  x,y,z=size;pts=[]
  for i in range(65):
   a=2*math.pi*i/64;pts.append((pos[0]+math.copysign(abs(math.cos(a))**.24,math.cos(a))*x*.46,pos[1]+math.copysign(abs(math.sin(a))**.24,math.sin(a))*y*.46,pos[2]+z*.13))
- curve(name+'_welt',pts,.0018,material);return o
+ curve(name+'_welt',pts,.0018,material)
+ sub=o.modifiers.new('Soft upholstery', 'SUBSURF');sub.levels=2
+ tex=bpy.data.textures.get('Upholstery compression') or bpy.data.textures.new('Upholstery compression','CLOUDS');tex.noise_scale=.11;tex.noise_depth=2
+ fold=o.modifiers.new('Small cloth compression', 'DISPLACE');fold.texture=tex;fold.strength=.008;fold.texture_coords='GLOBAL'
+ for face in o.data.polygons:face.use_smooth=True
+ return o
 def light(name,pos,target,power,size=.2,kind='AREA',color=(1,.78,.55)):
  d=bpy.data.lights.new(name,kind);d.energy=power;d.color=color
  if kind=='AREA':d.shape='DISK';d.size=size
@@ -130,7 +135,7 @@ for wing in plan['wings']:
      if any(o['along_start']<=(a+b)/2<=o['along_end'] and o['z_bottom']<=(c+d)/2<=o['z_top'] for o in ops):continue
      pos=((a+b)/2,wall,(c+d)/2) if horizontal else (wall,(a+b)/2,(c+d)/2)
      size=(b-a,.3,d-c) if horizontal else (.3,b-a,d-c)
-     box(f'{wid}_{level}_WALL_{side}',pos,size,stone if side in ['N','W'] or wid=='E' and level=='L0' else concrete)
+     box(f'{wid}_{level}_WALL_{side}',pos,size,stone)
      # Separate 12 mm inner finish, with the same apertures.
      inward=-1 if side in ['N','E'] else 1;pl=list(pos);pl[1 if horizontal else 0]+=inward*.156
      sz=list(size);sz[1 if horizontal else 0]=.012
@@ -342,7 +347,11 @@ def inpoly(x,y,poly):
   if (b>y)!=(e>y) and x<(d-a)*(y-b)/(e-b)+a:c=not c
  return c
 pond=plan['landscape']['pond_polygon']
-def terrain_z(x,y):return -.23+3.63*max(0,min(1,(y-2)/4.5))+.05*math.sin(x*.8)*math.sin(y*.6)
+def terrain_z(x,y):
+ r=math.hypot(x,y)
+ # Low woodland ridge closes the horizon beyond the authored house site.
+ ridge=max(0,min(1,(r-19)/23))*(7.2+1.2*math.sin(math.atan2(y,x)*3))
+ return -.23+3.63*max(0,min(1,(y-2)/4.5))+.05*math.sin(x*.8)*math.sin(y*.6)+ridge
 def occupied(x,y):return (-8<x<-1 and -4<y<4) or (3<x<8 and -1.5<y<4) or (-1.3<x<3.2 and .1<y<1.5) or inpoly(x,y,pond)
 verts=[];faces=[]
 for iy in range(80):
@@ -351,7 +360,19 @@ for iy in range(80):
   if occupied(x+.25,y+.25):continue
   k=len(verts);verts.extend([(a,b,terrain_z(a,b)) for a,b in [(x,y),(x+.5,y),(x+.5,y+.5),(x,y+.5)]]);faces.append((k,k+1,k+2,k+3))
 mesh('Excavated woodland terrain',verts,faces,soil)
-rect('Distant forest floor',[-200,-200,200,200],-.65,.1,soil)
+# Continuous forest floor beyond the detailed inner terrain, with a visible
+# undulating ridge instead of a flat empty horizon seen through every window.
+vs=[];fs=[];segments=160;rings=35
+for ring in range(rings+1):
+ r=18+ring*2
+ for j in range(segments):
+  a=j*math.tau/segments;x=math.cos(a)*r;y=math.sin(a)*r
+  vs.append((x,y,terrain_z(x,y)-(.15 if r<29 else 0)))
+for ring in range(rings):
+ for j in range(segments):
+  x=ring*segments+j;xx=ring*segments+(j+1)%segments
+  fs.append((x,xx,xx+segments,x+segments))
+mesh('Woodland horizon ridge',vs,fs,soil)
 for a,b,c,d in [w['bounds_xy'] for w in plan['wings']]:rect('Foundation plinth',[a,b,c,d],0,.65,stone)
 for name,bounds in [('WEST_TERRACE',plan['landscape']['west_terrace_bounds']),('LOUNGE_SILL',plan['landscape']['lounge_threshold_bounds']),('DRY_COURT',[-1.3,.1,3.2,1.5])]:rect(name,bounds,0,.18,stone,True)
 rect('UPPER_ENTRY_PATH',[-5.45,3.8,-4.1,8.5],3.4,.16,stone,True)
@@ -432,21 +453,28 @@ def taper(name,a,b,r1,r2,material):
  o=mesh(name,vs,[(j,(j+1)%10,(j+1)%10+10,j+10) for j in range(10)],material)
  for p in o.data.polygons:p.use_smooth=True
  return o
-for i in range(70):
- angle=i*2.399;r=random.uniform(11,32);x=math.cos(angle)*r;y=math.sin(angle)*r
- if y<-8 and -16<x<13:continue
+for i in range(150):
+ distant=i>=95
+ angle=i*2.399;r=random.uniform(32,58) if distant else random.uniform(11,31);x=math.cos(angle)*r;y=math.sin(angle)*r
+ # Keep the hero camera clear, not the entire southern forest.
+ if -24<y<-7 and -11<x<8:continue
  z=terrain_z(x,y);height=random.uniform(9,14);trunk=random.uniform(.12,.24)
  taper('Beech tapered trunk',(x,y,z),(x+.3,y-.2,z+height),trunk,.025,bark)
- for j in range(9):
-  a=j*2.399+i;zz=z+height*(.27+.06*j);end=Vector((x+math.cos(a)*random.uniform(2,4),y+math.sin(a)*random.uniform(2,4),zz+1.3))
+ for j in range(5 if distant else 9):
+  a=j*2.399+i;zz=z+height*(.34+.095*j if distant else .27+.06*j);end=Vector((x+math.cos(a)*random.uniform(2,4),y+math.sin(a)*random.uniform(2,4),zz+1.3))
   taper('Beech primary branch',(x,y,zz),end,.045,.008,bark)
   vs=[];fs=[]
-  for k in range(12):
+  for k in range(6 if distant else 12):
    a2=a+random.uniform(-1.7,1.7);start=Vector((x,y,zz)).lerp(end,.35+k/18);tip=start+Vector((math.cos(a2)*1.3,math.sin(a2)*1.3,random.uniform(.0,.7)))
    taper('Beech fine twig',start,tip,.009,.002,bark)
-   for l in range(64):
+   for l in range(24 if distant else 40):
     t=random.uniform(.25,1.3);at=start.lerp(tip,t)+Vector((random.uniform(-.5,.5),random.uniform(-.5,.5),random.uniform(-.3,.3)));angle=random.uniform(0,math.tau);length=random.uniform(.14,.25);side=Vector((-math.sin(angle),math.cos(angle),random.uniform(-.6,.6)))*length*.38;direction=Vector((math.cos(angle),math.sin(angle),random.uniform(-.6,.6)))*length
-    q=len(vs);vs.extend([at,at+direction*.45+side,at+direction,at+direction*.45-side,at+direction*.45+Vector((0,0,.012))]);fs.extend([(q,q+1,q+4),(q+1,q+2,q+4),(q+2,q+3,q+4),(q+3,q,q+4)])
+    # Rounded, lightly cupped blades: no diamond-shaped billboard leaves.
+    q=len(vs);vs.append(at+direction*.5+Vector((0,0,.009)))
+    for edge in range(8):
+     phase=edge*math.tau/8;along=(1-math.cos(phase))*.5
+     vs.append(at+direction*along+side*math.sin(phase)+Vector((0,0,.006*math.sin(phase)**2)))
+    for edge in range(8):fs.append((q,q+1+edge,q+1+(edge+1)%8))
   mesh('Beech individual leaf blades',vs,fs,random.choice(leaves))
 
 collection='10_LIGHTS';group='lights'
@@ -470,6 +498,8 @@ for c in json.loads((D/'cameras.json').read_text())['cameras']:
 for name,pos,target,lens in [('C01',(-16,-19,7),(0,0,3.1),30),('C07',(-1.85,1.15,1.7),(-6.2,-2.0,1.2),23),('C08',(-1.8,-1.4,5.1),(-6,-2.1,4.3),24)]:
  o=bpy.data.objects[name];o.location=pos;o.rotation_euler=(Vector(target)-o.location).to_track_quat('-Z','Y').to_euler();o.data.lens=lens
 runpy.run_path(str(H/'refine.py'))['apply']()
+runpy.run_path(str(H/'planting.py'))['apply'](terrain_z,occupied)
+runpy.run_path(str(H/'quality.py'))['apply']()
 s.camera=bpy.data.objects['C01']
 # Exportable navigation authority: physical blockers, unchanged source dimensions.
 (H/'colliders.json').write_text(json.dumps({'eyeHeight':1.7,'radius':.25,'obstacles':obstacles},indent=2)+'\n')
