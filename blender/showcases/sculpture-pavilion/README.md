@@ -82,7 +82,9 @@ The viewer starts with two bounded calibration frames (at most 600,000
 canvas pixels, a 512 px reflection and 4× anisotropy). Fast frame delivery
 restores the full desktop/mobile DPR, 2K/1K reflections and up to 16× anisotropy.
 Slow devices retain that bounded raster workload, with original texture sources
-unchanged. Two later queued frames exceeding 150 ms also activate this fallback.
+unchanged. Calibration and later checks include synchronous rendering plus queued frame
+latency. Two later frames exceeding 150 ms also activate this fallback; idle
+time is excluded. Measuring only RAF wait misses blocking software-GPU draws.
 Idle time is excluded from the measurement; there is no CI/device-name shortcut. Asset bytes, triangle counts, animation count, checksums and decoded RGBA
 texture estimates (including mipmaps, excluding framebuffers/temporary decode)
 are recorded in [asset-manifest.json](./asset-manifest.json). Delivery is 11.06 MB

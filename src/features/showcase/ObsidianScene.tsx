@@ -167,7 +167,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     let mixer: THREE.AnimationMixer | undefined, environment: THREE.WebGLRenderTarget | undefined;
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     let animationTime = performance.now();
-    let slowFrames = 0, reducedResolution = false, warmupFrames = 3;
+    let slowFrames = 0, reducedResolution = false, warmupFrames = 3, renderCost = 0;
     const balancedPixelRatio = () => Math.min(devicePixelRatio, 1, Math.sqrt(600_000 / Math.max(1, host.clientWidth * host.clientHeight)));
     const quality = (full: boolean) => {
       renderer.setPixelRatio(full ? Math.min(Math.max(devicePixelRatio, compact ? 1 : 1.5), 2) : balancedPixelRatio());
@@ -184,15 +184,20 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       const now = performance.now();
       // Calibrate with two bounded frames before supersampling. A full-size
       // first reflection can block a software GPU before adaptation can run.
-      // Queue latency excludes idle time and applies to every device equally.
+      // Include synchronous drawing as well as queued GPU latency. Measuring
+      // only the next RAF wait misses software renderers that block render().
+      // Idle time stays excluded; the same measurement applies to every device.
+      const slow = now - scheduledAt + renderCost > 150;
       if (model && warmupFrames) {
-        if (warmupFrames < 3 && now - scheduledAt > 150) slowFrames++;
+        // The first draw also compiles shaders/uploads textures. Measure the
+        // second bounded draw so one-time preparation does not demote fast GPUs.
+        if (warmupFrames < 2 && slow) slowFrames++;
         if (--warmupFrames === 0) {
           reducedResolution = slowFrames > 0;
           if (!reducedResolution) quality(true);
           slowFrames = 0;
         }
-      } else if (!reducedResolution && model && now - scheduledAt > 150) {
+      } else if (!reducedResolution && model && slow) {
         if (++slowFrames >= 2) { reducedResolution = true; quality(false); }
       } else slowFrames = 0;
       raf = 0;
@@ -216,6 +221,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       animationTime = now; host.dataset.animation = animate ? 'playing' : 'paused';
       if(mixer)host.dataset.animationTime=mixer.time.toFixed(3);
       renderer.render(scene, camera);
+      renderCost = performance.now() - now;
       const moving = Boolean(warmupFrames && model) || animate || (!paused && (mode === 'walk' ? walk.needsUpdate() : orbitMoving));
       host.dataset.idle = String(!moving);
       host.dataset.resolution = warmupFrames ? 'warming' : reducedResolution ? 'balanced' : 'full';

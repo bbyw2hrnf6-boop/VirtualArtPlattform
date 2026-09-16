@@ -1,5 +1,35 @@
 import { test, expect } from '@playwright/test';
 
+test('showcase calibration counts synchronous drawing before enabling supersampling', async ({page}) => {
+  await page.setViewportSize({width:1440,height:1000});
+  await page.addInitScript(() => {
+    // Model a software GPU that blocks draw calls, while RAF delivery itself
+    // remains fast. Delaying RAF alone would miss the production regression.
+    let delayed = false;
+    const request = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = callback => request(time => { delayed = false; callback(time); });
+    const draw = WebGL2RenderingContext.prototype.drawElements;
+    WebGL2RenderingContext.prototype.drawElements = function (...args) {
+      if (!delayed) {
+        delayed = true;
+        const until = performance.now() + 180;
+        while (performance.now() < until) { /* synchronous GPU work */ }
+      }
+      return draw.apply(this,args);
+    };
+  });
+  // Both showcases use the same renderer; Obsidian keeps this calibration
+  // regression independent of the Pavilion's large texture upload.
+  await page.goto('/#/showcase/obsidian');
+  await page.getByRole('button',{name:'Enter the exhibition'}).click();
+  const scene = page.locator('.obsidian__scene');
+  await expect(scene).toHaveAttribute('data-ready','true',{timeout:60_000});
+  await expect(scene).toHaveAttribute('data-resolution','balanced',{timeout:10_000});
+  const pixels = await scene.locator('canvas').evaluate(canvas => canvas.width * canvas.height);
+  expect(pixels).toBeLessThanOrEqual(600_000);
+  await expect(scene).toHaveAttribute('data-idle','true');
+});
+
 for (const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
   test.describe(`Sculpture Pavilion at ${viewport.width}`,()=>{
     const mobile=viewport.width===390;
