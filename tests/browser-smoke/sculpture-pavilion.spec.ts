@@ -65,7 +65,7 @@ for (const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
   test.describe(`Sculpture Pavilion at ${viewport.width}`,()=>{
     const mobile=viewport.width===390;
     test.use({viewport,hasTouch:mobile,isMobile:mobile});
-    test('visits the three modelled rooms with shared walking, overview and accessible sculptures',async({page,context},info)=>{
+    test('visits the three modelled rooms with shared walking, overview and accessible sculptures',{tag:'@showcase-gpu'},async({page,context},info)=>{
       const errors:string[]=[];
       page.on('pageerror',e=>errors.push(e.message));
       page.on('console',m=>{if(m.type()==='error' && /shader|webgl|texture|gl_invalid/i.test(m.text()))errors.push(m.text());});

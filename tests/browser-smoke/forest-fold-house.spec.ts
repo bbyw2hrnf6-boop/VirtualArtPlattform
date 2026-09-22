@@ -38,7 +38,7 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
         expect(Number(response.headers()['content-length']),path).toBeGreaterThan(0);
       }));
     });
-    test('loads on demand and shares walking, look, room heights and overview',{tag:'@forest-gpu'},async({page},info)=>{
+    test('loads on demand and shares walking, look, room heights and overview',{tag:'@showcase-gpu'},async({page},info)=>{
       const errors:string[]=[],models:string[]=[];
       page.on('pageerror',e=>errors.push(e.message));
       page.on('response',r=>{if(r.url().includes('/assets/showcases/forest-fold-house/')&&!r.ok())errors.push(`${r.status()} ${r.url()}`);});

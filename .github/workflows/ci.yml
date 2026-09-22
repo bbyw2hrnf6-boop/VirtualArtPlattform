@@ -316,17 +316,17 @@ jobs:
           ARTIFACT_DIGEST: ${{ steps.upload-release.outputs.artifact-digest }}
 
   production-browser:
-    name: ${{ matrix.shard == 'forest-gpu' && 'Forest House GPU (advisory)' || format('Production Chromium ({0}/4)', matrix.shard) }}
+    name: ${{ matrix.shard == 'showcase-gpu' && 'Detailed showcase GPU (advisory)' || format('Production Chromium ({0}/4)', matrix.shard) }}
     needs: production-artifact
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # Owner-approved exception for the detailed house on GPU-less runners.
-    # Its route/assets remain blocking; real-GPU walking qualification stays visible.
-    continue-on-error: ${{ matrix.shard == 'forest-gpu' }}
+    # Owner-approved exception for the detailed house/pavilion on GPU-less runners.
+    # Their route/assets remain blocking; real-GPU walking qualification stays visible.
+    continue-on-error: ${{ matrix.shard == 'showcase-gpu' }}
     strategy:
       fail-fast: true
       matrix:
-        shard: [1, 2, 3, 4, forest-gpu]
+        shard: [1, 2, 3, 4, showcase-gpu]
     permissions:
       contents: read
     env:
@@ -379,23 +379,23 @@ jobs:
           ./node_modules/.bin/playwright install --with-deps chromium
 
       - name: Smoke the exact production artifact in Chromium
-        if: matrix.shard != 'forest-gpu'
+        if: matrix.shard != 'showcase-gpu'
         timeout-minutes: 12
-        run: npm run test:browser-smoke -- --grep-invert @forest-gpu --shard=${{ matrix.shard }}/4 --global-timeout=660000
+        run: npm run test:browser-smoke -- --grep-invert @showcase-gpu --shard=${{ matrix.shard }}/4 --global-timeout=660000
 
-      - name: Qualify detailed house on software GPU (advisory)
-        if: matrix.shard == 'forest-gpu'
-        id: forest-gpu
+      - name: Qualify detailed showcases on software GPU (advisory)
+        if: matrix.shard == 'showcase-gpu'
+        id: showcase-gpu
         timeout-minutes: 6
-        run: npm run test:browser-smoke -- --grep @forest-gpu --retries=0 --global-timeout=300000
+        run: npm run test:browser-smoke -- --grep @showcase-gpu --retries=0 --global-timeout=300000
 
-      - name: Record house GPU qualification
-        if: always() && matrix.shard == 'forest-gpu'
+      - name: Record showcase GPU qualification
+        if: always() && matrix.shard == 'showcase-gpu'
         env:
-          QUALIFICATION: ${{ steps.forest-gpu.outcome }}
+          QUALIFICATION: ${{ steps.showcase-gpu.outcome }}
         run: |
-          echo "### Forest Fold House GPU qualification: ${QUALIFICATION}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Advisory on software-only runners by owner request. House route, render images, model dependencies and all other browser journeys remain release-blocking. A failure is not a hardware-performance pass." >> "$GITHUB_STEP_SUMMARY"
+          echo "### Detailed showcase GPU qualification: ${QUALIFICATION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Advisory on software-only runners by owner request. Showcase routes/assets and all other browser journeys remain release-blocking. A failure is not a hardware-performance pass." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Retain failed production browser diagnostics
         if: failure() || cancelled()

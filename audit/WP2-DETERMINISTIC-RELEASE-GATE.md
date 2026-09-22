@@ -317,8 +317,8 @@ retry stops that shard and cancels its siblings; the suite/step/job limits are
 11/12/15 minutes. Failure diagnostics retain a distinct shard suffix.
 
 
-The owner explicitly accepts an exception for the two detailed Forest Fold House
-walkthroughs tagged `@forest-gpu`: they run against the same verified artifact
+The owner explicitly accepts an exception for the four detailed Forest Fold House / Sculpture Pavilion
+walkthroughs tagged `@showcase-gpu`: they run against the same verified artifact
 in an advisory software-GPU matrix job, capped at five minutes (six-minute
 step), without retries. Its failure does not change Verify to failure; the job
 summary and retained traces preserve the unresolved qualification. Blocking

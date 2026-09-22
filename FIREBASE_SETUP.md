@@ -701,7 +701,7 @@ unchanged `dist` without rebuilding. Only success of the entire Verify run
 (including all four shards) permits the existing deployment resolver to promote
 it. Each shard stops at its first exhausted retry and has an 11-minute test
 limit, 12-minute step limit and 15-minute job limit; blocking matrix failure cancels siblings.
-Only the detailed house walkthroughs tagged `@forest-gpu` have an owner-approved
+Only the detailed house/pavilion walkthroughs tagged `@showcase-gpu` have an owner-approved
 advisory software-GPU job (five-minute suite, six-minute step, no retry). Its
 failure is retained in diagnostics and the job summary but does not block
 promotion. House route/image/model delivery and every other browser journey
