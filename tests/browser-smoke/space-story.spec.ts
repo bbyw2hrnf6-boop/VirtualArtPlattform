@@ -445,7 +445,9 @@ test('20-second playback demonstrates floors and walls automatically and settles
     (el as HTMLElement & {finishReport:()=>unknown}).finishReport=()=>{observer.disconnect();return {floor:[...seen.floor],wall:[...seen.wall]};};
   });
   try {
-    await page.getByRole('button',{name:'Play the film · 20 sec'}).click();
+    // The clock is paused: pointer actionability would wait for stability RAFs
+    // that cannot advance. Native keyboard activation needs no animation frame.
+    await page.getByRole('button',{name:'Play the film · 20 sec'}).press('Enter');
     await expect(page.getByRole('button',{name:'Pause film'})).toHaveAttribute('aria-pressed','true');
     // Jump over the camera path in one timer turn. The model suite exhaustively
     // covers its 1,729 samples; this browser journey only renders the finish
