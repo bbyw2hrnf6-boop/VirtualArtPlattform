@@ -67,6 +67,8 @@ Release validation checks both direct Functions endpoint declarations and explic
 
 The immutable release permits at most 5,000 files and 320 MiB, including the three detailed showcases. Assembly and the independent credentialed verifier enforce the same ceiling. This deliberately replaces the obsolete 250 MiB ceiling; it does not change asset quality or the browser performance budgets. Assembly output reports the measured byte total and limit.
 
+Showcase warm-up also measures actual GPU completion before enabling supersampling. Nonblocking WebGL fences prevent a fast JavaScript submission from misclassifying a backed-up graphics queue. The existing fast/slow-device render settings, source assets and navigation assertions remain unchanged. This adds about 158 bytes of production JavaScript gzip with an explicit 256-byte aggregate allowance; entry, lazy-chunk and CSS limits stay fixed.
+
 ## Repository map
 
 ```text

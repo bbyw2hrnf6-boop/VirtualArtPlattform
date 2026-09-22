@@ -71,7 +71,9 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     const camera = new THREE.PerspectiveCamera(defaultWalkFov(compact), 1, .04, 180);
     camera.position.fromArray(config.rooms[0].start);
     camera.lookAt(new THREE.Vector3().fromArray(config.rooms[0].look ?? [5,1.75,-3.6]));
-    let currentRoom = 0, raf = 0, frames = 0, paused = false, scheduledAt = 0;
+    let currentRoom = 0, raf = 0, frames = 0, paused = false, scheduledAt = 0, gpuTimer = 0;
+    const gl = renderer.getContext() as WebGL2RenderingContext;
+    let gpuFence: WebGLSync | null = null;
     let mode: ObsidianMode = 'walk';
     let model: THREE.Group | undefined;
     const modelTextures = new Set<THREE.Texture>();
@@ -79,7 +81,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     const overview = { value: false };
     const savedWalk = { position: camera.position.clone(), quaternion: camera.quaternion.clone() };
     const ray = new THREE.Raycaster();
-    const schedule = () => { if (!disposed && !raf && !document.hidden) { scheduledAt = performance.now(); raf = requestAnimationFrame(render); } };
+    const schedule = () => { if (!disposed && !raf && !gpuFence && !document.hidden) { scheduledAt = performance.now(); raf = requestAnimationFrame(render); } };
     const navigation = config.navigation();
     const walk = createFirstPersonWalk(camera, canvas, () => config.bounds,
       navigation.resolve, navigation.findPath, schedule, () => canvas.blur(), true, 1, config.eyeHeight);
@@ -194,11 +196,9 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       if (model && warmupFrames) {
         // The first draw also compiles shaders/uploads textures. Measure the
         // second bounded draw so one-time preparation does not demote fast GPUs.
-        if (warmupFrames < 2 && slow) slowFrames++;
         if (--warmupFrames === 0) {
-          reducedResolution = slowFrames > 0;
+          reducedResolution = slow;
           if (!reducedResolution) quality(true);
-          slowFrames = 0;
         }
       } else if (!reducedResolution && model && slow) {
         if (++slowFrames >= 2) { reducedResolution = true; quality(false); }
@@ -224,11 +224,28 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       animationTime = now; host.dataset.animation = animate ? 'playing' : 'paused';
       if(mixer)host.dataset.animationTime=mixer.time.toFixed(3);
       renderer.render(scene, camera);
-      renderCost = performance.now() - now;
       const moving = Boolean(warmupFrames && model) || animate || (!paused && (mode === 'walk' ? walk.needsUpdate() : orbitMoving));
       host.dataset.idle = String(!moving);
       host.dataset.resolution = warmupFrames ? 'warming' : reducedResolution ? 'balanced' : 'full';
-      if (moving) schedule();
+      // RAF and render() can return before queued GPU work completes. Measure
+      // actual completion of the bounded warm-up draws before supersampling.
+      // Poll without blocking input; full-quality assets and fast-GPU output
+      // stay unchanged. Never queue another draw while this sample is pending.
+      if (model && warmupFrames) {
+        gpuFence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        gl.flush();
+      }
+      const complete = () => {
+        if (gpuFence && gl.clientWaitSync(gpuFence, 0, 0) === gl.TIMEOUT_EXPIRED) {
+          gpuTimer = window.setTimeout(complete, 8);
+          return;
+        }
+        if (gpuFence) gl.deleteSync(gpuFence);
+        gpuFence = null;
+        renderCost = performance.now() - now;
+        if (moving) schedule();
+      };
+      complete();
     }
     const resize = new ResizeObserver(() => {
       if (!host.clientWidth || !host.clientHeight) return;
@@ -349,7 +366,9 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         canvas.focus({ preventScroll: true });
       }).catch(error => { if (!disposed && error.name !== 'AbortError') onError(); });
     return () => {
-      disposed = true; abort.abort(); cancelAnimationFrame(raf); resize.disconnect(); controlsRef.current = null;
+      disposed = true; abort.abort(); cancelAnimationFrame(raf); clearTimeout(gpuTimer);
+      if (gpuFence) gl.deleteSync(gpuFence);
+      resize.disconnect(); controlsRef.current = null;
       canvas.removeEventListener('pointermove', schedule); canvas.removeEventListener('click', click);
       canvas.removeEventListener('pointerup', click);
       canvas.removeEventListener('pointercancel', blur); canvas.removeEventListener('blur', blur);

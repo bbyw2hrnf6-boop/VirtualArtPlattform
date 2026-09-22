@@ -1,5 +1,36 @@
 import { test, expect } from '@playwright/test';
 
+test('showcase calibration waits for queued GPU work before enabling supersampling', async ({page}) => {
+  await page.setViewportSize({width:1440,height:1000});
+  await page.addInitScript(() => {
+    // Fast JavaScript submission can conceal a slow graphics queue. Model
+    // completion latency without slowing RAF or synchronous draw submission.
+    const ready = new WeakMap<WebGLSync, number>();
+    const prototype = WebGL2RenderingContext.prototype;
+    const fence = prototype.fenceSync, wait = prototype.clientWaitSync;
+    prototype.fenceSync = function (...args) {
+      const sync = fence.apply(this, args);
+      if (sync) ready.set(sync, performance.now() + 220);
+      return sync;
+    };
+    prototype.clientWaitSync = function (sync, flags, timeout) {
+      return performance.now() < (ready.get(sync) ?? 0)
+        ? this.TIMEOUT_EXPIRED : wait.call(this, sync, flags, timeout);
+    };
+  });
+  await page.goto('/#/showcase/obsidian');
+  await page.getByRole('button',{name:'Enter the exhibition'}).click();
+  const scene = page.locator('.obsidian__scene');
+  await expect(scene).toHaveAttribute('data-ready','true',{timeout:60_000});
+  await expect(scene).toHaveAttribute('data-resolution','balanced',{timeout:10_000});
+  await expect(scene).toHaveAttribute('data-idle','true');
+  await scene.locator('canvas').focus();
+  await page.keyboard.down('KeyE');
+  try { await expect.poll(async()=>Number(await scene.getAttribute('data-pitch'))).toBeGreaterThan(.15); }
+  finally { await page.keyboard.up('KeyE'); }
+  await expect(scene).toHaveAttribute('data-idle','true');
+});
+
 test('showcase calibration counts synchronous drawing before enabling supersampling', async ({page}) => {
   await page.setViewportSize({width:1440,height:1000});
   await page.addInitScript(() => {

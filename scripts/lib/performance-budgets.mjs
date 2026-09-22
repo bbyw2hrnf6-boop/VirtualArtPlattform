@@ -24,7 +24,9 @@ export const PERFORMANCE_TARGETS = Object.freeze({
 export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
   // Forest Fold House: explicit +6 KB for its lazy page, multi-level graph and shared height-aware visitor.
   // See blender/showcases/forest-fold-house/README.md; entry and Studio ceilings stay fixed.
-  jsGzip: 616_000,
+  // GPU-completion calibration: explicit +256 bytes; measured addition ~158
+  // bytes gzip. Entry, lazy-chunk, CSS and all asset-quality limits stay fixed.
+  jsGzip: 616_256,
   cssGzip: 56_500,
   largestLazyGzip: 195_000,
   entryGzip: 123_000,

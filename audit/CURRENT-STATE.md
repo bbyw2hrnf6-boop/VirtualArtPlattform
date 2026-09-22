@@ -73,6 +73,8 @@ The original admin console extended the aggregate release ceilings to 588,000 by
 
 ## Release boundary
 
+The shared showcase calibration waits asynchronously for WebGL fence completion on its bounded warm-up draws before choosing supersampling. CI traces showed quick draw submission followed by a stalled graphics queue, while the old estimator incorrectly reported full quality and stopped camera progress. A queued-GPU regression fails before this fix and passes after it; the existing synchronous-draw regression also passes. Assets, fast-device supersampling, slow-device fallback settings and the functional camera threshold remain unchanged. The measured production JS addition is about 158 bytes gzip; its aggregate ceiling deliberately increases by 256 bytes to 616,256. Entry, largest-lazy-chunk and CSS ceilings remain unchanged.
+
 Guest publication deliberately extended only the aggregate JS release ceiling by 2,000 bytes to 595,000 (measured approximately +2.2 KB production JS for the guarded UI, timed filtering/pagination and copy). At that release, the public entry, largest lazy chunk and CSS limits were unchanged; no dependencies were added. The subsequent public-entry tightening is recorded in the quality boundary above. This is an explicit feature-size tradeoff, not a disabled budget check.
 
 The immutable release validator accepts direct endpoint declarations and explicit named local-module re-exports, including the admin callables, without executing bundled code. The exact endpoint allowlist and digest checks remain mandatory; unsupported export forms fail closed.
