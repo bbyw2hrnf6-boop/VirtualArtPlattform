@@ -700,7 +700,13 @@ Chromium shards download and verify the same manifest/digest, then serve its
 unchanged `dist` without rebuilding. Only success of the entire Verify run
 (including all four shards) permits the existing deployment resolver to promote
 it. Each shard stops at its first exhausted retry and has an 11-minute test
-limit, 12-minute step limit and 15-minute job limit; matrix failure cancels siblings.
+limit, 12-minute step limit and 15-minute job limit; blocking matrix failure cancels siblings.
+Only the detailed house walkthroughs tagged `@forest-gpu` have an owner-approved
+advisory software-GPU job (five-minute suite, six-minute step, no retry). Its
+failure is retained in diagnostics and the job summary but does not block
+promotion. House route/image/model delivery and every other browser journey
+remain blocking. The full local suite still runs these walkthroughs; physical
+GPU/mobile performance qualification remains open.
 Within the production release, only the protected deploy job receives
 `id-token: write`; it deploys Functions and Hosting together without checkout,
 application dependency installation, predeploy hooks, or a rebuild. It installs

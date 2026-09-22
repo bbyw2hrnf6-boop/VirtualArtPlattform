@@ -307,11 +307,25 @@ Primary references: [Google Cloud WIF for deployment pipelines](https://cloud.go
 ### Parallel candidate verification
 
 The application bundle uploaded by `production-artifact` is a candidate until
-all four `production-browser` shards succeed. Every shard downloads the same
+all four blocking `production-browser` shards succeed. Every shard downloads the same
 run/SHA-named archive with digest mismatch rejection, verifies the release
 manifest and serves its unchanged `dist`. Browser tests are split at test level,
 with one worker per isolated runner. No shard rebuilds Hosting. The existing
 resolver accepts only a successful complete push/main Verify run, so an uploaded
-candidate from a failed or cancelled shard is never deployable. Exhausting one
+candidate from a failed or cancelled blocking shard is never deployable. Exhausting one
 retry stops that shard and cancels its siblings; the suite/step/job limits are
 11/12/15 minutes. Failure diagnostics retain a distinct shard suffix.
+
+
+The owner explicitly accepts an exception for the two detailed Forest Fold House
+walkthroughs tagged `@forest-gpu`: they run against the same verified artifact
+in an advisory software-GPU matrix job, capped at five minutes (six-minute
+step), without retries. Its failure does not change Verify to failure; the job
+summary and retained traces preserve the unresolved qualification. Blocking
+Chromium tests still verify the house route, rendered photographs, deferred model
+loading, desktop glTF and all referenced buffers/textures, and mobile GLB
+delivery. All other browser journeys, locked quality checks, hashes, artifact
+identity and production verification stay mandatory. Local full smoke continues
+to include the detailed walkthroughs. This release exception makes no claim
+that software-GPU or physical-phone performance has passed, and changes no
+production asset or renderer quality.

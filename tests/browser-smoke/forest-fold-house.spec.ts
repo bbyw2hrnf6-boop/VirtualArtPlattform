@@ -4,7 +4,41 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
   test.describe(`Forest Fold House ${viewport.width}`,()=>{
     const mobile=viewport.width===390;
     test.use({viewport,hasTouch:mobile,isMobile:mobile});
-    test('loads on demand and shares walking, look, room heights and overview',async({page},info)=>{
+    test('house preview and complete model delivery work without a GPU',async({page,request})=>{
+      const models:string[]=[],errors:string[]=[];
+      page.on('pageerror',error=>errors.push(error.message));
+      page.on('request',r=>{if(/forest-fold-house.*\.(glb|gltf)(\?|$)/.test(r.url()))models.push(r.url());});
+      await page.goto('/#/showcase/forest-fold-house');
+      await expect(page.getByRole('heading',{name:'Forest Fold House.'})).toBeVisible();
+      await expect(page.getByRole('button',{name:'Enter the house'})).toBeEnabled();
+      await expect(page.locator('.obsidian__poster')).toHaveJSProperty('naturalWidth',1920);
+      for(const image of await page.locator('.forest-house__photos img').all()){
+        await image.scrollIntoViewIfNeeded();
+        await expect(image).toHaveJSProperty('naturalWidth',1920);
+      }
+      expect(models).toEqual([]);
+      expect(errors).toEqual([]);
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+      const base='/assets/showcases/forest-fold-house/';
+      const paths:string[]=mobile?[`${base}forest-fold-house-mobile.glb?v=3`]:[];
+      if(!mobile){
+        const response=await request.get(`${base}desktop-v3/forest-fold-house-desktop.gltf`);
+        expect(response.ok()).toBe(true);
+        const gltf=await response.json();
+        expect(gltf.asset.version).toBe('2.0');
+        // Meshopt's virtual fallback buffer has no URI; only external files
+        // make requests. Embedded image bufferViews use the checked binary.
+        for(const item of [...gltf.buffers,...gltf.images])if(item.uri)paths.push(`${base}desktop-v3/${item.uri}`);
+        expect(paths.length).toBeGreaterThan(1);
+      }
+      await Promise.all(paths.map(async path=>{
+        const response=await request.head(path);
+        expect(response.ok(),path).toBe(true);
+        expect(response.headers()['content-type'],path).not.toContain('text/html');
+        expect(Number(response.headers()['content-length']),path).toBeGreaterThan(0);
+      }));
+    });
+    test('loads on demand and shares walking, look, room heights and overview',{tag:'@forest-gpu'},async({page},info)=>{
       const errors:string[]=[],models:string[]=[];
       page.on('pageerror',e=>errors.push(e.message));
       page.on('response',r=>{if(r.url().includes('/assets/showcases/forest-fold-house/')&&!r.ok())errors.push(`${r.status()} ${r.url()}`);});

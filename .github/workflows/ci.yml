@@ -316,14 +316,17 @@ jobs:
           ARTIFACT_DIGEST: ${{ steps.upload-release.outputs.artifact-digest }}
 
   production-browser:
-    name: Production Chromium (${{ matrix.shard }}/4)
+    name: ${{ matrix.shard == 'forest-gpu' && 'Forest House GPU (advisory)' || format('Production Chromium ({0}/4)', matrix.shard) }}
     needs: production-artifact
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # Owner-approved exception for the detailed house on GPU-less runners.
+    # Its route/assets remain blocking; real-GPU walking qualification stays visible.
+    continue-on-error: ${{ matrix.shard == 'forest-gpu' }}
     strategy:
       fail-fast: true
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, forest-gpu]
     permissions:
       contents: read
     env:
@@ -376,8 +379,23 @@ jobs:
           ./node_modules/.bin/playwright install --with-deps chromium
 
       - name: Smoke the exact production artifact in Chromium
+        if: matrix.shard != 'forest-gpu'
         timeout-minutes: 12
-        run: npm run test:browser-smoke -- --shard=${{ matrix.shard }}/4 --global-timeout=660000
+        run: npm run test:browser-smoke -- --grep-invert @forest-gpu --shard=${{ matrix.shard }}/4 --global-timeout=660000
+
+      - name: Qualify detailed house on software GPU (advisory)
+        if: matrix.shard == 'forest-gpu'
+        id: forest-gpu
+        timeout-minutes: 6
+        run: npm run test:browser-smoke -- --grep @forest-gpu --retries=0 --global-timeout=300000
+
+      - name: Record house GPU qualification
+        if: always() && matrix.shard == 'forest-gpu'
+        env:
+          QUALIFICATION: ${{ steps.forest-gpu.outcome }}
+        run: |
+          echo "### Forest Fold House GPU qualification: ${QUALIFICATION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Advisory on software-only runners by owner request. House route, render images, model dependencies and all other browser journeys remain release-blocking. A failure is not a hardware-performance pass." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Retain failed production browser diagnostics
         if: failure() || cancelled()
