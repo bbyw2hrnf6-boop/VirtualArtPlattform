@@ -65,6 +65,8 @@ Main CI verifies the same immutable production candidate on four isolated Chromi
 
 Release validation checks both direct Functions endpoint declarations and explicit named local-module re-exports against the reviewed endpoint allowlist without executing artifact code. Wildcard exports are not supported; see the [release procedure](./FIREBASE_SETUP.md#current-release-order).
 
+The immutable release permits at most 5,000 files and 320 MiB, including the three detailed showcases. Assembly and the independent credentialed verifier enforce the same ceiling. This deliberately replaces the obsolete 250 MiB ceiling; it does not change asset quality or the browser performance budgets. Assembly output reports the measured byte total and limit.
+
 ## Repository map
 
 ```text

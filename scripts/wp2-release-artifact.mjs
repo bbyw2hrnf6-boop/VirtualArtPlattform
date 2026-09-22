@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   RELEASE_DIRECTORY,
+  MAXIMUM_RELEASE_BYTES,
   assembleReleaseBundle,
   verifyReleaseBundle,
 } from "./wp2-release-artifact-lib.mjs";
@@ -91,6 +92,8 @@ process.stdout.write(
       firebaseCliVersion: manifest.firebaseCliVersion,
       mailMode: manifest.mailMode,
       fileCount: manifest.files.length,
+      totalBytes: manifest.files.reduce((sum, file) => sum + file.size, 0),
+      maximumBytes: MAXIMUM_RELEASE_BYTES,
     },
     null,
     2,

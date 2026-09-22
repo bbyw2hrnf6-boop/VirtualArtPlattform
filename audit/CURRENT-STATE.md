@@ -77,6 +77,8 @@ Guest publication deliberately extended only the aggregate JS release ceiling by
 
 The immutable release validator accepts direct endpoint declarations and explicit named local-module re-exports, including the admin callables, without executing bundled code. The exact endpoint allowlist and digest checks remain mandatory; unsupported export forms fail closed.
 
+The complete detailed showcase payload needs about 280 MiB of Hosting assets, exceeding the former 250 MiB release-package ceiling. The reviewed package ceiling is now 320 MiB in both assembly and the independent credentialed verifier, with the 5,000-file limit unchanged. A real 280 MiB regression fixture must assemble and verify; oversized disk payloads and manifest claims must still fail closed. This is an explicit download/storage allowance for the detailed demos, not a change to rendering, texture resolution, entry-chunk limits or browser checks. The release command reports actual and maximum bytes for diagnosis.
+
 Builds generate a minimal `/release.json` with schema version, build time and the exact CI commit SHA. Local builds without `GITHUB_SHA` carry a null SHA, never a guessed live identity. Immutable artifact validation requires a non-null stamp matching the manifest SHA, rejects extra fields and includes the file in digest verification. Hosting revalidates it on every request. Older live deployments do not retroactively gain this identity file.
 
 Treat the product as a controlled production pilot until these external conditions are evidenced:

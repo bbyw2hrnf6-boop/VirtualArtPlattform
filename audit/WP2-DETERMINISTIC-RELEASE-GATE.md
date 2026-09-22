@@ -92,8 +92,14 @@ checks, a preview build, and Chromium smoke. A successful push to
 9. upload `lieuva-production-{SHA}-{VERIFY_RUN_ID}` for 30 days and record its
    artifact ID and archive digest.
 
-The release bundle is allowlisted and bounded to 5,000 files and 250 MiB. It
-contains:
+The release bundle is allowlisted and bounded to 5,000 files and 320 MiB in
+both assembly and the independent credentialed verifier. The old 250 MiB
+ceiling excluded the detailed three-showcase payload (about 280 MiB for
+Hosting alone). This reviewed allowance preserves texture and geometry
+quality; browser and entry-chunk gates remain unchanged. Regression coverage
+assembles and verifies a real 280 MiB fixture and rejects both oversized files
+and oversized manifest claims. Assembly reports measured and maximum bytes.
+It contains:
 
 - built Hosting `dist/`;
 - production-only `functions/lib/*.js`;

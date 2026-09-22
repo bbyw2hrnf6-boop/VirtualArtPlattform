@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -12,6 +12,8 @@ import {
 } from "../functions/scripts/generate-manifest.mjs";
 import {
   RELEASE_DIRECTORY,
+  RELEASE_MANIFEST,
+  MAXIMUM_RELEASE_BYTES,
   assembleReleaseBundle,
   compiledEndpointNames,
   verifyReleaseBundle,
@@ -143,6 +145,37 @@ test("assembles a production-only bundle and verifies every digest", async () =>
   assert.equal(Object.hasOwn(firebase.functions, "predeploy"), false);
   assert.equal(Object.hasOwn(firebase.hosting, "predeploy"), false);
   await verifyReleaseBundle(releaseRoot, options);
+});
+
+test("detailed showcases fit while oversized actual and declared bundles fail closed", async (t) => {
+  const root = await fixture();
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const releaseRoot = join(root, RELEASE_DIRECTORY);
+  const assetPath = "dist/assets/detailed-showcases.bin";
+  await writeFile(join(root, assetPath), "");
+  // Sparse fixture reproduces the real payload above the obsolete 250 MiB cap.
+  await truncate(join(root, assetPath), 280 * 1024 * 1024);
+  const manifest = await assembleReleaseBundle(root, releaseRoot, options);
+  await verifyReleaseBundle(releaseRoot, options);
+
+  const oversizedManifest = structuredClone(manifest);
+  oversizedManifest.files.find((file) => file.path === assetPath).size = MAXIMUM_RELEASE_BYTES + 1;
+  await writeFile(join(releaseRoot, RELEASE_MANIFEST), JSON.stringify(oversizedManifest));
+  await assert.rejects(verifyReleaseBundle(releaseRoot, options), /manifest byte total exceeds/);
+
+  await writeFile(join(releaseRoot, RELEASE_MANIFEST), JSON.stringify(manifest));
+  await truncate(join(releaseRoot, assetPath), MAXIMUM_RELEASE_BYTES + 1);
+  await assert.rejects(verifyReleaseBundle(releaseRoot, options), /bundle size exceeds/);
+  await truncate(join(root, assetPath), MAXIMUM_RELEASE_BYTES + 1);
+  await assert.rejects(assembleReleaseBundle(root, releaseRoot, options), /bundle size exceeds/);
+});
+
+test("credentialed deployment pins the same reviewed byte bound", async () => {
+  // Keep the verifier independent of executable code in the downloaded bundle.
+  const workflow = await readFile(new URL("../.github/workflows/deploy.yml", import.meta.url), "utf8");
+  const bound = workflow.match(/actualBytes > (\d+) \* 1024 \* 1024/);
+  assert.ok(bound, "Privileged release verification must retain a byte bound");
+  assert.equal(Number(bound[1]) * 1024 * 1024, MAXIMUM_RELEASE_BYTES);
 });
 
 test("rejects unknown, mismatched, malformed and over-projected Hosting release identity", async () => {

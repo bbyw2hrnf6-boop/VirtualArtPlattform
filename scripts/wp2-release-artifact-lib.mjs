@@ -65,7 +65,9 @@ const VERSION = /^[0-9]+[.][0-9]+[.][0-9]+$/;
 const PROJECT_ID = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const PORTABLE_PATH = /^[-A-Za-z0-9._@/+]+$/;
 const MAXIMUM_FILES = 5_000;
-const MAXIMUM_BYTES = 250 * 1024 * 1024;
+// Covers all three detailed showcases (~281 MiB including release metadata).
+// The credentialed verifier pins the same bound independently in deploy.yml.
+export const MAXIMUM_RELEASE_BYTES = 320 * 1024 * 1024;
 
 function fail(message) {
   throw new Error(`Invalid LIEUVA release artifact: ${message}`);
@@ -257,8 +259,8 @@ async function releaseFileEntries(releaseRoot) {
   if (!files.length || files.length > MAXIMUM_FILES)
     fail("file count is outside its bound");
   const totalBytes = files.reduce((sum, file) => sum + (file.size ?? 0), 0);
-  if (!Number.isSafeInteger(totalBytes) || totalBytes > MAXIMUM_BYTES)
-    fail("bundle size exceeds its bound");
+  if (!Number.isSafeInteger(totalBytes) || totalBytes > MAXIMUM_RELEASE_BYTES)
+    fail(`bundle size exceeds its bound: ${totalBytes} bytes > ${MAXIMUM_RELEASE_BYTES} bytes`);
   for (const file of files) {
     if (!isAllowedReleaseFile(file.relativePath))
       fail(`unexpected file ${file.relativePath}`);
@@ -551,7 +553,7 @@ export async function verifyReleaseBundle(releaseRootValue, expectations = {}) {
     manifestBytes += entry.size;
     manifestPaths.push(entry.path);
   }
-  if (manifestBytes > MAXIMUM_BYTES)
+  if (!Number.isSafeInteger(manifestBytes) || manifestBytes > MAXIMUM_RELEASE_BYTES)
     fail("manifest byte total exceeds its bound");
   const sortedPaths = [...manifestPaths].sort();
   if (

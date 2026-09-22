@@ -331,7 +331,7 @@ jobs:
           const actualBytes = actual.reduce((total, entry) => total + entry.size, 0);
           if (
             actual.length > 5_000
-            || actualBytes > 250 * 1024 * 1024
+            || actualBytes > 320 * 1024 * 1024
             || JSON.stringify(actual) !== JSON.stringify(manifest.files)
           )
             throw new Error("Release file set or digest does not match its manifest.");

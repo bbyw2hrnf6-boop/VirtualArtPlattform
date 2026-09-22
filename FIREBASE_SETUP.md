@@ -783,6 +783,15 @@ migration is involved. Main `Verify` prepares
    forms such as `export *`; missing, extra and duplicate endpoint names still
    fail the reviewed allowlist check. Regression fixtures cover the modular
    admin exports and immutable bundle assembly.
+   The complete bundle is capped at 5,000 files and 320 MiB in both assembly
+   and the independent credentialed verifier. The detailed showcase assets
+   exceed the former 250 MiB cap (Hosting alone is about 280 MiB); this reviewed
+   increase preserves their original texture and geometry quality. Browser
+   and entry-chunk gates remain unchanged. Creation and verification report
+   actual and maximum byte totals. Before pushing asset-heavy changes, also
+   run the workflow's `wp2-release-artifact.mjs create` and `verify` commands
+   locally against the production-configured build, generated Functions
+   manifest and matching `GITHUB_SHA`; a preview build alone is insufficient.
 3. Inspect the main Verify result, commit SHA, artifact ID, and archive digest.
    The automatic deploy resolves that exact successful push-to-main run. A
    manual deploy requires the full SHA of an unexpired successful main artifact.
