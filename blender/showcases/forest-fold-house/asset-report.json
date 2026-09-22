@@ -1,20 +1,47 @@
 {
   "showcase": "forest-fold-house",
   "source": "forest-fold-house.blend",
-  "sourceSha256": "d8b1e8b27ff4629745aaf959eb82f76b190a647a7dc20eba1d0f7d34de59e665",
+  "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
   "models": {
-    "forest-fold-house-desktop.glb": {
-      "bytes": 38239712,
-      "sha256": "08cf019e3c97dbdc06ca64b5ee5a5ee5fdc23757666a0164220b4b65ade06edd",
-      "triangles": 2359796,
-      "primitives": 30,
-      "materials": 29,
-      "decodedRgbaMipBytesEstimate": 587202560,
+    "desktop-v3/forest-fold-house-desktop.gltf": {
+      "bytes": 136704287,
+      "sha256": "5ce05bbeb33905ceb5767dca96fe9bdc56d486ac4923b5f7fdc020afcf21c834",
+      "triangles": 9388615,
+      "uniqueMeshTriangles": 4942089,
+      "instancedBatches": 17,
+      "primitives": 49,
+      "materials": 35,
+      "decodedRgbaMipBytesEstimate": 1660944384,
       "textures": [
+        {
+          "name": "bark_brown_02_nor_gl_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "bark_brown_02_diff_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "bark_brown_02_rough_2k",
+          "width": 2048,
+          "height": 2048
+        },
         {
           "name": "bridge_walk",
           "width": 2048,
           "height": 2048
+        },
+        {
+          "name": "bridge_walk-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "bridge_walk-roughness",
+          "width": 1024,
+          "height": 1024
         },
         {
           "name": "E0_furniture",
@@ -22,9 +49,29 @@
           "height": 2048
         },
         {
+          "name": "E0_furniture-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0_furniture-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "E0",
           "width": 4096,
           "height": 4096
+        },
+        {
+          "name": "E0-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0-roughness",
+          "width": 1024,
+          "height": 1024
         },
         {
           "name": "E0_walk",
@@ -32,9 +79,29 @@
           "height": 2048
         },
         {
+          "name": "E0_walk-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0_walk-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "E1_furniture",
           "width": 2048,
           "height": 2048
+        },
+        {
+          "name": "E1_furniture-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E1_furniture-roughness",
+          "width": 1024,
+          "height": 1024
         },
         {
           "name": "E1",
@@ -42,9 +109,29 @@
           "height": 4096
         },
         {
+          "name": "E1-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E1-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "E1_walk",
           "width": 2048,
           "height": 2048
+        },
+        {
+          "name": "E1_walk-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E1_walk-roughness",
+          "width": 1024,
+          "height": 1024
         },
         {
           "name": "exterior",
@@ -52,9 +139,149 @@
           "height": 1024
         },
         {
+          "name": "exterior-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "exterior-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "leafy_grass_nor_gl_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "leafy_grass_diff_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "leafy_grass_rough_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "rock_08_nor_gl_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "rock_08_diff_4k",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "rock_08_rough_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "mossy_rock_nor_gl_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "mossy_rock_diff_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "mossy_rock_rough_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "fern_02_nor_gl",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "fern_02_diff-fern_02_alpha",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "fern_02_rough",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "periwinkle_plant_nor_gl",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "periwinkle_plant_diff-periwinkle_plant_opacity",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "periwinkle_plant_rough",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "tree_small_02_branch_nor_gl_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "tree_small_02_branch_diff_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "tree_small_02_branch_rough_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "tree_small_02_leaves_nor_gl_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "tree_small_02_leaves_diff-tree_small_02_leaves_alpha",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "tree_small_02_leaves_rough_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "tree_small_02_nor_gl",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "tree_small_02_diff_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "tree_small_02_rough",
+          "width": 2048,
+          "height": 2048
+        },
+        {
           "name": "stairs_walk",
           "width": 2048,
           "height": 2048
+        },
+        {
+          "name": "stairs_walk-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "stairs_walk-roughness",
+          "width": 1024,
+          "height": 1024
         },
         {
           "name": "W0_furniture",
@@ -62,9 +289,29 @@
           "height": 2048
         },
         {
+          "name": "W0_furniture-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W0_furniture-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W0",
           "width": 4096,
           "height": 4096
+        },
+        {
+          "name": "W0-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W0-roughness",
+          "width": 1024,
+          "height": 1024
         },
         {
           "name": "W0_walk",
@@ -72,9 +319,29 @@
           "height": 2048
         },
         {
+          "name": "W0_walk-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W0_walk-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W1_furniture",
           "width": 2048,
           "height": 2048
+        },
+        {
+          "name": "W1_furniture-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W1_furniture-roughness",
+          "width": 1024,
+          "height": 1024
         },
         {
           "name": "W1",
@@ -82,26 +349,445 @@
           "height": 4096
         },
         {
+          "name": "W1-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W1-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W1_walk",
           "width": 2048,
           "height": 2048
+        },
+        {
+          "name": "W1_walk-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "W1_walk-roughness",
+          "width": 1024,
+          "height": 1024
         }
       ],
       "extensionsRequired": [
         "EXT_meshopt_compression",
         "KHR_mesh_quantization"
+      ],
+      "files": [
+        {
+          "path": "desktop-v3/baseColor_1.jpg",
+          "bytes": 2356592,
+          "sha256": "285051e34826ace29f4ab438ad35cc1201b2aae0a6157a5f3c0bf6667bbc539e"
+        },
+        {
+          "path": "desktop-v3/baseColor_2.jpg",
+          "bytes": 4766204,
+          "sha256": "8e1c6d21365d4b89bc5a35ab664da98a78dbc3ab9ba6100474881c8619a5b113"
+        },
+        {
+          "path": "desktop-v3/baseColor_3.jpg",
+          "bytes": 9919017,
+          "sha256": "676d63d8a10dc2be8e979b9cc97fd52c276b9d355deba6465ec78b0c6ad5c84f"
+        },
+        {
+          "path": "desktop-v3/baseColor_4.jpg",
+          "bytes": 4535360,
+          "sha256": "98ecbd1d19953433f5909b79958992b1da2b45addbee772d1d4c27287f368499"
+        },
+        {
+          "path": "desktop-v3/baseColor_5.png",
+          "bytes": 3558365,
+          "sha256": "f5da54e9f2ba7409e59833d12591dd1ba381bdeded2af0a0c870081a839f08b2"
+        },
+        {
+          "path": "desktop-v3/baseColor_6.png",
+          "bytes": 3267509,
+          "sha256": "c010627ab8174a6a3e41ecdf68a60e635efbe0b15b07bfd4d256f0f798135f44"
+        },
+        {
+          "path": "desktop-v3/baseColor_7.jpg",
+          "bytes": 292760,
+          "sha256": "b519732a06972cef77d88f9ce28f3289703dde1b46e70fb36b30668723dc1714"
+        },
+        {
+          "path": "desktop-v3/baseColor_8.png",
+          "bytes": 2451601,
+          "sha256": "f1540e6c1908874dd2504d1e74966897d0265990765a89c93d4cdd9041e03c26"
+        },
+        {
+          "path": "desktop-v3/baseColor_9.jpg",
+          "bytes": 3170612,
+          "sha256": "4ab3210b6ec6bb1181145500bca71d1c1f81ead6baaa8600f5979c2cec50c6a4"
+        },
+        {
+          "path": "desktop-v3/emissive_1.jpg",
+          "bytes": 253927,
+          "sha256": "7de549deff2c7e1981ac583612b15831ba04facf9a56c2065c12a9f61b182095"
+        },
+        {
+          "path": "desktop-v3/emissive_10.jpg",
+          "bytes": 396676,
+          "sha256": "de1b1cce2291b55f9b174bf7ebdfd01afc70cfc27e72f37a44d3b39879f6c9b7"
+        },
+        {
+          "path": "desktop-v3/emissive_11.jpg",
+          "bytes": 739754,
+          "sha256": "c200475b4f0973ca3f72b0d61ec7aab39b956122138559dd4e4f0a7d35668d9d"
+        },
+        {
+          "path": "desktop-v3/emissive_12.jpg",
+          "bytes": 213868,
+          "sha256": "22f8a20778f785f7eac5c8477c42c2b3fd8101f059eca4e92b347829904d949a"
+        },
+        {
+          "path": "desktop-v3/emissive_13.jpg",
+          "bytes": 326552,
+          "sha256": "b0f8483e57145d8c11c7eaf4710f6e2a5902714c8e9dc25384d704341989e844"
+        },
+        {
+          "path": "desktop-v3/emissive_14.jpg",
+          "bytes": 875325,
+          "sha256": "36a25848f304fdcf9de6beaf4f68b493ce97d84e2872084bc5cc1b6c94bc4a16"
+        },
+        {
+          "path": "desktop-v3/emissive_15.jpg",
+          "bytes": 252543,
+          "sha256": "37a7e6652c32d599dacd7263dd097041f575ddb0d7f29b6877e5955a5cc1603b"
+        },
+        {
+          "path": "desktop-v3/emissive_2.jpg",
+          "bytes": 229614,
+          "sha256": "7ae5ebbc2d7984995a3cdadfe41aef511f4cc0b60bbda77a38a22152ad43546c"
+        },
+        {
+          "path": "desktop-v3/emissive_3.jpg",
+          "bytes": 710415,
+          "sha256": "bd011444c07cd5dbc1fbefdbae036a652e9b64fbdcc750f402fb6af33afd6c9a"
+        },
+        {
+          "path": "desktop-v3/emissive_4.jpg",
+          "bytes": 177482,
+          "sha256": "382080a6d630b5686242dad3744cb6394f1bfa7b9cea99011a7f33840e102399"
+        },
+        {
+          "path": "desktop-v3/emissive_5.jpg",
+          "bytes": 276708,
+          "sha256": "8f9cfa48226a95061d0de34ab1cf9404ec3e5dda7c14e97d31565e5f3cd3c62d"
+        },
+        {
+          "path": "desktop-v3/emissive_6.jpg",
+          "bytes": 764789,
+          "sha256": "4f449b12a617271312dfa097ea3514a75e6150149e9d624fb991204b88c88079"
+        },
+        {
+          "path": "desktop-v3/emissive_7.jpg",
+          "bytes": 224319,
+          "sha256": "6b2448ad62e692f555a2381c5a7b1abfa367536d04f413698a3565228dbb6c29"
+        },
+        {
+          "path": "desktop-v3/emissive_8.jpg",
+          "bytes": 81507,
+          "sha256": "b86ac90fe99827d40fb83a34e3c5eec1accce919c11862d4014d46f38837c895"
+        },
+        {
+          "path": "desktop-v3/emissive_9.jpg",
+          "bytes": 285094,
+          "sha256": "a26b85d21f3305a60809eb79490cae2fb04c8a77568fdae2275734a2f2abfd05"
+        },
+        {
+          "path": "desktop-v3/forest-fold-house-desktop.bin",
+          "bytes": 69251248,
+          "sha256": "f5aec910ee49294083247ca19f94e57d9d1dd5606b4da5a947ff1be933dd05c5"
+        },
+        {
+          "path": "desktop-v3/forest-fold-house-desktop.gltf",
+          "bytes": 222764,
+          "sha256": "5ce05bbeb33905ceb5767dca96fe9bdc56d486ac4923b5f7fdc020afcf21c834"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_1.jpg",
+          "bytes": 427656,
+          "sha256": "0fd4fc710c7ddf5899b009c791264f4e0c74421d8bb7e5373600162ee5091012"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_10.jpg",
+          "bytes": 259515,
+          "sha256": "fb16e52624a4f40e5c3785bf49174538478fd903366158cc2b71c34c20a6e6d5"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_11.jpg",
+          "bytes": 346146,
+          "sha256": "4b4624103e89e10fb6a18850921cb39dec249a737474376410e0e5e1bb17b20b"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_12.jpg",
+          "bytes": 666105,
+          "sha256": "42e62bb1888ed9b336a46eed783f6c299642840c5af76468f3740182f342fbcf"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_13.jpg",
+          "bytes": 205803,
+          "sha256": "472ac74e44fe6fe980814e169ccedcc6a255ff3a3257051ed5d3cebea720c07f"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_14.jpg",
+          "bytes": 107709,
+          "sha256": "b06a79b572aae006d07afaaae6074f998b8a40f019826de10ee8880911c41f91"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_15.jpg",
+          "bytes": 144790,
+          "sha256": "cefe8bccff081527d4e7a35c5d85629894fd57b2f546ff1191a237913c96e9f3"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_16.jpg",
+          "bytes": 193594,
+          "sha256": "77fd90253d820f12efdf525bd7ce8892337f560977ddce2567b609405ddbff8c"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_17.jpg",
+          "bytes": 295062,
+          "sha256": "d185a52efb66032f84ffbf3eafe68b8a444329a1c8266c8f7c278b6d8333a9d9"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_18.jpg",
+          "bytes": 215025,
+          "sha256": "9fa17e34ad773f972e2c9039233853fcf41f99e328f8085deeb73dab7e3a020b"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_19.jpg",
+          "bytes": 162854,
+          "sha256": "9058b837048598a1aed0b2a2362480ab9dbad98dca9628c0807c09ce327912ac"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_2.jpg",
+          "bytes": 239387,
+          "sha256": "5d49a098441ee2f48fff78f5cc59b85cbc2aaa21efc90138a86adb1758754555"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_20.jpg",
+          "bytes": 130177,
+          "sha256": "5b603cbbe054490d21637d8a1ef50afc192a2c4232786a9dcdaedee8e1537008"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_21.jpg",
+          "bytes": 21494,
+          "sha256": "f8ff77253212134ba5c8166f27d5a42bfe354d9a6f71a60deb3dde1bfbdb67db"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_22.jpg",
+          "bytes": 160629,
+          "sha256": "cae55c0fe6a4095e3109d44760cdd0e7c3a85ef38acfdf63a1f03568a15ccd4c"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_23.jpg",
+          "bytes": 129221,
+          "sha256": "69d82662ff4aba348c1bff19d8f34f5c8914078b6c1cfe78297a4a4451a85b58"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_24.jpg",
+          "bytes": 201276,
+          "sha256": "2ef01ac83d640b841859b600820818bd02702638e5760f3f7d02914c2a7fd88d"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_3.jpg",
+          "bytes": 139886,
+          "sha256": "7683bbd7984c8a1e73d806260e500ebaa4f7fbca7dce080a8817e560ccc775b6"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_4.jpg",
+          "bytes": 126251,
+          "sha256": "fa8d3ae83c783b79d962b54f33b6ef4f8da47d1dcb4a73fa209b80739a5a9f15"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_5.jpg",
+          "bytes": 23137,
+          "sha256": "b331acf98523461216eb351a8ef1e7a54546c33afc711b48675c7eed3999c268"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_6.jpg",
+          "bytes": 156759,
+          "sha256": "c3f7d0e80f6f31750ca0fdc109604d3d7c1733feae8d9a9011d4f1b05b90e13c"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_7.jpg",
+          "bytes": 128783,
+          "sha256": "dc35590c118dd49d4ffee60b8c27acdde0bbc72fcc93043a9995724866911251"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_8.jpg",
+          "bytes": 220012,
+          "sha256": "23136cc70385c7af1bdf3aa5790830d55b71e000dfef12253402ae42dd977bff"
+        },
+        {
+          "path": "desktop-v3/metallicRoughness_9.jpg",
+          "bytes": 61739,
+          "sha256": "641d51246c1f25ea6f6a290a2811238f91c973f5bc2cbc4171bc300df2818d43"
+        },
+        {
+          "path": "desktop-v3/normal_1.jpg",
+          "bytes": 3707907,
+          "sha256": "aaba4529c3167a7811b4dbf5b4327d054a166c2fc8ea08ebd249a2692adace41"
+        },
+        {
+          "path": "desktop-v3/normal_10.jpg",
+          "bytes": 6047262,
+          "sha256": "df0cf0ce96e653f033e5b934d5b12995464bda027aa53bd12e329be889aa9f45"
+        },
+        {
+          "path": "desktop-v3/normal_11.jpg",
+          "bytes": 3406692,
+          "sha256": "5577d9766de427110c43b4d50be021389599421fd3f0249b1ee07e40bf27738e"
+        },
+        {
+          "path": "desktop-v3/normal_12.jpg",
+          "bytes": 4033031,
+          "sha256": "78c05b52eb78617fcce4fde7a9ac4872a9725fb2d13aff33248cbdb9c6330563"
+        },
+        {
+          "path": "desktop-v3/normal_13.jpg",
+          "bytes": 269507,
+          "sha256": "48e405efd1e7cd813b26bd1bbd56a70bf6dede120839ce929f5e3ba2ae9bc4ef"
+        },
+        {
+          "path": "desktop-v3/normal_14.jpg",
+          "bytes": 236952,
+          "sha256": "223a5eec832a0cff33e5d4b205f57bfa20f241248c64943b1f769cbc85f43caa"
+        },
+        {
+          "path": "desktop-v3/normal_15.jpg",
+          "bytes": 375530,
+          "sha256": "6a1a261ec172bd4fb6bb71686d209000b797cd3c3671bb521422c092d4ed34df"
+        },
+        {
+          "path": "desktop-v3/normal_16.jpg",
+          "bytes": 423995,
+          "sha256": "215f01567525b31cbdfeee0f9bfa4127542fa8db945db6d5e617860b5e5dd8fb"
+        },
+        {
+          "path": "desktop-v3/normal_17.jpg",
+          "bytes": 1095648,
+          "sha256": "9e73579f76ddf04fc51f1423333034b3ccdbfb7c19c55f3be670c90243f41e5b"
+        },
+        {
+          "path": "desktop-v3/normal_18.jpg",
+          "bytes": 146288,
+          "sha256": "4406085c17d701f5a1b232b68eba6837380aca2fe8fc416302de4a2da94bb256"
+        },
+        {
+          "path": "desktop-v3/normal_19.jpg",
+          "bytes": 137762,
+          "sha256": "a87e626ef940c5b0fd25655b11543a036f09a256a5eff5adee608d67d8247f5c"
+        },
+        {
+          "path": "desktop-v3/normal_2.jpg",
+          "bytes": 147193,
+          "sha256": "6ad51c822515a0f0cbd829dbf372780a4659ce43ac59806e7a9145f18e8c358f"
+        },
+        {
+          "path": "desktop-v3/normal_20.jpg",
+          "bytes": 241604,
+          "sha256": "d66d75453579fd20daba3b577511eb7ddf308cb531feaf78f3ae0d81502d989f"
+        },
+        {
+          "path": "desktop-v3/normal_21.jpg",
+          "bytes": 119850,
+          "sha256": "693d972cd895c7168ac4794f58853ec69bc94bbbc954f08603864efa71849813"
+        },
+        {
+          "path": "desktop-v3/normal_22.jpg",
+          "bytes": 150799,
+          "sha256": "3171bb91c29696a364a8ffa958e8fd655f0787156b687dc8c33bae914aa2a95b"
+        },
+        {
+          "path": "desktop-v3/normal_23.jpg",
+          "bytes": 236772,
+          "sha256": "a9f154e5c989d9a3aff8b791ba5f12592ca1222f63f3bbd5ce1364cbcc6c6cfe"
+        },
+        {
+          "path": "desktop-v3/normal_24.jpg",
+          "bytes": 136332,
+          "sha256": "b37743ccdd0acba78df0e0f6deea35e5c4bc8ea3b7743378d1963749d474322a"
+        },
+        {
+          "path": "desktop-v3/normal_3.jpg",
+          "bytes": 192491,
+          "sha256": "df99a960e02cff5f22a336fd08a3718d5721c0c9fe529aa09a3a3370313c62bd"
+        },
+        {
+          "path": "desktop-v3/normal_4.jpg",
+          "bytes": 401337,
+          "sha256": "ae3493cd1f1e8d33b8c2f5dea52078dce2f7ea90b6ab440ba7bcd961b5e47aeb"
+        },
+        {
+          "path": "desktop-v3/normal_5.jpg",
+          "bytes": 123322,
+          "sha256": "917e51b44578b65fac3c707367f61c73d808f7eddc6274ebd52c01f74ce127f8"
+        },
+        {
+          "path": "desktop-v3/normal_6.jpg",
+          "bytes": 116715,
+          "sha256": "8c883553aff23132e19c2858022329a039ec50785a4711079ce1f234a6fedbf4"
+        },
+        {
+          "path": "desktop-v3/normal_7.jpg",
+          "bytes": 312417,
+          "sha256": "640e9dd64c9f8a56c11a0c6dfbd919b2b919b804b36ef56b39bec7cdc294feef"
+        },
+        {
+          "path": "desktop-v3/normal_8.jpg",
+          "bytes": 142485,
+          "sha256": "bf3a435cfee3e4ed1028074fba6d34a928f0ead5346bed9e849a214b945ada00"
+        },
+        {
+          "path": "desktop-v3/normal_9.jpg",
+          "bytes": 138781,
+          "sha256": "21e5c76a02c4963d9d6590cd4c37093032b9ac500ecaf3f9306128a4e2f6016d"
+        }
       ]
     },
     "forest-fold-house-mobile.glb": {
-      "bytes": 34344900,
-      "sha256": "9d0754a24d65162116144338486332a7d4915da6950f0a1594852956c7249bae",
-      "triangles": 2359796,
-      "primitives": 30,
-      "materials": 29,
-      "decodedRgbaMipBytesEstimate": 83886080,
+      "bytes": 80222348,
+      "sha256": "aebc454cd17e1f11b7c083f088cb4bed63d7aee83586af6ff7393f24210a1a1e",
+      "triangles": 9388615,
+      "uniqueMeshTriangles": 4942089,
+      "instancedBatches": 17,
+      "primitives": 49,
+      "materials": 35,
+      "decodedRgbaMipBytesEstimate": 402653184,
       "textures": [
         {
+          "name": "bark_brown_02_nor_gl_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "bark_brown_02_diff_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "bark_brown_02_rough_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "bridge_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "bridge_walk-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "bridge_walk-roughness",
           "width": 1024,
           "height": 1024
         },
@@ -111,7 +797,27 @@
           "height": 1024
         },
         {
+          "name": "E0_furniture-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_furniture-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "E0",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0-roughness",
           "width": 1024,
           "height": 1024
         },
@@ -121,7 +827,27 @@
           "height": 1024
         },
         {
+          "name": "E0_walk-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_walk-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "E1_furniture",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_furniture-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_furniture-roughness",
           "width": 1024,
           "height": 1024
         },
@@ -131,7 +857,27 @@
           "height": 1024
         },
         {
+          "name": "E1-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "E1_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_walk-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_walk-roughness",
           "width": 1024,
           "height": 1024
         },
@@ -141,7 +887,147 @@
           "height": 1024
         },
         {
+          "name": "exterior-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "exterior-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "leafy_grass_nor_gl_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "leafy_grass_diff_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "leafy_grass_rough_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "rock_08_nor_gl_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "rock_08_diff_4k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "rock_08_rough_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "mossy_rock_nor_gl_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "mossy_rock_diff_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "mossy_rock_rough_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "fern_02_nor_gl",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "fern_02_diff-fern_02_alpha",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "fern_02_rough",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "periwinkle_plant_nor_gl",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "periwinkle_plant_diff-periwinkle_plant_opacity",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "periwinkle_plant_rough",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "tree_small_02_branch_nor_gl_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "tree_small_02_branch_diff_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "tree_small_02_branch_rough_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "tree_small_02_leaves_nor_gl_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "tree_small_02_leaves_diff-tree_small_02_leaves_alpha",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "tree_small_02_leaves_rough_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "tree_small_02_nor_gl",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "tree_small_02_diff_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "tree_small_02_rough",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "stairs_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "stairs_walk-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "stairs_walk-roughness",
           "width": 1024,
           "height": 1024
         },
@@ -151,7 +1037,27 @@
           "height": 1024
         },
         {
+          "name": "W0_furniture-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W0_furniture-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W0",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W0-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W0-roughness",
           "width": 1024,
           "height": 1024
         },
@@ -161,7 +1067,27 @@
           "height": 1024
         },
         {
+          "name": "W0_walk-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W0_walk-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W1_furniture",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W1_furniture-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W1_furniture-roughness",
           "width": 1024,
           "height": 1024
         },
@@ -171,7 +1097,27 @@
           "height": 1024
         },
         {
+          "name": "W1-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W1-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W1_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W1_walk-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W1_walk-roughness",
           "width": 1024,
           "height": 1024
         }
@@ -179,6 +1125,13 @@
       "extensionsRequired": [
         "EXT_meshopt_compression",
         "KHR_mesh_quantization"
+      ],
+      "files": [
+        {
+          "path": "forest-fold-house-mobile.glb",
+          "bytes": 80222348,
+          "sha256": "aebc454cd17e1f11b7c083f088cb4bed63d7aee83586af6ff7393f24210a1a1e"
+        }
       ]
     }
   },
@@ -187,75 +1140,80 @@
       "name": "C01-afternoon.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 46569061,
-      "sha256": "c3684e5c7e85319f0859e8a6f66a92cd3d5951848b55e079c9a6e1826696b3e4"
+      "bytes": 50168274,
+      "sha256": "8e145b2069e853dca7160755ea60d21d88f428dcb700fef227105d1c07516d19"
     },
     {
       "name": "C01-evening.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 39005605,
-      "sha256": "4332896fce4ae5aeb02bc47e162ae5e6fe94d7db65a47e726a304583b251f226"
+      "bytes": 42259874,
+      "sha256": "bf5c4d6f9d0be0fc0ee902c61b1d83cbf0af7f425d169803eb6b5d5f042b9edc"
     },
     {
       "name": "C01-overcast.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 46510875,
-      "sha256": "521bac22df3dd597c7ad7b7cc474d31b24944003c7739ab9b0bca7346bfaaf2b"
+      "bytes": 50128457,
+      "sha256": "89b13e0aed6fccd16744bfeb9684b1045b2cd7ffc6267473b2c2cab3b9f47de2"
     },
     {
       "name": "C07-afternoon.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 39565997,
-      "sha256": "1c8fc4beb03abd7394d2f6a9dea192ec0566e7990cdf009b829f723e9c9ff6a1"
+      "bytes": 45832320,
+      "sha256": "48ec630c5fbb23766f8decd913d98f4e6d2279db47ea928a163ce6d29cd8fc61"
     },
     {
       "name": "C08-afternoon.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 43676637,
-      "sha256": "670b0605a23267c6c3616f32c92ffb679e6944accda0bdb91ec8d8d3f1721614"
+      "bytes": 47097692,
+      "sha256": "834cb8184f17cf8409288a79ba6b859a44d1d2eb0bbb74c6b799dd73d4a21d7f"
     },
     {
       "name": "C09-afternoon.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 38042431,
-      "sha256": "58e3b2833bdcb85f45a92e5b00f998f046f4ba4d682f7fd1179f5627370c13c0"
+      "bytes": 38793962,
+      "sha256": "c3df0ab982dee56cbf168fbb008548f4bd10e641b6830af85503e067ce058f47"
     },
     {
       "name": "C10-afternoon.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 44097628,
-      "sha256": "6bfdd4558bb6ee080b2c8a68b3dbc99e3571751793a16604c980aced6f394eb5"
+      "bytes": 48872714,
+      "sha256": "5e06ab6db70a56929ddb136ea1a3e40845a54f035a778b3b58acf4506033eb94"
     },
     {
       "name": "C11-afternoon.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 39382460,
-      "sha256": "9f4e8e7c3cbd0f7fa0f01e35184fb9161543262c122bf3a7ab0232062ca61c8e"
+      "bytes": 46147728,
+      "sha256": "2094d34d30f9cce1b432df08b7e0e43c1f49460b0afb51bd5cb0577ab098bb1f"
     },
     {
       "name": "C12-afternoon.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 43819917,
-      "sha256": "ba7b4820bf2a78ff89a47927d99aa75d6be88971642386900c17d7168b168ce8"
+      "bytes": 49144252,
+      "sha256": "53ef375c6fe8bfe5d5108f500484975b16aed8ddea2280518df05b8b9c58dd99"
     },
     {
       "name": "C13-afternoon.png",
       "width": 3840,
       "height": 2160,
-      "bytes": 40327464,
-      "sha256": "71a0c50f6b63fcadeafc9c5db50f77b53c95903ba611ee5014c72cd26e72fb27"
+      "bytes": 41888099,
+      "sha256": "11b86409e05e00e7950b6d6eefbae95ac5892344d7f802287cf3ff457c3b5cc6"
     }
   ],
   "openQualification": [
     "Physical phone GPU, thermals and sustained frame rate",
     "Real slow-network loading; browser emulation is not a physical-device measurement"
-  ]
+  ],
+  "sourceAssets": {
+    "license": "CC0-1.0",
+    "count": 9,
+    "manifest": "materials/sources.json"
+  }
 }

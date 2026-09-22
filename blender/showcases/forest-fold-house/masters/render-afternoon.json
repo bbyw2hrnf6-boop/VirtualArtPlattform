@@ -4,63 +4,63 @@
     "lighting": "afternoon",
     "width": 3840,
     "height": 2160,
-    "samples": 128,
-    "seconds": 259.93
+    "samples": 512,
+    "seconds": 971.24
   },
   {
     "camera": "C07",
     "lighting": "afternoon",
     "width": 3840,
     "height": 2160,
-    "samples": 128,
-    "seconds": 279.64
+    "samples": 256,
+    "seconds": 565.58
   },
   {
     "camera": "C08",
     "lighting": "afternoon",
     "width": 3840,
     "height": 2160,
-    "samples": 128,
-    "seconds": 268.34
+    "samples": 256,
+    "seconds": 768.46
   },
   {
     "camera": "C09",
     "lighting": "afternoon",
     "width": 3840,
     "height": 2160,
-    "samples": 128,
-    "seconds": 315.37
+    "samples": 256,
+    "seconds": 946.19
   },
   {
     "camera": "C10",
     "lighting": "afternoon",
     "width": 3840,
     "height": 2160,
-    "samples": 128,
-    "seconds": 248.5
+    "samples": 256,
+    "seconds": 854.58
   },
   {
     "camera": "C11",
     "lighting": "afternoon",
     "width": 3840,
     "height": 2160,
-    "samples": 128,
-    "seconds": 285.36
+    "samples": 256,
+    "seconds": 763.53
   },
   {
     "camera": "C12",
     "lighting": "afternoon",
     "width": 3840,
     "height": 2160,
-    "samples": 128,
-    "seconds": 275.53
+    "samples": 256,
+    "seconds": 856.95
   },
   {
     "camera": "C13",
     "lighting": "afternoon",
     "width": 3840,
     "height": 2160,
-    "samples": 128,
-    "seconds": 272.74
+    "samples": 256,
+    "seconds": 807.02
   }
 ]

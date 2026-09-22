@@ -275,9 +275,11 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     motion.addEventListener('change', schedule);
     window.addEventListener('blur', blur); document.addEventListener('visibilitychange', visibility);
     const abort = new AbortController();
-    fetch(`/assets/showcases/${config.id}/${config.id}-${compact ? 'mobile' : 'desktop'}.glb${config.assetVersion ?? ''}`, { signal: abort.signal })
+    const separate = config.architecture && !compact;
+    const assetRoot = `/assets/showcases/${config.id}/${separate ? 'desktop-v3/' : ''}`;
+    fetch(`${assetRoot}${config.id}-${compact ? 'mobile' : 'desktop'}.${separate ? 'gltf' : 'glb'}${config.assetVersion ?? ''}`, { signal: abort.signal })
       .then(response => { if (!response.ok) throw new Error('Missing showcase'); return response.arrayBuffer(); })
-      .then(buffer => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buffer, `/assets/showcases/${config.id}/`))
+      .then(buffer => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buffer, assetRoot))
       .then(gltf => {
         if (disposed) { disposeModel(gltf.scene); return; }
         model = gltf.scene;

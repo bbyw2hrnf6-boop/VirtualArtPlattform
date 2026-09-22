@@ -6,7 +6,7 @@
     "normalResolution": 2048,
     "roughnessResolution": 1024,
     "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 94.8
+    "seconds": 0.03
   },
   {
     "group": "W1_furniture",
@@ -15,7 +15,7 @@
     "normalResolution": 2048,
     "roughnessResolution": 1024,
     "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 149.38
+    "seconds": 0.0
   },
   {
     "group": "E1_furniture",
@@ -24,7 +24,7 @@
     "normalResolution": 2048,
     "roughnessResolution": 1024,
     "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 83.22
+    "seconds": 0.0
   },
   {
     "group": "E0_furniture",
@@ -33,7 +33,7 @@
     "normalResolution": 2048,
     "roughnessResolution": 1024,
     "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 140.64
+    "seconds": 0.0
   },
   {
     "group": "W0",
@@ -42,7 +42,7 @@
     "normalResolution": 2048,
     "roughnessResolution": 1024,
     "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 279.83
+    "seconds": 0.0
   },
   {
     "group": "W0_walk",
@@ -51,7 +51,7 @@
     "normalResolution": 2048,
     "roughnessResolution": 1024,
     "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 117.36
+    "seconds": 0.0
   },
   {
     "group": "W1",
@@ -60,7 +60,7 @@
     "normalResolution": 2048,
     "roughnessResolution": 1024,
     "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 284.5
+    "seconds": 0.0
   },
   {
     "group": "W1_walk",
@@ -69,6 +69,69 @@
     "normalResolution": 2048,
     "roughnessResolution": 1024,
     "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 67.07
+    "seconds": 0.0
+  },
+  {
+    "group": "exterior",
+    "resolution": 1024,
+    "samples": 256,
+    "normalResolution": 1024,
+    "roughnessResolution": 1024,
+    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
+    "seconds": 0.0
+  },
+  {
+    "group": "E0",
+    "resolution": 4096,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
+    "seconds": 0.0
+  },
+  {
+    "group": "E0_walk",
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
+    "seconds": 0.0
+  },
+  {
+    "group": "E1",
+    "resolution": 4096,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
+    "seconds": 0.0
+  },
+  {
+    "group": "E1_walk",
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
+    "seconds": 0.0
+  },
+  {
+    "group": "bridge_walk",
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
+    "seconds": 0.0
+  },
+  {
+    "group": "stairs_walk",
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
+    "seconds": 0.0
   }
 ]

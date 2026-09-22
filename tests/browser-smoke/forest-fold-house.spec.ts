@@ -7,7 +7,8 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
     test('loads on demand and shares walking, look, room heights and overview',async({page},info)=>{
       const errors:string[]=[],models:string[]=[];
       page.on('pageerror',e=>errors.push(e.message));
-      page.on('request',r=>{if(r.url().includes('forest-fold-house')&&r.url().includes('.glb'))models.push(r.url());});
+      page.on('response',r=>{if(r.url().includes('/assets/showcases/forest-fold-house/')&&!r.ok())errors.push(`${r.status()} ${r.url()}`);});
+      page.on('request',r=>{if(/forest-fold-house.*\.(glb|gltf)(\?|$)/.test(r.url()))models.push(r.url());});
       await page.goto('/#/showcase/forest-fold-house');
       await expect(page.getByRole('heading',{name:'Forest Fold House.'})).toBeVisible();
       expect(models).toHaveLength(0);
@@ -16,11 +17,14 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
       const scene=page.locator('.obsidian__scene'),canvas=scene.locator('canvas');
       await expect(scene).toHaveAttribute('data-ready','true',{timeout:90_000});
       await expect(scene).toHaveAttribute('data-idle','true');
-      expect(models).toHaveLength(1);expect(models[0]).toContain(mobile?'mobile.glb':'desktop.glb');
+      expect(models).toHaveLength(1);expect(models[0]).toContain(mobile?'mobile.glb':'desktop.gltf');
       const position=async()=> (await scene.getAttribute('data-position'))!.split(',').map(Number);
       expect((await position())[1]).toBeCloseTo(5.1,1);
-      await canvas.focus();await page.keyboard.down('KeyE');await page.waitForTimeout(350);await page.keyboard.up('KeyE');
-      await expect.poll(async()=>Number(await scene.getAttribute('data-pitch'))).toBeGreaterThan(.15);
+      // Keep input active until the rendered camera responds. A fixed 350 ms
+      // hold measured CI's software GPU speed, then polled a stopped camera.
+      await canvas.focus();await page.keyboard.down('KeyE');
+      try{await expect.poll(async()=>Number(await scene.getAttribute('data-pitch'))).toBeGreaterThan(.15);}
+      finally{await page.keyboard.up('KeyE');}
       await page.getByLabel('House room').selectOption('2');
       await expect.poll(async()=>(await position())[0]).toBeCloseTo(.4,1);
       // Drag down to reveal the bridge deck, then hit its visible top surface.

@@ -3,7 +3,7 @@ Never changes the editable master. Run after the approved source build.
 """
 import bpy,json,time,runpy,hashlib
 from pathlib import Path
-H=Path(__file__).resolve().parent;OUT=H.parents[2]/'public/assets/showcases/forest-fold-house';MAP=H/'lightmaps';MAP.mkdir(exist_ok=True);OUT.mkdir(parents=True,exist_ok=True)
+H=Path(__file__).resolve().parent;OUT=H.parents[2]/'artifacts/forest/raw';MAP=H/'lightmaps';MAP.mkdir(exist_ok=True);OUT.mkdir(parents=True,exist_ok=True)
 s=bpy.context.scene;bpy.context.preferences.filepaths.save_version=0
 prefs=bpy.context.preferences.addons['cycles'].preferences;prefs.compute_device_type='METAL';prefs.get_devices()
 for d in prefs.devices:d.use=d.type=='METAL'
@@ -107,10 +107,17 @@ for m in bpy.data.materials:
   p.inputs['Base Color'].default_value=(.7,.85,.78,1);p.inputs['Alpha'].default_value=.12;p.inputs['Metallic'].default_value=.3;p.inputs['Roughness'].default_value=.07;m.surface_render_method='BLENDED'
  else:
   p.inputs['Base Color'].default_value=(.12,.20,.16,1);p.inputs['Metallic'].default_value=.55;p.inputs['Roughness'].default_value=.13
-# Batch static vegetation and hardware by material, preserving walkable meshes.
+# Batch one-off static vegetation and hardware by material, preserving walkable
+# meshes. Repeated scanned plants deliberately share one Blender mesh. Keep
+# those objects separate so glTF emits one mesh plus lightweight transform
+# nodes instead of expanding the same fern/tree geometry thousands of times.
+mesh_users={}
+for o in s.objects:
+ if o.type=='MESH':mesh_users[o.data]=mesh_users.get(o.data,0)+1
 bins={}
 for o in list(s.objects):
  if o.type!='MESH' or o.get('baked_diffuse'):continue
+ if mesh_users.get(o.data,0)>1:continue
  key=tuple(m.name for m in o.data.materials)
  bins.setdefault(key,[]).append(o)
 for key,obs in bins.items():
