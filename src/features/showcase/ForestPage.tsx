@@ -25,7 +25,7 @@ export default function ForestPage(){
     <header className="obsidian__header"><a href="#/">LIEUVA <span>/ ARCHITECTURE</span></a><a href="#/">← Back to LIEUVA</a></header>
     <section ref={stage} className="obsidian__stage" aria-label="Forest Fold House preview" data-flight={flight.status}>
       <ShowcaseActions id="forest-fold-house" title="Forest Fold House" target={stage} />
-      {status!=='ready'&&<img className="obsidian__poster" src={`${asset}cover.webp?v=3`} alt="Two stone and oak wings joined by a glass bridge, overlooking a shallow woodland watercourt." fetchPriority="high"/>}
+      {status!=='ready'&&<img className="obsidian__poster" src={`${asset}cover.webp?v=5`} alt="Two stone and oak wings joined by a glass bridge, overlooking a shallow woodland watercourt." fetchPriority="high"/>}
       {active&&<Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} onTour={setTour} onFlight={setFlight}/></Suspense>}
       {status!=='ready'&&<div className="obsidian__entrance">
         <p className="obsidian__eyebrow">A LIEUVA architecture showcase</p><h1>Forest Fold<br/>House.</h1>
@@ -52,7 +52,7 @@ export default function ForestPage(){
     </section>
     <section id="forest-rooms" className="obsidian__collection" aria-labelledby="forest-heading">
       <div className="obsidian__collection-intro"><p className="obsidian__eyebrow">173.4 m² / Two levels / One bridge</p><h2 id="forest-heading">At home in<br/>the forest.</h2><p>Oak, linen and quiet stone. A planted roof above, a sheltered watercourt below. Follow the stairs from the upper entrance to the living rooms, then cross the courtyard to the water lounge.</p></div>
-      <div className="forest-house__photos">{forestRooms.map(r=><figure key={r.id}><a href={`${asset}${r.image}.webp?v=3`} target="_blank" rel="noreferrer"><img src={`${asset}${r.image}.webp?v=3`} alt={`${r.name} — rendered from the Forest Fold House model`} loading="lazy" width="1920" height="1080"/></a><figcaption>{r.name}</figcaption></figure>)}</div>
+      <div className="forest-house__photos">{forestRooms.map(r=><figure key={r.id}><a href={`${asset}${r.image}.webp?v=5`} target="_blank" rel="noreferrer"><img src={`${asset}${r.image}.webp?v=5`} alt={`${r.name} — rendered from the Forest Fold House model`} loading="lazy" width="1920" height="1080"/></a><figcaption>{r.name}</figcaption></figure>)}</div>
       <footer><p>An individually authored architectural concept, modelled in Blender.<br/>Separate from the room templates available in Studio. Concept dimensions, not construction documents.</p><a href="#/">Back to LIEUVA ↗</a></footer>
     </section>
   </main>;

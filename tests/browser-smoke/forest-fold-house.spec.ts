@@ -12,23 +12,49 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
       await expect(page.getByRole('heading',{name:'Forest Fold House.'})).toBeVisible();
       await expect(page.getByRole('button',{name:'Enter the house'})).toBeEnabled();
       await expect(page.locator('.obsidian__poster')).toHaveJSProperty('naturalWidth',1920);
+      await expect(page.locator('.obsidian__poster')).toHaveAttribute('src',/cover\.webp\?v=5$/);
       for(const image of await page.locator('.forest-house__photos img').all()){
         await image.scrollIntoViewIfNeeded();
         await expect(image).toHaveJSProperty('naturalWidth',1920);
+        await expect(image).toHaveAttribute('src',/\.webp\?v=5$/);
       }
       expect(models).toEqual([]);
       expect(errors).toEqual([]);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
       const base='/assets/showcases/forest-fold-house/';
-      const paths:string[]=mobile?[`${base}forest-fold-house-mobile.glb?v=4`]:[];
+      const paths:string[]=mobile?[`${base}forest-fold-house-mobile.glb?v=5`]:[];
       if(!mobile){
-        const response=await request.get(`${base}desktop-v4/forest-fold-house-desktop.gltf`);
+        const response=await request.get(`${base}desktop-v5/forest-fold-house-desktop.gltf`);
         expect(response.ok()).toBe(true);
         const gltf=await response.json();
         expect(gltf.asset.version).toBe('2.0');
+        const irradianceIndices=new Set<number>(),tiledIndices=new Set<number>();
+        const textureUv=(texture:{texCoord?:number;extensions?:{KHR_texture_transform?:{texCoord?:number}}})=>texture.extensions?.KHR_texture_transform?.texCoord??texture.texCoord??0;
+        for(let i=0;i<gltf.materials.length;i++){
+          const material=gltf.materials[i];
+          if(material.extras?.forest_irradiance!==true)continue;
+          irradianceIndices.add(i);
+          expect(material.emissiveTexture,material.name).toBeDefined();
+          expect(textureUv(material.emissiveTexture),material.name).toBe(1);
+          const tiled=material.extras.forest_surface_tile_m!==undefined;
+          if(tiled)tiledIndices.add(i);
+          // Scans retain metre-scaled UV0; procedural source materials use
+          // their own albedo/normal/roughness atlases on the lightmap UV1.
+          for(const texture of [material.pbrMetallicRoughness?.baseColorTexture,material.normalTexture,material.pbrMetallicRoughness?.metallicRoughnessTexture]){
+            expect(texture,material.name).toBeDefined();
+            expect(textureUv(texture),material.name).toBe(tiled?0:1);
+          }
+        }
+        expect(irradianceIndices.size).toBeGreaterThan(0);
+        expect(tiledIndices.size).toBeGreaterThan(0);
+        for(const mesh of gltf.meshes)for(const primitive of mesh.primitives){
+          if(!irradianceIndices.has(primitive.material))continue;
+          expect(primitive.attributes.TEXCOORD_1).toBeDefined();
+          if(tiledIndices.has(primitive.material))expect(primitive.attributes.TEXCOORD_0).toBeDefined();
+        }
         // Meshopt's virtual fallback buffer has no URI; only external files
         // make requests. Embedded image bufferViews use the checked binary.
-        for(const item of [...gltf.buffers,...gltf.images])if(item.uri)paths.push(`${base}desktop-v4/${item.uri}`);
+        for(const item of [...gltf.buffers,...gltf.images])if(item.uri)paths.push(`${base}desktop-v5/${item.uri}`);
         expect(paths.length).toBeGreaterThan(1);
       }
       await Promise.all(paths.map(async path=>{
@@ -55,7 +81,8 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
       await expect(scene).toHaveAttribute('data-lighting','night');
       await page.getByRole('button',{name:'Day',exact:true}).click();
       await expect(scene).toHaveAttribute('data-lighting','day');
-      expect(models).toHaveLength(1);expect(models[0]).toContain(mobile?'mobile.glb':'desktop.gltf');
+      expect(models).toHaveLength(1);
+      expect(models[0]).toContain(mobile?'forest-fold-house-mobile.glb?v=5':'desktop-v5/forest-fold-house-desktop.gltf?v=5');
       const position=async()=> (await scene.getAttribute('data-position'))!.split(',').map(Number);
       expect((await position())[1]).toBeCloseTo(5.1,1);
       // Keep input active until the rendered camera responds. A fixed 350 ms

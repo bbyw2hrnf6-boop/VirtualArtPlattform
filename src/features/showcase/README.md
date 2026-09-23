@@ -66,6 +66,17 @@ Scene disposal releases geometries, textures and renderer; readiness waits for
 shader warm-up draws. Loading retains a poster, failure retains static navigation,
 and reduced motion keeps still chapters without automatic motion.
 
+The raster adapts to sustained slow frames and can recover after a cooldown and
+sustained fast visitor-driven frames. It never renders idle frames to probe for
+recovery. Texture filtering is set before the first upload and stays fixed while
+raster/reflection sizes adapt. Forest materials marked `forest_irradiance` combine
+their separate baked irradiance and tiled albedo in linear space, keeping live
+specular highlights without adding a second diffuse-light contribution. Original
+combined bakes and other showcases retain their existing material behavior.
+Forest revision 5 loads desktop dependencies from `desktop-v5/`; the mobile GLB,
+house photographs and homepage cover use revision-5 URLs to invalidate cached
+assets after the geometry and material export changes.
+
 Standalone flights use the existing full-detail assets, reflections and GPU calibration.
 The film derives from retained Blender masters and additional views of the existing
 Obsidian scene; it does not replace runtime geometry or materials. The original

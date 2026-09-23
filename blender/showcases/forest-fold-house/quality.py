@@ -15,8 +15,10 @@ def surface_uv(obj, tile):
     uv = mesh.uv_layers.get('SurfaceUV') or mesh.uv_layers.new(name='SurfaceUV')
     shift = int(hashlib.sha256(obj.name.encode()).hexdigest()[:6], 16) / 0xffffff
     wood = any(m.name.startswith('M03') for m in mesh.materials)
+    normal_matrix = obj.matrix_world.to_3x3().inverted().transposed()
     for face in mesh.polygons:
-        axis = max(range(3), key=lambda i: abs(face.normal[i]))
+        normal = normal_matrix @ face.normal
+        axis = max(range(3), key=lambda i: abs(normal[i]))
         for index in face.loop_indices:
             co = obj.matrix_world @ mesh.vertices[mesh.loops[index].vertex_index].co
             # Vertical veneer follows height; ceiling/floor grain follows the
@@ -27,6 +29,13 @@ def surface_uv(obj, tile):
                 u, v = co.x, co.z
             else:
                 u, v = co.y, co.z
+            # The photographed oak grain runs along texture V. Each stair
+            # tread/riser is one width-wise board, not grain down the flight.
+            if wood and obj.name.startswith(('ST01_FLIGHT_', 'ST01_HALF_LANDING')):
+                if axis == 2:
+                    u, v = co.y, co.x
+                elif axis == 1:
+                    u, v = co.z, co.x
             uv.data[index].uv = (u / tile + (shift if wood else 0), v / tile + (shift * 3 if wood else 0))
 
 
@@ -41,10 +50,11 @@ def apply():
         if obj.type == 'MESH' and obj.name.startswith(('Excavated woodland', 'Woodland horizon')):
             obj.data.materials.clear(); obj.data.materials.append(living_ground)
     specs = [
-        ('M01', 'rock_08', 1.5, 0.85, .018),
+        ('M01', 'rock_08', 1.5, 0.45, .008),
+        ('Honed courtyard', 'rock_08', 1.5, .22, .0015),
         ('M03', 'oak_veneer_01', 1.83, .48, .0012),
         ('Forest soil', 'forest_ground_04', 3.15, 1.0, .055),
-        ('Living woodland', 'leafy_grass', 2.0, .85, .025),
+        ('Living woodland', 'forest_ground_04', 3.15, .85, .025),
         ('Beech silver', 'bark_brown_02', 1.0, .85, .014),
         ('Moss cushions', 'mossy_rock', 3.0, .9, .020),
     ]
@@ -64,7 +74,7 @@ def apply():
             tex = tree.nodes.new('ShaderNodeTexImage'); tex.image = image
             tree.links.new(uv.outputs['UV'], tex.inputs['Vector']); images[channel] = tex
         tree.links.new(images['Diffuse'].outputs['Color'], shader.inputs['Base Color'])
-        if prefix == 'M01':
+        if prefix in ['M01', 'Honed courtyard']:
             # Silver gneiss from the concept, not the scan's rusty brown cast.
             finish = tree.nodes.new('ShaderNodeHueSaturation')
             finish.inputs['Saturation'].default_value = .30
@@ -132,4 +142,4 @@ def apply():
     s.cycles.glossy_bounces = 8
     s.cycles.transmission_bounces = 16
     s.cycles.sample_clamp_indirect = 10
-    s['quality_revision'] = 'separated-shell-silver-stone-v3'
+    s['quality_revision'] = 'continuous-shell-metric-surfaces-courtyard-v5'

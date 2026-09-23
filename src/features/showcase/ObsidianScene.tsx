@@ -14,6 +14,8 @@ import { createShowcaseDirector } from './showcaseDirector';
 import { ENTRY_FLIGHTS, WORLD_FLIGHTS, SHOWCASE_STOPS } from './showcaseFlights';
 import { forestRooms } from './forestRooms';
 import { createWorldPortal } from './worldPortal';
+import { createShowcaseQuality } from './showcaseQuality';
+import { installForestIrradiance } from './forestIrradiance';
 import type { VisitorTourState } from '../gallery/visitorTourState';
 
 export interface ShowcaseSceneConfig {
@@ -91,7 +93,6 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     let gpuFence: WebGLSync | null = null;
     let mode: ObsidianMode = 'walk';
     let model: THREE.Group | undefined;
-    const modelTextures = new Set<THREE.Texture>();
     let reflection: ReturnType<typeof createFloorReflection> | undefined;
     const overview = { value: false };
     const savedWalk = { position: camera.position.clone(), quaternion: camera.quaternion.clone() };
@@ -238,18 +239,18 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       },
     });
     let animationTime = performance.now();
-    let slowFrames = 0, reducedResolution = false, warmupFrames = 3, renderCost = 0, readyNotified = false;
+    let renderCost = 0, readyNotified = false;
+    const resolution = createShowcaseQuality();
     const balancedPixelRatio = () => Math.min(devicePixelRatio, 1, Math.sqrt(600_000 / Math.max(1, host.clientWidth * host.clientHeight)));
+    const fullPixelRatio = () => Math.min(Math.max(devicePixelRatio, compact ? 1 : 1.5), 2);
     const quality = (full: boolean) => {
-      renderer.setPixelRatio(full ? Math.min(Math.max(devicePixelRatio, compact ? 1 : 1.5), 2) : balancedPixelRatio());
+      renderer.setPixelRatio(full ? fullPixelRatio() : balancedPixelRatio());
       const size = full ? compact ? 1024 : 2048 : 512;
       if (reflection) {
         reflection.getRenderTarget().samples = full && !compact ? 2 : 0;
         reflection.getRenderTarget().setSize(size, size);
         (reflection.material as THREE.ShaderMaterial).uniforms.texel.value.set(1 / size, 1 / size);
       }
-      const anisotropy = Math.min(full ? 16 : 4, renderer.capabilities.getMaxAnisotropy());
-      modelTextures.forEach(texture => { texture.anisotropy = anisotropy; });
     };
     function render() {
       const now = performance.now();
@@ -258,17 +259,11 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       // Include synchronous drawing as well as queued GPU latency. Measuring
       // only the next RAF wait misses software renderers that block render().
       // Idle time stays excluded; the same measurement applies to every device.
-      const slow = now - scheduledAt + renderCost > 150;
-      if (model && warmupFrames) {
-        // The first draw also compiles shaders/uploads textures. Measure the
-        // second bounded draw so one-time preparation does not demote fast GPUs.
-        if (--warmupFrames === 0) {
-          reducedResolution = slow;
-          if (!reducedResolution) quality(true);
-        }
-      } else if (!reducedResolution && model && slow) {
-        if (++slowFrames >= 2) { reducedResolution = true; quality(false); }
-      } else slowFrames = 0;
+      if (model) {
+        const workload = Math.max((fullPixelRatio() / balancedPixelRatio()) ** 2, reflection ? compact ? 4 : 16 : 1);
+        const change = resolution.sample(now, now - scheduledAt + renderCost, renderCost, workload);
+        if (change !== undefined) quality(change);
+      }
       raf = 0;
       if (disposed || document.hidden) return;
       // Orbit owns the camera in Overview; Walk must not apply its FOV easing.
@@ -294,14 +289,14 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       if(mixer)host.dataset.animationTime=mixer.time.toFixed(3);
       portal?.update(filmProgress);
       renderer.render(scene, camera);
-      const moving = Boolean(warmupFrames && model) || animate || (!paused && (director?.moving() || (!director?.active() && !cinematic && (mode === 'walk' ? walk.needsUpdate() : orbitMoving))));
+      const moving = Boolean(resolution.warming() && model) || animate || (!paused && (director?.moving() || (!director?.active() && !cinematic && (mode === 'walk' ? walk.needsUpdate() : orbitMoving))));
       host.dataset.idle = String(!moving);
-      host.dataset.resolution = warmupFrames ? 'warming' : reducedResolution ? 'balanced' : 'full';
+      host.dataset.resolution = resolution.warming() ? 'warming' : resolution.full() ? 'full' : 'balanced';
       // RAF and render() can return before queued GPU work completes. Measure
       // actual completion of the bounded warm-up draws before supersampling.
       // Poll without blocking input; full-quality assets and fast-GPU output
       // stay unchanged. Never queue another draw while this sample is pending.
-      if (model && warmupFrames) {
+      if (model && resolution.warming()) {
         gpuFence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
         gl.flush();
       }
@@ -313,7 +308,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         if (gpuFence) gl.deleteSync(gpuFence);
         gpuFence = null;
         renderCost = performance.now() - now;
-        if (!disposed && model && !warmupFrames && !readyNotified) {
+        if (!disposed && model && !resolution.warming() && !readyNotified) {
           readyNotified = true; host.dataset.ready = 'true'; onReady();
           if (!cinematic) canvas.focus({ preventScroll: true });
         }
@@ -323,7 +318,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     }
     const resize = new ResizeObserver(() => {
       if (!host.clientWidth || !host.clientHeight) return;
-      if (warmupFrames || reducedResolution) renderer.setPixelRatio(balancedPixelRatio());
+      if (resolution.warming() || !resolution.full()) renderer.setPixelRatio(balancedPixelRatio());
       renderer.setSize(host.clientWidth, host.clientHeight); camera.aspect = host.clientWidth / host.clientHeight;
       if (mode === 'overview') fitOverview();
       camera.updateProjectionMatrix(); schedule();
@@ -374,7 +369,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     window.addEventListener('blur', windowBlur); document.addEventListener('visibilitychange', visibility);
     const abort = new AbortController();
     const separate = config.architecture && !compact;
-    const assetRoot = `/assets/showcases/${config.id}/${separate ? 'desktop-v4/' : ''}`;
+    const assetRoot = `/assets/showcases/${config.id}/${separate ? 'desktop-v5/' : ''}`;
     fetch(`${assetRoot}${config.id}-${compact ? 'mobile' : 'desktop'}.${separate ? 'gltf' : 'glb'}${config.assetVersion ?? ''}`, { signal: abort.signal })
       .then(response => { if (!response.ok) throw new Error('Missing showcase'); return response.arrayBuffer(); })
       .then(buffer => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buffer, assetRoot))
@@ -386,6 +381,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           // glTF multi-material nodes become Groups with untagged child meshes.
           object.userData.artwork_id ??= object.parent?.userData.artwork_id;
           object.userData.walk_surface ??= object.parent?.userData.walk_surface;
+          object.userData.baked_diffuse ??= object.parent?.userData.baked_diffuse;
           if (!(object instanceof THREE.Mesh)) return;
           for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
             materials.add(material);
@@ -393,8 +389,16 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           }
         });
         materials.forEach(material => {
-          Object.values(material).forEach(value => { if (value instanceof THREE.Texture) modelTextures.add(value); });
-          if (config.architecture && material instanceof THREE.MeshStandardMaterial) architecturalBakes.set(material, material.emissiveIntensity);
+          // Set samplers before the reflection probe uploads textures. Changing
+          // anisotropy afterwards needs a texture re-upload; raster adaptation
+          // should never repeatedly re-upload the house's large material set.
+          Object.values(material).forEach(value => {
+            if (value instanceof THREE.Texture) value.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
+          });
+          if (config.architecture && material instanceof THREE.MeshStandardMaterial) {
+            installForestIrradiance(material);
+            architecturalBakes.set(material, material.emissiveIntensity);
+          }
           // Cut roofs, glazing and coves together; retain full-height sculptures.
           if (!config.architecture && (!config.sculpture || !artworkMaterials.has(material))) installOverviewCutaway(material, overview, config.sculpture ? 1 : undefined);
         });

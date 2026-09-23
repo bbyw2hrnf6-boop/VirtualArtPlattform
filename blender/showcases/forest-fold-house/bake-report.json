@@ -1,173 +1,112 @@
 [
   {
     "group": "W0_furniture",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 8,
     "resolution": 2048,
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 74.3
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 89.33
   },
   {
     "group": "W1_furniture",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 8,
     "resolution": 2048,
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 136.51
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 141.01
   },
   {
     "group": "E1_furniture",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
     "resolution": 2048,
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 76.32
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 56.01
   },
   {
     "group": "E0_furniture",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
     "resolution": 2048,
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 117.83
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 103.11
+  },
+  {
+    "group": "courtyard_walk",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 2,
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 119.87
   },
   {
     "group": "W0",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 8,
     "resolution": 4096,
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 476.63
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 409.24
   },
   {
     "group": "W0_walk",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
     "resolution": 2048,
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 126.49
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 123.7
   },
   {
     "group": "W0_ceiling",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 8,
     "resolution": 2048,
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 103.45
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 93.63
   },
   {
     "group": "W1",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 16,
     "resolution": 4096,
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 547.56
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 458.14
   },
   {
     "group": "W1_walk",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
     "resolution": 2048,
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 77.52
-  },
-  {
-    "group": "W1_ceiling",
-    "resolution": 2048,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 109.68
-  },
-  {
-    "group": "exterior",
-    "resolution": 4096,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 539.87
-  },
-  {
-    "group": "E0",
-    "resolution": 4096,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 498.91
-  },
-  {
-    "group": "E0_walk",
-    "resolution": 2048,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 130.45
-  },
-  {
-    "group": "E0_ceiling",
-    "resolution": 2048,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 105.76
-  },
-  {
-    "group": "E1",
-    "resolution": 4096,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 334.5
-  },
-  {
-    "group": "E1_walk",
-    "resolution": 2048,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 80.78
-  },
-  {
-    "group": "E1_ceiling",
-    "resolution": 2048,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 99.54
-  },
-  {
-    "group": "bridge_walk",
-    "resolution": 2048,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 208.85
-  },
-  {
-    "group": "stairs_walk",
-    "resolution": 2048,
-    "samples": 256,
-    "normalResolution": 2048,
-    "roughnessResolution": 1024,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 152.91
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 71.28
   }
 ]

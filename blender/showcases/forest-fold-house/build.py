@@ -8,6 +8,8 @@ from mathutils import Vector
 H=Path(__file__).resolve().parent
 D=H/'source/data'
 plan=json.loads((D/'scene.json').read_text())
+shell_geometry=runpy.run_path(str(H/'shell_geometry.py'))
+aperture_prism=shell_geometry['aperture_prism'];interior_bounds=shell_geometry['interior_bounds']
 random.seed(160926)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.context.preferences.filepaths.save_version=0
@@ -119,7 +121,17 @@ def light(name,pos,target,power,size=.2,kind='AREA',color=(1,.78,.55)):
  o=attach(bpy.data.objects.new(name,d));o.location=pos;o.rotation_euler=(Vector(target)-Vector(pos)).to_track_quat('-Z','Y').to_euler();return o
 def obstacle(bounds,level):obstacles.append({'bounds':bounds,'level':level})
 
-# Walls are tiled around explicit openings, avoiding coplanar Boolean debris.
+def aperture_wall(name,lo,hi,bottom,top,wall,depth,horizontal,openings,material,bevel=.006):
+ vs,fs=aperture_prism(lo,hi,bottom,top,depth,openings)
+ vs=[(u,wall+v,z) if horizontal else (wall+v,u,z) for u,v,z in vs]
+ if not horizontal:fs=[tuple(reversed(face)) for face in fs]
+ o=mesh(name,vs,fs,material);o['continuous_shell']=True
+ if bevel:
+  mod=o.modifiers.new('Aperture edge radius','BEVEL');mod.width=bevel;mod.segments=3;mod.limit_method='ANGLE';mod.angle_limit=math.radians(30)
+  o.modifiers.new('Continuous wall normals','WEIGHTED_NORMAL')
+ return o
+
+# One welded solid per wall. Interior grid edges are coplanar and stay un-bevelled.
 for wing in plan['wings']:
  wid=wing['id'];collection='02_SHELL_W' if wid=='W' else '03_SHELL_E';x0,y0,x1,y1=wing['bounds_xy']
  for level,z in [('L0',0),('L1',3.4)]:
@@ -131,21 +143,14 @@ for wing in plan['wings']:
    wall=(y1-.15 if side=='N' else y0+.15) if horizontal else (x1-.15 if side=='E' else x0+.15)
    ops=[o for o in plan['openings'] if o['wing']==wid and o['level']==level and o['side']==side]
    us=sorted(set([lo,hi]+[o[k] for o in ops for k in ['along_start','along_end'] if lo<o[k]<hi]))
-   zs=sorted(set([z,z+3.05]+[o[k] for o in ops for k in ['z_bottom','z_top']]))
+   apertures=[(o['along_start'],o['along_end'],o['z_bottom'],o['z_top']) for o in ops]
+   # Close the floor/roof band, including where the stair exposes both storeys.
+   # Concrete and finishes are clipped inside this ring below, not overlaid.
+   aperture_wall(f'{wid}_{level}_WALL_{side}',lo,hi,z,z+3.4,wall,.3,horizontal,apertures,stone)
+   inward=-1 if side in ['N','E'] else 1
+   aa,bb=(x0+.312,x1-.312) if horizontal else (lo,hi)
+   aperture_wall(f'{wid}_{level}_LINING_{side}',aa,bb,z,z+(3.4 if level=='L0' else 3.05),wall+inward*.156,.012,horizontal,apertures,stone if wid=='E' and level=='L0' and side in ['N','E'] else plaster,.001)
    for a,b in zip(us,us[1:]):
-    for c,d in zip(zs,zs[1:]):
-     if any(o['along_start']<=(a+b)/2<=o['along_end'] and o['z_bottom']<=(c+d)/2<=o['z_top'] for o in ops):continue
-     pos=((a+b)/2,wall,(c+d)/2) if horizontal else (wall,(a+b)/2,(c+d)/2)
-     size=(b-a,.3,d-c) if horizontal else (.3,b-a,d-c)
-     box(f'{wid}_{level}_WALL_{side}',pos,size,stone)
-     # Separate 12 mm inner finish, with the same apertures.
-     inward=-1 if side in ['N','E'] else 1;pl=list(pos);pl[1 if horizontal else 0]+=inward*.156
-     sz=list(size);sz[1 if horizontal else 0]=.012
-     # Finish returns meet edge-to-edge as well; no duplicate interior face.
-     aa,bb=(max(a,x0+.312),min(b,x1-.312)) if horizontal else (a,b)
-     if bb>aa:
-      pl[0 if horizontal else 1]=(aa+bb)/2;sz[0 if horizontal else 1]=bb-aa
-      box(f'{wid}_{level}_LINING_{side}',pl,sz,stone if wid=='E' and level=='L0' and side in ['N','E'] else plaster,.002)
     # Collision only along solid wall or window, doors stay genuinely open.
     if not any(o['type']=='door' and o['along_start']<=(a+b)/2<=o['along_end'] for o in ops):
      obstacle([a,wall-.15,b,wall+.15] if horizontal else [wall-.15,a,wall+.15,b],z)
@@ -169,9 +174,13 @@ for wing in plan['wings']:
   if wid=='W' and level=='L1':parts=[(x0,y0,x1,-.85),(-5.45,-.85,x1,y1),(x0,2.7,-5.45,y1),(x0,-.85,-7.7,2.7)]
   # The 350 mm floor assembly includes 25 mm oak + 10 mm service separation.
   # Keep the specified finished ceiling at +3.05/+6.45, recess the concrete.
-  for j,bounds in enumerate(parts):rect(f'{wid}_{level}_SLAB_{j}',bounds,z,.315 if level=='L1' else .35,concrete)
+  for j,bounds in enumerate(parts):
+   inner=interior_bounds(bounds,wing['bounds_xy'],.3)
+   if inner:rect(f'{wid}_{level}_SLAB_{j}',inner,z,.315 if level=='L1' else .35,concrete)
   # Narrow oak boards upstairs; limestone tiles downstairs. Actual 2 mm joints.
   for bounds in parts:
+   bounds=interior_bounds(bounds,wing['bounds_xy'],.312)
+   if not bounds:continue
    a,b,c,d=bounds;dx,dy=(.16,2.4) if z else (.6,1.2)
    xx=a
    while xx<c-.001:
@@ -182,11 +191,14 @@ for wing in plan['wings']:
   # Ceiling strips track slab openings below the U stair.
   ceiling_parts=parts if level=='L1' else ([(x0,y0,x1,-.85),(-5.45,-.85,x1,y1),(x0,2.7,-5.45,y1)] if wid=='W' else [(x0,y0,x1,y1)])
   if level=='L1':ceiling_parts=[(x0,y0,x1,y1)]
-  for a,b,c,d in ceiling_parts:
+  for bounds in ceiling_parts:
+   bounds=interior_bounds(bounds,wing['bounds_xy'],.312)
+   if not bounds:continue
+   a,b,c,d=bounds
    xx=a
    while xx<c-.001:
     rect(f'{wid}_{level}_CEILING',[xx+.001,b,min(c,xx+.16)-.001,d],z+3.075,.025,oak);xx+=.16
- group='exterior';rect(wid+'_ROOF_SLAB',(x0,y0,x1,y1),6.8,.315,concrete)
+ group='exterior';rect(wid+'_ROOF_SLAB',(x0+.3,y0+.3,x1-.3,y1-.3),6.8,.315,concrete)
  for side,bounds in [('S',(x0,y0,x1,y0+.18)),('N',(x0,y1-.18,x1,y1)),('W',(x0,y0+.18,x0+.18,y1-.18)),('E',(x1-.18,y0+.18,x1,y1-.18))]:
   rect(wid+'_PARAPET_'+side,bounds,7.15,.35,concrete);rect(wid+'_COPING_'+side,bounds,7.165,.025,bronze)
  rect(wid+'_ROOF_SUBSTRATE',(x0+.35,y0+.35,x1-.35,y1-.35),7.03,.22,soil)
@@ -197,12 +209,21 @@ for wing in plan['wings']:
 collection='06_JOINERY'
 for i,p in enumerate(plan['interior_partitions']):
  z=plan['levels'][p['level']];group='W'+p['level'][-1];a,b=p['from'],p['to'];horizontal=abs(a[1]-b[1])<.001;axis=0 if horizontal else 1
+ # The two stair enclosure walls run uninterrupted across the slab datum.
+ # Their upper halves are supplied separately in the plan, not separate panels.
+ if i in [1,2]:continue
+ bottom=z;top=z+3.05
+ if i in [0,3]:bottom=0;top=6.45;group='W0'
+ lo,hi=sorted((a[axis],b[axis]))
+ if i==0:lo=-7.688;hi=-5.39
+ if i==3:lo=-.79
+ apertures=[(u,v,z,z+2.4) for u,v in p['door_gaps']]
+ aperture_wall('PARTITION_%02d'%i,lo,hi,bottom,top,a[1] if horizontal else a[0],.12,horizontal,apertures,plaster,.002)
  cuts=sorted(set([a[axis],b[axis]]+[v for gap in p['door_gaps'] for v in gap]))
  for lo,hi in zip(cuts,cuts[1:]):
-  gap=any(u<=(lo+hi)/2<=v for u,v in p['door_gaps']);bottom=z+2.4 if gap else z
-  pos=((lo+hi)/2,a[1],(bottom+z+3.05)/2) if horizontal else (a[0],(lo+hi)/2,(bottom+z+3.05)/2)
-  box('PARTITION_%02d'%i,pos,(hi-lo,.12,z+3.05-bottom) if horizontal else (.12,hi-lo,z+3.05-bottom),plaster)
-  if not gap:obstacle([lo,a[1]-.06,hi,a[1]+.06] if horizontal else [a[0]-.06,lo,a[0]+.06,hi],z)
+  gap=any(u<=(lo+hi)/2<=v for u,v in p['door_gaps'])
+  if not gap:
+   for floor in ([0,3.4] if i in [0,3] else [z]):obstacle([lo,a[1]-.06,hi,a[1]+.06] if horizontal else [a[0]-.06,lo,a[0]+.06,hi],floor)
   else:
    for u in [lo,hi]:box('OAK_DOOR_REVEAL', (u,a[1],z+1.2) if horizontal else (a[0],u,z+1.2),(.025,.15,2.4) if horizontal else (.15,.025,2.4),oak,.002)
 
@@ -227,15 +248,25 @@ for x,z1,z2 in [(-6.68,2.75,1.05),(-6.52,2.75,4.45)]:
  for j in range(11):
   t=j/10;y=.2+t*2.5;z=z1+(z2-z1)*t
   rod('ST01_BALUSTER',(x,y,z-1.05),(x,y,z),.008,bronze)
-rod('ST01_LANDING_RAIL',(-6.55,2.7,4.45),(-7.65,2.7,4.45),.025,bronze)
+rail_corner=(-6.52,2.7,4.45)
+rod('ST01_LANDING_RAIL',rail_corner,(-7.65,2.7,4.45),.025,bronze)
+# Both rail axes terminate at the same cast bronze junction. Its small rounded
+# collar encloses the end caps instead of leaving two floating bevelled ends.
+bpy.ops.mesh.primitive_uv_sphere_add(segments=24,ring_count=12,radius=.027,location=rail_corner)
+o=attach(bpy.context.object,bronze);o.name='ST01_UPPER_RAIL_JUNCTION'
+for face in o.data.polygons:face.use_smooth=True
+# The inner handrail also returns continuously around the half-landing.
+curve('ST01_HALF_LANDING_RETURN',[(-6.60-.08*math.cos(i*math.pi/24),.2-.08*math.sin(i*math.pi/24),2.75) for i in range(25)],.025,bronze)
 for x in [-7.65,-7.35,-7.05,-6.75]:rod('ST01_GUARD',(x,2.7,3.4),(x,2.7,4.45),.008,bronze)
 
 # Furniture at the supplied metric positions, with component joinery and upholstery.
 collection='07_FURNITURE'
 def books(x,y,z,width=.65):
- for i in range(max(2,int(width/.065))):
-  h=random.uniform(.18,.31);m=random.choice(bookmats);o=box('Bound volume',(x+i*.063,y,z+h/2),(.045,.19,h),m,.003)
-  box('Book page block',(x+i*.063,y-.003,z+h/2),(.032,.195,h-.018),paper,.001)
+ # x is the left support edge; the last cover always stays within width.
+ for i in range(max(0,1+math.floor((width-.045)/.063))):
+  h=random.uniform(.18,.31);m=random.choice(bookmats);xx=x+.0225+i*.063
+  box('Bound volume',(xx,y,z+h/2),(.045,.19,h),m,.003)
+  box('Book page block',(xx,y,z+h/2),(.032,.176,h-.018),paper,.001)
 def vessel(x,y,z,r=.07,h=.18):
  # Lathed ceramic with an open throat and inner wall.
  profile=[(r*.5,0),(r,.025),(r*.95,h*.55),(r*.5,h*.9),(r*.49,h),(r*.40,h),(r*.4,h*.85),(r*.75,.04),(0,.035)]
@@ -246,6 +277,12 @@ def vessel(x,y,z,r=.07,h=.18):
  return o
 for f in json.loads((D/'furniture.json').read_text()):
  id=f['id'];x,y,z=f['center_xyz'];w,d,h=f['size_xyz'];base=3.4 if f['zone'].startswith('L1') else 0;group=('E' if 'LOUNGE' in f['zone'] or 'STUDIO' in f['zone'] else 'W')+('1' if base else '0')+'_furniture'
+ # Fitted joinery resolves conflicts in the illustrative furniture schedule,
+ # keeping the authoritative wall, bedroom doorway and north slit unchanged.
+ if id=='F07':y=1.765;w=2.72
+ if id=='F12':x=-2.40;w=2.08
+ if id=='F18':x=5.10;w=3.10
+ if id=='F23':x=6.90;y=.50
  start=set(bpy.data.objects);kind=f['kind'].lower()
  obstacle([x-w/2,y-d/2,x+w/2,y+d/2],base)
  if 'sofa' in kind:
@@ -260,7 +297,7 @@ for f in json.loads((D/'furniture.json').read_text()):
   if rot:
    for o in set(bpy.data.objects)-start:o.location=Vector((x,y,0))+Vector((-(o.location.y-y),o.location.x-x,o.location.z));o.rotation_euler.z+=math.pi/2
  elif 'chair' in kind:
-  dining='dining' in kind;ww=.48 if dining else .76;dd=.48 if dining else .72
+  dining='dining' in kind;ww=.48 if dining else min(.76,w-.04);dd=.48 if dining else min(.72,d-.04)
   for dx in [-ww*.39,ww*.39]:
    for dy in [-dd*.38,dd*.38]:rod(id+'_leg',(x+dx,y+dy,base+.02),(x+dx*.92,y+dy*.92,base+.46),.022,oak)
   cushion(id+'_seat',(x,y,base+.46),(ww,dd,.12),olive if not dining else linen)
@@ -283,8 +320,8 @@ for f in json.loads((D/'furniture.json').read_text()):
   fs=[(j*(nx+1)+i,j*(nx+1)+i+1,(j+1)*(nx+1)+i+1,(j+1)*(nx+1)+i) for j in range(ny) for i in range(nx)]
   o=mesh(id+'_quilt',vs,fs,linen);o.modifiers.new('Quilt thickness','SOLIDIFY').thickness=.012
   for p in o.data.polygons:p.use_smooth=True
-  for xx in [x-w/2-.26,x+w/2+.26]:
-   cylinder('Bedside table',(xx,y+.62,base+.24),.22,.46,oak);vessel(xx,y+.62,base+.47,.07,.16)
+  for xx in [x-w/2-.20,x+w/2+.20]:
+   cylinder('Bedside table',(xx,y+.62,base+.24),.16,.46,oak);vessel(xx,y+.62,base+.47,.07,.16)
  elif 'table' in kind or id in ['F17','F22']:
   round_='round' in kind or id=='F22';ma=limestone if id in ['F02','F22'] else oak
   if round_:cylinder(id+'_top',(x,y,base+h-.03),w/2,.06,ma,64);cylinder(id+'_pedestal',(x,y,base+(h-.06)/2),w*.23,h-.06,ma)
@@ -313,14 +350,25 @@ for f in json.loads((D/'furniture.json').read_text()):
   rod(id+'_tap',(x,y+.13,base+.88),(x,y+.13,base+1.13),.012,bronze);rod(id+'_spout',(x,y+.13,base+1.13),(x,y,base+1.13),.012,bronze)
   mirror=mat(id+' mirror','#d3d7d3',.04,1);box(id+'_mirror',(x,y+.30,base+1.55),(w,.012,.8),mirror,.02)
  elif id in ['F18','F24']:
-  box(id+'_back',(x,y+d/2-.02,base+h/2),(w,.04,h),oak)
-  for xx in [x-w/2,x+w/2]:box(id+'_side',(xx,y,base+h/2),(.035,d,h),oak)
+  # F24 is a long shelf along the east wall, with its front facing west.
+  # Build the books/carcass in one local orientation, then rotate together.
+  ww,dd=(d,w) if id=='F24' else (w,d)
+  box(id+'_back',(x,y+dd/2-.02,base+h/2),(ww,.04,h),oak)
+  for xx in [x-ww/2+.0175,x+ww/2-.0175]:box(id+'_side',(xx,y,base+h/2),(.035,dd,h),oak)
   for k in range(6 if h>2 else 3):
-   zz=base+.08+k*(h-.12)/(5 if h>2 else 2);box(id+'_shelf',(x,y,zz),(w,d,.035),oak)
+   zz=base+.08+k*(h-.12)/(5 if h>2 else 2);box(id+'_shelf',(x,y,zz),(ww,dd,.035),oak)
    if zz<base+h-.2:
-    books(x-w/2+.09,y-.025,zz+.02,min(w-.15,1.2));vessel(x+w*.27,y-.04,zz+.02)
+    # Divide the library into real bays; no book intersects a vertical divider.
+    bay_width=ww/3 if h>2 else ww
+    for bay in range(3 if h>2 else 1):
+     left=x-ww/2+bay*bay_width
+     books(left+.075,y-.025,zz+.0175,min(bay_width-.15,.72))
+    if h<2:vessel(x+ww*.27,y-.025,zz+.0175)
   if h>2:
-   for xx in [x-w/6,x+w/6]:box(id+'_divider',(xx,y,base+h/2),(.026,d,h),oak)
+   for xx in [x-ww/6,x+ww/6]:box(id+'_divider',(xx,y,base+h/2),(.026,dd,h),oak)
+  if id=='F24':
+   for o in set(bpy.data.objects)-start:
+    q=o.location-Vector((x,y,0));o.location=(x+q.y,y-q.x,q.z);o.rotation_euler.z-=math.pi/2
  else:
   # Handle-free oak joinery: toe recess, individual fronts and stone worktops.
   box(id+'_carcass',(x,y,base+h/2),(w-.015,d-.015,h-.015),oak)
@@ -332,6 +380,10 @@ for f in json.loads((D/'furniture.json').read_text()):
    if id=='F07':
     box('Inset sink',(x+.55,y,base+h+.028),(.48,.35,.012),black,.045);rod('Kitchen tap',(x+.55,y+.16,base+h),(x+.55,y+.16,base+h+.32),.013,bronze)
     for xx in [x-.75,x-.42]:cylinder('Induction ring',(xx,y,base+h+.028),.12,.004,black)
+ for o in set(bpy.data.objects)-start:
+  o['forest_furniture_id']=id
+  if id in ['F07','F08','F12','F18','F24']:
+   o['joinery_footprint']=[x-w/2-.025,y-d/2-.025,x+w/2+.025,y+d/2+.025]
 
 # Joinery accessories, textiles and deliberately sparse objects.
 group='W0_furniture'
@@ -358,7 +410,7 @@ pond=plan['landscape']['pond_polygon']
 def terrain_z(x,y):
  r=math.hypot(x,y)
  # Low woodland ridge closes the horizon beyond the authored house site.
- ridge=max(0,min(1,(r-19)/23))*(7.2+1.2*math.sin(math.atan2(y,x)*3))
+ ridge=max(0,min(1,(r-19)/23))*(3.2+.7*math.sin(math.atan2(y,x)*3))
  return -.23+3.63*max(0,min(1,(y-2)/4.5))+.05*math.sin(x*.8)*math.sin(y*.6)+ridge
 def occupied(x,y):return (-8<x<-1 and -4<y<4) or (3<x<8 and -1.5<y<4) or (-1.3<x<3.2 and .1<y<1.5) or inpoly(x,y,pond)
 verts=[];faces=[]
@@ -508,6 +560,7 @@ for name,pos,target,lens in [('C01',(-16,-19,7),(0,0,3.1),30),('C07',(-1.85,1.15
 runpy.run_path(str(H/'refine.py'))['apply']()
 exec(compile((H/'finish_details.py').read_text(),str(H/'finish_details.py'),'exec'))
 runpy.run_path(str(H/'planting.py'))['apply'](terrain_z,occupied)
+runpy.run_path(str(H/'courtyard.py'))['apply'](plan,terrain_z,occupied,box,mesh,rect)
 runpy.run_path(str(H/'clearance.py'))['apply']()
 runpy.run_path(str(H/'validate_source.py'))['validate']()
 runpy.run_path(str(H/'quality.py'))['apply']()
