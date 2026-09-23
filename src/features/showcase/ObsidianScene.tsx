@@ -35,6 +35,7 @@ export interface ObsidianControls {
   reset(): void;
   zoom(direction: -1 | 1): void;
   pause(value: boolean): void;
+  lighting?(night: boolean): void;
 }
 
 export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, onArtwork, onMode, config = obsidianConfig }: {
@@ -149,17 +150,6 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       orbit.enabled = !value && mode === 'overview';
       schedule();
     };
-    controlsRef.current = {
-      room: resetWalk,
-      mode: switchMode,
-      reset: () => { if (mode === 'overview') fitOverview(); else resetWalk(currentRoom); schedule(); },
-      zoom: direction => { if (mode === 'walk') { walk.zoom(direction); canvas.focus({ preventScroll: true }); schedule(); return; }
-        const offset = camera.position.clone().sub(orbit.target);
-        offset.setLength(THREE.MathUtils.clamp(offset.length() * (direction > 0 ? 1 / 1.3 : 1.3), orbit.minDistance, orbit.maxDistance));
-        camera.position.copy(orbit.target).add(offset); orbit.update(); schedule();
-      },
-      pause,
-    };
     const disposeModel = (root: THREE.Object3D) => {
       const mats = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
       root.traverse(o => { if (o instanceof THREE.Mesh) {
@@ -170,6 +160,36 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       textures.forEach(t => t.dispose());
     };
     let mixer: THREE.AnimationMixer | undefined, environment: THREE.WebGLRenderTarget | undefined;
+    let architecturalSky: THREE.HemisphereLight | undefined, architecturalSun: THREE.DirectionalLight | undefined;
+    const architecturalBakes = new Map<THREE.MeshStandardMaterial, number>();
+    const setArchitectureLighting = (night: boolean) => {
+      if (!config.architecture || !architecturalSky || !architecturalSun) return;
+      // The day bake remains the base transport. This preserves the mastered
+      // materials while providing a fast, real-time dusk treatment.
+      scene.background = new THREE.Color(night ? '#08111a' : '#acb7bb');
+      renderer.toneMappingExposure = night ? .72 : 1;
+      architecturalSky.color.set(night ? '#4c6688' : '#e4edf1');
+      architecturalSky.groundColor.set(night ? '#101914' : '#444b32');
+      architecturalSky.intensity = night ? .38 : 1.4;
+      architecturalSun.color.set(night ? '#9ebfff' : '#ffebc5');
+      architecturalSun.intensity = night ? 1.05 : 3;
+      architecturalBakes.forEach((intensity, material) => { material.emissiveIntensity = night ? intensity * .42 : intensity; });
+      if (reflection) (reflection.material as THREE.ShaderMaterial).opacity = night ? .72 : 1;
+      host.dataset.lighting = night ? 'night' : 'day';
+      schedule();
+    };
+    controlsRef.current = {
+      room: resetWalk,
+      mode: switchMode,
+      reset: () => { if (mode === 'overview') fitOverview(); else resetWalk(currentRoom); schedule(); },
+      zoom: direction => { if (mode === 'walk') { walk.zoom(direction); canvas.focus({ preventScroll: true }); schedule(); return; }
+        const offset = camera.position.clone().sub(orbit.target);
+        offset.setLength(THREE.MathUtils.clamp(offset.length() * (direction > 0 ? 1 / 1.3 : 1.3), orbit.minDistance, orbit.maxDistance));
+        camera.position.copy(orbit.target).add(offset); orbit.update(); schedule();
+      },
+      pause,
+      lighting: setArchitectureLighting,
+    };
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     let animationTime = performance.now();
     let slowFrames = 0, reducedResolution = false, warmupFrames = 3, renderCost = 0;
@@ -313,6 +333,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         });
         materials.forEach(material => {
           Object.values(material).forEach(value => { if (value instanceof THREE.Texture) modelTextures.add(value); });
+          if (config.architecture && material instanceof THREE.MeshStandardMaterial) architecturalBakes.set(material, material.emissiveIntensity);
           // Cut roofs, glazing and coves together; retain full-height sculptures.
           if (!config.architecture && (!config.sculpture || !artworkMaterials.has(material))) installOverviewCutaway(material, overview, config.sculpture ? 1 : undefined);
         });
@@ -323,10 +344,10 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
             const ms=Array.isArray(o.material)?o.material:[o.material];
             o.castShadow=!ms.some(m=>m.transparent);o.receiveShadow=!o.userData.baked_diffuse;
           }});
-          scene.add(new THREE.HemisphereLight('#e4edf1','#444b32',1.4));
+          architecturalSky=new THREE.HemisphereLight('#e4edf1','#444b32',1.4);scene.add(architecturalSky);
           // Same source direction as the Blender afternoon: Z-up to Y-up.
-          const sun = new THREE.DirectionalLight('#ffebc5',3);sun.position.set(-14,15,16);
-          sun.castShadow=true;sun.shadow.mapSize.set(compact?2048:4096,compact?2048:4096);sun.shadow.camera.left=-24;sun.shadow.camera.right=24;sun.shadow.camera.top=24;sun.shadow.camera.bottom=-24;sun.shadow.camera.far=100;sun.shadow.normalBias=.012;scene.add(sun);
+          architecturalSun = new THREE.DirectionalLight('#ffebc5',3);architecturalSun.position.set(-14,15,16);
+          architecturalSun.castShadow=true;architecturalSun.shadow.mapSize.set(compact?2048:4096,compact?2048:4096);architecturalSun.shadow.camera.left=-24;architecturalSun.shadow.camera.right=24;architecturalSun.shadow.camera.top=24;architecturalSun.shadow.camera.bottom=-24;architecturalSun.shadow.camera.far=100;architecturalSun.shadow.normalBias=.012;scene.add(architecturalSun);
           // Static house/woodland: render this detailed map once, not on each
           // walking frame. Camera movement does not change sun-space shadows.
           renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;

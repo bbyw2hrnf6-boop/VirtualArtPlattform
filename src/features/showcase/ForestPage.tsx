@@ -8,7 +8,7 @@ const asset='/assets/showcases/forest-fold-house/';
 export default function ForestPage(){
   useEffect(()=>{window.scrollTo({top:0,behavior:'instant'});},[]);
   const [status,setStatus]=useState<'idle'|'loading'|'ready'|'error'>('idle');
-  const [active,setActive]=useState(false),[room,setRoom]=useState(0),[mode,setMode]=useState<ObsidianMode>('walk');
+  const [active,setActive]=useState(false),[room,setRoom]=useState(0),[mode,setMode]=useState<ObsidianMode>('walk'),[night,setNight]=useState(false);
   const controls=useRef<ObsidianControls|null>(null);
   const ready=useCallback(()=>setStatus('ready'),[]),failed=useCallback(()=>{setActive(false);setStatus('error');},[]),artwork=useCallback(()=>{},[]);
   useEffect(()=>{const title=document.title;document.title='Forest Fold House — LIEUVA';return()=>{document.title=title;};},[]);
@@ -28,6 +28,10 @@ export default function ForestPage(){
       {status==='ready'&&<>
         <div className="obsidian__room-label"><span>FOREST FOLD HOUSE</span><h1>{forestRooms[room].name}</h1></div>
         <label className="obsidian__room-picker">Room<select aria-label="House room" value={room} onChange={e=>controls.current?.room(Number(e.target.value))}>{forestRooms.map((r,i)=><option key={r.id} value={i}>{r.name}</option>)}</select></label>
+        <div className="forest-house__lighting" role="group" aria-label="House lighting">
+          <button type="button" className={!night?'is-active':''} aria-pressed={!night} onClick={()=>{setNight(false);controls.current?.lighting?.(false);}}>Day</button>
+          <button type="button" className={night?'is-active':''} aria-pressed={night} onClick={()=>{setNight(true);controls.current?.lighting?.(true);}}>Night</button>
+        </div>
         <VisitorControls<ObsidianMode> mode={mode} modeOptions={[{value:'walk',label:'Walk',icon:'↟'},{value:'overview',label:'Overview',icon:'◇'}]} onModeChange={m=>controls.current?.mode(m)} onResetView={()=>controls.current?.reset()} showHelp={false}/>
         <div className="arrange-zoom obsidian__zoom" role="group" aria-label="Camera zoom"><button aria-label="Zoom out" onClick={()=>controls.current?.zoom(-1)}>−</button><button aria-label="Zoom in" onClick={()=>controls.current?.zoom(1)}>+</button></div>
       </>}

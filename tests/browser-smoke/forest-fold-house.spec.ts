@@ -51,6 +51,10 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
       const scene=page.locator('.obsidian__scene'),canvas=scene.locator('canvas');
       await expect(scene).toHaveAttribute('data-ready','true',{timeout:90_000});
       await expect(scene).toHaveAttribute('data-idle','true');
+      await page.getByRole('button',{name:'Night',exact:true}).click();
+      await expect(scene).toHaveAttribute('data-lighting','night');
+      await page.getByRole('button',{name:'Day',exact:true}).click();
+      await expect(scene).toHaveAttribute('data-lighting','day');
       expect(models).toHaveLength(1);expect(models[0]).toContain(mobile?'mobile.glb':'desktop.gltf');
       const position=async()=> (await scene.getAttribute('data-position'))!.split(',').map(Number);
       expect((await position())[1]).toBeCloseTo(5.1,1);
