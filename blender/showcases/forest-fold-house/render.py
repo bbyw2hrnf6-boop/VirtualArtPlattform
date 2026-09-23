@@ -1,9 +1,11 @@
 """Real Cycles proofs/masters from the single source. Never upscale concept images."""
-import bpy, argparse, sys, time, json, math
+import bpy, argparse, sys, time, json, math, hashlib, runpy
 from pathlib import Path
 H=Path(__file__).resolve().parent
 p=argparse.ArgumentParser();p.add_argument('--cameras',default='C01,C07,C12');p.add_argument('--width',type=int,default=1920);p.add_argument('--samples',type=int,default=96);p.add_argument('--out',default='artifacts/forest/proof');p.add_argument('--lighting',choices=['afternoon','overcast','evening'],default='afternoon')
 a=p.parse_args(sys.argv[sys.argv.index('--')+1:]);s=bpy.context.scene
+runpy.run_path(str(H/'validate_source.py'))['validate']()
+source_hash=hashlib.sha256((H/'forest-fold-house.blend').read_bytes()).hexdigest()
 prefs=bpy.context.preferences.addons['cycles'].preferences;prefs.compute_device_type='METAL';prefs.get_devices()
 for d in prefs.devices:d.use=d.type=='METAL'
 s.cycles.device='GPU';s.cycles.samples=a.samples
@@ -22,6 +24,6 @@ if a.lighting=='evening':
 out=H.parents[2]/a.out;out.mkdir(parents=True,exist_ok=True);report=[]
 for name in a.cameras.split(','):
  s.camera=bpy.data.objects[name];s.render.filepath=str(out/f'{name}-{a.lighting}.png');start=time.monotonic();bpy.ops.render.render(write_still=True)
- record={'camera':name,'lighting':a.lighting,'width':a.width,'height':s.render.resolution_y,'samples':a.samples,'seconds':round(time.monotonic()-start,2)}
+ record={'camera':name,'lighting':a.lighting,'width':a.width,'height':s.render.resolution_y,'samples':a.samples,'sourceSha256':source_hash,'seconds':round(time.monotonic()-start,2)}
  report.append(record);(out/f'{name}-{a.lighting}.json').write_text(json.dumps(record,indent=2)+'\n')
 (out/f'render-{a.lighting}.json').write_text(json.dumps([json.loads(path.read_text()) for path in sorted(out.glob(f'C*-{a.lighting}.json'))],indent=2)+'\n')

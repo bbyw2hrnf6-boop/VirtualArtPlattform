@@ -31,7 +31,7 @@ const SHOWCASES: readonly ShowcaseItem[] = [
   {
     id: "architecture",
     sceneHref: "#/showcase/forest-fold-house", sceneName: "Forest Fold House",
-    cover: "/assets/showcases/forest-fold-house/cover.webp?v=2",
+    cover: "/assets/showcases/forest-fold-house/cover.webp?v=3",
     alt: "Forest Fold House: two planted stone wings and one glass bridge above a woodland watercourt",
     meta: "03 / Spaces & living",
     title: "Architecture",

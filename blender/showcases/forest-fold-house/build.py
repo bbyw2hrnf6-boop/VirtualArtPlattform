@@ -125,10 +125,12 @@ for wing in plan['wings']:
  for level,z in [('L0',0),('L1',3.4)]:
   group=wid+level[-1];floor_level=z
   for side in ['N','S','E','W']:
-   horizontal=side in ['N','S'];lo,hi=(x0,x1) if horizontal else (y0,y1)
+   # North/south own the corners. East/west butt against them instead of
+   # overlaying 30 cm of coplanar stone at each external corner.
+   horizontal=side in ['N','S'];lo,hi=(x0,x1) if horizontal else (y0+.3,y1-.3)
    wall=(y1-.15 if side=='N' else y0+.15) if horizontal else (x1-.15 if side=='E' else x0+.15)
    ops=[o for o in plan['openings'] if o['wing']==wid and o['level']==level and o['side']==side]
-   us=sorted(set([lo,hi]+[o[k] for o in ops for k in ['along_start','along_end']]))
+   us=sorted(set([lo,hi]+[o[k] for o in ops for k in ['along_start','along_end'] if lo<o[k]<hi]))
    zs=sorted(set([z,z+3.05]+[o[k] for o in ops for k in ['z_bottom','z_top']]))
    for a,b in zip(us,us[1:]):
     for c,d in zip(zs,zs[1:]):
@@ -139,7 +141,11 @@ for wing in plan['wings']:
      # Separate 12 mm inner finish, with the same apertures.
      inward=-1 if side in ['N','E'] else 1;pl=list(pos);pl[1 if horizontal else 0]+=inward*.156
      sz=list(size);sz[1 if horizontal else 0]=.012
-     box(f'{wid}_{level}_LINING_{side}',pl,sz,stone if wid=='E' and level=='L0' and side in ['N','E'] else plaster,.002)
+     # Finish returns meet edge-to-edge as well; no duplicate interior face.
+     aa,bb=(max(a,x0+.312),min(b,x1-.312)) if horizontal else (a,b)
+     if bb>aa:
+      pl[0 if horizontal else 1]=(aa+bb)/2;sz[0 if horizontal else 1]=bb-aa
+      box(f'{wid}_{level}_LINING_{side}',pl,sz,stone if wid=='E' and level=='L0' and side in ['N','E'] else plaster,.002)
     # Collision only along solid wall or window, doors stay genuinely open.
     if not any(o['type']=='door' and o['along_start']<=(a+b)/2<=o['along_end'] for o in ops):
      obstacle([a,wall-.15,b,wall+.15] if horizontal else [wall-.15,a,wall+.15,b],z)
@@ -161,7 +167,9 @@ for wing in plan['wings']:
   # Upper slab is cut around the stair void; no hidden ceiling across the run.
   parts=[(x0,y0,x1,y1)]
   if wid=='W' and level=='L1':parts=[(x0,y0,x1,-.85),(-5.45,-.85,x1,y1),(x0,2.7,-5.45,y1),(x0,-.85,-7.7,2.7)]
-  for j,bounds in enumerate(parts):rect(f'{wid}_{level}_SLAB_{j}',bounds,z,.35,concrete)
+  # The 350 mm floor assembly includes 25 mm oak + 10 mm service separation.
+  # Keep the specified finished ceiling at +3.05/+6.45, recess the concrete.
+  for j,bounds in enumerate(parts):rect(f'{wid}_{level}_SLAB_{j}',bounds,z,.315 if level=='L1' else .35,concrete)
   # Narrow oak boards upstairs; limestone tiles downstairs. Actual 2 mm joints.
   for bounds in parts:
    a,b,c,d=bounds;dx,dy=(.16,2.4) if z else (.6,1.2)
@@ -178,8 +186,8 @@ for wing in plan['wings']:
    xx=a
    while xx<c-.001:
     rect(f'{wid}_{level}_CEILING',[xx+.001,b,min(c,xx+.16)-.001,d],z+3.075,.025,oak);xx+=.16
- group='exterior';rect(wid+'_ROOF_SLAB',(x0,y0,x1,y1),6.8,.35,concrete)
- for side,bounds in [('S',(x0,y0,x1,y0+.18)),('N',(x0,y1-.18,x1,y1)),('W',(x0,y0,x0+.18,y1)),('E',(x1-.18,y0,x1,y1))]:
+ group='exterior';rect(wid+'_ROOF_SLAB',(x0,y0,x1,y1),6.8,.315,concrete)
+ for side,bounds in [('S',(x0,y0,x1,y0+.18)),('N',(x0,y1-.18,x1,y1)),('W',(x0,y0+.18,x0+.18,y1-.18)),('E',(x1-.18,y0+.18,x1,y1-.18))]:
   rect(wid+'_PARAPET_'+side,bounds,7.15,.35,concrete);rect(wid+'_COPING_'+side,bounds,7.165,.025,bronze)
  rect(wid+'_ROOF_SUBSTRATE',(x0+.35,y0+.35,x1-.35,y1-.35),7.03,.22,soil)
  # Thin stone sill bands and rain chains give the façade a real construction scale.
@@ -498,7 +506,10 @@ for c in json.loads((D/'cameras.json').read_text())['cameras']:
 for name,pos,target,lens in [('C01',(-16,-19,7),(0,0,3.1),30),('C07',(-1.85,1.15,1.7),(-6.2,-2.0,1.2),23),('C08',(-1.8,-1.4,5.1),(-6,-2.1,4.3),24)]:
  o=bpy.data.objects[name];o.location=pos;o.rotation_euler=(Vector(target)-o.location).to_track_quat('-Z','Y').to_euler();o.data.lens=lens
 runpy.run_path(str(H/'refine.py'))['apply']()
+exec(compile((H/'finish_details.py').read_text(),str(H/'finish_details.py'),'exec'))
 runpy.run_path(str(H/'planting.py'))['apply'](terrain_z,occupied)
+runpy.run_path(str(H/'clearance.py'))['apply']()
+runpy.run_path(str(H/'validate_source.py'))['validate']()
 runpy.run_path(str(H/'quality.py'))['apply']()
 s.camera=bpy.data.objects['C01']
 # Exportable navigation authority: physical blockers, unchanged source dimensions.

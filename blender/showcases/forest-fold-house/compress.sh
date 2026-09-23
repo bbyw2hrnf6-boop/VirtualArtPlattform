@@ -4,15 +4,16 @@ set -eu
 cd "$(dirname "$0")/../../.."
 cli="${GLTF_TRANSFORM:-gltf-transform}"
 [ "$("$cli" --version)" = "4.5.0" ] || { echo 'Need gltf-transform 4.5.0'; exit 1; }
-mkdir -p artifacts/forest/instanced public/assets/showcases/forest-fold-house/desktop-v3
+mkdir -p artifacts/forest/instanced public/assets/showcases/forest-fold-house/desktop-v4
 for tier in desktop mobile; do
   name="forest-fold-house-$tier.glb"
   "$cli" instance "artifacts/forest/raw/$name" "artifacts/forest/instanced/$name"
+  GLTF_TRANSFORM="$cli" node blender/showcases/forest-fold-house/spatial_instances.mjs "artifacts/forest/instanced/$name" "artifacts/forest/instanced/spatial-$name"
   output="public/assets/showcases/forest-fold-house/$name"
   if [ "$tier" = desktop ]; then
     # External images preserve every texel while keeping each Git blob below
     # 100 MiB. A versioned directory also invalidates immutable dependency URLs.
-    output="public/assets/showcases/forest-fold-house/desktop-v3/forest-fold-house-desktop.gltf"
+    output="public/assets/showcases/forest-fold-house/desktop-v4/forest-fold-house-desktop.gltf"
   fi
-  "$cli" meshopt "artifacts/forest/instanced/$name" "$output" --quantize-position 16 --quantize-texcoord 14
+  "$cli" meshopt "artifacts/forest/instanced/spatial-$name" "$output" --quantize-position 16 --quantize-texcoord 14
 done

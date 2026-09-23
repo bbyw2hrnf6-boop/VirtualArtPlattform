@@ -64,6 +64,13 @@ def apply():
             tex = tree.nodes.new('ShaderNodeTexImage'); tex.image = image
             tree.links.new(uv.outputs['UV'], tex.inputs['Vector']); images[channel] = tex
         tree.links.new(images['Diffuse'].outputs['Color'], shader.inputs['Base Color'])
+        if prefix == 'M01':
+            # Silver gneiss from the concept, not the scan's rusty brown cast.
+            finish = tree.nodes.new('ShaderNodeHueSaturation')
+            finish.inputs['Saturation'].default_value = .30
+            finish.inputs['Value'].default_value = .88
+            tree.links.new(images['Diffuse'].outputs['Color'], finish.inputs['Color'])
+            tree.links.new(finish.outputs['Color'], shader.inputs['Base Color'])
         if prefix == 'M03':
             # The brief calls for smoked, restrained oak rather than orange
             # raw veneer. Colour correction affects the authored finish only.
@@ -125,4 +132,4 @@ def apply():
     s.cycles.glossy_bounces = 8
     s.cycles.transmission_bounces = 16
     s.cycles.sample_clamp_indirect = 10
-    s['quality_revision'] = 'scanned-surfaces-daylight-v2'
+    s['quality_revision'] = 'separated-shell-silver-stone-v3'

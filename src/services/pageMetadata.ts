@@ -56,7 +56,7 @@ export function pageMetadataPolicy(
     title: productTitle("Forest Fold House"),
     description: "Explore a compact woodland house with two furnished levels, a glass bridge and a sheltered watercourt.",
     canonical: HOME_CANONICAL, robots: "noindex,nofollow",
-    image: `${HOME_CANONICAL}assets/showcases/forest-fold-house/cover.webp?v=2`,
+    image: `${HOME_CANONICAL}assets/showcases/forest-fold-house/cover.webp?v=3`,
     imageAlt: "Forest Fold House, an individually authored LIEUVA architectural concept",
   };
   if (page === "sculpture-pavilion") return {

@@ -5,8 +5,8 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.03
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 74.3
   },
   {
     "group": "W1_furniture",
@@ -14,8 +14,8 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 136.51
   },
   {
     "group": "E1_furniture",
@@ -23,8 +23,8 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 76.32
   },
   {
     "group": "E0_furniture",
@@ -32,8 +32,8 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 117.83
   },
   {
     "group": "W0",
@@ -41,8 +41,8 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 476.63
   },
   {
     "group": "W0_walk",
@@ -50,8 +50,17 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 126.49
+  },
+  {
+    "group": "W0_ceiling",
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 103.45
   },
   {
     "group": "W1",
@@ -59,8 +68,8 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 547.56
   },
   {
     "group": "W1_walk",
@@ -68,17 +77,26 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 77.52
+  },
+  {
+    "group": "W1_ceiling",
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 109.68
   },
   {
     "group": "exterior",
-    "resolution": 1024,
+    "resolution": 4096,
     "samples": 256,
-    "normalResolution": 1024,
+    "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 539.87
   },
   {
     "group": "E0",
@@ -86,8 +104,8 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 498.91
   },
   {
     "group": "E0_walk",
@@ -95,8 +113,17 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 130.45
+  },
+  {
+    "group": "E0_ceiling",
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 105.76
   },
   {
     "group": "E1",
@@ -104,8 +131,8 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 334.5
   },
   {
     "group": "E1_walk",
@@ -113,8 +140,17 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 80.78
+  },
+  {
+    "group": "E1_ceiling",
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 99.54
   },
   {
     "group": "bridge_walk",
@@ -122,8 +158,8 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 208.85
   },
   {
     "group": "stairs_walk",
@@ -131,7 +167,7 @@
     "samples": 256,
     "normalResolution": 2048,
     "roughnessResolution": 1024,
-    "sourceSha256": "d2481e10e3da90c09348eeb4aaa3237885bbc694c304f159574b07a0653e3250",
-    "seconds": 0.0
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 152.91
   }
 ]

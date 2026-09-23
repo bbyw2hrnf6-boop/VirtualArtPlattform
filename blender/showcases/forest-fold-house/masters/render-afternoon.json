@@ -5,7 +5,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 512,
-    "seconds": 971.24
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 1049.97
   },
   {
     "camera": "C07",
@@ -13,7 +14,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 565.58
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 518.73
   },
   {
     "camera": "C08",
@@ -21,7 +23,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 768.46
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 568.91
   },
   {
     "camera": "C09",
@@ -29,7 +32,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 946.19
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 691.42
   },
   {
     "camera": "C10",
@@ -37,7 +41,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 854.58
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 623.58
   },
   {
     "camera": "C11",
@@ -45,7 +50,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 763.53
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 561.08
   },
   {
     "camera": "C12",
@@ -53,7 +59,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 856.95
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 657.08
   },
   {
     "camera": "C13",
@@ -61,6 +68,7 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "seconds": 807.02
+    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+    "seconds": 524.63
   }
 ]

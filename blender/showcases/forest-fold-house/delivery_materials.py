@@ -44,6 +44,14 @@ def apply():
             for name in ['Base Color', 'Normal']:
                 socket = shader.inputs[name]
                 for link in list(socket.links):
+                    if name == 'Base Color' and material.name.startswith('M01') and link.from_node.type == 'HUE_SAT':
+                        # This scanned finish is baked on architecture. Loose
+                        # landscape rocks still need an exportable colour map;
+                        # never let the unsupported colour node turn them white.
+                        texture = link.from_node.inputs['Color'].links[0].from_socket
+                        tree.links.remove(link)
+                        tree.links.new(texture, socket)
+                        continue
                     if name == 'Normal' and material.get('scanned_asset') and link.from_node.type == 'BUMP':
                         # glTF carries the photographed tangent normal directly;
                         # source-only height bump stays in the Cycles master.

@@ -5,6 +5,7 @@ import bpy,json,time,runpy,hashlib
 from pathlib import Path
 H=Path(__file__).resolve().parent;OUT=H.parents[2]/'artifacts/forest/raw';MAP=H/'lightmaps';MAP.mkdir(exist_ok=True);OUT.mkdir(parents=True,exist_ok=True)
 s=bpy.context.scene;bpy.context.preferences.filepaths.save_version=0
+runpy.run_path(str(H/'validate_source.py'))['validate']()
 prefs=bpy.context.preferences.addons['cycles'].preferences;prefs.compute_device_type='METAL';prefs.get_devices()
 for d in prefs.devices:d.use=d.type=='METAL'
 s.cycles.device='GPU';s.cycles.samples=256;s.cycles.use_adaptive_sampling=False
@@ -38,13 +39,16 @@ for o in list(s.objects):
  if o.type!='MESH' or special(o):continue
  g=o.get('forest_group','')
  if g in ['planting','landscape','water','lights']:continue
+ # Give the long oak ceiling its own chart: wall/facade detail no longer
+ # competes with hundreds of board faces for the same atlas texels.
+ if '_CEILING' in o.name:g+='_ceiling'
  g+= '_walk' if o.get('walk_surface') else ''
  groups.setdefault(g,[]).append(o)
 pending=[];report=[]
 # A completed atlas may be reused only for this exact source and bake revision.
 # This makes a long local GPU job resumable without mixing old/new lighting.
 source_hash=hashlib.sha256((H/'forest-fold-house.blend').read_bytes()).hexdigest()
-cache_path=MAP/'cache-v2.json'
+cache_path=MAP/'cache-v3.json'
 cache=json.loads(cache_path.read_text()) if cache_path.exists() else {}
 if cache.get('source')!=source_hash:cache={'source':source_hash,'groups':{}}
 for name,obs in groups.items():
@@ -53,7 +57,7 @@ for name,obs in groups.items():
  chart=o.data.uv_layers.new(name='Lightmap');o.data.uv_layers.active=chart
  chart.active_render=True
  bpy.ops.object.mode_set(mode='EDIT');bpy.ops.mesh.select_all(action='SELECT');bpy.ops.uv.smart_project(angle_limit=1.2,island_margin=.004);bpy.ops.object.mode_set(mode='OBJECT')
- size=4096 if name in ['W0','W1','E0','E1'] else 2048 if 'furniture' in name or '_walk' in name else 1024
+ size=4096 if name in ['W0','W1','E0','E1','exterior'] else 2048
  for slot in o.material_slots:
   slot.material=slot.material.copy();m=slot.material
  maps={};start=time.monotonic()
@@ -118,10 +122,13 @@ bins={}
 for o in list(s.objects):
  if o.type!='MESH' or o.get('baked_diffuse'):continue
  if mesh_users.get(o.data,0)>1:continue
- key=tuple(m.name for m in o.data.materials)
+ # Local foliage clusters can be rejected by the view frustum. A single
+ # woodland-wide leaf mesh made every tree cost vertices in every room.
+ cell=tuple(int(v//12) for v in (o.matrix_world @ o.data.vertices[0].co)[:2]) if o.get('forest_group') in ['planting','landscape'] and len(o.data.vertices) else ()
+ key=(tuple(m.name for m in o.data.materials),cell)
  bins.setdefault(key,[]).append(o)
 for key,obs in bins.items():
- if len(obs)>1:select(obs);bpy.ops.object.join();bpy.context.object.name=' / '.join(key)
+ if len(obs)>1:select(obs);bpy.ops.object.join();bpy.context.object.name=' / '.join(key[0])+str(key[1])
 runpy.run_path(str(H/'delivery_materials.py'))['apply']()
 runpy.run_path(str(H/'validate_delivery.py'))['validate']()
 bpy.data.orphans_purge(do_recursive=True)

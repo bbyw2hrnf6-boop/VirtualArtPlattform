@@ -36,7 +36,7 @@ def scene_triangles(j):
  return sum(visit(root) for root in j['scenes'][j.get('scene',0)]['nodes'])
 
 for tier in ['desktop','mobile']:
- path=OUT/('desktop-v3/forest-fold-house-desktop.gltf' if tier=='desktop' else 'forest-fold-house-mobile.glb')
+ path=OUT/('desktop-v4/forest-fold-house-desktop.gltf' if tier=='desktop' else 'forest-fold-house-mobile.glb')
  j,binary=load(path);textures=[];files={path}
  for item in j.get('buffers',[])+j.get('images',[]):
   if 'uri' in item:files.add(resource(path,item['uri']))
@@ -56,7 +56,7 @@ for tier in ['desktop','mobile']:
  # A successful export must retain the improvement, not silently fall back to
  # unlit room colours or solid rectangular vegetation cards.
  baked=[m for m in j['materials'] if m.get('name','').endswith('_transport')]
- assert len(baked)==15, f'Missing room transport materials in {path.name}'
+ assert len(baked)==19, f'Missing room transport materials in {path.name}'
  for material in baked:
   assert 'emissiveTexture' in material and 'normalTexture' in material, material['name']
   assert 'metallicRoughnessTexture' in material['pbrMetallicRoughness'], material['name']
@@ -67,6 +67,8 @@ for tier in ['desktop','mobile']:
  if tier=='mobile':assert all(max(t['width'],t['height'])<=1024 for t in textures), 'Mobile texture cap exceeded'
  report['models'][str(path.relative_to(OUT))]={'bytes':sum(file.stat().st_size for file in files),'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'triangles':scene_triangles(j),'uniqueMeshTriangles':sum(j['accessors'][p['indices']]['count']//3 for p in ps),'instancedBatches':sum('EXT_mesh_gpu_instancing' in node.get('extensions',{}) for node in j['nodes']),'primitives':len(ps),'materials':len(j['materials']),'decodedRgbaMipBytesEstimate':round(sum(p['width']*p['height']*4*4/3 for p in textures)),'textures':textures,'extensionsRequired':j.get('extensionsRequired',[]),'files':[{'path':str(file.relative_to(OUT)),'bytes':file.stat().st_size,'sha256':hashlib.sha256(file.read_bytes()).hexdigest()} for file in sorted(files)]}
 for path in sorted((H/'masters').glob('C*.png')):
+ evidence=json.loads(path.with_suffix('.json').read_text())
+ assert evidence['sourceSha256']==report['sourceSha256'], f'Stale master from another model revision: {path}'
  im=Image.open(path);small=im.convert('RGB').resize((1,1));assert max(small.getpixel((0,0)))>10, f'Black render: {path}'
  report['images'].append({'name':path.name,'width':im.width,'height':im.height,'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
 manifest=json.loads((H/'materials/sources.json').read_text())

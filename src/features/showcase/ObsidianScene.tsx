@@ -293,7 +293,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     window.addEventListener('blur', blur); document.addEventListener('visibilitychange', visibility);
     const abort = new AbortController();
     const separate = config.architecture && !compact;
-    const assetRoot = `/assets/showcases/${config.id}/${separate ? 'desktop-v3/' : ''}`;
+    const assetRoot = `/assets/showcases/${config.id}/${separate ? 'desktop-v4/' : ''}`;
     fetch(`${assetRoot}${config.id}-${compact ? 'mobile' : 'desktop'}.${separate ? 'gltf' : 'glb'}${config.assetVersion ?? ''}`, { signal: abort.signal })
       .then(response => { if (!response.ok) throw new Error('Missing showcase'); return response.arrayBuffer(); })
       .then(buffer => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buffer, assetRoot))
@@ -318,7 +318,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         });
         scene.add(model);
         if (config.architecture) {
-          renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+          renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
           model.traverse(o=>{if(o instanceof THREE.Mesh){
             const ms=Array.isArray(o.material)?o.material:[o.material];
             o.castShadow=!ms.some(m=>m.transparent);o.receiveShadow=!o.userData.baked_diffuse;
