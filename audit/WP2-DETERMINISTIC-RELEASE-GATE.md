@@ -307,14 +307,16 @@ Primary references: [Google Cloud WIF for deployment pipelines](https://cloud.go
 ### Parallel candidate verification
 
 The application bundle uploaded by `production-artifact` is a candidate until
-all four blocking `production-browser` shards succeed. Every shard downloads the same
+all six blocking `production-browser` shards succeed. Every shard downloads the same
 run/SHA-named archive with digest mismatch rejection, verifies the release
 manifest and serves its unchanged `dist`. Browser tests are split at test level,
 with one worker per isolated runner. No shard rebuilds Hosting. The existing
 resolver accepts only a successful complete push/main Verify run, so an uploaded
 candidate from a failed or cancelled blocking shard is never deployable. Exhausting one
 retry stops that shard and cancels its siblings; the suite/step/job limits are
-11/12/15 minutes. Failure diagnostics retain a distinct shard suffix.
+11/12/15 minutes. Six shards keep the slow Walk preference journeys from sharing
+an overloaded final batch; this changes scheduling, not test coverage or deadlines.
+Failure diagnostics retain a distinct shard suffix.
 
 
 The owner explicitly accepts an exception for the four detailed Forest Fold House / Sculpture Pavilion

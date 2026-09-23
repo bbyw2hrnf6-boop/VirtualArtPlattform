@@ -316,7 +316,7 @@ jobs:
           ARTIFACT_DIGEST: ${{ steps.upload-release.outputs.artifact-digest }}
 
   production-browser:
-    name: ${{ matrix.shard == 'showcase-gpu' && 'Detailed showcase GPU (advisory)' || format('Production Chromium ({0}/4)', matrix.shard) }}
+    name: ${{ matrix.shard == 'showcase-gpu' && 'Detailed showcase GPU (advisory)' || format('Production Chromium ({0}/6)', matrix.shard) }}
     needs: production-artifact
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -326,7 +326,9 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        shard: [1, 2, 3, 4, showcase-gpu]
+        # Keep the slower Walk preference journeys below the unchanged suite
+        # deadline; every functional test still gates the same release artifact.
+        shard: [1, 2, 3, 4, 5, 6, showcase-gpu]
     permissions:
       contents: read
     env:
@@ -381,7 +383,7 @@ jobs:
       - name: Smoke the exact production artifact in Chromium
         if: matrix.shard != 'showcase-gpu'
         timeout-minutes: 12
-        run: npm run test:browser-smoke -- --grep-invert @showcase-gpu --shard=${{ matrix.shard }}/4 --global-timeout=660000
+        run: npm run test:browser-smoke -- --grep-invert @showcase-gpu --shard=${{ matrix.shard }}/6 --global-timeout=660000
 
       - name: Qualify detailed showcases on software GPU (advisory)
         if: matrix.shard == 'showcase-gpu'

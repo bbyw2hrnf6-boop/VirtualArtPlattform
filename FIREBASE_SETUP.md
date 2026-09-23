@@ -695,10 +695,10 @@ Configure the external trust once:
 Main `Verify` compiles and browser-smokes the exact release, generates and
 validates `functions/functions.yaml`, runs the Firestore/Storage emulator
 authorization matrix, and uploads separate digest-bound application and policy
-artifacts. The application artifact is initially a candidate: four one-worker
+artifacts. The application artifact is initially a candidate: six one-worker
 Chromium shards download and verify the same manifest/digest, then serve its
 unchanged `dist` without rebuilding. Only success of the entire Verify run
-(including all four shards) permits the existing deployment resolver to promote
+(including all six shards) permits the existing deployment resolver to promote
 it. Each shard stops at its first exhausted retry and has an 11-minute test
 limit, 12-minute step limit and 15-minute job limit; blocking matrix failure cancels siblings.
 Only the detailed house/pavilion walkthroughs tagged `@showcase-gpu` have an owner-approved
