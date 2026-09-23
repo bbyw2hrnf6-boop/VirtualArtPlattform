@@ -21,6 +21,12 @@ Blender masters, licensing and asset reproduction stay in the corresponding
 - All three rooms have guided visits, pause/resume, previous/next and exit.
   Reduced motion uses explicit still stops. Tab hiding/window blur pauses motion.
 
+Each standalone showcase exposes the shared `SpaceShareMenu` with a canonical
+hash-route link, native share where supported and an on-demand QR code. The
+same stage toolbar targets that scene for Full screen, so share and exit-fullscreen
+controls remain available while immersed. These showcase URLs are public demos,
+not published Studio Spaces; do not route them through gallery IDs or ACLs.
+
 Entering Obsidian or Sculpture Pavilion starts a **26/28-second opening flight**
 once their scene is ready. Pause, scrub or Exit flight stays available; direct
 camera input cancels the film. Reduced motion enters free Walk without autoplay.

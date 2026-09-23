@@ -7,6 +7,7 @@ import '../../styles/visitorControls.css';
 import { IDLE_VISITOR_TOUR } from '../gallery/visitorTourState';
 import { useReducedMotion } from './useReducedMotion';
 import { FlightControls } from './FlightControls';
+import { ShowcaseActions } from './ShowcaseActions';
 const Scene=lazy(()=>import('./ForestScene'));
 const asset='/assets/showcases/forest-fold-house/';
 export default function ForestPage(){
@@ -14,6 +15,7 @@ export default function ForestPage(){
   const [status,setStatus]=useState<'idle'|'loading'|'ready'|'error'>('idle');
   const [active,setActive]=useState(false),[room,setRoom]=useState(0),[mode,setMode]=useState<ObsidianMode>('walk'),[night,setNight]=useState(false);
   const controls=useRef<ObsidianControls|null>(null);
+  const stage=useRef<HTMLElement|null>(null);
   const [tour,setTour]=useState(IDLE_VISITOR_TOUR),[flight,setFlight]=useState(IDLE_VISITOR_TOUR);
   const reduced=useReducedMotion(), pendingFlight=useRef(false);
   const ready=useCallback(()=>{setStatus('ready');if(pendingFlight.current){pendingFlight.current=false;controls.current?.flight('start');}},[]),failed=useCallback(()=>{setActive(false);setStatus('error');},[]),artwork=useCallback(()=>{},[]);
@@ -21,7 +23,8 @@ export default function ForestPage(){
   const saver=Boolean((navigator as Navigator & {connection?:{saveData?:boolean}}).connection?.saveData);
   return <main className="obsidian forest-house">
     <header className="obsidian__header"><a href="#/">LIEUVA <span>/ ARCHITECTURE</span></a><a href="#/">← Back to LIEUVA</a></header>
-    <section className="obsidian__stage" aria-label="Forest Fold House preview" data-flight={flight.status}>
+    <section ref={stage} className="obsidian__stage" aria-label="Forest Fold House preview" data-flight={flight.status}>
+      <ShowcaseActions id="forest-fold-house" title="Forest Fold House" target={stage} />
       {status!=='ready'&&<img className="obsidian__poster" src={`${asset}cover.webp?v=3`} alt="Two stone and oak wings joined by a glass bridge, overlooking a shallow woodland watercourt." fetchPriority="high"/>}
       {active&&<Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} onTour={setTour} onFlight={setFlight}/></Suspense>}
       {status!=='ready'&&<div className="obsidian__entrance">

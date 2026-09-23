@@ -8,6 +8,7 @@ import '../../styles/visitorControls.css';
 import './obsidian.css';
 import { useReducedMotion } from './useReducedMotion';
 import { FlightControls } from './FlightControls';
+import { ShowcaseActions } from './ShowcaseActions';
 
 const ObsidianScene = lazy(() => import('./ObsidianScene'));
 
@@ -19,6 +20,7 @@ export default function ObsidianPage({ sculpture = false }: { sculpture?: boolea
   const Scene = sculpture ? SculptureScene : ObsidianScene;
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const controls = useRef<ObsidianControls | null>(null);
+  const stage = useRef<HTMLElement | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [active, setActive] = useState(false);
   const [status, setStatus] = useState('idle');
@@ -46,7 +48,8 @@ export default function ObsidianPage({ sculpture = false }: { sculpture?: boolea
       <a href="#/" aria-label="LIEUVA home">LIEUVA <span>/ SHOWCASE</span></a>
       <a href="#/">← Back to LIEUVA</a>
     </header>
-    <section className="obsidian__stage" aria-label={`${title} exhibition preview`} data-flight={flight.status}>
+    <section ref={stage} className="obsidian__stage" aria-label={`${title} exhibition preview`} data-flight={flight.status}>
+      <ShowcaseActions id={sculpture ? 'sculpture-pavilion' : 'obsidian'} title={title} target={stage} />
       {status !== 'ready' && <img className="obsidian__poster" src={`/assets/showcases/${sculpture ? "sculpture-pavilion" : "obsidian"}/cover.webp${sculpture ? "?v=2" : ""}`} alt={sculpture ? "Sculpture Pavilion: ivory atrium, bronze ribbons, carved stone and pale ash beneath an oval skylight." : "Obsidian: warm pools of light, botanical art, walnut portals and honed black limestone."} fetchPriority="high" />}
       {active && <Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} onTour={setTour} onFlight={setFlight} /></Suspense>}
       {status !== 'ready' && <div className="obsidian__entrance">

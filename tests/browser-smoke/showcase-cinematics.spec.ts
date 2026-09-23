@@ -4,6 +4,20 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
   test.describe(`Showcase cinematics ${viewport.width}`,()=>{
     test.use({viewport,hasTouch:viewport.width===390,isMobile:viewport.width===390});
     for(const id of ['obsidian','sculpture-pavilion','forest-fold-house']){
+      test(`${id} shares its direct link, makes a QR code and supports full screen`,async({page})=>{
+        await page.goto(`/#/showcase/${id}`);
+        const stage=page.locator('.obsidian__stage');
+        await page.getByRole('button',{name:/^Share/}).click();
+        const link=page.getByRole('textbox',{name:'Shareable Space URL'});
+        await expect(link).toHaveValue(`${new URL(page.url()).origin}/#/showcase/${id}`);
+        await page.getByRole('button',{name:'QR code'}).click();
+        await expect(page.getByRole('img',{name:`QR code for ${id==='forest-fold-house'?'Forest Fold House':id==='sculpture-pavilion'?'Sculpture Pavilion':'Obsidian'}`})).toBeVisible();
+        await page.getByRole('button',{name:'Close sharing options'}).click();
+        await page.getByRole('button',{name:'Enter full screen'}).click();
+        await expect.poll(()=>stage.evaluate(element=>document.fullscreenElement===element)).toBe(true);
+        await page.getByRole('button',{name:'Exit full screen'}).click();
+        await expect.poll(()=>stage.evaluate(element=>document.fullscreenElement!==element)).toBe(true);
+      });
       test(`${id} guided visit can pause, step, exit and keep visitor controls`,async({page},info)=>{
         const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
         await page.goto(`/#/showcase/${id}`);
