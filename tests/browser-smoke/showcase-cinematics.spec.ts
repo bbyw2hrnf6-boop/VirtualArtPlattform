@@ -78,7 +78,7 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
         await page.screenshot({path:info.outputPath(`story-${name}.png`)});
       }
       await story.getByRole('slider',{name:'Journey position'}).fill('1000');
-      await expect(story).toHaveAttribute('data-progress','1.0000');
+      await expect(story.getByRole('slider',{name:'Journey position'})).toHaveValue('1000');
       await expect(story.getByText('Bespoke showcases. Separate from the three editable Studio templates.')).toBeVisible();
       await story.getByRole('button',{name:'Close journey ×'}).click();
       await expect(story.locator('canvas')).toHaveCount(0);
@@ -102,11 +102,37 @@ test('the complete three-world film reaches its final view without skipping a wo
   await story.scrollIntoViewIfNeeded();
   await story.getByRole('button',{name:'Watch the journey · 48 sec'}).click();
   for(const progress of [.15,.32,.36,.5,.64,.7,.85,1]){
-    await expect.poll(async()=>Number(await story.getAttribute('data-progress')),{timeout:50_000}).toBeGreaterThanOrEqual(progress);
+    await expect.poll(async()=>Number(await story.getByRole('slider',{name:'Journey position'}).inputValue())/1000,{timeout:50_000}).toBeGreaterThanOrEqual(progress);
     await expect(story.locator('canvas')).toHaveCount(1);
     await page.screenshot({path:info.outputPath(`film-${progress}.png`)});
   }
   await expect(story).toHaveAttribute('data-chapter','2');
   await expect(story).toHaveAttribute('data-playing','false');
   await expect(story.getByRole('button',{name:'Play journey'})).toBeVisible();
+});
+
+test('the next world is ready before each portal and the film does not buffer at the cut',async({page})=>{
+  await page.setViewportSize({width:1440,height:1000});
+  await page.goto('/#/');
+  const story=page.getByRole('region',{name:'Three worlds cinematic story'});
+  await story.scrollIntoViewIfNeeded();
+  await story.getByRole('button',{name:'Watch the journey · 48 sec'}).click();
+  await expect(story.locator('[data-world="0"] .obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
+  const position=story.getByRole('slider',{name:'Journey position'});
+  await expect.poll(async()=>Number(await position.inputValue())).toBeGreaterThan(40);
+  await story.getByRole('button',{name:'Pause journey'}).click();
+  await expect(story.locator('[data-world="1"] .obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
+  await story.getByRole('navigation',{name:'Journey chapters'}).getByRole('button',{name:/Sculpture Pavilion/}).click();
+  await expect(story.locator('[data-world="1"].is-ready .obsidian__scene')).toHaveAttribute('data-ready','true');
+  await expect(story.getByRole('status')).not.toContainText('Entering');
+  await story.getByRole('button',{name:'Play journey'}).click();
+  await expect.poll(async()=>Number(await position.inputValue())).toBeGreaterThan(300);
+  await story.getByRole('button',{name:'Pause journey'}).click();
+  await expect(story.locator('[data-world="2"] .obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
+  await story.getByRole('navigation',{name:'Journey chapters'}).getByRole('button',{name:/Forest Fold House/}).click();
+  await expect(story.locator('[data-world="2"].is-ready .obsidian__scene')).toHaveAttribute('data-ready','true');
+  await expect(story.getByRole('status')).not.toContainText('Entering');
+  await expect(story.locator('canvas')).toHaveCount(1);
+  await story.getByRole('navigation',{name:'Journey chapters'}).getByRole('button',{name:/Obsidian/}).click();
+  await expect(story.locator('[data-world="0"] .obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
 });

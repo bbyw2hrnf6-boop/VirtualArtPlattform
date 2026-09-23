@@ -93,7 +93,8 @@ for (const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
       await page.keyboard.press('Escape');
       await expect(page.getByRole('dialog')).not.toBeVisible();
       // Use visible floor above the flight replay and visitor controls.
-      const floor={x:box.x+box.width*.5,y:box.y+box.height*.7};
+      // Aim beside the central plinth: the old center click hit its stone base.
+      const floor={x:box.x+box.width*.62,y:box.y+box.height*.72};
       if(mobile)await page.touchscreen.tap(floor.x,floor.y);else await page.mouse.click(floor.x,floor.y);
       await expect(scene).toHaveAttribute('data-destination','true');
       if(mobile){

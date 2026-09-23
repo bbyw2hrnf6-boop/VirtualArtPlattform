@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ObsidianControls } from '../showcase/ObsidianScene';
 import { useReducedMotion } from '../showcase/useReducedMotion';
 import { WORLD_CHAPTERS, WORLD_STORY_DURATION, worldFrame } from './threeWorldStoryModel';
@@ -8,19 +8,33 @@ import { portalPreview, WORLD_PORTALS } from '../showcase/worldPortals';
 const Scenes=[lazy(()=>import('../showcase/ObsidianScene')),lazy(()=>import('../showcase/SculptureScene')),lazy(()=>import('../showcase/ForestScene'))];
 const noop=()=>{};
 
-/** One lazy 3D world at a time. Scroll and Play sample the same reversible rail.
- * Loading freezes the film clock; no skipped chapter on a slower connection. */
+/** Keep the next world GPU-ready before the camera reaches its portal.
+ * At most two scenes exist; the next renderer rests after its warm-up draws. */
 export default function ThreeWorldStory() {
   const reduced=useReducedMotion();
-  const [active,setActive]=useState(false),[index,setIndex]=useState(0),[ready,setReady]=useState(false),[error,setError]=useState(false),[playing,setPlaying]=useState(false),[progress,setProgress]=useState(0);
-  const host=useRef<HTMLElement>(null), controls=useRef<ObsidianControls|null>(null);
+  const [active,setActive]=useState(false),[index,setIndex]=useState(0),[preparing,setPreparing]=useState<number|null>(null),[ready,setReady]=useState(false),[error,setError]=useState(false),[playing,setPlaying]=useState(false),[progress,setProgress]=useState(0);
+  const host=useRef<HTMLElement>(null);
+  const controls=useMemo(()=>Array.from({length:Scenes.length},()=>({current:null as ObsidianControls|null})),[]);
+  const prepared=useRef(new Set<number>());
+  const failedPrep=useRef(false);
   const progressRef=useRef(0), indexRef=useRef(0), readyRef=useRef(false), playingRef=useRef(false);
   const requested=useRef<number|null>(null);
   const [incomingPortal,setIncomingPortal]=useState<string>();
-
-  const onReady=useCallback(()=>{readyRef.current=true;setReady(true);setProgress(progressRef.current);controls.current?.seekFilm(worldFrame(progressRef.current).local);},[]);
-  const onError=useCallback(()=>{readyRef.current=false;playingRef.current=false;setReady(false);setPlaying(false);setError(true);},[]);
   const stop=useCallback(()=>{playingRef.current=false;setPlaying(false);},[]);
+
+  const onReady=useCallback((sceneIndex:number)=>{
+    prepared.current.add(sceneIndex);
+    // Warm the exact first camera frame too; the hidden renderer then goes idle.
+    controls[sceneIndex].current?.seekFilm(sceneIndex===indexRef.current?worldFrame(progressRef.current).local:0);
+    if(sceneIndex!==indexRef.current)return;
+    readyRef.current=true;setReady(true);
+  },[controls]);
+  const onError=useCallback((sceneIndex:number)=>{
+    if(sceneIndex!==indexRef.current){failedPrep.current=true;setPreparing(null);return;}
+    readyRef.current=false;stop();setReady(false);setError(true);
+  },[stop]);
+  const sceneReady=useMemo(()=>Scenes.map((_,i)=>()=>onReady(i)),[onReady]);
+  const sceneError=useMemo(()=>Scenes.map((_,i)=>()=>onError(i)),[onError]);
 
   useEffect(()=>{
     const section=host.current;if(!section||!active)return;
@@ -29,14 +43,21 @@ export default function ThreeWorldStory() {
       let p=Math.max(0,Math.min(1,value)),frame=worldFrame(p);
       if(playingRef.current&&frame.index>indexRef.current){p=frame.chapter.start/WORLD_STORY_DURATION;frame=worldFrame(p);}
       progressRef.current=p;
-      section.style.setProperty('--world-progress',String(p));
       section.style.setProperty('--world-portal',String(frame.portal));
-      section.dataset.chapter=String(frame.index);section.dataset.progress=p.toFixed(4);
       if(frame.index!==indexRef.current){
         setIncomingPortal(frame.index>indexRef.current?frame.chapter.id:undefined);
+        const targetPrepared=prepared.current.has(frame.index)&&Boolean(controls[frame.index].current);
+        prepared.current.clear();
+        if(targetPrepared)prepared.current.add(frame.index);
+        failedPrep.current=false;
         indexRef.current=frame.index;readyRef.current=false;setReady(false);setError(false);setIndex(frame.index);
+        setPreparing(null);
+        if(targetPrepared){
+          readyRef.current=true;setReady(true);
+          controls[frame.index].current?.seekFilm(frame.local);
+        }
         force=true;
-      }else if(readyRef.current&&!reduced)controls.current?.seekFilm(frame.local);
+      }else if(readyRef.current&&!reduced)controls[frame.index].current?.seekFilm(frame.local);
       if(force||performance.now()-lastUi>100||p===1){lastUi=performance.now();setProgress(p);}
     };
     const scrollToProgress=(p:number)=>{
@@ -73,7 +94,24 @@ export default function ThreeWorldStory() {
     // A user action can wake the RAF without registering a second clock.
     section.addEventListener('world-seek',schedule);schedule();
     return()=>{cancelAnimationFrame(raf);observer.disconnect();window.removeEventListener('scroll',scroll);window.removeEventListener('resize',scroll);window.removeEventListener('wheel',interrupt);window.removeEventListener('touchstart',interrupt);window.removeEventListener('keydown',interrupt);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',stop);section.removeEventListener('world-seek',schedule);};
-  },[active,reduced,stop]);
+  },[active,reduced,stop,controls]);
+
+  useEffect(()=>{
+    const motion=matchMedia('(prefers-reduced-motion: reduce)');
+    const changed=()=>{
+      if(!motion.matches)return;
+      prepared.current.clear();readyRef.current=false;
+      setPreparing(null);setReady(false);stop();
+    };
+    motion.addEventListener('change',changed);
+    return()=>motion.removeEventListener('change',changed);
+  },[stop]);
+
+  // Begin preparing the next room near the start of this one. Its model,
+  // textures, shaders and reflections are paid for before the visual cut.
+  useEffect(()=>{
+    if(active&&!reduced&&ready&&index<Scenes.length-1&&!failedPrep.current&&worldFrame(progress).local>.12)setPreparing(index+1);
+  },[active,reduced,ready,index,progress]);
 
   const wake=()=>host.current?.dispatchEvent(new Event('world-seek'));
   const seek=(p:number)=>{stop();requested.current=p;if(!active)setActive(true);wake();};
@@ -83,13 +121,17 @@ export default function ThreeWorldStory() {
     if(!active||progressRef.current>=.999){requested.current=0;setActive(true);}
     playingRef.current=true;setPlaying(true);wake();
   };
-  const exit=()=>{stop();setActive(false);readyRef.current=false;setReady(false);setError(false);setIncomingPortal(undefined);indexRef.current=0;progressRef.current=0;setIndex(0);setProgress(0);host.current?.scrollIntoView({behavior:'instant'});};
-  const Scene=Scenes[index],chapter=WORLD_CHAPTERS[index],next=WORLD_PORTALS[chapter.id]?.next;
+  const exit=()=>{stop();setActive(false);readyRef.current=false;prepared.current.clear();failedPrep.current=false;setPreparing(null);setReady(false);setError(false);setIncomingPortal(undefined);indexRef.current=0;progressRef.current=0;setIndex(0);setProgress(0);host.current?.scrollIntoView({behavior:'instant'});};
+  const chapter=WORLD_CHAPTERS[index],next=WORLD_PORTALS[chapter.id]?.next;
+  const mounted=[index,...(preparing!==null&&preparing!==index?[preparing]:[])];
   const preview=(id:string,className:string)=><picture><source media="(max-width:767px)" srcSet={portalPreview(id,true)}/><img className={className} src={portalPreview(id,false)} alt="" aria-hidden="true"/></picture>;
-  return <section id="three-worlds" ref={host} className={`world-story${active&&!reduced?' is-active':''}`} aria-label="Three worlds cinematic story" data-playing={playing} data-motion={reduced?'reduced':'full'}>
+  return <section id="three-worlds" ref={host} className={`world-story${active&&!reduced?' is-active':''}`} aria-label="Three worlds cinematic story" data-playing={playing} data-motion={reduced?'reduced':'full'} data-chapter={index}>
     <div className="world-story__stage">
       <img className="world-story__poster" src={chapter.cover} alt={`${chapter.name} — an authored LIEUVA world`} loading="lazy"/>
-      {active&&!reduced&&!error&&<div className={`world-story__scene${ready?' is-ready':''}`}><Suspense fallback={null}><Scene key={index} controlsRef={controls} onReady={onReady} onError={onError} onRoom={noop} onArtwork={noop} onMode={noop} cinematic/></Suspense></div>}
+      {active&&!reduced&&!error&&mounted.map(sceneIndex=>{
+        const Scene=Scenes[sceneIndex],current=sceneIndex===index;
+        return <div key={sceneIndex} data-world={sceneIndex} aria-hidden={!current} className={`world-story__scene${current&&ready?' is-ready':''}`}><Suspense fallback={null}><Scene controlsRef={controls[sceneIndex]} onReady={sceneReady[sceneIndex]} onError={sceneError[sceneIndex]} onRoom={noop} onArtwork={noop} onMode={noop} cinematic/></Suspense></div>;
+      })}
       {active&&!reduced&&next&&preview(next,"world-story__portal")}
       {active&&!reduced&&incomingPortal&&preview(incomingPortal,`world-story__arrival${ready?' is-ready':''}`)}
       <div className="world-story__shade"/>

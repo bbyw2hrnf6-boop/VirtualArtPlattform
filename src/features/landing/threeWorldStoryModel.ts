@@ -8,5 +8,5 @@ export function worldFrame(progress: number) {
   const p=Math.max(0,Math.min(1,progress)), time=p*WORLD_STORY_DURATION;
   const index=time<12?0:time<26?1:2, chapter=WORLD_CHAPTERS[index];
   const local=(time-chapter.start)/(chapter.end-chapter.start);
-  return {index,local,chapter,portal:index<2?Math.max(0,(local-.985)/.015):0};
+  return {index,local,chapter,portal:index<2?Math.max(0,Math.min(1,(local-.93)/.07)):0};
 }

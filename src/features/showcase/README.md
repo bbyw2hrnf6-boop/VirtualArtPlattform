@@ -33,9 +33,13 @@ Obsidian 12 s → Sculpture 14 s → Forest 22 s. Homepage header and Beyond Stu
 buttons both open it. Play and native, reversible scroll sample the same rails.
 `worldPortal.ts` places the next scene's matched first frame inside the actual
 painting/entrance frame. The aperture expands in perspective as the camera
-approaches; the same image masks lazy loading until the next scene is ready.
-Only one WebGL scene remains mounted. Loading pauses film time; slow devices can
-take longer than 48 seconds. The original 20-second Studio introduction is unchanged.
+approaches; the same image covers the cut and expands into the incoming view.
+Once the visitor opts in, the next world is loaded and GPU-warmed near the start
+of the current chapter. At most two scenes are mounted; the prepared renderer
+rests until the portal, then the old scene is disposed. This keeps the normal
+48-second clock moving through ready transitions. On a slow connection, the
+arrival image continues masking a late scene and the clock waits so no chapter
+is skipped. The original 20-second Studio introduction is unchanged.
 
 Portal previews under `public/assets/showcases/cinematic/` are UI-free captures of
 the shipped full-detail scenes at their first film frame, at 1440 × 1000 and
@@ -44,8 +48,9 @@ They add about 197 KB total, not another set of room models.
 
 ## Loading and quality
 
-No bespoke GLB loads until the visitor opts in. Only one bespoke scene/context
-is mounted at a time; scene disposal releases geometries, textures and renderer.
+No bespoke GLB loads until the visitor opts in. One current and at most one
+prepared scene/context may be mounted during the homepage film; stand-alone
+showcase pages retain one. Scene disposal releases geometries, textures and renderer.
 Loading retains a poster, failure retains static navigation, and reduced motion
 uses still chapters without loading bespoke 3D. Scene readiness waits for shader
 warm-up draws. Native scrolling stays available; no scroll lock or wheel capture.
@@ -53,7 +58,8 @@ warm-up draws. Native scrolling stays available; no scroll lock or wheel capture
 Flights use the existing full-detail assets, reflections and GPU calibration.
 This feature does not replace or re-render the Blender masters. The original cinematic allowance is **8 KB gzip JS and 2 KB gzip CSS**.
 Automatic gallery entries and matched world-space portals add **2 KB gzip JS**;
-the App Check + telemetry production fixture measures 625,949 B against 626,256 B.
+next-world GPU warm-up adds a documented 256 B aggregate allowance (626,512 B).
+Entry, largest lazy chunk, CSS, Studio assets and quality settings remain fixed.
 Retired Coming Soon compositions are removed, saving about 500 B gzip CSS. Entry, largest-chunk, Studio-asset and product-target
 budgets are unchanged; see `scripts/lib/performance-budgets.mjs`.
 
