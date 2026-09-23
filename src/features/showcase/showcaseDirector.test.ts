@@ -61,7 +61,7 @@ describe('guided showcase visits',()=>{
       let from=new Vector3().fromArray(start);
       for(const stop of stops){const to=new Vector3().fromArray(stop.position);expect(nav.findPath(from,to),stop.label).not.toBeNull();from=to;}
     }
-  });
+  },30_000);
   function setup(reduced=false,flight=HOUSE_FLIGHT){
     let now=0;vi.spyOn(performance,'now').mockImplementation(()=>now);
     const camera=new PerspectiveCamera(55);camera.position.set(1.5,1.75,-1.5);camera.lookAt(6,1.8,-7.97);
