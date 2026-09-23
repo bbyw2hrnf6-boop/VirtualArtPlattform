@@ -3,6 +3,7 @@ import type { ObsidianControls, ObsidianMode } from './ObsidianScene';
 import obsidian from './obsidian.json';
 import pavilion from './sculpture-pavilion.json';
 import { VisitorControls } from '../gallery/VisitorControls';
+import { IDLE_VISITOR_TOUR } from '../gallery/visitorTourState';
 import '../../styles/visitorControls.css';
 import './obsidian.css';
 
@@ -21,6 +22,7 @@ export default function ObsidianPage({ sculpture = false }: { sculpture?: boolea
   const [status, setStatus] = useState('idle');
   const [room, setRoom] = useState(0);
   const [mode, setMode] = useState<ObsidianMode>('walk');
+  const [tour, setTour] = useState(IDLE_VISITOR_TOUR);
   const [selected, setSelected] = useState<string | null>(null);
   const ready = useCallback(() => { setRoom(0); setMode('walk'); setStatus('ready'); }, []);
   const failed = useCallback(() => { setStatus('error'); setActive(false); }, []);
@@ -42,7 +44,7 @@ export default function ObsidianPage({ sculpture = false }: { sculpture?: boolea
     </header>
     <section className="obsidian__stage" aria-label={`${title} exhibition preview`}>
       {status !== 'ready' && <img className="obsidian__poster" src={`/assets/showcases/${sculpture ? "sculpture-pavilion" : "obsidian"}/cover.webp${sculpture ? "?v=2" : ""}`} alt={sculpture ? "Sculpture Pavilion: ivory atrium, bronze ribbons, carved stone and pale ash beneath an oval skylight." : "Obsidian: warm pools of light, botanical art, walnut portals and honed black limestone."} fetchPriority="high" />}
-      {active && <Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} /></Suspense>}
+      {active && <Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} onTour={setTour} /></Suspense>}
       {status !== 'ready' && <div className="obsidian__entrance">
         <p className="obsidian__eyebrow">A LIEUVA bespoke exhibition</p>
         <h1>{title}.</h1>
@@ -63,6 +65,10 @@ export default function ObsidianPage({ sculpture = false }: { sculpture?: boolea
           modeOptions={[{value:'walk',label:'Walk',icon:'↟'}, {value:'overview',label:'Overview',icon:'◇'}]}
           onModeChange={value => controls.current?.mode(value)}
           onResetView={() => controls.current?.reset()}
+          tour={tour} tourAvailable={mode === 'walk'}
+          onStartOrSkipTour={() => controls.current?.tour(tour.status === 'idle' ? 'start' : 'stop')}
+          onPauseOrResumeTour={() => controls.current?.tour('pause')}
+          onStepTour={direction => controls.current?.tour(direction)}
           onOpenArtworkDirectory={browseCollection}
           artworkCount={data.artworks.length}
           artworkDirectoryId="obsidian-collection"

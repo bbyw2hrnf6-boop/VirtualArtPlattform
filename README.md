@@ -27,6 +27,7 @@ npm run dev
 | `npm run test:firebase-rules` | Firestore and Storage rules in emulators. |
 | `npm run test:browser-smoke` | Built Chromium journeys. |
 | `npm run test:browser-visual` | Reviewed visual baselines at desktop and mobile sizes. |
+| `npm run test:browser-cinematic` | GPU qualification for bespoke flights and guided tours at desktop/mobile sizes. |
 | `npm run check:ci` | Full local CI-equivalent gate; needs Java and Chromium. |
 | `npm run validate:premium` | Validate current Studio GLBs without changing reports. |
 | `npm run clean:generated` | Remove reproducible builds, diagnostics and Blender scratch files. |
@@ -70,5 +71,6 @@ The largest modules are `src/App.tsx`, `src/features/gallery/GalleryScene.tsx` a
 | Asset provenance | [ASSET_LICENSES.md](./ASSET_LICENSES.md) |
 | Studio Blender/GLB contract | [blender/EXPORT_CONTRACT.md](./blender/EXPORT_CONTRACT.md) |
 | Bespoke render/showcase contract | [blender/showcases](./blender/showcases/) |
+| Guided visits, house flight and three-world homepage film | [showcase direction](./src/features/showcase/README.md) |
 
 Do not deploy, publish fixtures, mutate production data or alter rules during local verification without explicit user authorization.

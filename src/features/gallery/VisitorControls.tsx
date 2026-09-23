@@ -16,6 +16,7 @@ type VisitorControlsProps<TMode extends string> = {
   onModeChange: (mode: TMode) => void;
   tour?: VisitorTourState;
   tourAvailable?: boolean;
+  tourDescription?: string;
   onStartOrSkipTour?: () => void;
   onPauseOrResumeTour?: () => void;
   onStepTour?: (direction: -1 | 1) => void;
@@ -43,6 +44,7 @@ export function VisitorControls<TMode extends string>({
   onModeChange,
   tour = IDLE_VISITOR_TOUR,
   tourAvailable = false,
+  tourDescription = 'Optional artwork route',
   onStartOrSkipTour,
   onPauseOrResumeTour,
   onStepTour,
@@ -117,7 +119,7 @@ export function VisitorControls<TMode extends string>({
             {tourRunning
               ? `${Math.max(1, tour.currentStop)} / ${Math.max(1, tour.stopCount)} · ${tour.currentLabel}`
               : tourAvailable
-                ? "Optional artwork route"
+                ? tourDescription
                 : "Switch to Walk"}
           </small>
           <i aria-hidden="true" />

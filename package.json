@@ -15,6 +15,7 @@
     "test:scripts": "node --test scripts/*.node-test.mjs firebase-cli/*.node-test.mjs && node firebase-cli/validate-lock.mjs",
     "test:firebase-rules": "node firebase-cli/node_modules/firebase-tools/lib/bin/firebase.js emulators:exec --only firestore,storage --project demo-lieuva-rules \"vitest run --config tests/firebase-rules/vitest.config.ts\"",
     "test:browser-smoke": "playwright test --project=chromium",
+    "test:browser-cinematic": "playwright test --project=chromium-cinematic",
     "test:browser-visual": "playwright test tests/browser-smoke/visual-regression.spec.ts --project=chromium-visual",
     "test:browser-smoke:install": "playwright install chromium",
     "test:release-gate": "vitest run src/services/firebaseGalleryRepository.releaseGate.test.ts src/services/draftStorage.test.ts src/services/galleryPublishingError.test.ts src/services/galleryStoragePaths.test.ts src/services/galleryValidation.test.ts src/services/imageBlob.test.ts src/features/gallery/editor/publishReview.test.ts src/features/gallery/editor/publishState.test.ts",

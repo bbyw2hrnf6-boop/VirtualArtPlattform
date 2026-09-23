@@ -10,6 +10,10 @@ import { VISITOR_KEYBOARD_HINT } from '../gallery/visitorKeyboard';
 import { createObsidianNavigation, obsidianBounds } from './navigation';
 import { createFloorReflection, installOverviewCutaway } from './floorReflection';
 import data from './obsidian.json';
+import { createShowcaseDirector } from './showcaseDirector';
+import { HOUSE_FLIGHT, WORLD_FLIGHTS, SHOWCASE_STOPS } from './showcaseFlights';
+import { forestRooms } from './forestRooms';
+import type { VisitorTourState } from '../gallery/visitorTourState';
 
 export interface ShowcaseSceneConfig {
   id: string; title: string;
@@ -36,9 +40,12 @@ export interface ObsidianControls {
   zoom(direction: -1 | 1): void;
   pause(value: boolean): void;
   lighting?(night: boolean): void;
+  tour(command: 'start' | 'stop' | 'pause' | number): void;
+  flight(command: 'start' | 'stop' | 'pause' | number): void;
+  seekFilm(progress: number): void;
 }
 
-export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, onArtwork, onMode, config = obsidianConfig }: {
+export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, onArtwork, onMode, onTour, onFlight, cinematic = false, config = obsidianConfig }: {
   config?: ShowcaseSceneConfig;
   controlsRef: { current: ObsidianControls | null };
   onReady: () => void;
@@ -46,6 +53,9 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
   onRoom: (index: number) => void;
   onArtwork: (id: string) => void;
   onMode: (mode: ObsidianMode) => void;
+  onTour?: (state: VisitorTourState) => void;
+  onFlight?: (state: VisitorTourState) => void;
+  cinematic?: boolean;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -117,6 +127,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       orbit.update();
     };
     const switchMode = (next: ObsidianMode) => {
+      if (director?.active()) director.stop();
       if (next === mode) return;
       if (next === 'overview') {
         savedWalk.position.copy(camera.position); savedWalk.quaternion.copy(camera.quaternion);
@@ -146,7 +157,8 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     };
     const pause = (value: boolean) => {
       paused = value;
-      walk.setEnabled(!value && mode === 'walk' && Boolean(model));
+      if (value) director?.pause(true);
+      walk.setEnabled(!value && !cinematic && !director?.active() && mode === 'walk' && Boolean(model));
       orbit.enabled = !value && mode === 'overview';
       schedule();
     };
@@ -182,17 +194,47 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       room: resetWalk,
       mode: switchMode,
       reset: () => { if (mode === 'overview') fitOverview(); else resetWalk(currentRoom); schedule(); },
-      zoom: direction => { if (mode === 'walk') { walk.zoom(direction); canvas.focus({ preventScroll: true }); schedule(); return; }
+      zoom: direction => { if (director.active()) director.stop(); if (mode === 'walk') { walk.zoom(direction); canvas.focus({ preventScroll: true }); schedule(); return; }
         const offset = camera.position.clone().sub(orbit.target);
         offset.setLength(THREE.MathUtils.clamp(offset.length() * (direction > 0 ? 1 / 1.3 : 1.3), orbit.minDistance, orbit.maxDistance));
         camera.position.copy(orbit.target).add(offset); orbit.update(); schedule();
       },
       pause,
       lighting: setArchitectureLighting,
+      tour: command => {
+        if (!model) return;
+        if (typeof command === 'number') director?.stepTour(command);
+        else if (command === 'start') director?.startTour();
+        else if (command === 'pause') director?.pause();
+        else director?.stop();
+      },
+      flight: command => {
+        if (!model) return;
+        if (typeof command === 'number') director?.seekFlight(command);
+        else if (command === 'start') director?.startFlight();
+        else if (command === 'pause') director?.pause();
+        else director?.stop();
+      },
+      seekFilm: progress => { if (model) director?.seekWorld(progress); },
     };
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    const director = createShowcaseDirector({
+      camera, navigation, reduced: () => motion.matches, schedule, onTour, onFlight,
+      flight: HOUSE_FLIGHT, world: WORLD_FLIGHTS[config.id],
+      stops: config.architecture ? [0,1,6,2,3,4,7,5].map(i => ({
+        label: forestRooms[i].name, position: forestRooms[i].start, target: forestRooms[i].look,
+      })) : SHOWCASE_STOPS[config.id],
+      acquire: () => {
+        switchMode('walk'); walk.setEnabled(false); orbit.enabled=false;
+        camera.clearViewOffset(); camera.updateProjectionMatrix();
+      },
+      release: () => {
+        walk.syncFromCamera(); walk.setEnabled(!paused && !cinematic && mode==='walk');
+        orbit.enabled=!paused && !cinematic && mode==='overview';
+      },
+    });
     let animationTime = performance.now();
-    let slowFrames = 0, reducedResolution = false, warmupFrames = 3, renderCost = 0;
+    let slowFrames = 0, reducedResolution = false, warmupFrames = 3, renderCost = 0, readyNotified = false;
     const balancedPixelRatio = () => Math.min(devicePixelRatio, 1, Math.sqrt(600_000 / Math.max(1, host.clientWidth * host.clientHeight)));
     const quality = (full: boolean) => {
       renderer.setPixelRatio(full ? Math.min(Math.max(devicePixelRatio, compact ? 1 : 1.5), 2) : balancedPixelRatio());
@@ -226,7 +268,8 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       raf = 0;
       if (disposed || document.hidden) return;
       // Orbit owns the camera in Overview; Walk must not apply its FOV easing.
-      if (mode === 'walk' && !paused) walk.update();
+      if (!paused) director?.update(now);
+      if (mode === 'walk' && !paused && !director?.active() && !cinematic) walk.update();
       const orbitMoving = orbit.enabled && orbit.update();
       const room = config.roomAt(camera.position);
       if (mode === 'walk' && room !== currentRoom) { currentRoom = room; onRoom(room); }
@@ -235,6 +278,8 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       host.dataset.pitch = camera.rotation.x.toFixed(4);
       host.dataset.yaw = camera.rotation.y.toFixed(4);
       host.dataset.mode = mode;
+      host.dataset.cameraOwner = director?.kind() ?? 'visitor';
+      host.dataset.flightProgress = director.progress().toFixed(3);
       host.dataset.destination = String(walk.hasDestination());
       walkMarker.visible = mode === 'walk' && walk.hasDestination();
       host.dataset.frames = String(++frames);
@@ -244,7 +289,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       animationTime = now; host.dataset.animation = animate ? 'playing' : 'paused';
       if(mixer)host.dataset.animationTime=mixer.time.toFixed(3);
       renderer.render(scene, camera);
-      const moving = Boolean(warmupFrames && model) || animate || (!paused && (mode === 'walk' ? walk.needsUpdate() : orbitMoving));
+      const moving = Boolean(warmupFrames && model) || animate || (!paused && (director?.moving() || (!director?.active() && !cinematic && (mode === 'walk' ? walk.needsUpdate() : orbitMoving))));
       host.dataset.idle = String(!moving);
       host.dataset.resolution = warmupFrames ? 'warming' : reducedResolution ? 'balanced' : 'full';
       // RAF and render() can return before queued GPU work completes. Measure
@@ -263,6 +308,10 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         if (gpuFence) gl.deleteSync(gpuFence);
         gpuFence = null;
         renderCost = performance.now() - now;
+        if (!disposed && model && !warmupFrames && !readyNotified) {
+          readyNotified = true; host.dataset.ready = 'true'; onReady();
+          if (!cinematic) canvas.focus({ preventScroll: true });
+        }
         if (moving) schedule();
       };
       complete();
@@ -283,7 +332,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         if (!(event instanceof PointerEvent) || event.pointerType !== 'touch') return;
         lastTouchActivationAt = performance.now();
       } else if (performance.now() - lastTouchActivationAt < 700) return;
-      if (event.button !== 0 || paused || !model || mode !== 'walk' || !walk.consumeClick()) return;
+      if (cinematic || director?.active() || event.button !== 0 || paused || !model || mode !== 'walk' || !walk.consumeClick()) return;
       const rect = canvas.getBoundingClientRect();
       ray.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1), camera);
       const hit = ray.intersectObject(model, true)[0];
@@ -302,15 +351,22 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       }
     };
     const lost = (event: Event) => { event.preventDefault(); pause(true); onError(); };
-    const blur = () => { walk.setEnabled(false); if (!paused && mode === 'walk' && model) walk.setEnabled(true); schedule(); };
-    const visibility = () => { blur(); if (!document.hidden) schedule(); };
+    const blur = () => { walk.setEnabled(false); if (!paused && !cinematic && !director?.active() && mode === 'walk' && model) walk.setEnabled(true); schedule(); };
+    const visibility = () => { if (document.hidden) director?.pause(true); blur(); if (!document.hidden) schedule(); };
+    const windowBlur = () => { director?.pause(true); blur(); };
+    const interrupt = (event: Event) => {
+      if (cinematic || !director?.active()) return;
+      if (event instanceof KeyboardEvent && !['Escape','w','a','s','d','q','e','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.key)) return;
+      director.stop();
+    };
     // Pointer look and pinch mutate camera state inside the shared controller.
     canvas.addEventListener('pointermove', schedule); canvas.addEventListener('click', click);
     canvas.addEventListener('pointerup', click);
     canvas.addEventListener('pointercancel', blur); canvas.addEventListener('blur', blur);
     canvas.addEventListener('webglcontextlost', lost);
+    canvas.addEventListener('pointerdown', interrupt, true); canvas.addEventListener('keydown', interrupt, true); canvas.addEventListener('wheel', interrupt, {capture:true,passive:true});
     motion.addEventListener('change', schedule);
-    window.addEventListener('blur', blur); document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('blur', windowBlur); document.addEventListener('visibilitychange', visibility);
     const abort = new AbortController();
     const separate = config.architecture && !compact;
     const assetRoot = `/assets/showcases/${config.id}/${separate ? 'desktop-v4/' : ''}`;
@@ -383,8 +439,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         } else reflection = createFloorReflection(compact);
         if (reflection) scene.add(reflection);
         quality(false);
-        host.dataset.ready = 'true'; walk.setEnabled(true); schedule(); onReady();
-        canvas.focus({ preventScroll: true });
+        walk.setEnabled(!cinematic); schedule();
       }).catch(error => { if (!disposed && error.name !== 'AbortError') onError(); });
     return () => {
       disposed = true; abort.abort(); cancelAnimationFrame(raf); clearTimeout(gpuTimer);
@@ -394,7 +449,8 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       canvas.removeEventListener('pointerup', click);
       canvas.removeEventListener('pointercancel', blur); canvas.removeEventListener('blur', blur);
       canvas.removeEventListener('webglcontextlost', lost);
-      window.removeEventListener('blur', blur); document.removeEventListener('visibilitychange', visibility);
+      canvas.removeEventListener('pointerdown', interrupt, true); canvas.removeEventListener('keydown', interrupt, true); canvas.removeEventListener('wheel', interrupt, true);
+      window.removeEventListener('blur', windowBlur); document.removeEventListener('visibilitychange', visibility);
       motion.removeEventListener('change', schedule);
       mixer?.stopAllAction(); if(model)mixer?.uncacheRoot(model);environment?.dispose();
       walk.dispose(); orbit.dispose();
@@ -402,6 +458,6 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       walkMarker.geometry.dispose(); walkMarker.material.dispose();
       reflection?.geometry.dispose(); reflection?.dispose(); renderer.dispose(); canvas.remove();
     };
-  }, [controlsRef, onReady, onError, onRoom, onArtwork, onMode, config]);
-  return <div ref={mount} className="obsidian__scene" role="region" aria-label={`${config.title} gallery`} />;
+  }, [controlsRef, onReady, onError, onRoom, onArtwork, onMode, onTour, onFlight, cinematic, config]);
+  return <div ref={mount} className="obsidian__scene" data-showcase={config.id} role="region" aria-label={`${config.title} gallery`} />;
 }

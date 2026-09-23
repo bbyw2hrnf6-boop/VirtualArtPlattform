@@ -9,6 +9,7 @@ Do not read this directory as a bundle. Start with [`CURRENT-STATE.md`](./CURREN
 | Work | Read |
 | --- | --- |
 | Mobile experience or remote-AI direction | [`MOBILE-EXPERIENCE-AND-AI-DIRECTION.md`](./MOBILE-EXPERIENCE-AND-AI-DIRECTION.md) |
+| Bespoke guided tours, cinematic cameras or three-world scroll | [Showcase direction](../src/features/showcase/README.md) |
 | Firebase release, rollback or artifact identity | [`WP2-DETERMINISTIC-RELEASE-GATE.md`](./WP2-DETERMINISTIC-RELEASE-GATE.md) and `FIREBASE_SETUP.md` |
 | Rules, lifecycle, security or access | [`WP3-DATA-SECURITY-LIFECYCLE.md`](./WP3-DATA-SECURITY-LIFECYCLE.md), [`WP3-FIREBASE-POLICY-GATE.md`](./WP3-FIREBASE-POLICY-GATE.md), or [`LIVE-ACCESS-MATRIX.md`](./LIVE-ACCESS-MATRIX.md) |
 | Publishing, visibility, SEO or clean Space URLs | [`PUBLISH-UPDATE-RELEASE-GATE.md`](./PUBLISH-UPDATE-RELEASE-GATE.md) or [`CLEAN-SPACE-URL-SEO-IMPLEMENTATION.md`](./CLEAN-SPACE-URL-SEO-IMPLEMENTATION.md) |

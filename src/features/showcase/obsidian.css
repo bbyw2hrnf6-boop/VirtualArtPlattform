@@ -73,5 +73,19 @@
 }
 
 .forest-house__photos { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:36px; margin-bottom:64px; }
+.forest-house__flight-entry { min-height:44px; padding:12px 0; background:transparent; border:0; text-decoration:underline; text-underline-offset:5px; }
+.forest-house__flight { position:absolute; left:32px; bottom:24px; max-width:calc(100% - 170px); display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; background:#10120ff2; padding:6px 14px; border:1px solid #ffffff40; }
+.forest-house__flight button { min-height:44px; border:0; background:transparent; font-size:12px; }
+.forest-house__flight button:disabled { opacity:.7; cursor:default; }
+.forest-house__flight span { font-size:12px; color:#e0e6c6; flex-basis:100%; padding-top:6px; }
+.forest-house__flight input { width:100%; min-height:44px; accent-color:#d4ff4a; }
+.obsidian__stage[data-flight=playing]>.obsidian__room-label,.obsidian__stage[data-flight=paused]>.obsidian__room-label,
+.obsidian__stage[data-flight=playing]>.obsidian__room-picker,.obsidian__stage[data-flight=paused]>.obsidian__room-picker,
+.obsidian__stage[data-flight=playing]>.forest-house__lighting,.obsidian__stage[data-flight=paused]>.forest-house__lighting,
+.obsidian__stage[data-flight=playing]>.visitor-controls,.obsidian__stage[data-flight=paused]>.visitor-controls,
+.obsidian__stage[data-flight=playing]>.obsidian__zoom,.obsidian__stage[data-flight=paused]>.obsidian__zoom,
+.obsidian__stage[data-flight=playing] .walk-preferences,.obsidian__stage[data-flight=paused] .walk-preferences { display:none; }
+.forest-house__flight:not([data-flight=idle]) { bottom:24px; width:min(420px,calc(100% - 48px)); max-width:none; }
+@media(max-width:1000px) { .forest-house__flight { left:12px; bottom:112px; max-width:calc(100% - 112px); } .obsidian:has(.is-touring) .obsidian__zoom { bottom:168px; } .obsidian:has(.is-touring) .forest-house__flight { display:none; } }
 .forest-house__photos figure { margin:0; }.forest-house__photos img { width:100%;height:auto;display:block; }.forest-house__photos figcaption { font:30px/1.2 Instrument,serif; margin-top:16px; }
 @media(max-width:700px) { .forest-house__photos { grid-template-columns:1fr;gap:28px; } }

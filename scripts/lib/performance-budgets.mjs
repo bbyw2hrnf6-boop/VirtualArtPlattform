@@ -26,8 +26,10 @@ export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
   // See blender/showcases/forest-fold-house/README.md; entry and Studio ceilings stay fixed.
   // GPU-completion calibration: explicit +256 bytes; measured addition ~158
   // bytes gzip. Entry, lazy-chunk, CSS and all asset-quality limits stay fixed.
-  jsGzip: 616_256,
-  cssGzip: 56_500,
+  // Cinematic rails, three-world scroll and shared guided visits: +8 KB JS /
+  // +2 KB CSS, loaded on their feature boundary. Assets and entry stay fixed.
+  jsGzip: 624_256,
+  cssGzip: 58_500,
   largestLazyGzip: 195_000,
   entryGzip: 123_000,
   entryCssGzip: 32_500,

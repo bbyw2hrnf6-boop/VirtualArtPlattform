@@ -41,7 +41,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: /visual-regression\.spec\.ts/,
+      testIgnore: /(visual-regression|showcase-cinematics)\.spec\.ts/,
       // Use the pinned full Chromium's modern headless mode. The separate legacy
       // headless shell can stall during the homepage's real WebGL shader warm-up.
       use: {
@@ -52,6 +52,14 @@ export default defineConfig({
           args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
         } } : {}),
       },
+    },
+    {
+      // Camera framing/three-world transitions need a real GPU qualification.
+      // Keep these new visual journeys separate from the four existing
+      // owner-approved advisory CI tests; do not expand that exception.
+      name: 'chromium-cinematic',
+      testMatch: /showcase-cinematics\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], channel: 'chromium' },
     },
     {
       name: 'chromium-visual',

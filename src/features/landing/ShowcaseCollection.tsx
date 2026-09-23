@@ -1,3 +1,6 @@
+import { lazy, Suspense } from 'react';
+const ThreeWorldStory = lazy(() => import('./ThreeWorldStory'));
+
 type ShowcaseItem = {
   id: "art-exhibitions" | "sculpture-3d" | "architecture";
   meta: string;
@@ -50,6 +53,8 @@ export function ShowcaseCollection() {
         </h2>
         <p>Enter Obsidian, Sculpture Pavilion and Forest Fold House. Discover what individually authored worlds can become.</p>
       </header>
+
+      <Suspense fallback={null}><ThreeWorldStory /></Suspense>
 
       <div className="showcase-collection__grid">
         {SHOWCASES.map((showcase) => {
