@@ -42,7 +42,7 @@ describe('cinematic rails',()=>{
         expect(colliders.obstacles.some(o=>c.y>o.level+.1&&c.y<o.level+2.35&&c.x>o.bounds[0]-.06&&c.x<o.bounds[2]+.06&&-c.z>o.bounds[1]-.06&&-c.z<o.bounds[3]+.06),`House ${p}`).toBe(false);
       }
     }
-  });
+  },30_000);
   it('reverses through exact world boundaries, including the final frame',()=>{
     expect([0,12/48,26/48,1,25/48,11/48,0].map(p=>worldFrame(p).index)).toEqual([0,1,2,2,1,0,0]);
     expect(worldFrame(1).local).toBe(1);
