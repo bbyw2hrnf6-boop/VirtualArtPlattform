@@ -276,6 +276,7 @@ function Header({ light = false, onSearch }: { light?: boolean; onSearch?: () =>
       <Logo dark={light} />
       <nav>
         <span className="preview-status">{PRODUCT_BRAND.previewLabel}</span>
+        {onSearch && <button className="site-header__film" aria-label="Watch the film" onClick={() => { document.getElementById("three-worlds")?.scrollIntoView({behavior:"instant"}); document.getElementById("three-worlds")?.querySelector("button")?.click(); }}><span>Watch the film ↗</span><span className="site-header__film-compact" aria-hidden="true">Film</span></button>}
         {onSearch && <button className="site-header__search" onClick={onSearch} aria-label="Search public Spaces and Creators"><span>Search</span> <i aria-hidden="true">⌕</i></button>}
         <a className="site-header__creators" href="/creator-hub">CREATOR HUB</a>
         <button className="site-header__demo" onClick={() => landingNavigate("/demo", "landing_example_entered", "header")}>{PRODUCT_BRAND.secondaryCta}</button>

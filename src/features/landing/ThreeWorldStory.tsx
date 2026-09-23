@@ -3,6 +3,7 @@ import type { ObsidianControls } from '../showcase/ObsidianScene';
 import { useReducedMotion } from '../showcase/useReducedMotion';
 import { WORLD_CHAPTERS, WORLD_STORY_DURATION, worldFrame } from './threeWorldStoryModel';
 import './threeWorldStory.css';
+import { portalPreview, WORLD_PORTALS } from '../showcase/worldPortals';
 
 const Scenes=[lazy(()=>import('../showcase/ObsidianScene')),lazy(()=>import('../showcase/SculptureScene')),lazy(()=>import('../showcase/ForestScene'))];
 const noop=()=>{};
@@ -16,6 +17,7 @@ export default function ThreeWorldStory() {
   const progressRef=useRef(0), indexRef=useRef(0), readyRef=useRef(false), playingRef=useRef(false);
   const requested=useRef<number|null>(null);
   const [incomingPortal,setIncomingPortal]=useState<string>();
+
   const onReady=useCallback(()=>{readyRef.current=true;setReady(true);setProgress(progressRef.current);controls.current?.seekFilm(worldFrame(progressRef.current).local);},[]);
   const onError=useCallback(()=>{readyRef.current=false;playingRef.current=false;setReady(false);setPlaying(false);setError(true);},[]);
   const stop=useCallback(()=>{playingRef.current=false;setPlaying(false);},[]);
@@ -24,13 +26,14 @@ export default function ThreeWorldStory() {
     const section=host.current;if(!section||!active)return;
     let raf=0,last=performance.now(),lastUi=0,visible=true,dirty=true;
     const publish=(value:number,force=false)=>{
-      const p=Math.max(0,Math.min(1,value)),frame=worldFrame(p);
+      let p=Math.max(0,Math.min(1,value)),frame=worldFrame(p);
+      if(playingRef.current&&frame.index>indexRef.current){p=frame.chapter.start/WORLD_STORY_DURATION;frame=worldFrame(p);}
       progressRef.current=p;
       section.style.setProperty('--world-progress',String(p));
       section.style.setProperty('--world-portal',String(frame.portal));
       section.dataset.chapter=String(frame.index);section.dataset.progress=p.toFixed(4);
       if(frame.index!==indexRef.current){
-        setIncomingPortal(WORLD_CHAPTERS[indexRef.current].portal);
+        setIncomingPortal(frame.index>indexRef.current?frame.chapter.id:undefined);
         indexRef.current=frame.index;readyRef.current=false;setReady(false);setError(false);setIndex(frame.index);
         force=true;
       }else if(readyRef.current&&!reduced)controls.current?.seekFilm(frame.local);
@@ -76,31 +79,33 @@ export default function ThreeWorldStory() {
   const seek=(p:number)=>{stop();requested.current=p;if(!active)setActive(true);wake();};
   const play=()=>{
     if(playingRef.current){stop();return;}
+    if(!active)host.current?.scrollIntoView({behavior:'instant'});
     if(!active||progressRef.current>=.999){requested.current=0;setActive(true);}
     playingRef.current=true;setPlaying(true);wake();
   };
   const exit=()=>{stop();setActive(false);readyRef.current=false;setReady(false);setError(false);setIncomingPortal(undefined);indexRef.current=0;progressRef.current=0;setIndex(0);setProgress(0);host.current?.scrollIntoView({behavior:'instant'});};
-  const Scene=Scenes[index],chapter=WORLD_CHAPTERS[index];
-  return <section ref={host} className={`world-story${active&&!reduced?' is-active':''}`} aria-label="Three worlds cinematic story" data-playing={playing} data-motion={reduced?'reduced':'full'}>
+  const Scene=Scenes[index],chapter=WORLD_CHAPTERS[index],next=WORLD_PORTALS[chapter.id]?.next;
+  const preview=(id:string,className:string)=><picture><source media="(max-width:767px)" srcSet={portalPreview(id,true)}/><img className={className} src={portalPreview(id,false)} alt="" aria-hidden="true"/></picture>;
+  return <section id="three-worlds" ref={host} className={`world-story${active&&!reduced?' is-active':''}`} aria-label="Three worlds cinematic story" data-playing={playing} data-motion={reduced?'reduced':'full'}>
     <div className="world-story__stage">
       <img className="world-story__poster" src={chapter.cover} alt={`${chapter.name} — an authored LIEUVA world`} loading="lazy"/>
       {active&&!reduced&&!error&&<div className={`world-story__scene${ready?' is-ready':''}`}><Suspense fallback={null}><Scene key={index} controlsRef={controls} onReady={onReady} onError={onError} onRoom={noop} onArtwork={noop} onMode={noop} cinematic/></Suspense></div>}
-      <img className="world-story__portal" src={chapter.portal} alt="" aria-hidden="true" loading="lazy"/>
-      {active&&!reduced&&incomingPortal&&<img className={`world-story__arrival${ready?' is-ready':''}`} src={incomingPortal} alt="" aria-hidden="true"/>}
+      {active&&!reduced&&next&&preview(next,"world-story__portal")}
+      {active&&!reduced&&incomingPortal&&preview(incomingPortal,`world-story__arrival${ready?' is-ready':''}`)}
       <div className="world-story__shade"/>
       <div className="world-story__caption">
         <span>THREE WORLDS / ONE POSSIBILITY</span>
         <h3>{active?chapter.heading:'Step beyond the familiar.'}</h3>
-        <p>{active?chapter.copy:'Art becomes form. Form becomes a place. A continuous journey through three individually authored worlds.'}</p>
+        <p>{active?chapter.copy:'Through a painting, beyond sculpture, into a home. Three worlds. One journey.'}</p>
         {active&&<a href={`#/showcase/${chapter.id}`}>Explore {chapter.name} ↗</a>}
         {active&&index===2&&<p className="world-story__boundary">Bespoke showcases. Separate from the three editable Studio templates.</p>}
       </div>
       <div className="world-story__controls">
         <div className="world-story__actions">
-          {!reduced&&<button onClick={play} aria-pressed={playing}>{playing?'Pause journey':active?'Play journey':'Watch the journey · 64 sec'} <span aria-hidden="true">{playing?'Ⅱ':'↗'}</span></button>}
+          {!reduced&&<button onClick={play} aria-pressed={playing}>{playing?'Pause journey':active?'Play journey':'Watch the journey · 48 sec'} <span aria-hidden="true">{playing?'Ⅱ':'↗'}</span></button>}
           {!active&&<button onClick={()=>{requested.current=0;setActive(true);}}> {reduced?'Explore still views':'Explore by scrolling'} ↓</button>}
           {active&&<button onClick={exit}>Close journey ×</button>}
-          <span role="status">{error?'3D could not load. Explore the showcase or choose another chapter.':active&&!ready&&!reduced?`Entering ${chapter.name}…`:reduced?'Still views · Reduced motion':active?'Scroll to direct the camera.':'Optional 3D journey'}</span>
+          <span role="status">{error?'3D unavailable. Try another chapter.':active&&!ready&&!reduced?`Entering ${chapter.name}…`:reduced?'Still views · Reduced motion':active?'Scroll to direct the camera.':'Art → Sculpture → Architecture'}</span>
         </div>
         {active&&<>
           <label className="world-story__scrub">Journey position<input type="range" min={0} max={1000} value={Math.round(progress*1000)} onChange={e=>seek(Number(e.target.value)/1000)} aria-label="Journey position"/></label>

@@ -1,7 +1,7 @@
 import { MathUtils, PerspectiveCamera, Vector3 } from 'three';
 
 export type FlightKey = { at: number; position: number[]; target: number[]; fov?: number; label: string };
-export type CameraFlight = { duration: number; keys: FlightKey[] };
+export type CameraFlight = { duration: number; keys: FlightKey[]; landAtEnd?: boolean };
 export const smooth = (t: number) => t * t * (3 - 2 * t);
 
 /** Time-aware Hermite rails keep velocity continuous across authored shots.
@@ -16,14 +16,20 @@ export function sampleFlight(flight: CameraFlight, progress: number) {
   const t = MathUtils.clamp((time - a.at) / dt, 0, 1);
   const scalar = (read: (k: FlightKey) => number) => {
     const slope = (n: number) => n === 0 || n === keys.length - 1 ? 0 :
-      (read(keys[n + 1]) - read(keys[n - 1])) / (keys[n + 1].at - keys[n - 1].at);
+      (() => {
+        const h0=keys[n].at-keys[n-1].at, h1=keys[n+1].at-keys[n].at;
+        const a=(read(keys[n])-read(keys[n-1]))/h0, b=(read(keys[n+1])-read(keys[n]))/h1;
+        // Monotone tangents: no overshoot into a wall after a narrow doorway.
+        if(a*b<=0)return 0;
+        return 3*(h0+h1)/((2*h1+h0)/a+(h1+2*h0)/b);
+      })();
     return (2*t*t*t-3*t*t+1)*read(a)+(t*t*t-2*t*t+t)*dt*slope(i)
       +(-2*t*t*t+3*t*t)*read(b)+(t*t*t-t*t)*dt*slope(i+1);
   };
   return {
     position: new Vector3(...[0,1,2].map(n => scalar(k => k.position[n]))),
     target: new Vector3(...[0,1,2].map(n => scalar(k => k.target[n]))),
-    fov: MathUtils.clamp(scalar(k => k.fov ?? 55), 38, 68),
+    fov: MathUtils.clamp(scalar(k => k.fov ?? 55), 38, 74),
     label: a.label, stop: i + 1,
   };
 }

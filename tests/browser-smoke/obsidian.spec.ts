@@ -14,6 +14,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       const scene = page.locator('.obsidian__scene');
       const canvas = scene.locator('canvas');
       await expect(scene).toHaveAttribute('data-ready', 'true', { timeout: 60_000 });
+      await page.getByRole('button', { name: 'Exit flight', exact: true }).click();
       await expect(canvas).toBeFocused();
       await expect(page.locator('.visitor-controls')).toBeVisible();
       await expect(page.getByRole('button', { name: /Controls How to explore/ })).toHaveCount(0);
@@ -118,6 +119,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
       await expect(page.getByRole('button', { name: /Canopy of Tomorrow/ })).toBeFocused();
       await page.getByRole('button', { name: 'Enter the exhibition' }).click();
       await expect(scene).toHaveAttribute('data-ready', 'true', { timeout: 60_000 });
+      await page.getByRole('button', { name: 'Exit flight', exact: true }).click();
       await expect(page.getByRole('heading', { level: 1, name: 'Botanical Origins', exact: true })).toBeVisible();
       expect(errors).toEqual([]);
     });

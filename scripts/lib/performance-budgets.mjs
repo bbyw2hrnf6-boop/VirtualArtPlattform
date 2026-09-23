@@ -28,7 +28,9 @@ export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
   // bytes gzip. Entry, lazy-chunk, CSS and all asset-quality limits stay fixed.
   // Cinematic rails, three-world scroll and shared guided visits: +8 KB JS /
   // +2 KB CSS, loaded on their feature boundary. Assets and entry stay fixed.
-  jsGzip: 624_256,
+  // Automatic gallery entries and matched world-space portals: +2 KB JS.
+  // App Check + telemetry fixture measured 625,949 B; all other ceilings fixed.
+  jsGzip: 626_256,
   cssGzip: 58_500,
   largestLazyGzip: 195_000,
   entryGzip: 123_000,

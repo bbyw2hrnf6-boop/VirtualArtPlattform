@@ -11,8 +11,9 @@ import { createObsidianNavigation, obsidianBounds } from './navigation';
 import { createFloorReflection, installOverviewCutaway } from './floorReflection';
 import data from './obsidian.json';
 import { createShowcaseDirector } from './showcaseDirector';
-import { HOUSE_FLIGHT, WORLD_FLIGHTS, SHOWCASE_STOPS } from './showcaseFlights';
+import { ENTRY_FLIGHTS, WORLD_FLIGHTS, SHOWCASE_STOPS } from './showcaseFlights';
 import { forestRooms } from './forestRooms';
+import { createWorldPortal } from './worldPortal';
 import type { VisitorTourState } from '../gallery/visitorTourState';
 
 export interface ShowcaseSceneConfig {
@@ -79,6 +80,9 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     walkMarker.rotation.x = -Math.PI / 2;
     walkMarker.visible = false;
     scene.add(walkMarker);
+    const portal=cinematic?createWorldPortal(config.id,compact,renderer,()=>schedule()):null;
+    let filmProgress=0;
+    if(portal)scene.add(portal.mesh);
     const camera = new THREE.PerspectiveCamera(defaultWalkFov(compact), 1, .04, 180);
     camera.position.fromArray(config.rooms[0].start);
     camera.lookAt(new THREE.Vector3().fromArray(config.rooms[0].look ?? [5,1.75,-3.6]));
@@ -213,14 +217,14 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         if (typeof command === 'number') director?.seekFlight(command);
         else if (command === 'start') director?.startFlight();
         else if (command === 'pause') director?.pause();
-        else director?.stop();
+        else { director?.stop(); canvas.focus({preventScroll:true}); }
       },
-      seekFilm: progress => { if (model) director?.seekWorld(progress); },
+      seekFilm: progress => { filmProgress=progress; if (model) director?.seekWorld(progress); },
     };
     const motion = matchMedia('(prefers-reduced-motion: reduce)');
     const director = createShowcaseDirector({
       camera, navigation, reduced: () => motion.matches, schedule, onTour, onFlight,
-      flight: HOUSE_FLIGHT, world: WORLD_FLIGHTS[config.id],
+      flight: ENTRY_FLIGHTS[config.id], world: WORLD_FLIGHTS[config.id],
       stops: config.architecture ? [0,1,6,2,3,4,7,5].map(i => ({
         label: forestRooms[i].name, position: forestRooms[i].start, target: forestRooms[i].look,
       })) : SHOWCASE_STOPS[config.id],
@@ -288,6 +292,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       if (animate) mixer!.update(Math.min((now-animationTime)/1000,.1));
       animationTime = now; host.dataset.animation = animate ? 'playing' : 'paused';
       if(mixer)host.dataset.animationTime=mixer.time.toFixed(3);
+      portal?.update(filmProgress);
       renderer.render(scene, camera);
       const moving = Boolean(warmupFrames && model) || animate || (!paused && (director?.moving() || (!director?.active() && !cinematic && (mode === 'walk' ? walk.needsUpdate() : orbitMoving))));
       host.dataset.idle = String(!moving);
@@ -455,7 +460,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       mixer?.stopAllAction(); if(model)mixer?.uncacheRoot(model);environment?.dispose();
       walk.dispose(); orbit.dispose();
       if (model) disposeModel(model);
-      walkMarker.geometry.dispose(); walkMarker.material.dispose();
+      walkMarker.geometry.dispose(); walkMarker.material.dispose(); portal?.dispose();
       reflection?.geometry.dispose(); reflection?.dispose(); renderer.dispose(); canvas.remove();
     };
   }, [controlsRef, onReady, onError, onRoom, onArtwork, onMode, onTour, onFlight, cinematic, config]);

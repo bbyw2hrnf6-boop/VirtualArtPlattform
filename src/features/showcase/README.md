@@ -10,25 +10,37 @@ Blender masters, licensing and asset reproduction stay in the corresponding
 - `showcaseFlights.ts`: authored Y-up camera/subject positions, timing, FOV and
   guided stops. Forest stops come from `forestRooms.ts`. Blender positions map
   `(x,y,z)` to `(x,z,-y)`; check artwork IDs before changing a gaze target.
-- `cameraFlight.ts`: time-aware cubic Hermite interpolation with continuous
+- `cameraFlight.ts`: time-aware monotone cubic Hermite interpolation with continuous
   velocity and eased endpoints. Separate subject rails and a fixed Y-up horizon
   avoid camera roll and abrupt per-shot easing resets. Portrait widens FOV.
 - `showcaseDirector.ts`: one camera owner. Guided visits use the existing
-  collision/navigation graphs; only authored film rails deliberately cross the
-  shell. Pause freezes the clock. Film exit/end restores the prior walk camera;
+  collision/navigation graphs; film rails use the shipped doorways and stairs. Only two explicit world
+  portals cross a surface. Pause freezes the clock. Film exit restores the prior walk camera; gallery flight completion
+  lands at a reachable final view;
   tour exit retains a reachable position. Direct camera input cancels direction.
 - All three rooms have guided visits, pause/resume, previous/next and exit.
   Reduced motion uses explicit still stops. Tab hiding/window blur pauses motion.
 
-The Forest entrance offers an optional **36-second flight** through the garden,
-glass bridge and rooms. Entering normally preserves free Walk. The flight's
-scrubber permits inspection/replay; visitor HUD yields to a compact film dock.
+Entering Obsidian or Sculpture Pavilion starts a **26/28-second opening flight**
+once their scene is ready. Pause, scrub or Exit flight stays available; direct
+camera input cancels the film. Reduced motion enters free Walk without autoplay.
+Forest offers an optional **38-second flight**, approaching the real upper entry, visiting the glass bridge/studio,
+descending the U stair and crossing both ground-floor doorways before the garden
+reveal. It avoids the former cuts through walls and slabs and widens interior FOV.
 
-`landing/ThreeWorldStory.tsx` adds the **64-second Three worlds journey** under
-Beyond Studio: Obsidian 22 s → Sculpture 20 s → Forest 22 s. Play and native,
-reversible scroll sample the same rails. Painting/bronze image transitions cover
-scene loading. Loading pauses active film time, so slow devices can take longer.
-The existing 20-second Studio introduction is unchanged.
+`landing/ThreeWorldStory.tsx` is the **48-second Three worlds journey**:
+Obsidian 12 s → Sculpture 14 s → Forest 22 s. Homepage header and Beyond Studio
+buttons both open it. Play and native, reversible scroll sample the same rails.
+`worldPortal.ts` places the next scene's matched first frame inside the actual
+painting/entrance frame. The aperture expands in perspective as the camera
+approaches; the same image masks lazy loading until the next scene is ready.
+Only one WebGL scene remains mounted. Loading pauses film time; slow devices can
+take longer than 48 seconds. The original 20-second Studio introduction is unchanged.
+
+Portal previews under `public/assets/showcases/cinematic/` are UI-free captures of
+the shipped full-detail scenes at their first film frame, at 1440 × 1000 and
+390 × 844. Regenerate them if the incoming rail pose, lighting or scene changes.
+They add about 197 KB total, not another set of room models.
 
 ## Loading and quality
 
@@ -39,9 +51,10 @@ uses still chapters without loading bespoke 3D. Scene readiness waits for shader
 warm-up draws. Native scrolling stays available; no scroll lock or wheel capture.
 
 Flights use the existing full-detail assets, reflections and GPU calibration.
-This feature does not replace or re-render the Blender masters. Aggregate release
-allowances deliberately increase by **8 KB gzip JS and 2 KB gzip CSS** for rails,
-direction and cinematic UI. Entry, largest-chunk, Studio-asset and product-target
+This feature does not replace or re-render the Blender masters. The original cinematic allowance is **8 KB gzip JS and 2 KB gzip CSS**.
+Automatic gallery entries and matched world-space portals add **2 KB gzip JS**;
+the App Check + telemetry production fixture measures 625,949 B against 626,256 B.
+Retired Coming Soon compositions are removed, saving about 500 B gzip CSS. Entry, largest-chunk, Studio-asset and product-target
 budgets are unchanged; see `scripts/lib/performance-budgets.mjs`.
 
 Direction references: [DJI Cine mode](https://repair.dji.com/help/content?customId=01700006544&lang=en&paperDocType=ARTICLE&re=US&spaceId=17)

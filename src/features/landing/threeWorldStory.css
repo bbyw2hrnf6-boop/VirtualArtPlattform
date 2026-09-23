@@ -1,19 +1,19 @@
 .world-story { position:relative; margin:40px 0 72px; color:#f3f0e6; background:#10120e; }
-.world-story.is-active { height:640svh; }
+.world-story.is-active { height:480svh; }
 .landing-proof:has(.world-story.is-active) { content-visibility:visible; }
 .world-story__stage { position:sticky; top:0; height:min(820px,90svh); min-height:540px; overflow:hidden; background:#10120e; isolation:isolate; }
 .world-story.is-active .world-story__stage { height:100svh; }
 .world-story__poster,.world-story__portal,.world-story__scene,.world-story__shade { position:absolute; inset:0; width:100%; height:100%; }
 .world-story__poster,.world-story__portal { object-fit:cover; }
-.world-story__scene { opacity:0; transition:opacity .7s ease; pointer-events:none; }
+.world-story__scene { opacity:0; transition:opacity .25s ease; pointer-events:none; }
 .world-story__scene.is-ready { opacity:1; }
 .world-story .obsidian__scene,.world-story canvas { touch-action:pan-y; pointer-events:none; }
 .world-story .obsidian__scene { position:absolute; inset:0; }
 .world-story canvas { display:block; width:100%; height:100%; }
 .world-story .walk-preferences { display:none; }
-.world-story__portal { pointer-events:none; opacity:var(--world-portal,0); transform:scale(calc(1 + var(--world-portal,0)*.15)); }
-.world-story__arrival { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; opacity:1; transform:scale(1.15); }
-.world-story__arrival.is-ready { opacity:0; transition:opacity .9s ease; }
+.world-story__portal { pointer-events:none; opacity:var(--world-portal,0); }
+.world-story__arrival { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; opacity:1; }
+.world-story__arrival.is-ready { opacity:0; transition:opacity .3s ease; }
 .world-story__shade { pointer-events:none; background:linear-gradient(0deg,#080b08f5 0%,#080b0830 65%,#080b0800); }
 .world-story__caption { position:absolute; left:5%; bottom:190px; width:min(700px,87%); }
 .world-story__caption>span { letter-spacing:.2em; font-size:10px; color:#deeeaa; }
@@ -47,3 +47,10 @@
   .world-story__scrub input { height:44px; }
 }
 @media(prefers-reduced-motion:reduce) { .world-story__scene,.world-story__arrival { transition:none; }.world-story__portal { transform:none; } }
+
+.world-story { scroll-margin-top:0; }
+.world-story.is-active .world-story__stage { width:100vw; margin-left:calc(50% - 50vw); }
+.world-story[data-playing=true] .world-story__caption { opacity:1; pointer-events:none; bottom:165px; }
+.world-story[data-playing=true] .world-story__caption h3 { font-size:clamp(25px,3vw,42px); }
+.world-story[data-playing=true] .world-story__caption p,.world-story[data-playing=true] .world-story__caption a { display:none; }
+@media(max-width:700px){.world-story[data-playing=true] .world-story__caption{bottom:240px;}}

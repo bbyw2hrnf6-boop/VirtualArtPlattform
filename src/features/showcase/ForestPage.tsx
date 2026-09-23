@@ -6,6 +6,7 @@ import './obsidian.css';
 import '../../styles/visitorControls.css';
 import { IDLE_VISITOR_TOUR } from '../gallery/visitorTourState';
 import { useReducedMotion } from './useReducedMotion';
+import { FlightControls } from './FlightControls';
 const Scene=lazy(()=>import('./ForestScene'));
 const asset='/assets/showcases/forest-fold-house/';
 export default function ForestPage(){
@@ -27,7 +28,7 @@ export default function ForestPage(){
         <p className="obsidian__eyebrow">A LIEUVA architecture showcase</p><h1>Forest Fold<br/>House.</h1>
         <p>Two wings. One glass bridge.<br/>A small home, folded into the woodland.</p>
         <button className="obsidian__enter" disabled={status==='loading'} onClick={()=>{setStatus('loading');setActive(true);}}>{status==='loading'?'Preparing your visit…':status==='error'?'Try the house again ↗':'Enter the house ↗'}</button>
-        {!reduced&&<button className="forest-house__flight-entry" disabled={status==='loading'} onClick={()=>{pendingFlight.current=true;setStatus('loading');setActive(true);}}>Take the flight · 36 sec ↗</button>}
+        {!reduced&&<button className="forest-house__flight-entry" disabled={status==='loading'} onClick={()=>{pendingFlight.current=true;setStatus('loading');setActive(true);}}>Take the flight · 38 sec ↗</button>}
         <p className="obsidian__status" role="status">{status==='error'?'The 3D view could not load. Explore the house in the photographs below.':saver?'Data Saver is on. Browse the photographs below, or choose to load the house.':'Explore freely on desktop or mobile.'}</p>
         <a href="#forest-rooms" onClick={e=>{e.preventDefault();document.getElementById('forest-rooms')?.scrollIntoView();}}>Discover the house ↓</a>
       </div>}
@@ -42,14 +43,7 @@ export default function ForestPage(){
           tour={tour} tourAvailable={mode==='walk'} tourDescription="Optional room route"
           onStartOrSkipTour={()=>controls.current?.tour(tour.status==='idle'?'start':'stop')}
           onPauseOrResumeTour={()=>controls.current?.tour('pause')} onStepTour={d=>controls.current?.tour(d)}/>
-        <div className="forest-house__flight" data-flight={flight.status}>
-          {flight.status==='idle'?<button disabled={reduced} onClick={()=>controls.current?.flight('start')}>{reduced?'Still views in Guided tour':'House flight · 36 sec ↗'}</button>:<>
-            <span>{flight.currentLabel}</span>
-            <button onClick={()=>controls.current?.flight('pause')}>{flight.status==='paused'?'Resume flight':'Pause flight'}</button>
-            <button onClick={()=>controls.current?.flight('stop')}>Exit flight</button>
-            <input type="range" aria-label="House flight position" min={0} max={1000} value={Math.round(flight.progress*1000)} onChange={e=>controls.current?.flight(Number(e.target.value)/1000)}/>
-          </>}
-        </div>
+        <FlightControls state={flight} controls={controls} duration={38} reduced={reduced} house/>
         <div className="arrange-zoom obsidian__zoom" role="group" aria-label="Camera zoom"><button aria-label="Zoom out" onClick={()=>controls.current?.zoom(-1)}>−</button><button aria-label="Zoom in" onClick={()=>controls.current?.zoom(1)}>+</button></div>
       </>}
     </section>

@@ -8,7 +8,7 @@ LIEUVA provides the landing story, Explore, Creator Hub/profiles, account/access
 
 Studio remains the product authoring boundary. Its templates are White Cube, Warm Gallery (`nocturne`) and Grand Forum (`pavilion`). Obsidian, Sculpture Pavilion and Forest Fold House are separate, read-only bespoke showcases: they share visitor controls and non-WebGL image fallbacks, but do not create Studio templates, Firebase publications or schema migrations.
 
-All three bespoke showcases offer guided visits. Forest also offers an optional 36-second camera flight; Beyond Studio includes a reversible, opt-in 64-second three-world film/scroll, with static chapters for reduced motion. See [showcase direction](../src/features/showcase/README.md) for camera ownership, loading and qualification boundaries.
+All three bespoke showcases offer guided visits. Obsidian and Sculpture open with skippable 26/28-second flights; Forest offers a 38-second flight through real entries and stairs. The homepage links directly to the opt-in 48-second three-world film/scroll with matched painting/door portals. Reduced motion uses free Walk and static chapters. See [showcase direction](../src/features/showcase/README.md) for camera ownership, loading and qualification boundaries.
 
 Legacy AURA/gallery identifiers and existing publication identities remain compatible. `/spaces/{galleryId}` delivers the same existing identity; it never permits cosmetic renaming of collections, paths, keys, callable parameters, routes or GLB metadata.
 

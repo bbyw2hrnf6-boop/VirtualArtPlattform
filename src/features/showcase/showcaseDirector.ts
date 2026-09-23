@@ -13,7 +13,7 @@ type Options = {
 };
 
 /** One owner for the camera. Tour routes are solved through the walking graph;
- * authored film rails may cross the shell. A film always restores a safe view. */
+ * authored film rails follow openings; explicit world portals cross surfaces. */
 export function createShowcaseDirector(o: Options) {
   let kind: 'tour' | 'flight' | 'world' | null = null, paused = false;
   let elapsed = 0, last = 0, stop = 0, duration = 0, lastPublish = -Infinity;
@@ -36,7 +36,7 @@ export function createShowcaseDirector(o: Options) {
   const finish = (completed = false) => {
     const previous = kind;
     kind = null; paused = false;
-    if (previous === 'flight' && saved) {
+    if (previous === 'flight' && saved && !(completed && o.flight.landAtEnd && o.navigation.findPath(saved.position,o.camera.position))) {
       o.camera.position.copy(saved.position); o.camera.lookAt(saved.target);
       o.camera.fov = saved.fov; o.camera.updateProjectionMatrix();
     }

@@ -6,10 +6,10 @@ type ShowcaseItem = {
   meta: string;
   title: string;
   description: string;
-  sceneHref?: string;
-  sceneName?: string;
-  cover?: string;
-  alt?: string;
+  sceneHref: string;
+  sceneName: string;
+  cover: string;
+  alt: string;
 };
 
 const SHOWCASES: readonly ShowcaseItem[] = [
@@ -51,25 +51,25 @@ export function ShowcaseCollection() {
           <span>See what’s possible.</span>
           <em>Art. Objects. Architecture.</em>
         </h2>
-        <p>Enter Obsidian, Sculpture Pavilion and Forest Fold House. Discover what individually authored worlds can become.</p>
+        <div className="showcase-collection__invitation"><p>Enter Obsidian, Sculpture Pavilion and Forest Fold House. Discover what individually authored worlds can become.</p><button onClick={()=>{document.getElementById("three-worlds")?.scrollIntoView({behavior:"instant"});document.getElementById("three-worlds")?.querySelector("button")?.click();}}>Watch three worlds · 48 sec <span aria-hidden="true">↓</span></button></div>
       </header>
 
       <Suspense fallback={null}><ThreeWorldStory /></Suspense>
 
       <div className="showcase-collection__grid">
         {SHOWCASES.map((showcase) => {
-          const actionLabel = showcase.sceneHref ? `Explore ${showcase.sceneName}` : "Bespoke project on request";
+          const actionLabel = `Explore ${showcase.sceneName}`;
           return <article className="showcase-card" key={showcase.id}>
             <a className={`showcase-card__media showcase-card__media--${showcase.id}`} href={showcase.sceneHref}>
-              {showcase.sceneHref ? <img src={showcase.cover} alt={showcase.alt} loading="lazy" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} /> : <span className="showcase-card__composition" aria-hidden="true"><i /><i /><i /></span>}
-              <span className="showcase-card__status">{showcase.sceneHref ? `Enter ${showcase.sceneName} ↗` : "Showcase coming soon"}</span>
+              <img src={showcase.cover} alt={showcase.alt} loading="lazy" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+              <span className="showcase-card__status">{`Enter ${showcase.sceneName} ↗`}</span>
             </a>
             <p className="showcase-card__meta">{showcase.meta}</p>
             <h3>{showcase.title}</h3>
             <p className="showcase-card__description">{showcase.description}</p>
             <a
-              className={`showcase-card__action${showcase.sceneHref ? " showcase-card__action--available" : ""}`}
-              href={showcase.sceneHref ?? "#bespoke-projects"}
+              className="showcase-card__action showcase-card__action--available"
+              href={showcase.sceneHref}
               aria-label={`${actionLabel}: ${showcase.title}`}
             >
               {actionLabel}

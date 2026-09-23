@@ -6,6 +6,8 @@ import { VisitorControls } from '../gallery/VisitorControls';
 import { IDLE_VISITOR_TOUR } from '../gallery/visitorTourState';
 import '../../styles/visitorControls.css';
 import './obsidian.css';
+import { useReducedMotion } from './useReducedMotion';
+import { FlightControls } from './FlightControls';
 
 const ObsidianScene = lazy(() => import('./ObsidianScene'));
 
@@ -23,8 +25,10 @@ export default function ObsidianPage({ sculpture = false }: { sculpture?: boolea
   const [room, setRoom] = useState(0);
   const [mode, setMode] = useState<ObsidianMode>('walk');
   const [tour, setTour] = useState(IDLE_VISITOR_TOUR);
+  const [flight, setFlight] = useState(IDLE_VISITOR_TOUR);
+  const reduced = useReducedMotion();
   const [selected, setSelected] = useState<string | null>(null);
-  const ready = useCallback(() => { setRoom(0); setMode('walk'); setStatus('ready'); }, []);
+  const ready = useCallback(() => { setRoom(0); setMode('walk'); setStatus('ready'); controls.current?.flight('start'); }, []);
   const failed = useCallback(() => { setStatus('error'); setActive(false); }, []);
   const artwork = useCallback((id: string) => setSelected(id), []);
   const current = data.artworks.find(a => a.id === selected);
@@ -42,15 +46,15 @@ export default function ObsidianPage({ sculpture = false }: { sculpture?: boolea
       <a href="#/" aria-label="LIEUVA home">LIEUVA <span>/ SHOWCASE</span></a>
       <a href="#/">← Back to LIEUVA</a>
     </header>
-    <section className="obsidian__stage" aria-label={`${title} exhibition preview`}>
+    <section className="obsidian__stage" aria-label={`${title} exhibition preview`} data-flight={flight.status}>
       {status !== 'ready' && <img className="obsidian__poster" src={`/assets/showcases/${sculpture ? "sculpture-pavilion" : "obsidian"}/cover.webp${sculpture ? "?v=2" : ""}`} alt={sculpture ? "Sculpture Pavilion: ivory atrium, bronze ribbons, carved stone and pale ash beneath an oval skylight." : "Obsidian: warm pools of light, botanical art, walnut portals and honed black limestone."} fetchPriority="high" />}
-      {active && <Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} onTour={setTour} /></Suspense>}
+      {active && <Suspense fallback={null}><Scene controlsRef={controls} onReady={ready} onError={failed} onRoom={setRoom} onArtwork={artwork} onMode={setMode} onTour={setTour} onFlight={setFlight} /></Suspense>}
       {status !== 'ready' && <div className="obsidian__entrance">
         <p className="obsidian__eyebrow">A LIEUVA bespoke exhibition</p>
         <h1>{title}.</h1>
         <p>{sculpture ? "Three rooms. Five sculptural encounters." : "Three rooms. Eleven visions of nature."}<br />{sculpture ? "Stone, bronze, ash and glass. Nature in another form." : "An exhibition in light, stone and living matter."}</p>
         <button className="obsidian__enter" disabled={status === 'loading'} onClick={() => { setStatus('loading'); setActive(true); }}>{status === 'loading' ? 'Preparing your visit…' : status === 'error' ? 'Try the exhibition again ↗' : 'Enter the exhibition ↗'}</button>
-        <p className="obsidian__status" role="status">{status === 'error' ? 'The 3D view could not load. You can still explore every artwork below.' : saver ? 'Data Saver is on. Browse the artworks below, or choose to load the 3D exhibition.' : 'Explore freely on desktop or mobile.'}</p>
+        <p className="obsidian__status" role="status">{status === 'error' ? 'The 3D view could not load. You can still explore every artwork below.' : saver ? 'Data Saver is on. Browse the artworks below, or choose to load the 3D exhibition.' : reduced ? 'Explore freely on desktop or mobile.' : 'A short opening flight, then explore freely. Skip at any time.'}</p>
         <a href="#obsidian-collection" onClick={e => { e.preventDefault(); document.getElementById("obsidian-collection")?.scrollIntoView(); }}>View the collection ↓</a>
       </div>}
       {status === 'ready' && <>
@@ -75,6 +79,7 @@ export default function ObsidianPage({ sculpture = false }: { sculpture?: boolea
           artworkDirectoryDialog={false}
           showHelp={false}
         />
+        <FlightControls state={flight} controls={controls} duration={sculpture?28:26} reduced={reduced}/>
         <div className="arrange-zoom obsidian__zoom" role="group" aria-label="Camera zoom"><button aria-label="Zoom out" onClick={() => controls.current?.zoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => controls.current?.zoom(1)}>+</button></div>
       </>}
     </section>

@@ -22,6 +22,7 @@ test('showcase calibration waits for queued GPU work before enabling supersampli
   await page.getByRole('button',{name:'Enter the exhibition'}).click();
   const scene = page.locator('.obsidian__scene');
   await expect(scene).toHaveAttribute('data-ready','true',{timeout:60_000});
+  await page.getByRole('button', { name: 'Exit flight', exact: true }).click();
   await expect(scene).toHaveAttribute('data-resolution','balanced',{timeout:10_000});
   await expect(scene).toHaveAttribute('data-idle','true');
   await scene.locator('canvas').focus();
@@ -55,6 +56,7 @@ test('showcase calibration counts synchronous drawing before enabling supersampl
   await page.getByRole('button',{name:'Enter the exhibition'}).click();
   const scene = page.locator('.obsidian__scene');
   await expect(scene).toHaveAttribute('data-ready','true',{timeout:60_000});
+  await page.getByRole('button', { name: 'Exit flight', exact: true }).click();
   await expect(scene).toHaveAttribute('data-resolution','balanced',{timeout:10_000});
   const pixels = await scene.locator('canvas').evaluate(canvas => canvas.width * canvas.height);
   expect(pixels).toBeLessThanOrEqual(600_000);
@@ -77,6 +79,7 @@ for (const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
       expect((await modelRequest).url()).toContain(`${mobile?'mobile':'desktop'}.glb?v=2`);
       const scene=page.locator('.obsidian__scene'),canvas=scene.locator('canvas');
       await expect(scene).toHaveAttribute('data-ready','true',{timeout:60_000});
+      await page.getByRole('button', { name: 'Exit flight', exact: true }).click();
       await expect(canvas).toBeFocused();
       await expect(page.locator('.visitor-controls')).toBeVisible();
       await expect(scene).toHaveAttribute('data-reflection','planar');
@@ -89,7 +92,8 @@ for (const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
       await expect(page.getByRole('dialog')).toContainText('Rooted Silence');
       await page.keyboard.press('Escape');
       await expect(page.getByRole('dialog')).not.toBeVisible();
-      const floor={x:box.x+box.width*.5,y:box.y+box.height*.8};
+      // Use visible floor above the flight replay and visitor controls.
+      const floor={x:box.x+box.width*.5,y:box.y+box.height*.7};
       if(mobile)await page.touchscreen.tap(floor.x,floor.y);else await page.mouse.click(floor.x,floor.y);
       await expect(scene).toHaveAttribute('data-destination','true');
       if(mobile){

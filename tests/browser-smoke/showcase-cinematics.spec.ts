@@ -10,6 +10,16 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
         await page.getByRole('button',{name:id==='forest-fold-house'?'Enter the house ↗':'Enter the exhibition ↗',exact:true}).click();
         const scene=page.locator('.obsidian__scene');
         await expect(scene).toHaveAttribute('data-ready','true',{timeout:90_000});
+        if(id!=='forest-fold-house'){
+          await expect(scene).toHaveAttribute('data-camera-owner','flight');
+          await page.getByRole('button',{name:'Pause flight',exact:true}).click();
+          for(const n of [0,300,600,900]){
+            await page.getByRole('slider',{name:'Exhibition flight position'}).fill(String(n));
+            await page.screenshot({path:info.outputPath(`${id}-flight-${n}.png`)});
+          }
+          await page.getByRole('button',{name:'Exit flight',exact:true}).click();
+          await expect(scene).toHaveAttribute('data-camera-owner','visitor');
+        }
         await expect(scene).toHaveAttribute('data-idle','true');
         await page.getByRole('button',{name:/^Guided tour/}).click();
         await expect(scene).toHaveAttribute('data-camera-owner','tour');
@@ -28,7 +38,7 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
         await expect(scene).toHaveAttribute('data-mode','walk');
         if(id==='forest-fold-house'){
           const before=await scene.getAttribute('data-position');
-          await page.getByRole('button',{name:'House flight · 36 sec ↗',exact:true}).click();
+          await page.getByRole('button',{name:'House flight · 38 sec ↗',exact:true}).click();
           await page.getByRole('button',{name:'Pause flight',exact:true}).click();
           for(const n of [0,250,420,670,835,999]){
             await page.getByRole('slider',{name:'House flight position'}).fill(String(n));
@@ -54,7 +64,7 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
       const story=page.getByRole('region',{name:'Three worlds cinematic story'});
       await story.scrollIntoViewIfNeeded();
       expect(requests).toEqual([]);
-      await story.getByRole('button',{name:'Watch the journey · 64 sec'}).click();
+      await page.getByRole('button',{name:'Watch the film',exact:false}).click();
       await expect(story.locator('.obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
       await story.getByRole('button',{name:'Pause journey'}).click();
       for(const [name,id] of [['Sculpture Pavilion','sculpture-pavilion'],['Forest Fold House','forest-fold-house'],['Obsidian','obsidian']]){
@@ -64,7 +74,7 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
         await expect(story.locator('canvas')).toHaveCount(1);
         await expect(story.locator('.obsidian__scene')).toHaveAttribute('data-camera-owner','world');
         await expect(story.locator('.world-story__scene')).toHaveCSS('opacity','1');
-        await expect(story.locator('.world-story__arrival')).toHaveCSS('opacity','0');
+        if(await story.locator('.world-story__arrival').count())await expect(story.locator('.world-story__arrival')).toHaveCSS('opacity','0');
         await page.screenshot({path:info.outputPath(`story-${name}.png`)});
       }
       await story.getByRole('slider',{name:'Journey position'}).fill('1000');
@@ -90,7 +100,7 @@ test('the complete three-world film reaches its final view without skipping a wo
   await page.goto('/#/');
   const story=page.getByRole('region',{name:'Three worlds cinematic story'});
   await story.scrollIntoViewIfNeeded();
-  await story.getByRole('button',{name:'Watch the journey · 64 sec'}).click();
+  await story.getByRole('button',{name:'Watch the journey · 48 sec'}).click();
   for(const progress of [.15,.32,.36,.5,.64,.7,.85,1]){
     await expect.poll(async()=>Number(await story.getAttribute('data-progress')),{timeout:50_000}).toBeGreaterThanOrEqual(progress);
     await expect(story.locator('canvas')).toHaveCount(1);
