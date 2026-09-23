@@ -1,160 +1,74 @@
 # LIEUVA
 
-LIEUVA is a browser-based platform for building, publishing and exploring walkable 3D exhibitions. The product includes LIEUVA Studio, three authored room templates, public and protected Space delivery, Discover, Creator profiles and a Firebase-backed publishing lifecycle.
+LIEUVA lets people create, publish and explore walkable 3D exhibitions. It includes Studio, three authored templates, local drafts and recovery, public/private Space delivery, Discover, Creator profiles, and Firebase-backed publication.
 
 Live product: [lieuva.com](https://lieuva.com/)
 
-> **Compatibility firewall:** LIEUVA is the customer-facing brand. Existing AURA/gallery identifiers in Firebase, Storage, callable Functions, local persistence, `.aura.json`, routes and GLB `aura_*` metadata are active compatibility contracts. Do not rename them without a migration plan and regression coverage.
+## Fast orientation
 
-## Current state
+- **Studio:** Arrange and Walk Preview share one Three.js scene. The three current templates are White Cube, Warm Gallery (`nocturne`) and Grand Forum (`pavilion`).
+- **Delivery:** published Spaces keep the existing `galleries/{galleryId}` identity; clean delivery is `/spaces/{galleryId}`. Legacy AURA/gallery names remain contracts.
+- **Bespoke demos:** Obsidian, Sculpture Pavilion and Forest Fold House are read-only, lazy-loaded showcases. They are not Studio templates or Firebase publications.
+- **Pilot boundary:** the product is a controlled production pilot. Current launch risks and priorities are in [current state](./audit/CURRENT-STATE.md).
 
-- Three templates: White Cube, Warm Gallery (technical ID `nocturne`) and Grand Forum (`pavilion`).
-- Arrange and Walk Preview share one Three.js scene and camera session.
-- Mobile Walk starts with a wider 78° view. “View & pace” adjusts the lens (40–90°) and walking speed (0.5–2×) for the current room session; Grand Forum defaults to 1.25×. Arrange supports much farther zoom-out, with tap-friendly −/+ controls as well as wheel/pinch.
-- Artwork upload, placement, framing, transforms, undo/redo, versioned local recovery and publish review are active.
-- Studio `Auto-arrange` is a local, reversible palette-and-placement workflow; it does not send artwork to an AI service.
-- The homepage contains the reversible 20-second room sequence with continuous, shape-preserving camera/gaze curves, a gentle forward entrance, and a fixed view for all three floor and three wall comparisons on desktop and mobile. Reduced motion remains stationary.
-- The story action is “Open in Studio” and always returns to the three-template Studio overview; it does not create or open a White Cube draft.
-- The post-story showcase presents three next-level showroom concepts independently from the existing Studio product and templates. The Art exhibitions preview and its “Explore Obsidian” action both open the independent [Obsidian showcase](./blender/showcases/obsidian/README.md) at `/#/showcase/obsidian`, with three connected Blender-authored rooms and eleven supplied artworks. Its visitor uses the shared Space menu and walking controller: click/tap a floor destination while freely looking around, WASD movement, E/↑ up and Q/↓ down, touch drag, pace and zoom. Collision-checked substeps keep movement responsive at low frame rates. It also provides a cutaway overview, refreshed 128-sample Cycles lighting and up to 2K/1K view-dependent floor reflections (adaptive raster resolution using synchronous draw cost plus queued frame latency on slow GPUs); the [Sculpture Pavilion](./blender/showcases/sculpture-pavilion/README.md) at `/#/showcase/sculpture-pavilion` adds three daylight rooms with corrected continuous portals and 4K wall lighting, five modelled sculptures and a reduced-motion-aware kinetic work through the same visitor/menu; the [Forest Fold House](./blender/showcases/forest-fold-house/README.md) at `/#/showcase/forest-fold-house` completes the Architecture card with two furnished levels, a glass bridge, a planted roof and a shallow watercourt. Its shared visitor follows continuous stairs at 1.70 m eye height. Scanned stone/oak, layered woodland and native 4K Cycles images refine the house; baked GI retains view-dependent normal/roughness detail, with cached static sunlight shadows. Separated ceiling/slab assemblies and clean facade corners prevent depth flicker; whole-plant clearance protects walls and paths. Dedicated ceiling atlases and 4K exterior lighting add detail, with physically lit pendants and concealed lounge lighting. Shared plants use spatially culled GPU instancing; the detailed desktop model is split into versioned glTF dependencies below GitHub’s per-file limit, with matching texture bytes and geometry checked against the export. Actual Cycles renders remain available without WebGL; the section positions comparable custom exhibitions, object showrooms and scanned or planned real-world environments as bespoke request work.
-- `public/assets/templates/premium-v3/` is the only shipping template-runtime generation. Older exports remain recoverable from Git; editable `.blend` sources and 4K masters remain in `blender/production/`.
-- The Danny Hirsch exhibition remains the visitor-quality and metadata reference.
-- The repository is suitable for a controlled production pilot, not unrestricted public uploads. External launch conditions are listed in [current state](./audit/CURRENT-STATE.md).
+## Toolchain and common commands
 
-## Toolchain and setup
-
-Use the pinned versions from `.nvmrc`, `package.json` and CI:
-
-- Node.js `22.23.2`
-- npm `10.9.8`
-- Java `21.0.12+101` only for Firebase rule-emulator tests
+Use Node `22.23.2` and npm `10.9.8`. Firebase rule tests also need Java `21.0.12+101`.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Vite prints the local URL, normally `http://localhost:5173/`. Do not open `index.html` through `file://`.
-
-Install the other locked workspaces only when needed:
-
-```bash
-npm ci --prefix functions
-npm ci --prefix firebase-cli --ignore-scripts --no-audit --no-fund
-```
-
-## Commands
-
-| Command | Purpose |
+| Command | Use |
 | --- | --- |
-| `npm run dev` | Start Vite. |
-| `npm run check` | Lint, unit tests, script tests, premium-GLB validation, production build and performance budgets. |
-| `npm run test:coverage` | Run the client suite with the enforced repository-wide coverage floor; reports stay in ignored `artifacts/coverage/`. |
-| `npm run check:functions` | Run Functions coverage, script tests, type-check, build and real release-manifest validation. |
-| `npm run test:firebase-rules` | Run Firestore and Storage authorization matrices in emulators. |
-| `npm run build` | Type-check and build `dist/`, then prepare the generated Functions app shell. |
-| `npm run test:browser-smoke` | Test the built public shell, story, Studio-overview handoff, all rooms and mobile editing in Chromium. |
-| `npm run test:browser-visual` | Compare platform-specific landing, White Cube, Account and Creator Hub baselines at 1440 × 1000 and 390 × 844. |
-| `npm run check:ci` | Run the complete local CI-equivalent gate; requires Functions/Firebase dependencies, Java and Chromium. |
-| `npm run validate:glb -- path/to/file.glb` | Validate the generic Blender/legacy metadata contract. |
-| `npm run validate:premium` | Validate all six shipping premium-v3 GLBs without changing tracked files. |
-| `npm run validate:premium:update` | Intentionally refresh the tracked GLB measurement report. |
-| `npm run clean:generated` | Remove builds, diagnostics, caches and Blender backups; keeps dependencies, `.env` files, sources and assets. |
-| `npm run admin:bootstrap -- --project PROJECT --email EMAIL` | Resolve and dry-run the guarded one-time first-owner registry bootstrap. |
+| `npm run check` | Default client quality gate: lint, tests, GLB validation, build, budgets. |
+| `npm run check:functions` | Functions type, test, build and release-manifest gate. |
+| `npm run test:firebase-rules` | Firestore and Storage rules in emulators. |
+| `npm run test:browser-smoke` | Built Chromium journeys. |
+| `npm run test:browser-visual` | Reviewed visual baselines at desktop and mobile sizes. |
+| `npm run check:ci` | Full local CI-equivalent gate; needs Java and Chromium. |
+| `npm run validate:premium` | Validate current Studio GLBs without changing reports. |
+| `npm run clean:generated` | Remove reproducible builds, diagnostics and Blender scratch files. |
 
-Main CI verifies the same immutable production candidate on four isolated Chromium shards. All four must pass before deployment; failures stop early after one exhausted retry. The four detailed Forest Fold House / Sculpture Pavilion walkthroughs (`@showcase-gpu`) run separately as an explicitly advisory, five-minute software-GPU qualification with no retry. By owner request, these GPU-only failures do not block release; the house route, photographs, lazy-loading boundary and every model dependency remain blocking. Local full smoke still includes all four walkthroughs. Real-GPU/mobile qualification remains required before claiming hardware performance. Run `npm run build` before an isolated browser-smoke run. Install Chromium once with `npm run test:browser-smoke:install`.
-
-Release validation checks both direct Functions endpoint declarations and explicit named local-module re-exports against the reviewed endpoint allowlist without executing artifact code. Wildcard exports are not supported; see the [release procedure](./FIREBASE_SETUP.md#current-release-order).
-
-The immutable release permits at most 5,000 files and 320 MiB, including the three detailed showcases. Assembly and the independent credentialed verifier enforce the same ceiling. This deliberately replaces the obsolete 250 MiB ceiling; it does not change asset quality or the browser performance budgets. Assembly output reports the measured byte total and limit.
-
-Showcase warm-up also measures actual GPU completion before enabling supersampling. Nonblocking WebGL fences prevent a fast JavaScript submission from misclassifying a backed-up graphics queue. The existing fast/slow-device render settings, source assets and navigation assertions remain unchanged. This adds about 158 bytes of production JavaScript gzip with an explicit 256-byte aggregate allowance; entry, lazy-chunk and CSS limits stay fixed.
+Run `npm run build` before an isolated smoke run. The four expensive Forest/Sculpture GPU walkthroughs are advisory in hosted CI by owner decision; their route, lazy-loading and asset dependency checks remain blocking. Local smoke still runs all journeys.
 
 ## Repository map
 
 ```text
-src/
-  App.tsx                         app shell, lightweight routing, Studio orchestration
-  features/demo/                 lazy Danny reference exhibition and embedded artwork metadata
-  features/gallery/              Three.js scene, editor, placement and visitor runtime
-  features/landing/              homepage story and discovery entry points
-  features/creator/              Creator Hub, directory and public profiles
-  features/account/              authentication, account and access management
-  services/                      drafts, Firebase boundary, publishing and telemetry
-  styles/                        shared, mobile and visitor styles
-functions/
-  src/index.ts                   core callable Functions and explicit endpoint re-exports
-  src/publicDelivery.ts          public HTML, JSON, image and sitemap delivery
-  src/                           publication, identity, rights, policy, SEO and observability modules
-tests/
-  browser-smoke/                 portable Playwright journeys
-  firebase-rules/                emulator authorization matrices
-public/assets/                    files copied into the deployed web root
-blender/production/v3/           current editable room sources, maps and retained masters
-blender/production/v1,v2/        retained historical editable sources and v1 masters
-scripts/                          build, validation, release and operator tools
-audit/                            current state and durable operational specifications only
+src/features/gallery/  Three.js scene, Studio editor, placement and visitor runtime
+src/features/landing/  Homepage story and showcase entry points
+src/features/{account,creator,demo}/  Account, profiles and Danny reference
+src/services/          Drafts, Firebase boundary, publishing and telemetry
+functions/src/         Callable/server delivery, lifecycle, policy and access modules
+tests/                 Playwright smoke and Firebase rule matrices
+public/assets/         Referenced deployment assets only
+blender/production/v3/ Current Studio sources, maps and retained masters
+blender/showcases/     Independent Obsidian, Sculpture and Forest sources
+scripts/               Build, validation, release and operator tools
+audit/                 Indexed durable contracts and current risks
 ```
 
-The largest implementation files are `src/App.tsx`, `src/features/gallery/GalleryScene.tsx` and `functions/src/index.ts`. Extract from them incrementally behind existing behavior tests; do not rewrite the renderer or change exported Function names as a cleanup shortcut.
+The largest modules are `src/App.tsx`, `src/features/gallery/GalleryScene.tsx` and `functions/src/index.ts`. Extract them only behind existing behavior coverage; do not use a renderer rewrite or Function-name migration as cleanup.
 
-## Product and data contracts
+## Core contracts
 
-- Drafts are local and account-free. Guests can publish a public Space without creating an account or Creator profile. New guest publications carry immutable server-authored `guestPublication: true`; Explore eligibility ends exactly seven days after the original `publishedAt`. The direct link keeps the existing 365-day preview hosting lifetime (`account-preview` retention); this is not permanent hosting or a seven-day deletion policy. Legacy `guest-10-days` records keep their original semantics.
-- Anonymous guest publication uses the same App Check, ownership, decoded-media and transactional permit boundary as account publication, with three new permits per UTC day and three active Spaces per guest identity. Guests need to create/link and verify an account in the same browser for live updates; ordinary sign-in to an existing account does not transfer guest-owned Spaces. Updates, restored rooms and UID-preserving signup never restart the Explore window or add a guest-origin room to a Creator profile.
-- Public, unlisted and private Spaces use the existing `galleries/{galleryId}` identity. Owner/Editor/Viewer access is stored separately.
-- Published media uses immutable owner/revision-scoped Storage paths. Updates preserve the Space ID and share URL.
-- `discoverEligible` is a server-owned reviewed-distribution and search-indexing gate. New publications, content revisions, visibility transitions and lifecycle actions fail closed to `false`; placement-only changes preserve an existing decision. Approval uses the guarded public-content review tools, never a client toggle.
-- Public Creator profiles remain owner-controlled, but an additional derived QA filter keeps obvious test/placeholder profiles out of the directory, sitemap and indexing. Self-service external links are treated as unverified UGC and are not asserted as `sameAs` identities.
-- New records use the current schema. Schema-v1/v2 records without a
-  `visibility` field keep their historical public direct-link fallback;
-  explicit legacy `public`, `unlisted` and `private` values are authoritative.
-- The same placement validator must govern click, drag, sliders, curation, restore and publish.
-- Any future remote-AI feature is opt-in and advisory: the user reviews a diff, acceptance is undoable, and deterministic validation remains authoritative.
-- Invalid transforms must fail transactionally: mesh, React state and persisted state may not diverge.
-- Renderer, controls, PMREM environment and full scene must survive selection, transform and mode-only changes.
-- Adaptive DPR, progressive loading, reduced motion, keyboard scope, WebGL fallbacks and non-WebGL artwork access are first-class behavior.
-- Site-wide administrator authority comes only from the server-owned `siteAdmins/{uid}` registry. It is not stored in Firebase custom claims or inferred from an email address.
-- The lazy `/admin/overview` console links from Account Settings only after server-confirmed access. It exposes bounded content metadata, GitHub Verify/Deploy history, the last 60 minutes / maximum 50 telemetry observations, live checks, diagnostics export, and owner-only access management. Scene setup timings are consent-dependent and client-reported (runtime initialization → interactive); they are not full-page load, FPS, unique visitor or billing measurements. Unknown sources stay explicitly unavailable. Admin HTML is uncached and noindex before JavaScript runs; the public entry performance ceilings remain unchanged.
-- `/admin/tests` runs a versioned suite of 13 fixed, credential-free production probes: HTML/status/privacy/security contracts, canonical sitemap/robots, the public creator JSON projection, anonymous admin rejection, three GLB HEAD checks and Hosting release identity. Results include bounded evidence, next steps, failure filtering, selection/export of recent runs and compatible four-check legacy history. This is not a browser journey or authenticated publication test.
-- `/admin/operations` separates the deployed Hosting SHA from the latest deploy attempt and last successful deployment, correlates successful Verify only by exact SHA, shows source age and bounded expiry/Trash/failure observations, and exports an explicit support projection without membership identities. Six copy-only local diagnostic commands cover live smoke, browser journeys, publication/draft recovery, emulator access rules, Functions and the full quality gate. No arbitrary scripts, cleanup or deployment execute through the console. See [the admin operations contract](audit/LIEUVA-OBSERVABILITY-DASHBOARDS.md#implemented-admin-operations).
-- The first active owner must be an existing enabled, verified Email/Password or Google account and is created only through the guarded dry-run-first operator command documented in `FIREBASE_SETUP.md`.
-- An active administrator cannot delete that same account. Another active owner must revoke the membership first; the last owner must assign a replacement owner before revocation. Account deletion removes an inactive membership and its per-actor live-check rate record, while pseudonymous operational/audit retention follows the explicit limitations in `audit/DATA-RIGHTS-ACCOUNT-DELETION.md`.
+- Drafts are local and account-free. Publishing, revisions and immutable media paths preserve the existing gallery identity.
+- Guest publication uses the same server permit, App Check, quota and ownership boundary as accounts. Its Explore period and direct-link retention are distinct contracts.
+- Visibility, review, Creator attribution, search indexing, access roles and lifecycle rules are server-owned. `discoverEligible` is never a client toggle.
+- Placement, navigation and accessibility must work on desktop and mobile, with reduced-motion and non-WebGL fallbacks.
+- Runtime assets require a real reference. Keep primary Blender sources and licensed originals; do not commit caches, backup blends, traces or duplicate generated outputs.
 
-Canonical public delivery is `/spaces/{galleryId}`. Compatibility entry points and technical IDs remain active:
+## Read only when relevant
 
-- `#/create` and `#/create/{white-cube|nocturne|pavilion}`
-- `#/create/{template}/demo`
-- `#/demo` for the Danny reference
-- `#/g/{galleryId}` as the legacy Space entry
-- `#/data` for data/right notices
-- Firebase Auth action query parameters such as `?mode=verifyEmail&oobCode=…`
+| Need | Source |
+| --- | --- |
+| Working conventions and document routing | [AGENTS.md](./AGENTS.md) |
+| Current boundary and open launch work | [audit/CURRENT-STATE.md](./audit/CURRENT-STATE.md) |
+| Audit/operations contract index | [audit/README.md](./audit/README.md) |
+| Firebase setup, release and rollback | [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) |
+| Asset provenance | [ASSET_LICENSES.md](./ASSET_LICENSES.md) |
+| Studio Blender/GLB contract | [blender/EXPORT_CONTRACT.md](./blender/EXPORT_CONTRACT.md) |
+| Bespoke render/showcase contract | [blender/showcases](./blender/showcases/) |
 
-Clean customer URLs do not authorize renaming `galleries`, `galleryId`, Storage paths, callable names, local draft keys or GLB `aura_*` fields.
-
-## Assets and Blender
-
-- Runtime assets belong in `public/assets/`; every file there is copied into builds and deployments, so it must have a real runtime reference.
-- Original/provenance files belong in `blender/`; current exports are rebuilt with `blender/production/build_premium.py` and validated with `npm run validate:premium`.
-- Keep primary `.blend` files, source material studies, current runtime maps and retained 4K masters. Do not commit `.blend1`, logs, caches, exploratory renders or duplicate old GLBs.
-- Record source and license changes in [ASSET_LICENSES.md](./ASSET_LICENSES.md). The Danny assets have project-specific permission, not a general redistribution license.
-- See [Blender export contract](./blender/EXPORT_CONTRACT.md) and [production instructions](./blender/production/README.md).
-
-## Firebase and release safety
-
-The production target is Firebase Hosting plus the scoped Functions exported by `functions/src/index.ts`. `.github/workflows/deploy.yml` is the production workflow. Firestore rules, Storage rules and indexes require their separate reviewed policy release.
-
-Do not deploy, publish fixtures, mutate production data or alter rules while doing local verification unless the user explicitly requests it. Deployment order, required variables, preview checks, rollback and operator procedures are in [FIREBASE_SETUP.md](./FIREBASE_SETUP.md).
-
-## Documentation sources of truth
-
-- [AGENTS.md](./AGENTS.md): default rules for future Codex work.
-- [audit/CURRENT-STATE.md](./audit/CURRENT-STATE.md): current product boundary, open risks and maintenance priorities.
-- [audit/README.md](./audit/README.md): retained audit/operations index and evidence policy.
-- [Mobile experience and AI direction](./audit/MOBILE-EXPERIENCE-AND-AI-DIRECTION.md): evidence-ranked mobile journey priorities and the Astra integration boundary.
-- [FIREBASE_SETUP.md](./FIREBASE_SETUP.md): Firebase setup, deployment and rollback.
-- [ASSET_LICENSES.md](./ASSET_LICENSES.md): asset provenance and rights.
-- [blender/EXPORT_CONTRACT.md](./blender/EXPORT_CONTRACT.md): Blender-to-GLB contract.
-
-Update these sources in the same change when behavior, architecture, schemas, release steps or assets change. Test output, screenshots and temporary reports belong in ignored `artifacts/`, not in permanent project documentation.
-
-This repository has no general code license. Do not infer reuse rights from repository access.
+Do not deploy, publish fixtures, mutate production data or alter rules during local verification without explicit user authorization.
