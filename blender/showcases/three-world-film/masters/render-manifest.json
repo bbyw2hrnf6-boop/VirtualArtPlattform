@@ -1,0 +1,23 @@
+[
+  {
+    "camera": "R2-SW",
+    "width": 2560,
+    "height": 1440,
+    "samples": 128,
+    "device": "GPU"
+  },
+  {
+    "camera": "R3-SW",
+    "width": 2560,
+    "height": 1440,
+    "samples": 128,
+    "device": "GPU"
+  },
+  {
+    "camera": "R1-NE",
+    "width": 2560,
+    "height": 1440,
+    "samples": 128,
+    "device": "GPU"
+  }
+]

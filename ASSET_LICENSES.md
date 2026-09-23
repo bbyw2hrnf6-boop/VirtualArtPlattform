@@ -122,3 +122,9 @@ No external HDRI or purchased furniture is used. Public WebP images are encoding
 ## Cinematic portal previews
 
 `public/assets/showcases/cinematic/` contains four UI-free WebP captures of the shipped Sculpture Pavilion and Forest Fold House scenes, rendered at their incoming film poses for desktop and portrait. They inherit the source/provenance boundaries above; they introduce no third-party media or changed artwork. Their purpose is a matched portal/loading transition, not a substitute for the interactive model.
+
+## Three worlds homepage film · 2026-09-23
+
+`public/assets/films/lieuva-three-worlds-20s.mp4` and its 720p delivery encode an original 20-second montage of the existing White Cube, Grand Forum, Obsidian, Sculpture Pavilion and Forest Fold House scenes. The soundtrack is original deterministic synthesis with no external music or audio samples. The film extends the visual treatment of the 18-second product-briefing intro, using retained Blender renders and additional views rendered from the existing Obsidian source. These are rendered scenes, not photographs or a continuous real-time walkthrough.
+
+The retained source schedule, added masters, sound synthesis, reproduction scripts and output checksums are recorded in [the film provenance](blender/showcases/three-world-film/). Existing artwork, material and scene provenance above continues to apply. No new standalone redistribution license is granted.

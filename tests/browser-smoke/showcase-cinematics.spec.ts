@@ -71,82 +71,135 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
         expect(errors).toEqual([]);
       });
     }
-    test('three-world story loads on request and reverses between every scene',async({page},info)=>{
-      const errors:string[]=[],requests:string[]=[];page.on('pageerror',e=>errors.push(e.message));
-      page.on('request',r=>{if(/\/showcases\/.*\.(glb|gltf)(\?|$)/.test(r.url()))requests.push(r.url());});
+    test('the three-world film loads only on request and seeks between every chapter',async({page},info)=>{
+      const errors:string[]=[],modelRequests:string[]=[],videoRequests:string[]=[];
+      page.on('pageerror',e=>errors.push(e.message));
+      page.on('request',r=>{
+        if(/\/showcases\/.*\.(glb|gltf)(\?|$)/.test(r.url()))modelRequests.push(r.url());
+        if(/\.(mp4|webm)(\?|$)/.test(r.url()))videoRequests.push(r.url());
+      });
+      await page.emulateMedia({reducedMotion:'no-preference'});
       await page.goto('/#/');
       const story=page.getByRole('region',{name:'Three worlds cinematic story'});
       await story.scrollIntoViewIfNeeded();
-      expect(requests).toEqual([]);
-      await page.getByRole('button',{name:'Watch the film',exact:false}).click();
-      await expect(story.locator('.obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
-      await story.getByRole('button',{name:'Pause journey'}).click();
-      for(const [name,id] of [['Sculpture Pavilion','sculpture-pavilion'],['Forest Fold House','forest-fold-house'],['Obsidian','obsidian']]){
-        await story.getByRole('navigation',{name:'Journey chapters'}).getByRole('button',{name:new RegExp(name)}).click();
-        await expect(story.locator('.obsidian__scene')).toHaveAttribute('data-showcase',id);
-        await expect(story.locator('.obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
-        await expect(story.locator('canvas')).toHaveCount(1);
-        await expect(story.locator('.obsidian__scene')).toHaveAttribute('data-camera-owner','world');
-        await expect(story.locator('.world-story__scene')).toHaveCSS('opacity','1');
-        if(await story.locator('.world-story__arrival').count())await expect(story.locator('.world-story__arrival')).toHaveCSS('opacity','0');
+      const video=story.locator('video'),position=story.getByRole('slider',{name:'Film position'});
+      await expect(video).toHaveAttribute('preload','none');
+      await expect(story.locator('video[src]')).toHaveCount(0);
+      await expect(story.locator('canvas')).toHaveCount(0);
+      expect(modelRequests).toEqual([]);
+      expect(videoRequests).toEqual([]);
+      for(const [name,id] of [['Obsidian','obsidian'],['Sculpture Pavilion','sculpture-pavilion'],['Forest Fold House','forest-fold-house']]){
+        const link=story.getByRole('link',{name:`Explore ${name}`,exact:true});
+        await expect(link).toBeVisible();
+        await expect(link).toHaveAttribute('href',`#/showcase/${id}`);
+      }
+      await story.getByRole('button',{name:'Play film with sound · 20 sec',exact:true}).click();
+      await expect(story).toHaveAttribute('data-playing','true');
+      await expect.poll(()=>video.evaluate((element:HTMLVideoElement)=>element.currentTime)).toBeGreaterThan(0);
+      expect(videoRequests.length).toBeGreaterThan(0);
+      await story.getByRole('button',{name:'Mute film',exact:true}).click();
+      await expect.poll(()=>video.evaluate((element:HTMLVideoElement)=>element.muted)).toBe(true);
+      await story.getByRole('button',{name:'Unmute film',exact:true}).click();
+      await expect.poll(()=>video.evaluate((element:HTMLVideoElement)=>element.muted)).toBe(false);
+      await story.getByRole('button',{name:'Pause film',exact:true}).click();
+      await expect(story).toHaveAttribute('data-playing','false');
+      await expect(position).toHaveAttribute('min','0');
+      await expect(position).toHaveAttribute('max','20');
+      await expect(position).toHaveAttribute('step','0.1');
+      for(const [index,name,start] of [[1,'Sculpture Pavilion',7],[2,'Forest Fold House',13],[0,'Obsidian',0]] as const){
+        await story.getByRole('navigation',{name:'Film chapters'}).getByRole('button',{name:`0${index+1} ${index === 0 ? 'Art spaces' : name}`}).click();
+        await expect(story).toHaveAttribute('data-chapter',String(index));
+        await expect(story).toHaveAttribute('data-playing','false');
+        await expect(position).toHaveValue(String(start));
+        await expect.poll(()=>video.evaluate((element:HTMLVideoElement)=>!element.seeking)).toBe(true);
+        await expect.poll(async()=>Math.abs(await video.evaluate((element:HTMLVideoElement)=>element.currentTime)-start)).toBeLessThan(.15);
+        await expect(story.locator('canvas')).toHaveCount(0);
         await page.screenshot({path:info.outputPath(`story-${name}.png`)});
       }
-      await story.getByRole('slider',{name:'Journey position'}).fill('1000');
-      await expect(story.getByRole('slider',{name:'Journey position'})).toHaveValue('1000');
-      await expect(story.getByText('Bespoke showcases. Separate from the three editable Studio templates.')).toBeVisible();
-      await story.getByRole('button',{name:'Close journey ×'}).click();
-      await expect(story.locator('canvas')).toHaveCount(0);
+      await position.fill('19.5');
+      await expect(position).toHaveValue('19.5');
+      await expect(story).toHaveAttribute('data-chapter','2');
+      await expect(story).toHaveAttribute('data-playing','false');
+      await expect.poll(()=>video.evaluate((element:HTMLVideoElement)=>!element.seeking)).toBe(true);
+      await story.getByRole('navigation',{name:'Film chapters'}).getByRole('button',{name:'03 Forest Fold House'}).click();
+      await expect.poll(async()=>Math.abs(await video.evaluate((element:HTMLVideoElement)=>element.currentTime)-13)).toBeLessThan(.15);
+      await story.getByRole('button',{name:'Resume film',exact:true}).click();
+      await expect(story).toHaveAttribute('data-playing','true');
+      const requestedVideos=videoRequests.length;
       await page.emulateMedia({reducedMotion:'reduce'});
-      const count=requests.length;
-      await story.getByRole('button',{name:'Explore still views'}).click();
-      await story.getByRole('navigation',{name:'Journey chapters'}).getByRole('button',{name:/Sculpture Pavilion/}).click();
+      await expect(story.getByRole('status')).toHaveText('Still views · Reduced motion');
+      await expect(story).toHaveAttribute('data-playing','false');
+      await expect(story.locator('video[src]')).toHaveCount(0);
+      await expect(story.getByRole('button',{name:/Play film|Resume film|Replay film/})).toHaveCount(0);
+      await story.getByRole('navigation',{name:'Film chapters'}).getByRole('button',{name:'02 Sculpture Pavilion'}).click();
       await expect(story).toHaveAttribute('data-chapter','1');
-      await expect(story.locator('canvas')).toHaveCount(0);expect(requests.length).toBe(count);
+      await expect(story.locator('canvas')).toHaveCount(0);
+      expect(videoRequests.length).toBe(requestedVideos);
+      expect(modelRequests).toEqual([]);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
       expect(errors).toEqual([]);
     });
   });
 }
 
-test('the complete three-world film reaches its final view without skipping a world', async ({page},info) => {
-  test.setTimeout(180_000);
+test('the complete three-world film reaches its final frame and can replay', async ({page},info) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({width:1440,height:1000});
+  await page.emulateMedia({reducedMotion:'no-preference'});
   await page.goto('/#/');
+  // The deferred Studio story above grows from a one-screen poster to its
+  // scroll sequence. Let that mount before measuring film-induced scrolling.
+  await expect(page.locator('.sgs')).toBeAttached();
   const story=page.getByRole('region',{name:'Three worlds cinematic story'});
   await story.scrollIntoViewIfNeeded();
-  await story.getByRole('button',{name:'Watch the journey · 48 sec'}).click();
-  for(const progress of [.15,.32,.36,.5,.64,.7,.85,1]){
-    await expect.poll(async()=>Number(await story.getByRole('slider',{name:'Journey position'}).inputValue())/1000,{timeout:50_000}).toBeGreaterThanOrEqual(progress);
-    await expect(story.locator('canvas')).toHaveCount(1);
-    await page.screenshot({path:info.outputPath(`film-${progress}.png`)});
+  const scrollBefore=await page.evaluate(()=>scrollY);
+  await story.getByRole('button',{name:'Play film with sound · 20 sec',exact:true}).click();
+  const position=story.getByRole('slider',{name:'Film position'});
+  for(const [time,chapter] of [[3,0],[10,1],[16,2]] as const){
+    await expect.poll(async()=>Number(await position.inputValue()),{timeout:30_000}).toBeGreaterThanOrEqual(time);
+    await expect(story).toHaveAttribute('data-chapter',String(chapter));
+    await expect(story.locator('canvas')).toHaveCount(0);
+    await page.screenshot({path:info.outputPath(`film-${time}.png`)});
   }
-  await expect(story).toHaveAttribute('data-chapter','2');
-  await expect(story).toHaveAttribute('data-playing','false');
-  await expect(story.getByRole('button',{name:'Play journey'})).toBeVisible();
+  await expect(story).toHaveAttribute('data-playing','false',{timeout:25_000});
+  await expect(position).toHaveValue('20');
+  await expect(story.getByRole('button',{name:'Replay film',exact:true})).toBeVisible();
+  expect(Math.abs(await page.evaluate(()=>scrollY)-scrollBefore)).toBeLessThanOrEqual(1);
+  await story.getByRole('button',{name:'Replay film',exact:true}).click();
+  await expect(story).toHaveAttribute('data-playing','true');
+  await expect(story).toHaveAttribute('data-chapter','0');
+  await expect.poll(async()=>Number(await position.inputValue())).toBeLessThan(3);
+  await story.getByRole('button',{name:'Pause film',exact:true}).click();
 });
 
-test('the next world is ready before each portal and the film does not buffer at the cut',async({page})=>{
+test('native page scrolling never seeks the film and leaving the section pauses it',async({page})=>{
   await page.setViewportSize({width:1440,height:1000});
+  await page.emulateMedia({reducedMotion:'no-preference'});
   await page.goto('/#/');
   const story=page.getByRole('region',{name:'Three worlds cinematic story'});
   await story.scrollIntoViewIfNeeded();
-  await story.getByRole('button',{name:'Watch the journey · 48 sec'}).click();
-  await expect(story.locator('[data-world="0"] .obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
-  const position=story.getByRole('slider',{name:'Journey position'});
-  await expect.poll(async()=>Number(await position.inputValue())).toBeGreaterThan(40);
-  await story.getByRole('button',{name:'Pause journey'}).click();
-  await expect(story.locator('[data-world="1"] .obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
-  await story.getByRole('navigation',{name:'Journey chapters'}).getByRole('button',{name:/Sculpture Pavilion/}).click();
-  await expect(story.locator('[data-world="1"].is-ready .obsidian__scene')).toHaveAttribute('data-ready','true');
-  await expect(story.getByRole('status')).not.toContainText('Entering');
-  await story.getByRole('button',{name:'Play journey'}).click();
-  await expect.poll(async()=>Number(await position.inputValue())).toBeGreaterThan(300);
-  await story.getByRole('button',{name:'Pause journey'}).click();
-  await expect(story.locator('[data-world="2"] .obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
-  await story.getByRole('navigation',{name:'Journey chapters'}).getByRole('button',{name:/Forest Fold House/}).click();
-  await expect(story.locator('[data-world="2"].is-ready .obsidian__scene')).toHaveAttribute('data-ready','true');
-  await expect(story.getByRole('status')).not.toContainText('Entering');
-  await expect(story.locator('canvas')).toHaveCount(1);
-  await story.getByRole('navigation',{name:'Journey chapters'}).getByRole('button',{name:/Obsidian/}).click();
-  await expect(story.locator('[data-world="0"] .obsidian__scene')).toHaveAttribute('data-ready','true',{timeout:90_000});
+  await story.getByRole('button',{name:'Play film with sound · 20 sec',exact:true}).click();
+  const video=story.locator('video'),position=story.getByRole('slider',{name:'Film position'});
+  await expect.poll(()=>video.evaluate((element:HTMLVideoElement)=>element.currentTime)).toBeGreaterThan(.2);
+  await story.getByRole('button',{name:'Pause film',exact:true}).click();
+  await position.fill('18');
+  await expect.poll(async()=>Math.abs(await video.evaluate((element:HTMLVideoElement)=>element.currentTime)-18)).toBeLessThan(.15);
+  await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+  await expect(story).not.toBeInViewport();
+  await story.scrollIntoViewIfNeeded();
+  await expect(position).toHaveValue('18');
+  await expect(story).toHaveAttribute('data-playing','false');
+  await story.getByRole('button',{name:'Resume film',exact:true}).click();
+  await expect(story).toHaveAttribute('data-playing','true');
+  await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+  await expect(story).not.toBeInViewport();
+  await expect(story).toHaveAttribute('data-playing','false');
+  await expect.poll(()=>video.evaluate((element:HTMLVideoElement)=>element.paused)).toBe(true);
+  const pausedAt=await video.evaluate((element:HTMLVideoElement)=>element.currentTime);
+  await story.scrollIntoViewIfNeeded();
+  await expect(story).toHaveAttribute('data-playing','false');
+  expect(Math.abs(await video.evaluate((element:HTMLVideoElement)=>element.currentTime)-pausedAt)).toBeLessThan(.15);
+  for(const name of ['Obsidian','Sculpture Pavilion','Forest Fold House']){
+    await expect(story.getByRole('link',{name:`Explore ${name}`,exact:true})).toBeVisible();
+  }
 });

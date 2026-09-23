@@ -34,35 +34,42 @@ Forest offers an optional **38-second flight**, approaching the real upper entry
 descending the U stair and crossing both ground-floor doorways before the garden
 reveal. It avoids the former cuts through walls and slabs and widens interior FOV.
 
-`landing/ThreeWorldStory.tsx` is the **48-second Three worlds journey**:
-Obsidian 12 s → Sculpture 14 s → Forest 22 s. Homepage header and Beyond Studio
-buttons both open it. Play and native, reversible scroll sample the same rails.
-`worldPortal.ts` places the next scene's matched first frame inside the actual
-painting/entrance frame. The aperture expands in perspective as the camera
-approaches; the same image covers the cut and expands into the incoming view.
-Once the visitor opts in, the next world is loaded and GPU-warmed near the start
-of the current chapter. At most two scenes are mounted; the prepared renderer
-rests until the portal, then the old scene is disposed. This keeps the normal
-48-second clock moving through ready transitions. On a slow connection, the
-arrival image continues masking a late scene and the clock waits so no chapter
-is skipped. The original 20-second Studio introduction is unchanged.
+`landing/ThreeWorldStory.tsx` presents the **20-second Three worlds film**:
+Art spaces 0–7 s (White Cube, Grand Forum and Obsidian), Sculpture Pavilion
+7–13 s, Forest Fold House 13–20 s.
+It is a pre-rendered montage in the visual style of the product-briefing intro,
+with a warm original instrumental soundtrack and three brief English teaser lines.
+It replaces the homepage's WebGL scroll journey. Its art chapter includes views of existing Studio templates and the bespoke
+Obsidian gallery; the first Explore action is explicitly labelled Obsidian. It does
+not change the standalone showcases or Studio story.
 
-Portal previews under `public/assets/showcases/cinematic/` are UI-free captures of
-the shipped full-detail scenes at their first film frame, at 1440 × 1000 and
-390 × 844. Regenerate them if the incoming rail pose, lighting or scene changes.
-They add about 197 KB total, not another set of room models.
+The header and Beyond Studio buttons start the film with sound on an explicit
+click. A native HTML video receives its source only after Play. Desktop uses
+1080p and narrow viewports use 720p; both share the exact chapter timing.
+Pause/resume/replay, mute, a reversible scrubber and paused chapter selection
+are available. Three persistent Explore links open the original showcase routes,
+including before playback and when media loading fails. Scrolling remains native
+and does not scrub or move with the film. Playback pauses when the section leaves
+the viewport, the tab becomes hidden or the window loses focus.
+
+Reduced motion keeps static chapter covers and Explore links, with no film
+source or autoplay. Changing the preference while playing pauses and unloads
+media. The film mounts no Three.js scene and downloads no showcase GLB.
+Sources, shot timing, sound synthesis and encoding instructions live in
+[`blender/showcases/three-world-film`](../../../blender/showcases/three-world-film/).
 
 ## Loading and quality
 
-No bespoke GLB loads until the visitor opts in. One current and at most one
-prepared scene/context may be mounted during the homepage film; stand-alone
-showcase pages retain one. Scene disposal releases geometries, textures and renderer.
-Loading retains a poster, failure retains static navigation, and reduced motion
-uses still chapters without loading bespoke 3D. Scene readiness waits for shader
-warm-up draws. Native scrolling stays available; no scroll lock or wheel capture.
+The homepage film requires no WebGL context. Standalone showcase pages load a
+single scene after entry and retain their existing disposal/readiness boundary.
+Scene disposal releases geometries, textures and renderer; readiness waits for
+shader warm-up draws. Loading retains a poster, failure retains static navigation,
+and reduced motion keeps still chapters without automatic motion.
 
-Flights use the existing full-detail assets, reflections and GPU calibration.
-This feature does not replace or re-render the Blender masters. The original cinematic allowance is **8 KB gzip JS and 2 KB gzip CSS**.
+Standalone flights use the existing full-detail assets, reflections and GPU calibration.
+The film derives from retained Blender masters and additional views of the existing
+Obsidian scene; it does not replace runtime geometry or materials. The original
+cinematic allowance is **8 KB gzip JS and 2 KB gzip CSS**.
 Automatic gallery entries and matched world-space portals add **2 KB gzip JS**;
 next-world GPU warm-up adds a documented 256 B aggregate allowance (626,512 B).
 Entry, largest lazy chunk, CSS, Studio assets and quality settings remain fixed.
@@ -78,10 +85,12 @@ the authored shot durations; guided paths instead interpolate by travelled dista
 
 `showcaseDirector.test.ts` checks rail continuity, all guided stop reachability,
 pause/resume, reduced motion and safe handback. `cinematic-fallback.spec.ts` keeps
-entry, static chapters and no-eager-GLB behavior in the blocking smoke suite.
+static chapter entry, Explore links and no-eager-media/GLB behavior in the blocking
+smoke suite. Homepage cases in `showcase-cinematics.spec.ts` cover sound controls,
+chapter timing, reversible seeking, replay and off-screen pause without WebGL.
 
 After building, run `npm run test:browser-cinematic` on a GPU-capable machine for
-desktop/mobile visits, framing, scrubbing and cross-world scene disposal. These
+desktop/mobile visits, framing and film controls. These
 new visual qualifications have a separate Playwright project; they do not extend
 the four existing owner-approved advisory CI journeys. Review generated images
 in ignored `artifacts/playwright-results/`. Physical mobile qualification remains

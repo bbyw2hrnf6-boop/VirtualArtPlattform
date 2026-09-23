@@ -1,159 +1,187 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ObsidianControls } from '../showcase/ObsidianScene';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from '../showcase/useReducedMotion';
 import { WORLD_CHAPTERS, WORLD_STORY_DURATION, worldFrame } from './threeWorldStoryModel';
 import './threeWorldStory.css';
-import { portalPreview, WORLD_PORTALS } from '../showcase/worldPortals';
 
-const Scenes=[lazy(()=>import('../showcase/ObsidianScene')),lazy(()=>import('../showcase/SculptureScene')),lazy(()=>import('../showcase/ForestScene'))];
-const noop=()=>{};
+const FILM = '/assets/films/lieuva-three-worlds-20s.mp4';
+const MOBILE_FILM = '/assets/films/lieuva-three-worlds-20s-720.mp4';
+const POSTER = '/assets/films/lieuva-three-worlds-poster.webp?v=3';
+const timestamp = (seconds: number) => `0:${String(Math.floor(seconds)).padStart(2, '0')}`;
 
-/** Keep the next world GPU-ready before the camera reaches its portal.
- * At most two scenes exist; the next renderer rests after its warm-up draws. */
+/** A user-started film. Interactive worlds load only after an Explore link. */
 export default function ThreeWorldStory() {
-  const reduced=useReducedMotion();
-  const [active,setActive]=useState(false),[index,setIndex]=useState(0),[preparing,setPreparing]=useState<number|null>(null),[ready,setReady]=useState(false),[error,setError]=useState(false),[playing,setPlaying]=useState(false),[progress,setProgress]=useState(0);
-  const host=useRef<HTMLElement>(null);
-  const controls=useMemo(()=>Array.from({length:Scenes.length},()=>({current:null as ObsidianControls|null})),[]);
-  const prepared=useRef(new Set<number>());
-  const failedPrep=useRef(false);
-  const progressRef=useRef(0), indexRef=useRef(0), readyRef=useRef(false), playingRef=useRef(false);
-  const requested=useRef<number|null>(null);
-  const [incomingPortal,setIncomingPortal]=useState<string>();
-  const stop=useCallback(()=>{playingRef.current=false;setPlaying(false);},[]);
+  const reduced = useReducedMotion();
+  const host = useRef<HTMLElement>(null);
+  const video = useRef<HTMLVideoElement>(null);
+  const pendingSeek = useRef<number | null>(null);
+  const playRequest = useRef(0);
+  const [playing, setPlaying] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [hasFrame, setHasFrame] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [time, setTime] = useState(0);
+  const { chapter, index } = worldFrame(time / WORLD_STORY_DURATION);
+  const finished = time >= WORLD_STORY_DURATION - 0.05;
+  const showFrame = hasFrame && !reduced && !error && (playing || time > 0.2);
 
-  const onReady=useCallback((sceneIndex:number)=>{
-    prepared.current.add(sceneIndex);
-    // Warm the exact first camera frame too; the hidden renderer then goes idle.
-    controls[sceneIndex].current?.seekFilm(sceneIndex===indexRef.current?worldFrame(progressRef.current).local:0);
-    if(sceneIndex!==indexRef.current)return;
-    readyRef.current=true;setReady(true);
-  },[controls]);
-  const onError=useCallback((sceneIndex:number)=>{
-    if(sceneIndex!==indexRef.current){failedPrep.current=true;setPreparing(null);return;}
-    readyRef.current=false;stop();setReady(false);setError(true);
-  },[stop]);
-  const sceneReady=useMemo(()=>Scenes.map((_,i)=>()=>onReady(i)),[onReady]);
-  const sceneError=useMemo(()=>Scenes.map((_,i)=>()=>onError(i)),[onError]);
+  const pause = useCallback(() => {
+    playRequest.current += 1;
+    video.current?.pause();
+    setPlaying(false);
+    setLoading(false);
+  }, []);
 
-  useEffect(()=>{
-    const section=host.current;if(!section||!active)return;
-    let raf=0,last=performance.now(),lastUi=0,visible=true,dirty=true;
-    const publish=(value:number,force=false)=>{
-      let p=Math.max(0,Math.min(1,value)),frame=worldFrame(p);
-      if(playingRef.current&&frame.index>indexRef.current){p=frame.chapter.start/WORLD_STORY_DURATION;frame=worldFrame(p);}
-      progressRef.current=p;
-      section.style.setProperty('--world-portal',String(frame.portal));
-      if(frame.index!==indexRef.current){
-        setIncomingPortal(frame.index>indexRef.current?frame.chapter.id:undefined);
-        const targetPrepared=prepared.current.has(frame.index)&&Boolean(controls[frame.index].current);
-        prepared.current.clear();
-        if(targetPrepared)prepared.current.add(frame.index);
-        failedPrep.current=false;
-        indexRef.current=frame.index;readyRef.current=false;setReady(false);setError(false);setIndex(frame.index);
-        setPreparing(null);
-        if(targetPrepared){
-          readyRef.current=true;setReady(true);
-          controls[frame.index].current?.seekFilm(frame.local);
-        }
-        force=true;
-      }else if(readyRef.current&&!reduced)controls[frame.index].current?.seekFilm(frame.local);
-      if(force||performance.now()-lastUi>100||p===1){lastUi=performance.now();setProgress(p);}
+  // No scroll coupling: leaving the film or hiding the tab silences playback.
+  useEffect(() => {
+    const section = host.current;
+    if (!section) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || entry.intersectionRatio < 0.15) pause();
+    }, { threshold: [0, 0.15] });
+    observer.observe(section);
+    const hidden = () => { if (document.hidden) pause(); };
+    document.addEventListener('visibilitychange', hidden);
+    window.addEventListener('blur', pause);
+    const media = video.current;
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', hidden);
+      window.removeEventListener('blur', pause);
+      playRequest.current += 1;
+      media?.pause();
     };
-    const scrollToProgress=(p:number)=>{
-      const top=scrollY+section.getBoundingClientRect().top;
-      window.scrollTo({top:top+p*Math.max(1,section.offsetHeight-innerHeight),behavior:'instant'});
-    };
-    const tick=(now:number)=>{
-      raf=0;
-      if(!visible||document.hidden){last=now;return;}
-      if(reduced&&playingRef.current)stop();
-      const dt=Math.min(.1,Math.max(0,(now-last)/1000));last=now;
-      if(requested.current!==null){const p=requested.current;requested.current=null;publish(p,true);if(!reduced)scrollToProgress(p);dirty=false;}
-      else if(playingRef.current&&!reduced){
-        if(readyRef.current){const p=Math.min(1,progressRef.current+dt/WORLD_STORY_DURATION);publish(p);scrollToProgress(p);if(p===1)stop();}
-      }else if(dirty&&!reduced){
-        const distance=Math.max(1,section.offsetHeight-innerHeight),offset=-section.getBoundingClientRect().top;
-        publish(offset>=distance-1?1:offset<=1?0:offset/distance);dirty=false;
+  }, [pause]);
+
+  useEffect(() => {
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    const changed = () => {
+      if (!motion.matches) return;
+      pause();
+      const media = video.current;
+      if (media) {
+        media.removeAttribute('src');
+        media.load();
       }
-      if(playingRef.current)raf=requestAnimationFrame(tick);
+      setHasFrame(false);
+      setStarted(false);
     };
-    const schedule=()=>{if(!raf&&visible&&!document.hidden){last=performance.now();raf=requestAnimationFrame(tick);}};
-    const scroll=()=>{if(!playingRef.current)dirty=true;schedule();};
-    const interrupt=(event:Event)=>{
-      if(event instanceof KeyboardEvent&&!['Escape','ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(event.key))return;
-      if(event.target instanceof Element&&event.target.closest('.world-story__controls')&&event.type!=='wheel')return;
-      stop();
-    };
-    const visibility=()=>{if(document.hidden)stop();else schedule();};
-    const observer=new IntersectionObserver(([entry])=>{visible=entry.isIntersecting;if(!visible)stop();else schedule();});observer.observe(section);
-    window.addEventListener('scroll',scroll,{passive:true});window.addEventListener('resize',scroll);
-    window.addEventListener('wheel',interrupt,{passive:true});window.addEventListener('touchstart',interrupt,{passive:true});window.addEventListener('keydown',interrupt);
-    document.addEventListener('visibilitychange',visibility);
-    window.addEventListener('blur',stop);
-    // A user action can wake the RAF without registering a second clock.
-    section.addEventListener('world-seek',schedule);schedule();
-    return()=>{cancelAnimationFrame(raf);observer.disconnect();window.removeEventListener('scroll',scroll);window.removeEventListener('resize',scroll);window.removeEventListener('wheel',interrupt);window.removeEventListener('touchstart',interrupt);window.removeEventListener('keydown',interrupt);document.removeEventListener('visibilitychange',visibility);window.removeEventListener('blur',stop);section.removeEventListener('world-seek',schedule);};
-  },[active,reduced,stop,controls]);
+    motion.addEventListener('change', changed);
+    return () => motion.removeEventListener('change', changed);
+  }, [pause]);
 
-  useEffect(()=>{
-    const motion=matchMedia('(prefers-reduced-motion: reduce)');
-    const changed=()=>{
-      if(!motion.matches)return;
-      prepared.current.clear();readyRef.current=false;
-      setPreparing(null);setReady(false);stop();
-    };
-    motion.addEventListener('change',changed);
-    return()=>motion.removeEventListener('change',changed);
-  },[stop]);
-
-  // Begin preparing the next room near the start of this one. Its model,
-  // textures, shaders and reflections are paid for before the visual cut.
-  useEffect(()=>{
-    if(active&&!reduced&&ready&&index<Scenes.length-1&&!failedPrep.current&&worldFrame(progress).local>.12)setPreparing(index+1);
-  },[active,reduced,ready,index,progress]);
-
-  const wake=()=>host.current?.dispatchEvent(new Event('world-seek'));
-  const seek=(p:number)=>{stop();requested.current=p;if(!active)setActive(true);wake();};
-  const play=()=>{
-    if(playingRef.current){stop();return;}
-    if(!active)host.current?.scrollIntoView({behavior:'instant'});
-    if(!active||progressRef.current>=.999){requested.current=0;setActive(true);}
-    playingRef.current=true;setPlaying(true);wake();
+  const play = async () => {
+    const media = video.current;
+    if (!media || reduced) return;
+    if (!media.paused) { pause(); return; }
+    const request = ++playRequest.current;
+    setError('');
+    setLoading(true);
+    setStarted(true);
+    pendingSeek.current = finished ? 0 : time;
+    // Setting src within the click keeps both download and sound opt-in.
+    if (!media.getAttribute('src')) {
+      media.src = matchMedia('(max-width: 767px)').matches ? MOBILE_FILM : FILM;
+      media.load();
+    } else if (media.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      media.currentTime = pendingSeek.current;
+      pendingSeek.current = null;
+    }
+    media.muted = muted;
+    media.volume = 0.8;
+    try {
+      await media.play();
+    } catch (reason) {
+      if (request !== playRequest.current) return;
+      setPlaying(false);
+      setLoading(false);
+      // A user pause or source teardown is not a playback failure.
+      if (reason instanceof DOMException && reason.name === 'AbortError') return;
+      setError('Playback could not start. Try Play again or explore a world below.');
+    }
   };
-  const exit=()=>{stop();setActive(false);readyRef.current=false;prepared.current.clear();failedPrep.current=false;setPreparing(null);setReady(false);setError(false);setIncomingPortal(undefined);indexRef.current=0;progressRef.current=0;setIndex(0);setProgress(0);host.current?.scrollIntoView({behavior:'instant'});};
-  const chapter=WORLD_CHAPTERS[index],next=WORLD_PORTALS[chapter.id]?.next;
-  const mounted=[index,...(preparing!==null&&preparing!==index?[preparing]:[])];
-  const preview=(id:string,className:string)=><picture><source media="(max-width:767px)" srcSet={portalPreview(id,true)}/><img className={className} src={portalPreview(id,false)} alt="" aria-hidden="true"/></picture>;
-  return <section id="three-worlds" ref={host} className={`world-story${active&&!reduced?' is-active':''}`} aria-label="Three worlds cinematic story" data-playing={playing} data-motion={reduced?'reduced':'full'} data-chapter={index}>
-    <div className="world-story__stage">
-      <img className="world-story__poster" src={chapter.cover} alt={`${chapter.name} — an authored LIEUVA world`} loading="lazy"/>
-      {active&&!reduced&&!error&&mounted.map(sceneIndex=>{
-        const Scene=Scenes[sceneIndex],current=sceneIndex===index;
-        return <div key={sceneIndex} data-world={sceneIndex} aria-hidden={!current} className={`world-story__scene${current&&ready?' is-ready':''}`}><Suspense fallback={null}><Scene controlsRef={controls[sceneIndex]} onReady={sceneReady[sceneIndex]} onError={sceneError[sceneIndex]} onRoom={noop} onArtwork={noop} onMode={noop} cinematic/></Suspense></div>;
-      })}
-      {active&&!reduced&&next&&preview(next,"world-story__portal")}
-      {active&&!reduced&&incomingPortal&&preview(incomingPortal,`world-story__arrival${ready?' is-ready':''}`)}
-      <div className="world-story__shade"/>
-      <div className="world-story__caption">
+
+  const seek = (seconds: number) => {
+    pause();
+    const next = Math.max(0, Math.min(WORLD_STORY_DURATION, seconds));
+    setTime(next);
+    pendingSeek.current = next;
+    const media = video.current;
+    if (!reduced && media?.getAttribute('src') && media.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      media.currentTime = next;
+      pendingSeek.current = null;
+    }
+  };
+
+  const syncTime = () => {
+    const media = video.current;
+    if (media?.getAttribute('src') && pendingSeek.current === null) {
+      setTime(Math.min(WORLD_STORY_DURATION, media.currentTime));
+    }
+  };
+  const toggleSound = () => {
+    const next = !muted;
+    if (video.current) video.current.muted = next;
+    setMuted(next);
+  };
+  const playLabel = playing ? 'Pause film' : finished ? 'Replay film' : started ? 'Resume film' : `Play film with sound · ${WORLD_STORY_DURATION} sec`;
+  const status = error || (reduced ? 'Still views · Reduced motion' : loading ? 'Loading film…' : 'Art. Sculpture. Architecture.');
+
+  return <section id="three-worlds" ref={host} className="world-story" aria-label="Three worlds cinematic story" data-playing={playing} data-motion={reduced ? 'reduced' : 'full'} data-chapter={index}>
+    <div className="world-story__stage" data-started={showFrame}>
+      <img className="world-story__poster" src={time > 0 || reduced ? chapter.cover : POSTER} alt={`${time > 0 || reduced ? chapter.name : 'Art spaces'} in LIEUVA`} loading="lazy" />
+      <video
+        ref={video}
+        className={`world-story__video${showFrame ? ' is-ready' : ''}`}
+        preload="none"
+        playsInline
+        aria-label="LIEUVA: art, sculpture and architecture"
+        aria-describedby="world-film-description"
+        onLoadedMetadata={() => {
+          if (video.current && pendingSeek.current !== null) {
+            video.current.currentTime = pendingSeek.current;
+            pendingSeek.current = null;
+          }
+        }}
+        onLoadedData={() => setHasFrame(true)}
+        onPlay={() => setPlaying(true)}
+        onPlaying={() => { setLoading(false); setHasFrame(true); }}
+        onPause={() => { setPlaying(false); setLoading(false); }}
+        onWaiting={() => { if (video.current && !video.current.paused) setLoading(true); }}
+        onTimeUpdate={syncTime}
+        onEnded={() => { pause(); setTime(WORLD_STORY_DURATION); }}
+        onError={() => {
+          if (!video.current?.getAttribute('src')) return;
+          pause();
+          setHasFrame(false);
+          setError('The film is unavailable. You can still explore every world below.');
+          video.current.removeAttribute('src');
+        }}
+      />
+      <div className="world-story__shade" />
+      <div className={`world-story__caption${showFrame ? ' is-hidden' : ''}`}>
         <span>THREE WORLDS / ONE POSSIBILITY</span>
-        <h3>{active?chapter.heading:'Step beyond the familiar.'}</h3>
-        <p>{active?chapter.copy:'Through a painting, beyond sculpture, into a home. Three worlds. One journey.'}</p>
-        {active&&<a href={`#/showcase/${chapter.id}`}>Explore {chapter.name} ↗</a>}
-        {active&&index===2&&<p className="world-story__boundary">Bespoke showcases. Separate from the three editable Studio templates.</p>}
+        <h3>{time > 0 || reduced ? chapter.heading : 'Step into another world.'}</h3>
+        <p>{time > 0 || reduced ? chapter.copy : 'Art spaces. Sculptural worlds. A house in the forest.'}</p>
       </div>
-      <div className="world-story__controls">
-        <div className="world-story__actions">
-          {!reduced&&<button onClick={play} aria-pressed={playing}>{playing?'Pause journey':active?'Play journey':'Watch the journey · 48 sec'} <span aria-hidden="true">{playing?'Ⅱ':'↗'}</span></button>}
-          {!active&&<button onClick={()=>{requested.current=0;setActive(true);}}> {reduced?'Explore still views':'Explore by scrolling'} ↓</button>}
-          {active&&<button onClick={exit}>Close journey ×</button>}
-          <span role="status">{error?'3D unavailable. Try another chapter.':active&&!ready&&!reduced?`Entering ${chapter.name}…`:reduced?'Still views · Reduced motion':active?'Scroll to direct the camera.':'Art → Sculpture → Architecture'}</span>
-        </div>
-        {active&&<>
-          <label className="world-story__scrub">Journey position<input type="range" min={0} max={1000} value={Math.round(progress*1000)} onChange={e=>seek(Number(e.target.value)/1000)} aria-label="Journey position"/></label>
-          <nav aria-label="Journey chapters">{WORLD_CHAPTERS.map((c,i)=><button key={c.id} aria-current={i===index?'step':undefined} onClick={()=>seek((c.start+.01)/WORLD_STORY_DURATION)}><small>0{i+1}</small>{c.name}</button>)}</nav>
-        </>}
+      {started && !reduced && <span className="world-story__now">0{index + 1} / {chapter.label}</span>}
+    </div>
+    <div className="world-story__controls">
+      <div className="world-story__actions">
+        {!reduced && <button type="button" data-film-play onClick={() => { void play(); }} aria-pressed={playing}>{playLabel}<span aria-hidden="true">{playing ? 'Ⅱ' : '↗'}</span></button>}
+        {!reduced && started && <button type="button" className="world-story__sound" onClick={toggleSound} aria-label={muted ? 'Unmute film' : 'Mute film'}>{muted ? 'Sound off' : 'Sound on'}<span aria-hidden="true">{muted ? '○' : '◉'}</span></button>}
+        <span className="world-story__status" role="status">{status}</span>
+        {!reduced && <span className="world-story__time" aria-hidden="true">{timestamp(time)} / {timestamp(WORLD_STORY_DURATION)}</span>}
       </div>
+      {!reduced && <label className="world-story__scrub">Film position<input type="range" min={0} max={WORLD_STORY_DURATION} step={0.1} value={time} onChange={event => seek(Number(event.target.value))} aria-label="Film position" aria-valuetext={`${timestamp(time)} of ${timestamp(WORLD_STORY_DURATION)}`} /></label>}
+      <nav className="world-story__chapters" aria-label="Film chapters">
+        {WORLD_CHAPTERS.map((world, i) => <div className="world-story__chapter" key={world.id} data-current={index === i}>
+          <button type="button" aria-current={index === i ? 'step' : undefined} onClick={() => seek(world.start)}><small>0{i + 1}</small>{world.label}</button>
+          <a href={`#/showcase/${world.id}`} aria-label={`Explore ${world.name}`}>{i === 0 ? 'Explore Obsidian' : 'Explore'} <span aria-hidden="true">↗</span></a>
+        </div>)}
+      </nav>
+      <p id="world-film-description" className="world-story__description">Art previews include Studio rooms. Explore the three bespoke worlds below. Original instrumental soundtrack.</p>
     </div>
   </section>;
 }

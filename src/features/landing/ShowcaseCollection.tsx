@@ -51,7 +51,7 @@ export function ShowcaseCollection() {
           <span>See what’s possible.</span>
           <em>Art. Objects. Architecture.</em>
         </h2>
-        <div className="showcase-collection__invitation"><p>Enter Obsidian, Sculpture Pavilion and Forest Fold House. Discover what individually authored worlds can become.</p><button onClick={()=>{document.getElementById("three-worlds")?.scrollIntoView({behavior:"instant"});document.getElementById("three-worlds")?.querySelector("button")?.click();}}>Watch three worlds · 48 sec <span aria-hidden="true">↓</span></button></div>
+        <div className="showcase-collection__invitation"><p>Enter Obsidian, Sculpture Pavilion and Forest Fold House. Discover what individually authored worlds can become.</p><button onClick={()=>{document.getElementById("three-worlds")?.scrollIntoView({behavior:"instant"});document.getElementById("three-worlds")?.querySelector<HTMLButtonElement>("[data-film-play][aria-pressed=false]")?.click();}}>Watch three worlds · 20 sec <span aria-hidden="true">↓</span></button></div>
       </header>
 
       <Suspense fallback={null}><ThreeWorldStory /></Suspense>

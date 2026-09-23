@@ -44,7 +44,7 @@ describe('cinematic rails',()=>{
     }
   },30_000);
   it('reverses through exact world boundaries, including the final frame',()=>{
-    expect([0,12/48,26/48,1,25/48,11/48,0].map(p=>worldFrame(p).index)).toEqual([0,1,2,2,1,0,0]);
+    expect([0,7/20,13/20,1,12/20,6/20,0].map(p=>worldFrame(p).index)).toEqual([0,1,2,2,1,0,0]);
     expect(worldFrame(1).local).toBe(1);
     expect(worldFrame(-2).local).toBe(0);
   });

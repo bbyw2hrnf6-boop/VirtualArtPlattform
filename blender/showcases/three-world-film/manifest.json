@@ -1,0 +1,359 @@
+{
+  "title": "LIEUVA — Three worlds",
+  "durationSeconds": 20,
+  "frameCount": 600,
+  "fps": 30,
+  "chapters": [
+    {
+      "id": "art-spaces",
+      "start": 0,
+      "end": 7,
+      "rooms": [
+        {
+          "id": "white-cube",
+          "start": 0,
+          "end": 1.9
+        },
+        {
+          "id": "grand-forum",
+          "start": 1.9,
+          "end": 3.7
+        },
+        {
+          "id": "obsidian",
+          "start": 3.7,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "sculpture-pavilion",
+      "start": 7,
+      "end": 13
+    },
+    {
+      "id": "forest-fold-house",
+      "start": 13,
+      "end": 20
+    }
+  ],
+  "method": "New edit of animated crops from actual Cycles renders. Not a speed-up of the prior film, a real-time browser recording, or a continuous 3D camera path.",
+  "audio": {
+    "method": "Original deterministic synthesis only. Warm major-key struck tones, gentle chord pad and light wooden ticks; no voice, samples, external music or recordings.",
+    "harmony": "A major / D major / E major / A major",
+    "durationSeconds": 20,
+    "sampleRate": 48000,
+    "channels": 2,
+    "peakLinear": 0.56
+  },
+  "sources": [
+    {
+      "id": "whitecube",
+      "path": "blender/production/v3/white-cube-r5-3840.png",
+      "sha256": "cf9b75e658e20b87a35fd70e6fe40bd20f4ada3269fb5d680925e95994102190",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "id": "forum",
+      "path": "blender/production/v3/pavilion-r5-3840.png",
+      "sha256": "6e7f0a1bd28b20f5375788df8f068e1830fc728c4d7cf1dbdde0c8037b788bf4",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "id": "obsidian1",
+      "path": "blender/showcases/obsidian/masters/R1-SW.png",
+      "sha256": "d3c3f89f53af066eac243b06a8e6c1d203b84f3f2399ef853be2735068a9d87e",
+      "size": [
+        3840,
+        2560
+      ]
+    },
+    {
+      "id": "obsidianReverse",
+      "path": "blender/showcases/three-world-film/masters/obsidian-R1-NE.png",
+      "sha256": "78ed083af686e42ba226105e0bcf2435eb8a08ece46ec8e6df65c8bcde6ca383",
+      "size": [
+        2560,
+        1440
+      ]
+    },
+    {
+      "id": "atrium",
+      "path": "blender/showcases/sculpture-pavilion/masters/Cover.png",
+      "sha256": "4a66eff1db383bb9685ff120c841ee3a63d056b44a321b06d0ae9304bc24bd7b",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "id": "glass",
+      "path": "blender/showcases/sculpture-pavilion/masters/B-SW.png",
+      "sha256": "9bf186047c710042be60af2230aaf89ca69453c02f571a7872f60a2d4138f56b",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "id": "kinetic",
+      "path": "blender/showcases/sculpture-pavilion/masters/C-SE.png",
+      "sha256": "247c60def05f4ed9862ef810b13f2fa9e316281ffcc545def9dd54c9818aea07",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "id": "house",
+      "path": "blender/showcases/forest-fold-house/masters/C01-afternoon.png",
+      "sha256": "3525c015923fb1fde1e31b7905dbdd33ea6dab72c0055f5c6e26ef3563f66571",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "id": "bridge",
+      "path": "blender/showcases/forest-fold-house/masters/C12-afternoon.png",
+      "sha256": "f189ccb378ebfa5d867833b5ab915f6afd783c56e1752e10663c99e4a23e3a41",
+      "size": [
+        3840,
+        2160
+      ]
+    },
+    {
+      "id": "dining",
+      "path": "blender/showcases/forest-fold-house/masters/C10-afternoon.png",
+      "sha256": "2d60a87e071f7c5057189201ae4ebf9be054720f47c827fd481e1678e0052dec",
+      "size": [
+        3840,
+        2160
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "start": 0,
+      "end": 1.9,
+      "source": "whitecube",
+      "zoom": [
+        1.015,
+        1.075
+      ],
+      "centreX": [
+        0.47,
+        0.5
+      ],
+      "centreY": [
+        0.51,
+        0.51
+      ],
+      "motion": "smooth"
+    },
+    {
+      "start": 1.9,
+      "end": 3.7,
+      "source": "forum",
+      "zoom": [
+        1.015,
+        1.08
+      ],
+      "centreX": [
+        0.5,
+        0.5
+      ],
+      "centreY": [
+        0.5,
+        0.51
+      ],
+      "motion": "smooth"
+    },
+    {
+      "start": 3.7,
+      "end": 5.4,
+      "source": "obsidian1",
+      "zoom": [
+        1.025,
+        1.09
+      ],
+      "centreX": [
+        0.47,
+        0.5
+      ],
+      "centreY": [
+        0.51,
+        0.52
+      ],
+      "motion": "smooth"
+    },
+    {
+      "start": 5.4,
+      "end": 7,
+      "source": "obsidianReverse",
+      "zoom": [
+        1.09,
+        1.025
+      ],
+      "centreX": [
+        0.52,
+        0.48
+      ],
+      "centreY": [
+        0.51,
+        0.5
+      ],
+      "motion": "smooth"
+    },
+    {
+      "start": 7,
+      "end": 9.1,
+      "source": "atrium",
+      "zoom": [
+        1.025,
+        1.1
+      ],
+      "centreX": [
+        0.5,
+        0.52
+      ],
+      "centreY": [
+        0.51,
+        0.53
+      ],
+      "motion": "smooth"
+    },
+    {
+      "start": 9.1,
+      "end": 10.5,
+      "source": "glass",
+      "zoom": [
+        1.025,
+        1.075
+      ],
+      "centreX": [
+        0.5,
+        0.51
+      ],
+      "centreY": [
+        0.46,
+        0.48
+      ],
+      "motion": "smooth"
+    },
+    {
+      "start": 10.5,
+      "end": 13,
+      "source": "kinetic",
+      "zoom": [
+        1.025,
+        1.12
+      ],
+      "centreX": [
+        0.49,
+        0.51
+      ],
+      "centreY": [
+        0.52,
+        0.52
+      ],
+      "motion": "smooth"
+    },
+    {
+      "start": 13,
+      "end": 15,
+      "source": "house",
+      "zoom": [
+        1.01,
+        1.17
+      ],
+      "centreX": [
+        0.5,
+        0.5
+      ],
+      "centreY": [
+        0.49,
+        0.55
+      ],
+      "motion": "accelerate"
+    },
+    {
+      "start": 15,
+      "end": 16.5,
+      "source": "bridge",
+      "zoom": [
+        1.02,
+        1.19
+      ],
+      "centreX": [
+        0.51,
+        0.51
+      ],
+      "centreY": [
+        0.52,
+        0.52
+      ],
+      "motion": "accelerate"
+    },
+    {
+      "start": 16.5,
+      "end": 18.8,
+      "source": "dining",
+      "zoom": [
+        1.08,
+        1.17
+      ],
+      "centreX": [
+        0.49,
+        0.52
+      ],
+      "centreY": [
+        0.51,
+        0.53
+      ],
+      "motion": "linear"
+    }
+  ],
+  "teasers": [
+    {
+      "start": 1.0,
+      "end": 3.2,
+      "text": "Art, in a new light.",
+      "colour": "ink"
+    },
+    {
+      "start": 9.2,
+      "end": 11.4,
+      "text": "Beyond the frame.",
+      "colour": "ink"
+    },
+    {
+      "start": 14.0,
+      "end": 16.2,
+      "text": "Step inside.",
+      "colour": "paper"
+    }
+  ],
+  "teaserPlacement": {
+    "x": 120,
+    "y": 824,
+    "fontSize": 80,
+    "font": "Baskerville"
+  },
+  "endTitle": {
+    "start": 18.6,
+    "text": "LIEUVA"
+  },
+  "poster": {
+    "time": 1.0,
+    "source": "whitecube",
+    "text": false
+  },
+  "fonts": "System Arial and Baskerville rasterized into frames; no font files distributed."
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "audioCodec": "AAC",
+    "audioTracks": 1,
+    "bytes": 7655037,
+    "durationSeconds": 20,
+    "fastStartRequested": true,
+    "fps": 30,
+    "height": 1080,
+    "path": "public/assets/films/lieuva-three-worlds-20s.mp4",
+    "requestedVideoBitrate": 2850000,
+    "videoCodec": "H.264",
+    "width": 1920,
+    "atoms": [
+      {
+        "type": "ftyp",
+        "offset": 0,
+        "bytes": 28
+      },
+      {
+        "type": "moov",
+        "offset": 28,
+        "bytes": 13410
+      },
+      {
+        "type": "mdat",
+        "offset": 13438,
+        "bytes": 7641599
+      }
+    ],
+    "sha256": "69c18c5adf7795fa2e0caae3b62aafc8718329a2e5f79e099567a5b83e63e594",
+    "fastStart": true
+  },
+  {
+    "audioCodec": "AAC",
+    "audioTracks": 1,
+    "bytes": 3949144,
+    "durationSeconds": 20,
+    "fastStartRequested": true,
+    "fps": 30.000001907348633,
+    "height": 720,
+    "path": "public/assets/films/lieuva-three-worlds-20s-720.mp4",
+    "requestedVideoBitrate": 1350000,
+    "videoCodec": "H.264",
+    "width": 1280,
+    "atoms": [
+      {
+        "type": "ftyp",
+        "offset": 0,
+        "bytes": 28
+      },
+      {
+        "type": "moov",
+        "offset": 28,
+        "bytes": 13409
+      },
+      {
+        "type": "mdat",
+        "offset": 13437,
+        "bytes": 3935707
+      }
+    ],
+    "sha256": "fcbe036b6fe8a32c9d0140995b762d45e73c68ab1509969cc96793de86a5c075",
+    "fastStart": true
+  }
+]
