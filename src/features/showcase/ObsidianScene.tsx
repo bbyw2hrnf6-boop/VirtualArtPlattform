@@ -268,11 +268,14 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     let renderCost = 0, readyNotified = false;
     const resolution = createShowcaseQuality();
     const balancedPixelRatio = () => Math.min(devicePixelRatio, 1, Math.sqrt(600_000 / Math.max(1, host.clientWidth * host.clientHeight)));
-    const fullPixelRatio = () => Math.min(Math.max(devicePixelRatio, compact ? 1 : 1.5), 2);
+    // Forest already renders a second woodland view for the pond. Avoid
+    // forced 1.5x supersampling on 1x displays; preserve native mobile detail.
+    const fullPixelRatio = () => forestSky ? Math.min(devicePixelRatio, compact ? 2 : 1.5) : Math.min(Math.max(devicePixelRatio, compact ? 1 : 1.5), 2);
+    const fullReflectionSize = forestSky ? compact ? 512 : 1024 : compact ? 1024 : 2048;
     const quality = (full: boolean) => {
       renderer.setPixelRatio(full ? fullPixelRatio() : balancedPixelRatio());
       mirrors?.quality(full);
-      const size = full ? compact ? 1024 : 2048 : 512;
+      const size = full ? fullReflectionSize : 512;
       if (reflection) {
         reflection.getRenderTarget().samples = full && !compact ? 2 : 0;
         reflection.getRenderTarget().setSize(size, size);
@@ -287,7 +290,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       // only the next RAF wait misses software renderers that block render().
       // Idle time stays excluded; the same measurement applies to every device.
       if (model) {
-        const workload = Math.max((fullPixelRatio() / balancedPixelRatio()) ** 2, reflection ? compact ? 4 : 16 : 1);
+        const workload = Math.max((fullPixelRatio() / balancedPixelRatio()) ** 2, reflection ? (fullReflectionSize / 512) ** 2 : 1);
         const change = resolution.sample(now, now - scheduledAt + renderCost, renderCost, workload);
         if (change !== undefined) quality(change);
       }
@@ -397,7 +400,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     window.addEventListener('blur', windowBlur); document.addEventListener('visibilitychange', visibility);
     const abort = new AbortController();
     const separate = config.architecture && !compact;
-    const assetRoot = `/assets/showcases/${config.id}/${separate ? 'desktop-v5/' : ''}`;
+    const assetRoot = `/assets/showcases/${config.id}/${separate ? 'desktop-v6/' : ''}`;
     fetch(`${assetRoot}${config.id}-${compact ? 'mobile' : 'desktop'}.${separate ? 'gltf' : 'glb'}${config.assetVersion ?? ''}`, { signal: abort.signal })
       .then(response => { if (!response.ok) throw new Error('Missing showcase'); return response.arrayBuffer(); })
       .then(buffer => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buffer, assetRoot))

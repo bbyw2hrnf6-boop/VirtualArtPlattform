@@ -21,8 +21,9 @@ def digest(value):
 
 
 def day_geometry_digest(root):
-    """Bind the UV evidence to unchanged v5 geometry on both delivery tiers."""
-    desktop = root/'desktop-v5/forest-fold-house-desktop.gltf'
+    """Bind UV evidence to a complete delivery, including its dependency bytes."""
+    revision = 'desktop-v6' if (root/'desktop-v6').exists() else 'desktop-v5'
+    desktop = root/revision/'forest-fold-house-desktop.gltf'
     paths = [desktop, root/'forest-fold-house-mobile.glb']
     for buffer in json.loads(desktop.read_text())['buffers']:
         if 'uri' not in buffer:

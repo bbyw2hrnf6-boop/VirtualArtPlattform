@@ -93,9 +93,16 @@ not physical refraction or a change to the Blender water.
 Only the Forest pond uses a water Fresnel curve and mip-filtered planar target
 to reduce distant foliage aliasing in its reflection. Other showcase floors
 retain their original stone response and render-target filtering.
-Forest revision 5 loads desktop dependencies from `desktop-v5/`; the mobile GLB,
-house photographs and homepage cover use revision-5 URLs to invalidate cached
-assets after the geometry and material export changes.
+Forest revision 6 loads desktop dependencies from `desktop-v6/` and the mobile
+GLB with `?v=6`. The photographs remain the revision-5 Blender masters, not new
+renders of the supplemental garden dressing. Daylight now uses RGBM WebP
+(quality 100, lossless multiplier); the Night-only files stay lossless.
+The source delivery verifier preserves every original geometry/UV/normal byte
+and decoded surface pixel, and adds 1,161 shared fern instances in 23 culling
+cells. Pond, terraces and circulation are reserved by full plant bounds.
+Forest no longer forces 1.5× supersampling on 1× desktop displays, and caps
+desktop DPR at 1.5. Its mip-filtered pond pass uses 1024 px desktop / 512 px
+mobile instead of 2048 / 1024; mirror and other showcase settings are unchanged.
 
 Standalone flights use the existing full-detail assets, reflections and GPU calibration.
 The film derives from retained Blender masters and additional views of the existing

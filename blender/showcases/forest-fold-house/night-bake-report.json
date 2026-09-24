@@ -1,7 +1,7 @@
 {
   "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
   "runtimeSha256": "4add99e2454f5b8979f1999dc4f0bb5f079e88be7a7cb6f86791c104c0235a73",
-  "dayGeometrySha256": "ecacf1b7777da97b20db5ca13e044fa88c1cef1b952ee5435f19c236086ea2f6",
+  "dayGeometrySha256": "62dd1ad7763c599035d02bd43973daba8966b83a3c5de3e0e395361d457df64e",
   "lightingProfileSha256": "1f5a39be54d03477991d7437b9bf0d9b9c91bbd72ed73e5acd9369f5f4484245",
   "layoutsSha256": "b99de948059380a21ce52400b383adaac9d3f08852d5ef36a5c74025cb54c4a6",
   "pipelineSha256": "a6a3d0d85656f4dc81373c46fd60ef66539497aeb564ff3cfa264b59ee9a23fd",
@@ -1014,5 +1014,9 @@
       "night_rgbm.py": "cf91d984e82bceba2b9699abbdfbe392d4d1ee3d55951860e873a497463da829",
       "night_reprocess.py": "3beca5089f9fde8b916f91c1a426caf2c42dbb90f11fdb82766bf3d196a7bbe9"
     }
+  },
+  "deliveryRebind": {
+    "previousDayGeometrySha256": "ecacf1b7777da97b20db5ca13e044fa88c1cef1b952ee5435f19c236086ea2f6",
+    "refinementReportSha256": "e4089e5c425e204dfa6a471c0b063703be8bc46134bc911d7ab6b12ed6217ab6"
   }
 }

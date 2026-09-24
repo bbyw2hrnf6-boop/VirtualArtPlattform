@@ -7,6 +7,11 @@ from master_contract import validate_master_set,validate_master
 from night_contract import day_geometry_digest, validate_report as validate_night_report, validate_manifest as validate_night_manifest
 H=Path(__file__).resolve().parent;OUT=H.parents[2]/'public/assets/showcases/forest-fold-house'
 report={'showcase':'forest-fold-house','deliveryRevision':5,'source':'forest-fold-house.blend','sourceSha256':hashlib.sha256((H/'forest-fold-house.blend').read_bytes()).hexdigest(),'models':{},'images':[],'openQualification':['Physical phone GPU, thermals and sustained frame rate','Real slow-network loading; browser emulation is not a physical-device measurement']}
+report['deliveryRevision']=6
+refinement=json.loads((H/'delivery-refinement-report.json').read_text())
+assert refinement['revision']==6 and refinement['sourceSha256']==report['sourceSha256']
+assert hashlib.sha256((H/'garden-dressing.json').read_bytes()).hexdigest()==refinement['tiers']['desktop']['gardenSha256']
+report['deliveryRefinement']=refinement
 EXPECTED_GROUPS={room+suffix for room in ['W0','W1','E0','E1'] for suffix in ['', '_walk', '_ceiling', '_furniture']}|{'exterior','bridge_walk','stairs_walk','courtyard_walk'}
 bakes=json.loads((H/'bake-report.json').read_text())
 assert len(bakes)==len(EXPECTED_GROUPS) and {b['group'] for b in bakes}==EXPECTED_GROUPS, 'Incomplete or unexpected Forest irradiance bake groups'
@@ -55,7 +60,10 @@ def texture_uv(texture):
  return texture.get('extensions',{}).get('KHR_texture_transform',{}).get('texCoord',texture.get('texCoord',0))
 
 def texture_size(j,textures,texture):
- return textures[j['textures'][texture['index']]['source']]
+ return textures[texture_source(j['textures'][texture['index']])]
+
+def texture_source(texture):
+ return texture.get('extensions',{}).get('EXT_texture_webp',{}).get('source',texture.get('source'))
 
 def validate_irradiance(j,textures,tier):
  # Revision 5 has multiple surface materials per atlas. Material counts vary
@@ -78,9 +86,9 @@ def validate_irradiance(j,textures,tier):
   # across material graphs. The image identity, not texture index, is the atlas.
   atlas=j['textures'][material['emissiveTexture']['index']]
   sampler=j.get('samplers',[])[atlas['sampler']] if 'sampler' in atlas else {}
-  assert group not in atlas_sources or atlas_sources[group]==atlas['source'], f'Split irradiance within one group: {group}'
+  assert group not in atlas_sources or atlas_sources[group]==texture_source(atlas), f'Split irradiance within one group: {group}'
   assert group not in atlas_samplers or atlas_samplers[group]==sampler, f'Inconsistent irradiance sampling: {group}'
-  atlas_sources[group]=atlas['source'];atlas_samplers[group]=sampler
+  atlas_sources[group]=texture_source(atlas);atlas_samplers[group]=sampler
   size=texture_size(j,textures,material['emissiveTexture'])
   expected=min(bakes[group]['resolution'],1024) if tier=='mobile' else bakes[group]['resolution']
   assert (size['width'],size['height'])==(expected,expected), f'Irradiance texture resolution: {name}'
@@ -107,7 +115,7 @@ def validate_irradiance(j,textures,tier):
  return {'mode':'irradiance-with-tiled-albedo','groups':sorted(groups),'materials':len(baked),'tiledSurfaceMaterials':tiled_count}
 
 for tier in ['desktop','mobile']:
- path=OUT/('desktop-v5/forest-fold-house-desktop.gltf' if tier=='desktop' else 'forest-fold-house-mobile.glb')
+ path=OUT/('desktop-v6/forest-fold-house-desktop.gltf' if tier=='desktop' else 'forest-fold-house-mobile.glb')
  j,binary=load(path);textures=[];files={path}
  for item in j.get('buffers',[])+j.get('images',[]):
   if 'uri' in item:files.add(resource(path,item['uri']))
@@ -116,13 +124,17 @@ for tier in ['desktop','mobile']:
  for im,data in zip(j.get('images',[]),payloads):
   p=Image.open(io.BytesIO(data))
   textures.append({'name':im.get('name',im.get('uri','')),'width':p.width,'height':p.height})
- # Packaging may share meshes and split files, never reduce scene geometry or
- # re-encode the exported material images. Raw export is local build evidence.
+ # The v6 verifier compares all original geometry/UV/normal bytes and decoded
+ # surface pixels against v5, then permits only the new plants and day RGBM.
+ # Bind that evidence to every actual dependency, not just the glTF descriptor.
  raw=H.parents[2]/f'artifacts/forest/raw/forest-fold-house-{tier}.glb'
+ expected=refinement['tiers'][tier]
+ assert {file.name for file in files}==set(expected['files']), 'Refined dependency set changed'
+ for file in files:
+  assert hashlib.sha256(file.read_bytes()).hexdigest()==expected['files'][file.name], 'Unverified refinement: '+file.name
  if raw.exists():
   original,original_binary=load(raw)
-  assert scene_triangles(j)==scene_triangles(original), 'Packaging changed visible triangle count'
-  assert sorted(hashlib.sha256(p).hexdigest() for p in payloads)==sorted(hashlib.sha256(p).hexdigest() for p in images(raw,original,original_binary)), 'Packaging changed texture bytes'
+  assert scene_triangles(j)==scene_triangles(original)+expected['gardenPlants']*784, 'Unexpected geometry beyond the verified fern instances'
  ps=[p for m in j['meshes'] for p in m['primitives']]
  # A successful export must retain the improvement, not silently fall back to
  # unlit room colours or solid rectangular vegetation cards.
@@ -146,6 +158,9 @@ report['sourceAssets']={'license':manifest['license'],'count':len(manifest['asse
 # A night download adds illumination only: source, v5 geometry and day atlases
 # remain unchanged. Validate every chart's provenance and every delivered byte.
 night=json.loads((H/'night-bake-report.json').read_text())
+assert night['deliveryRebind']['refinementReportSha256']==hashlib.sha256((H/'delivery-refinement-report.json').read_bytes()).hexdigest(), 'Unverified night delivery rebind'
+assert night['deliveryRebind']['previousDayGeometrySha256']==refinement['previousNightGeometrySha256'], 'Lost previous night provenance'
+assert night['dayGeometrySha256']==refinement['dayGeometrySha256'], 'Refined night geometry mismatch'
 validate_night_report(night,report['sourceSha256'],day_geometry_digest(OUT))
 night_manifest_path=OUT/'night-v1/manifest.json'
 night_manifest=json.loads(night_manifest_path.read_text());night_assets={}

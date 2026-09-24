@@ -22,9 +22,9 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
       expect(errors).toEqual([]);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
       const base='/assets/showcases/forest-fold-house/';
-      const paths:string[]=mobile?[`${base}forest-fold-house-mobile.glb?v=5`]:[];
+      const paths:string[]=mobile?[`${base}forest-fold-house-mobile.glb?v=6`]:[];
       if(!mobile){
-        const response=await request.get(`${base}desktop-v5/forest-fold-house-desktop.gltf`);
+        const response=await request.get(`${base}desktop-v6/forest-fold-house-desktop.gltf`);
         expect(response.ok()).toBe(true);
         const gltf=await response.json();
         expect(gltf.asset.version).toBe('2.0');
@@ -54,7 +54,7 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
         }
         // Meshopt's virtual fallback buffer has no URI; only external files
         // make requests. Embedded image bufferViews use the checked binary.
-        for(const item of [...gltf.buffers,...gltf.images])if(item.uri)paths.push(`${base}desktop-v5/${item.uri}`);
+        for(const item of [...gltf.buffers,...gltf.images])if(item.uri)paths.push(`${base}desktop-v6/${item.uri}`);
         expect(paths.length).toBeGreaterThan(1);
       }
       await Promise.all(paths.map(async path=>{
@@ -99,7 +99,7 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
       await expect(scene).toHaveAttribute('data-lighting','day');
       expect(nightRequests).toHaveLength(loadedNightRequests);
       expect(models).toHaveLength(1);
-      expect(models[0]).toContain(mobile?'forest-fold-house-mobile.glb?v=5':'desktop-v5/forest-fold-house-desktop.gltf?v=5');
+      expect(models[0]).toContain(mobile?'forest-fold-house-mobile.glb?v=6':'desktop-v6/forest-fold-house-desktop.gltf?v=6');
       const position=async()=> (await scene.getAttribute('data-position'))!.split(',').map(Number);
       expect((await position())[1]).toBeCloseTo(5.1,1);
       // Keep input active until the rendered camera responds. A fixed 350 ms

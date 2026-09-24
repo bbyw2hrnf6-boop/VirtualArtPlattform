@@ -2,6 +2,67 @@
 
 Independent read-only showcase at `/#/showcase/forest-fold-house`. Both the homepage Architecture image and its action open this house. It is not a Studio template or Firebase publication. The source package is preserved in `source/`; its JSON dimensions take precedence over the illustrative AI images.
 
+## Current delivery: revision 6
+
+The reported lounge-wall posterization was reproduced in Day mode. The v5 JPEG
+irradiance was amplified by the room's ×64 HDR scale. `day_reprocess.py` denoises
+the retained raw day bakes into PNG16, and `day_package.py` encodes RGBM before
+`refine_delivery.mjs` packages WebP at quality 100 with lossless alpha. This
+removes the large JPEG colour steps without modifying wall geometry. The raw
+day bake itself is PNG8; postprocessing does not recover unrecorded precision
+or constitute a new Cycles lighting simulation. Night maps remain unchanged.
+
+The concept hero informed denser grouped ferns at the courtyard, pond banks,
+rocky ravine, side façades and roof beds: 1,161 additional instances in 23 local
+4 m batches, sharing an existing licensed fern mesh and its images. Complete
+rotated plant bounds exclude the house, pond, both terraces, waterfall and
+circulation. `garden-dressing.json` retains every placement; the deterministic
+recipe is in `refine_delivery.mjs`. This is a supplemental delivery dressing,
+not a change to the retained architectural `.blend` or the ten v5 Cycles masters.
+Those photographs therefore do not yet show the new planting. Offline re-render
+and baked shadow integration of the supplement remain a separate authoring step;
+new ferns use the existing live sun/shadow and leaf-shading path.
+
+`verify_refinement.mjs` compares all original mesh/index/UV/normal arrays and
+decoded non-lighting surface pixels with v5, checks RGBM alpha, and validates
+every new planting bound before `promote_refinement.py` copies assets locally.
+No original triangles or texture dimensions were reduced. Alpha foliage uses
+lossless WebP with exact transparent RGB preservation. `delivery-refinement-report.json`
+binds all delivered files to the comparison, and records the Night provenance
+rebind: its original UVs and geometry remain byte-identical. Superseded v5 runtime
+files move to ignored artifacts (and remain recoverable in Git), not a second
+copy in `public/`. The report generator checks the complete dependency set and
+the added triangle count, rather than claiming texture payloads match old JPEGs.
+
+Forest rendering no longer forces desktop 1.5× supersampling on a 1× display;
+desktop DPR is capped at 1.5. The mip-filtered, blurred pond reflection uses
+1024 px desktop / 512 px mobile instead of 2048 / 1024. Other showcases, bathroom
+mirrors and source material detail are unchanged. Short local 1440 × 1000 room
+rotation samples measured approximately 18–21 FPS before and 29–30 FPS with the
+final delivery/raster change. This is not a sustained benchmark or a physical
+phone claim. Final desktop/mobile Day/Night views were reviewed separately.
+
+Tradeoff: the corrected initial delivery is **165.82 MiB desktop / 86.96 MiB
+mobile**, up from 144.04 / 81.39 MiB. Encoded file size and GPU memory are different:
+decoded texture allocation remains approximately 1,952 / 448 MiB; only the
+reflection/raster work is reduced. No claim of a smaller download or completed
+photorealistic concept match is made. KTX2/LOD optimization still needs dedicated
+visual/device qualification; the current package stays inside the existing release
+ceiling without increasing any budget.
+
+Build-only processing uses glTF-Transform 4.5.0 (`GLTF_TRANSFORM` executable),
+Pillow/NumPy (`FOREST_PYTHON` executable) and Blender 5.2. After the retained v5
+spatial export, run `day_reprocess.py` in Blender, `day_package.py` in Python,
+then `refine_delivery.mjs` and `verify_refinement.mjs` with Node (`--expose-gc`
+for the verifier). The migration helper `promote_refinement.py` requires an
+unmodified v5 baseline and refuses to overwrite an existing recovery copy.
+Subsequent regeneration should be verified in staging before replacing v6.
+
+References used for the delivery approach:
+[Three.js instancing](https://threejs.org/docs/pages/InstancedMesh.html) and
+[glTF-Transform compression guidance](https://gltf-transform.dev/cli).
+The following revision-5 bake/master details remain the source baseline.
+
 ## Model and circulation
 
 One coherent metric Blender model: west wing 7 × 8 m, east wing 5 × 5.5 m, floors at 0 and 3.4 m, one 4 × 1.6 m enclosed upper bridge. Gross concept area is 173.4 m², not a measured legal living area. The upper entrance, bedroom, compact shower room, architect's studio, lower living/kitchen, WC and water lounge are furnished. Roofs are planted and non-walkable; the shallow pond is separate from the dry courtyard route. There is no basement, third floor or underwater room.
