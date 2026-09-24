@@ -65,9 +65,9 @@ const VERSION = /^[0-9]+[.][0-9]+[.][0-9]+$/;
 const PROJECT_ID = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const PORTABLE_PATH = /^[-A-Za-z0-9._@/+]+$/;
 const MAXIMUM_FILES = 5_000;
-// Covers all three detailed showcases (~281 MiB including release metadata).
-// The credentialed verifier pins the same bound independently in deploy.yml.
-export const MAXIMUM_RELEASE_BYTES = 320 * 1024 * 1024;
+// Covers the three detailed showcases, including Forest's dual-state lightmaps.
+// The credentialed verifier pins the same reviewed bound independently in deploy.yml.
+export const MAXIMUM_RELEASE_BYTES = 448 * 1024 * 1024;
 
 function fail(message) {
   throw new Error(`Invalid LIEUVA release artifact: ${message}`);

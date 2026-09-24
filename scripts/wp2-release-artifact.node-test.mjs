@@ -147,14 +147,14 @@ test("assembles a production-only bundle and verifies every digest", async () =>
   await verifyReleaseBundle(releaseRoot, options);
 });
 
-test("detailed showcases fit while oversized actual and declared bundles fail closed", async (t) => {
+test("expanded detailed showcases fit while oversized actual and declared bundles fail closed", async (t) => {
   const root = await fixture();
   t.after(() => rm(root, { recursive: true, force: true }));
   const releaseRoot = join(root, RELEASE_DIRECTORY);
   const assetPath = "dist/assets/detailed-showcases.bin";
   await writeFile(join(root, assetPath), "");
-  // Sparse fixture reproduces the real payload above the obsolete 250 MiB cap.
-  await truncate(join(root, assetPath), 280 * 1024 * 1024);
+  // Sparse fixture covers the observed 389 MiB release with modest headroom.
+  await truncate(join(root, assetPath), 390 * 1024 * 1024);
   const manifest = await assembleReleaseBundle(root, releaseRoot, options);
   await verifyReleaseBundle(releaseRoot, options);
 

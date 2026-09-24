@@ -18,7 +18,7 @@ Legacy AURA/gallery identifiers and existing publication identities remain compa
 - The shared renderer, controls and PMREM environment survive editor-only interactions. Animation and automatic motion stop for reduced-motion users.
 - Public assets are production input. Source Blender files, licensed originals and final masters remain retained; diagnostics and exploratory output remain ignored.
 - Main CI validates a digest-checked immutable production artifact before deployment. The four expensive bespoke GPU walkthroughs are an owner-approved advisory software-renderer job only; all other functional, security, route and dependency checks remain release-blocking.
-- The detailed showcase release allowance is 320 MiB and 5,000 files. This is a reviewed delivery ceiling, not permission to reduce visual quality or silently raise other budgets.
+- The detailed showcase release allowance is 448 MiB and 5,000 files, covering Forest Fold House's dual-state lighting bundle at 389 MiB with about 59 MiB headroom. This is a reviewed delivery ceiling, not permission to reduce visual quality or silently raise other budgets.
 
 ## External evidence still needed
 
