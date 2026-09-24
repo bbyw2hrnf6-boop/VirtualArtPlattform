@@ -1492,5 +1492,26 @@
     "license": "CC0-1.0",
     "count": 9,
     "manifest": "materials/sources.json"
+  },
+  "nightIrradiance": {
+    "manifest": "night-v1/manifest.json",
+    "manifestSha256": "2bc8ddaeb40e434b584d63e7c0745cf0c59d9c6b92f326890408a22bdd8f071d",
+    "encoding": "rgbm-srgb-lossless-webp",
+    "losslessSourceCompared": true,
+    "retainedBitDepth": 16,
+    "ditherIntensity": 0,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "lightingProfileSha256": "1f5a39be54d03477991d7437b9bf0d9b9c91bbd72ed73e5acd9369f5f4484245",
+    "dayGeometrySha256": "ecacf1b7777da97b20db5ca13e044fa88c1cef1b952ee5435f19c236086ea2f6",
+    "groups": 20,
+    "additionalTextureBytes": {
+      "desktop": 67082792,
+      "mobile": 15426484
+    },
+    "runtimeCompared": true,
+    "decodedRgbaMipBytesEstimate": {
+      "desktop": 782936747,
+      "mobile": 111848107
+    }
   }
 }

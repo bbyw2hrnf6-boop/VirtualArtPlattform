@@ -1,0 +1,371 @@
+{
+  "revision": 1,
+  "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+  "lightingProfileSha256": "1f5a39be54d03477991d7437b9bf0d9b9c91bbd72ed73e5acd9369f5f4484245",
+  "colorSpace": "srgb",
+  "textureChannel": 1,
+  "flipY": false,
+  "encoding": "rgbm-srgb-lossless-webp",
+  "groups": {
+    "E0": {
+      "irradianceScale": 128,
+      "uvSha256": "26c2cf4a8097d999e5e786de6fea9935009b7c4fd08c8a5c8a6040c7eacb744c",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/E0.webp",
+        "width": 4096,
+        "height": 4096,
+        "sha256": "427616f1b61421cadce3159337771bd70713bd7e959e4cb8d2040a9ec975f8db",
+        "bytes": 2290788
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/E0.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "314fe43038c54de53a48f36c1c43e4162defc914cfd7bf6dd261c33afc5fb31d",
+        "bytes": 217462
+      }
+    },
+    "E0_ceiling": {
+      "irradianceScale": 8,
+      "uvSha256": "85560b1258aafdca5dc91264892fe0f8bf79c17e11fdc55fd6763a3f5bca413f",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/E0_ceiling.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "8c5b862dd548ac10e6e8a24b184cbbf6c359e1d25d83cb7a669a777b4f5776f5",
+        "bytes": 3176816
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/E0_ceiling.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "fa1e7336f8de55ea8bb6d0e40b2a924fc35bbb97e1cdc8b2c0e6447ccc53de6f",
+        "bytes": 946918
+      }
+    },
+    "E0_furniture": {
+      "irradianceScale": 2,
+      "uvSha256": "09fd0703de614692a337651c266ad9d5e4be5bca38bff952043e00f7e6d5ec67",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/E0_furniture.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "f67091462739f5898fa03baa140eb2c7cc8928a8fad4d752069805dc8e1ab9bb",
+        "bytes": 3257994
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/E0_furniture.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "756d82e0fc3c62f91bf0c0720cf5df3e7e83b1310cd87c4eb7cf98f879049665",
+        "bytes": 980026
+      }
+    },
+    "E0_walk": {
+      "irradianceScale": 2,
+      "uvSha256": "267a46a21d3dd2689dc8fbafc13709baa900d15c545d63553797c9f8958de26a",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/E0_walk.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "ce02028f5aa5966876c2e6b5d62d5455b9615af294ba64421a0781a273601573",
+        "bytes": 2101700
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/E0_walk.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "08631687651fe6d41074420a91f30f30650176a0dd526bb93567bc1aae43d67c",
+        "bytes": 648038
+      }
+    },
+    "E1": {
+      "irradianceScale": 2,
+      "uvSha256": "4f06c4a8808cf0397944b24727a446370d3edc945e042a0b0ad48f6422499807",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/E1.webp",
+        "width": 4096,
+        "height": 4096,
+        "sha256": "3a0838b3642cbbf61274e87b526e74873cac9090df0fbb56bb4c765c77bb17e6",
+        "bytes": 5020168
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/E1.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "fc3abe2e95e73447efaf2489dc0ceeb2ff2f8f3908609622596802ec13ed7a73",
+        "bytes": 497270
+      }
+    },
+    "E1_ceiling": {
+      "irradianceScale": 1,
+      "uvSha256": "85560b1258aafdca5dc91264892fe0f8bf79c17e11fdc55fd6763a3f5bca413f",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/E1_ceiling.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "d1aa6d59127b03d0599becebbeb418c7c75e48a35418e3adb494d0b320d06ad3",
+        "bytes": 3207668
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/E1_ceiling.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "2d0d9ff129ad33105bb9a252fe87ab9f959d9ac6a585037efd077260641fb9ec",
+        "bytes": 975732
+      }
+    },
+    "E1_furniture": {
+      "irradianceScale": 1,
+      "uvSha256": "a9d73d4e4bec86afbe9aa872ffbd362b01bab9afa54bb18221b923145c376501",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/E1_furniture.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "01f2d8a41fd9afba450d0e2285ca4cd50de83a9ac0867e3f3f952e0f787cd355",
+        "bytes": 2851456
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/E1_furniture.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "5912db7a97adb997ec9bf6627fa03afc72e990c2527f7f4d5f1c95f597dc45a2",
+        "bytes": 925698
+      }
+    },
+    "E1_walk": {
+      "irradianceScale": 1,
+      "uvSha256": "593d7cf060173696d56aa7ae1d554f7f63df9a0c67af15bc158c38da6c95ec3a",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/E1_walk.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "3cc8f4c85ded3b28caf13f682a9f83963b27fccbfa78f07df6885eb17b683d99",
+        "bytes": 2002582
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/E1_walk.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "97c431cd303c353d088c637fcd9b98019934e20558eda0adc14f4bf87e69388a",
+        "bytes": 648002
+      }
+    },
+    "W0": {
+      "irradianceScale": 32,
+      "uvSha256": "ba6b151afc1f9b658d98a81c520657eba1531f0c4d3df4748f3c210f3ecf1f22",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/W0.webp",
+        "width": 4096,
+        "height": 4096,
+        "sha256": "4d14389fdff70579e420df0568d22fbecb9ee7e593a53cd94da72d3150edea00",
+        "bytes": 4139052
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/W0.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "995b7590dced0955e30207edec882d2cd05f861aab435dff081f3828120e1e62",
+        "bytes": 408592
+      }
+    },
+    "W0_ceiling": {
+      "irradianceScale": 8,
+      "uvSha256": "332ca002017083683610acf6749524cb3bf2173feef984b99ca498c21eb1a5ef",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/W0_ceiling.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "c08f7e6553ff0c6d58fe6ca6356393319cc78d1bec1497145ba2eef5d82b574b",
+        "bytes": 4646014
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/W0_ceiling.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "8a4d0eadd624be55eaa0b4c4de288cf6b3ae6e4f82e5ad6f08c14cdc9e2d110d",
+        "bytes": 1376658
+      }
+    },
+    "W0_furniture": {
+      "irradianceScale": 16,
+      "uvSha256": "e4335733fc0c2484d7ed671437ea564f3beb46cecd6366d0d36c031f528c3128",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/W0_furniture.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "8b507bc6224f93ad009af7ca13df737cf6fd314fad1b95c87a00f50abf060d4a",
+        "bytes": 3347244
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/W0_furniture.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "d8c4926d7ac7c93c954917712840db2dd84c271678213beb89adb4466c6e22f7",
+        "bytes": 1014588
+      }
+    },
+    "W0_walk": {
+      "irradianceScale": 8,
+      "uvSha256": "edc9c12f36fe077e842fa8caa6662c834321a40ed1c7289c1bed8756ddfd572b",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/W0_walk.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "79f07aeb653ceb2b46f2fa6cbdf7d5069817045a7ddd7829f10fbf0573a89768",
+        "bytes": 2298108
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/W0_walk.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "736c371028a007bfa0580c71df3037c0dc2fafce4429eb264a7112821afdf3cf",
+        "bytes": 717078
+      }
+    },
+    "W1": {
+      "irradianceScale": 32,
+      "uvSha256": "f75573f5c586ba4604f8d596a0543fa7757c84348771e517b2fd0036cda41e3f",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/W1.webp",
+        "width": 4096,
+        "height": 4096,
+        "sha256": "76c3ee0739f06ed5b2d3741410ce77729c5bf6eb22926840faada4a811bcc6dc",
+        "bytes": 4704424
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/W1.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "403d9894c59eef3d3f75335e10a7e3ce343680669d8b06a9febae2df92144478",
+        "bytes": 475420
+      }
+    },
+    "W1_ceiling": {
+      "irradianceScale": 8,
+      "uvSha256": "428333f7bc0c211abb2db1f886ba04c09fc730f2e4881b9ca01a09b65443db8c",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/W1_ceiling.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "315fd861fbaedf360b96f25ccd23b15e801a198e737b3ccfe63b0fb31e98a6b7",
+        "bytes": 4786308
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/W1_ceiling.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "2d742bfb84611a8d2c85a23a6cd1e106aa5e2520ea7c61af8491d2b4f974253c",
+        "bytes": 1389926
+      }
+    },
+    "W1_furniture": {
+      "irradianceScale": 16,
+      "uvSha256": "f3621a368b123d2bc6394b085ef1b7ee92140018b72e66beff0effdd9b03eedf",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/W1_furniture.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "02a2d7afac7be485ec5e394edf235963c166349d25b155052e0c24983ff500e8",
+        "bytes": 2834032
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/W1_furniture.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "bb85d70859a691a842d240392570edd9764dc16505937a477c729654171f440c",
+        "bytes": 869182
+      }
+    },
+    "W1_walk": {
+      "irradianceScale": 8,
+      "uvSha256": "e0cb596feedfafd073379d75752feedd571f89fb062a6f44b37a67d9024f82b9",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/W1_walk.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "5cd14ecd12b09ee6475dc576563eb9529c3e87b35e0f1e2b24e8cfb21e76af9e",
+        "bytes": 1763614
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/W1_walk.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "1df95e4210936067442ef8867aeb1cae48ffd32ebf8c48fb8f65deb9a1b20590",
+        "bytes": 544618
+      }
+    },
+    "bridge_walk": {
+      "irradianceScale": 2,
+      "uvSha256": "b289584c335a0da819ba45bbacc94ed7252a2407dc78207a19cf182d1ae2d622",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/bridge_walk.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "361255ceb03cf3efb517d9e212dcd717ec15459e049ef60c87c8b0ca80da03f5",
+        "bytes": 2502774
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/bridge_walk.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "c9fd37bd6166a639f5db2df1ac5894cafb0223a790f266bad016cf1cefcd997a",
+        "bytes": 677818
+      }
+    },
+    "courtyard_walk": {
+      "irradianceScale": 2,
+      "uvSha256": "d6a3acae08da34bba17912752597b38f65175d67371c3bc0eb411d23636b6f16",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/courtyard_walk.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "c533d088ccfa2d3dcc34071b6af77515f44baa16c60b28c1e8e8d5486dc7583c",
+        "bytes": 2209832
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/courtyard_walk.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "eeb51daf456eb099abedb727642f10c5905c8814c44dd67c1accbc13e3b76190",
+        "bytes": 659558
+      }
+    },
+    "exterior": {
+      "irradianceScale": 2,
+      "uvSha256": "3cf33379a6f1ef9856c5a1fc6267b68bb74fb8159aa62bdcac50304c7b843d82",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/exterior.webp",
+        "width": 4096,
+        "height": 4096,
+        "sha256": "442389550600ae54424a25e3e5ef8f0a07a90efa9b645f0832378a818eb48f84",
+        "bytes": 7046220
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/exterior.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "c22998d83206d43aae4758eeac8bae58bef2c8632ced6054df2021e5a52bc0c5",
+        "bytes": 605600
+      }
+    },
+    "stairs_walk": {
+      "irradianceScale": 4,
+      "uvSha256": "48998b524789a09c2fc083ab57c90c16151c5b7cec7b5a25e17acc15d941c948",
+      "desktop": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/desktop/stairs_walk.webp",
+        "width": 2048,
+        "height": 2048,
+        "sha256": "9392d58b0c1c7ae5c302da62129f02d58008752bceed3b51f6527b41f80e50db",
+        "bytes": 2895998
+      },
+      "mobile": {
+        "url": "/assets/showcases/forest-fold-house/night-v1/mobile/stairs_walk.webp",
+        "width": 1024,
+        "height": 1024,
+        "sha256": "e67df0650d336aa748debbc362e989eaba68f5c95476e10c3fb8b8ce4b256117",
+        "bytes": 848300
+      }
+    }
+  }
+}

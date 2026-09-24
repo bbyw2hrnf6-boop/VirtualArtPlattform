@@ -14,13 +14,21 @@ export default function ForestPage(){
   useEffect(()=>{window.scrollTo({top:0,behavior:'instant'});},[]);
   const [status,setStatus]=useState<'idle'|'loading'|'ready'|'error'>('idle');
   const [active,setActive]=useState(false),[room,setRoom]=useState(0),[mode,setMode]=useState<ObsidianMode>('walk'),[night,setNight]=useState(false);
+  const [lightingStatus,setLightingStatus]=useState<'idle'|'loading'|'error'>('idle');
   const controls=useRef<ObsidianControls|null>(null);
   const stage=useRef<HTMLElement|null>(null);
   const [tour,setTour]=useState(IDLE_VISITOR_TOUR),[flight,setFlight]=useState(IDLE_VISITOR_TOUR);
   const reduced=useReducedMotion(), pendingFlight=useRef(false);
-  const ready=useCallback(()=>{setStatus('ready');if(pendingFlight.current){pendingFlight.current=false;controls.current?.flight('start');}},[]),failed=useCallback(()=>{setActive(false);setStatus('error');},[]),artwork=useCallback(()=>{},[]);
+  const ready=useCallback(()=>{setStatus('ready');setNight(false);setLightingStatus('idle');if(pendingFlight.current){pendingFlight.current=false;controls.current?.flight('start');}},[]),failed=useCallback(()=>{setActive(false);setStatus('error');},[]),artwork=useCallback(()=>{},[]);
   useEffect(()=>{const title=document.title;document.title='Forest Fold House — LIEUVA';return()=>{document.title=title;};},[]);
   const saver=Boolean((navigator as Navigator & {connection?:{saveData?:boolean}}).connection?.saveData);
+  const changeLighting=async(value:boolean)=>{
+    if(lightingStatus==='loading'||night===value)return;
+    const target=controls.current;
+    setLightingStatus('loading');
+    try{await target?.lighting?.(value);if(controls.current===target){setNight(value);setLightingStatus('idle');}}
+    catch{if(controls.current===target)setLightingStatus('error');}
+  };
   return <main className="obsidian forest-house">
     <header className="obsidian__header"><a href="#/">LIEUVA <span>/ ARCHITECTURE</span></a><a href="#/">← Back to LIEUVA</a></header>
     <section ref={stage} className="obsidian__stage" aria-label="Forest Fold House preview" data-flight={flight.status}>
@@ -38,9 +46,10 @@ export default function ForestPage(){
       {status==='ready'&&<>
         <div className="obsidian__room-label"><span>FOREST FOLD HOUSE</span><h1>{forestRooms[room].name}</h1></div>
         <label className="obsidian__room-picker">Room<select aria-label="House room" value={room} onChange={e=>controls.current?.room(Number(e.target.value))}>{forestRooms.map((r,i)=><option key={r.id} value={i}>{r.name}</option>)}</select></label>
-        <div className="forest-house__lighting" role="group" aria-label="House lighting">
-          <button type="button" className={!night?'is-active':''} aria-pressed={!night} onClick={()=>{setNight(false);controls.current?.lighting?.(false);}}>Day</button>
-          <button type="button" className={night?'is-active':''} aria-pressed={night} onClick={()=>{setNight(true);controls.current?.lighting?.(true);}}>Night</button>
+        <div className="forest-house__lighting" role="group" aria-label="House lighting" aria-busy={lightingStatus==='loading'}>
+          <button type="button" disabled={lightingStatus==='loading'} className={!night?'is-active':''} aria-pressed={!night} onClick={()=>void changeLighting(false)}>Day</button>
+          <button type="button" disabled={lightingStatus==='loading'} className={night?'is-active':''} aria-pressed={night} onClick={()=>void changeLighting(true)}>Night</button>
+          {lightingStatus!=='idle'&&<span role="status">{lightingStatus==='loading'?'Preparing lighting…':'Lighting could not load. Try again.'}</span>}
         </div>
         <VisitorControls<ObsidianMode> mode={mode} modeOptions={[{value:'walk',label:'Walk',icon:'↟'},{value:'overview',label:'Overview',icon:'◇'}]} onModeChange={m=>controls.current?.mode(m)} onResetView={()=>controls.current?.reset()} showHelp={false}
           tour={tour} tourAvailable={mode==='walk'} tourDescription="Optional room route"

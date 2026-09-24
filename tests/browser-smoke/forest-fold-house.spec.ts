@@ -66,6 +66,8 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
     });
     test('loads on demand and shares walking, look, room heights and overview',{tag:'@showcase-gpu'},async({page},info)=>{
       const errors:string[]=[],models:string[]=[];
+      const nightRequests:string[]=[];
+      page.on('request',r=>{if(r.url().includes('/night-v1/'))nightRequests.push(r.url());});
       page.on('pageerror',e=>errors.push(e.message));
       page.on('response',r=>{if(r.url().includes('/assets/showcases/forest-fold-house/')&&!r.ok())errors.push(`${r.status()} ${r.url()}`);});
       page.on('request',r=>{if(/forest-fold-house.*\.(glb|gltf)(\?|$)/.test(r.url()))models.push(r.url());});
@@ -77,10 +79,25 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
       const scene=page.locator('.obsidian__scene'),canvas=scene.locator('canvas');
       await expect(scene).toHaveAttribute('data-ready','true',{timeout:90_000});
       await expect(scene).toHaveAttribute('data-idle','true');
+      expect(nightRequests).toEqual([]);
+      // A missing optional light study must leave the current day view intact
+      // and allow a retry, rather than partially swapping room illumination.
+      await page.route('**/night-v1/manifest.json',route=>route.abort(),{times:1});
+      await page.getByRole('button',{name:'Night',exact:true}).click();
+      await expect(page.getByRole('status',{name:''}).filter({hasText:'Lighting could not load'})).toBeVisible();
+      await expect(page.getByRole('button',{name:'Day',exact:true})).toHaveAttribute('aria-pressed','true');
+      await page.getByRole('button',{name:'Night',exact:true}).click();
+      await expect(scene).toHaveAttribute('data-lighting','night',{timeout:90_000});
+      await expect(page.getByRole('button',{name:'Night',exact:true})).toHaveAttribute('aria-pressed','true');
+      const loadedNightRequests=nightRequests.length;
+      expect(loadedNightRequests).toBe(22); // failed manifest + retry + 20 atlases
+      await page.getByRole('button',{name:'Day',exact:true}).click();
+      await expect(scene).toHaveAttribute('data-lighting','day');
       await page.getByRole('button',{name:'Night',exact:true}).click();
       await expect(scene).toHaveAttribute('data-lighting','night');
       await page.getByRole('button',{name:'Day',exact:true}).click();
       await expect(scene).toHaveAttribute('data-lighting','day');
+      expect(nightRequests).toHaveLength(loadedNightRequests);
       expect(models).toHaveLength(1);
       expect(models[0]).toContain(mobile?'forest-fold-house-mobile.glb?v=5':'desktop-v5/forest-fold-house-desktop.gltf?v=5');
       const position=async()=> (await scene.getAttribute('data-position'))!.split(',').map(Number);
@@ -109,6 +126,24 @@ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
       await page.getByRole('button',{name:'Walk',exact:true}).click();await expect(scene).toHaveAttribute('data-mode','walk');
       await page.getByLabel('House room').selectOption('5');await expect.poll(async()=>(await position())[1]).toBeCloseTo(1.7,1);
       await page.screenshot({path:info.outputPath(`forest-lounge-${viewport.width}.png`)});
+      await page.getByLabel('House room').selectOption('7');
+      await expect(scene).toHaveAttribute('data-idle','true');
+      await page.screenshot({path:info.outputPath(`forest-courtyard-${viewport.width}.png`)});
+      await page.getByLabel('House room').selectOption('6');
+      await canvas.focus();await page.keyboard.down('ArrowLeft');
+      try{await expect.poll(async()=>Number(await scene.getAttribute('data-yaw'))).toBeGreaterThan(0);}
+      finally{await page.keyboard.up('ArrowLeft');}
+      await expect(scene).toHaveAttribute('data-idle','true');
+      await page.screenshot({path:info.outputPath(`forest-mirror-${viewport.width}.png`)});
+      await page.getByRole('button',{name:'Night',exact:true}).click();
+      await expect(scene).toHaveAttribute('data-lighting','night');
+      await expect(scene).toHaveAttribute('data-idle','true');
+      await page.screenshot({path:info.outputPath(`forest-mirror-night-${viewport.width}.png`)});
+      for(const room of ['5','7']){
+        await page.getByLabel('House room').selectOption(room);
+        await expect(scene).toHaveAttribute('data-idle','true');
+        await page.screenshot({path:info.outputPath(`forest-night-courtyard-${room}-${viewport.width}.png`)});
+      }
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
       for(const image of await page.locator('.forest-house__photos img').all()){
         await image.scrollIntoViewIfNeeded();

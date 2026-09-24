@@ -73,6 +73,14 @@ raster/reflection sizes adapt. Forest materials marked `forest_irradiance` combi
 their separate baked irradiance and tiled albedo in linear space, keeping live
 specular highlights without adding a second diffuse-light contribution. Original
 combined bakes and other showcases retain their existing material behavior.
+Forest's Day/Night control atomically swaps twenty source-matched irradiance
+RGBM lightmaps in lossless WebP loaded only on the first Night request; existing GPU texture allocations
+are reused, while loading failure leaves the current view intact. Sky, exposure
+and one cached environment per state follow the same switch. Bathroom mirrors
+are bounded, viewpoint-correct passes with recursion protection and full disposal.
+Their adaptive fallback retains 512 px desktop / 256 px mobile so nearby
+reflections remain readable after a slow loading frame.
+See the Forest source contract for bake reproduction and delivery approximations.
 Forest's M09 water does not cast an opaque shadow. Its joined waterfall receives
 area-weighted normals at coincident quantized positions; the flat pond normals,
 positions, indices and source assets remain unchanged.
@@ -93,6 +101,8 @@ Obsidian scene; it does not replace runtime geometry or materials. The original
 cinematic allowance is **8 KB gzip JS and 2 KB gzip CSS**.
 Automatic gallery entries and matched world-space portals add **2 KB gzip JS**;
 next-world GPU warm-up adds a documented 256 B aggregate allowance (626,512 B).
+Forest's true night delivery, skies, foliage and mirrors add 4 KiB to that
+aggregate ceiling (630,608 B); the production fixture measures 629,684 B.
 Entry, largest lazy chunk, CSS, Studio assets and quality settings remain fixed.
 Retired Coming Soon compositions are removed, saving about 500 B gzip CSS. Entry, largest-chunk, Studio-asset and product-target
 budgets are unchanged; see `scripts/lib/performance-budgets.mjs`.

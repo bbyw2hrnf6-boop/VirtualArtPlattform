@@ -4,6 +4,7 @@ from urllib.parse import unquote,urlsplit
 import hashlib,json,struct,io,math
 from PIL import Image
 from master_contract import validate_master_set,validate_master
+from night_contract import day_geometry_digest, validate_report as validate_night_report, validate_manifest as validate_night_manifest
 H=Path(__file__).resolve().parent;OUT=H.parents[2]/'public/assets/showcases/forest-fold-house'
 report={'showcase':'forest-fold-house','deliveryRevision':5,'source':'forest-fold-house.blend','sourceSha256':hashlib.sha256((H/'forest-fold-house.blend').read_bytes()).hexdigest(),'models':{},'images':[],'openQualification':['Physical phone GPU, thermals and sustained frame rate','Real slow-network loading; browser emulation is not a physical-device measurement']}
 EXPECTED_GROUPS={room+suffix for room in ['W0','W1','E0','E1'] for suffix in ['', '_walk', '_ceiling', '_furniture']}|{'exterior','bridge_walk','stairs_walk','courtyard_walk'}
@@ -142,4 +143,36 @@ manifest=json.loads((H/'materials/sources.json').read_text())
 for source in manifest['files']:
  assert hashlib.sha256((H/'materials'/source['path']).read_bytes()).hexdigest()==source['sha256'], source['path']
 report['sourceAssets']={'license':manifest['license'],'count':len(manifest['assets']),'manifest':'materials/sources.json'}
+# A night download adds illumination only: source, v5 geometry and day atlases
+# remain unchanged. Validate every chart's provenance and every delivered byte.
+night=json.loads((H/'night-bake-report.json').read_text())
+validate_night_report(night,report['sourceSha256'],day_geometry_digest(OUT))
+night_manifest_path=OUT/'night-v1/manifest.json'
+night_manifest=json.loads(night_manifest_path.read_text());night_assets={}
+assert set(night['postprocess']['pipelineSha256'])=={'denoise.py','night_rgbm.py','night_reprocess.py'}, 'Missing night postprocess provenance'
+for name,expected in night['postprocess']['pipelineSha256'].items():
+ assert name in ['denoise.py','night_rgbm.py','night_reprocess.py'] and hashlib.sha256((H/name).read_bytes()).hexdigest()==expected, 'Stale night postprocessing pipeline: '+name
+for name,group in night_manifest['groups'].items():
+ source_path=H/'lightmaps/night-v1'/f'{name}.png'
+ assert source_path.read_bytes()[24]==16, 'Retained night precision lost: '+name
+ for tier in ['desktop','mobile']:
+  texture=group[tier];url=texture['url'];prefix='/assets/showcases/forest-fold-house/night-v1/'
+  assert url.startswith(prefix), 'External night texture'
+  path=(OUT/'night-v1'/url.removeprefix(prefix)).resolve()
+  assert path.is_relative_to((OUT/'night-v1').resolve()) and path.is_file(), 'Missing/unsafe night texture: '+url
+  im=Image.open(path)
+  night_assets[url]={'width':im.width,'height':im.height,'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
+   'losslessSourceMatch':im.format=='WEBP' and hashlib.sha256(im.convert('RGBA').tobytes()).hexdigest()==night['groups'][name]['rgbm'][tier]['rgbaSha256']}
+night_bytes=validate_night_manifest(night_manifest,night,report['sourceSha256'],night_assets)
+for name,evidence in night['groups'].items():
+ path=H/'lightmaps/night-v1'/f'{name}.png'
+ assert path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest()==evidence['imageSha256'], 'Missing/corrupt retained night irradiance: '+name
+with_source_runtime=H/'forest-runtime.blend'
+if with_source_runtime.exists():
+ assert hashlib.sha256(with_source_runtime.read_bytes()).hexdigest()==night['runtimeSha256'], 'Retained UV reference changed since night bake'
+report['nightIrradiance']={'manifest':'night-v1/manifest.json','manifestSha256':hashlib.sha256(night_manifest_path.read_bytes()).hexdigest(),
+ 'encoding':'rgbm-srgb-lossless-webp','losslessSourceCompared':True,'retainedBitDepth':16,'ditherIntensity':0,
+ 'sourceSha256':night['sourceSha256'],'lightingProfileSha256':night['lightingProfileSha256'],'dayGeometrySha256':night['dayGeometrySha256'],
+ 'groups':len(night['groups']),'additionalTextureBytes':night_bytes,'runtimeCompared':with_source_runtime.exists(),
+ 'decodedRgbaMipBytesEstimate':{tier:round(sum(item[tier]['width']*item[tier]['height']*4*4/3 for item in night_manifest['groups'].values())) for tier in ['desktop','mobile']}}
 (H/'asset-report.json').write_text(json.dumps(report,indent=2)+'\n')

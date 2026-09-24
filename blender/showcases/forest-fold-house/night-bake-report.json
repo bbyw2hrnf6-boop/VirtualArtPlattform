@@ -1,0 +1,1018 @@
+{
+  "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+  "runtimeSha256": "4add99e2454f5b8979f1999dc4f0bb5f079e88be7a7cb6f86791c104c0235a73",
+  "dayGeometrySha256": "ecacf1b7777da97b20db5ca13e044fa88c1cef1b952ee5435f19c236086ea2f6",
+  "lightingProfileSha256": "1f5a39be54d03477991d7437b9bf0d9b9c91bbd72ed73e5acd9369f5f4484245",
+  "layoutsSha256": "b99de948059380a21ce52400b383adaac9d3f08852d5ef36a5c74025cb54c4a6",
+  "pipelineSha256": "a6a3d0d85656f4dc81373c46fd60ef66539497aeb564ff3cfa264b59ee9a23fd",
+  "revision": 1,
+  "profile": {
+    "name": "authored-blue-hour-v1",
+    "sunEnergy": 0,
+    "worldColorLinear": [
+      0.08,
+      0.16,
+      0.35
+    ],
+    "worldStrength": 0.22,
+    "practicalEnergyMultiplier": 2.5,
+    "samples": 256,
+    "bake": "DIFFUSE",
+    "passColor": false,
+    "direct": true,
+    "indirect": true
+  },
+  "groups": {
+    "W0_furniture": {
+      "topologySha256": "2ffdcbb79a7e28fbc6ec63d6c3df028a92053a7bf0d34f887103eb9f882740ad",
+      "loopCount": 394352,
+      "transform": [
+        7.549790126404332e-08,
+        -1.0,
+        0.0,
+        -9.100000381469727,
+        1.0,
+        7.549790126404332e-08,
+        0.0,
+        4.699999809265137,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 394352,
+      "uvSha256": "e4335733fc0c2484d7ed671437ea564f3beb46cecd6366d0d36c031f528c3128",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 16,
+      "rawSha256": "a855dc35dbe95041c301e7e7208597c8ee69acdd9913e42898c13ba1709fe577",
+      "denoised": true,
+      "seconds": 73.9,
+      "imageSha256": "b79a222f670c43a35de7680fc9e68a4993d4b46070737e0ab3feff3674564f23",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "bab42a1901d9171965e61930e2c4c122d33e96bf6d9221097b80f379eefd12e8",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.003350675106048584,
+          "meanNormalizedLinearError": 4.0079958125716075e-05
+        },
+        "mobile": {
+          "rgbaSha256": "9138a66ac5211b59b8ab7f6c89760bb1e7da5cf5ef4b00e15ede271e0c3293b2",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.002926468849182129,
+          "meanNormalizedLinearError": 3.998335523647256e-05
+        }
+      }
+    },
+    "W1_furniture": {
+      "topologySha256": "9f2b7e4c61025a3be3fed8df5c92998cf13ec719134d6d616a7c7c9fc3375043",
+      "loopCount": 134976,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 134976,
+      "uvSha256": "f3621a368b123d2bc6394b085ef1b7ee92140018b72e66beff0effdd9b03eedf",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 16,
+      "rawSha256": "686cb5dcbddf73af7b57f5f0fbf0e2a12f1c7f86518bc9d47e9bbafdf93dc958",
+      "denoised": true,
+      "seconds": 112.29,
+      "imageSha256": "b416e2e1d81e3d8ac3541f3e66060bcfd9365fb86e050e61d08a64b43c59e96f",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "77d1ea8c85770e8bd89d981862a87f43ca1a0c32491f3b15abdb1895a2295190",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.0035068392753601074,
+          "meanNormalizedLinearError": 2.9368549803621136e-05
+        },
+        "mobile": {
+          "rgbaSha256": "1be52dc26d7c3f4d4e28d63d609e3d11819f5795a6b0a8e682efcb5be3a034b5",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0039168596267700195,
+          "meanNormalizedLinearError": 2.868216688511893e-05
+        }
+      }
+    },
+    "E1_furniture": {
+      "topologySha256": "88f1d3af6e8b25c55b1ac4b8fb31821f684e4f4b30295d23ee9d3db871a38721",
+      "loopCount": 369640,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -2.3841858265427618e-08,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 369640,
+      "uvSha256": "a9d73d4e4bec86afbe9aa872ffbd362b01bab9afa54bb18221b923145c376501",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 1,
+      "rawSha256": "f4fe8bef36283ef99005676e78fdf43b73e9b25826ad5ea27220063f45e2df8e",
+      "denoised": true,
+      "seconds": 39.29,
+      "imageSha256": "8f36d22252c1de272c043d9a8e169579940116185c8adb73a5e8bc49fe287a53",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "88acdeef68b8efa9f322aae27c0c7dc130e60f443b05ac18f683bfad557c03f7",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.0035930275917053223,
+          "meanNormalizedLinearError": 1.0708706213335972e-05
+        },
+        "mobile": {
+          "rgbaSha256": "990fcc7eb8f4f6d935b5a3d537582fffc3e3e013a224154919da3d147b6f6643",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0027517080307006836,
+          "meanNormalizedLinearError": 1.0733173439803068e-05
+        }
+      }
+    },
+    "E0_furniture": {
+      "topologySha256": "bf072b7e44a045b46c0b7304cb1f351dd31db1b308cc072eb7fda57779c6444f",
+      "loopCount": 246032,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 246032,
+      "uvSha256": "09fd0703de614692a337651c266ad9d5e4be5bca38bff952043e00f7e6d5ec67",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 2,
+      "rawSha256": "9451447abad32af8879899d661b57e8df7ae0b4161d8d588a99bd65241e8b6f0",
+      "denoised": true,
+      "seconds": 96.37,
+      "imageSha256": "0da6579ab94af8504a4faa2d8570c586a507f49b6b8ad760ab0daae99c89d90a",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "ac7407adf6771a1c20661d5a3ab77efaf006f207736565dc3928d63f38cec9d8",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.0020059049129486084,
+          "meanNormalizedLinearError": 6.433591624954715e-05
+        },
+        "mobile": {
+          "rgbaSha256": "cb5595a3126e75a9c603d921621a52b6c47b106b3eae25b95bd89ce5070aad3e",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0023165345191955566,
+          "meanNormalizedLinearError": 6.438145646825433e-05
+        }
+      }
+    },
+    "courtyard_walk": {
+      "topologySha256": "821a301941e9b16cc6df760dadb0c851bfd1bb044bd3e70c5e9c8faf80c5c8c0",
+      "loopCount": 30240,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -0.925000011920929,
+        0.0,
+        1.0,
+        0.0,
+        0.44999998807907104,
+        0.0,
+        0.0,
+        1.0,
+        -0.029999999329447746,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 30240,
+      "uvSha256": "d6a3acae08da34bba17912752597b38f65175d67371c3bc0eb411d23636b6f16",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 2,
+      "rawSha256": "51cec8c8ea18a8545059981a7427ce8316d85b2fa6a09dc042bdc31bed904e03",
+      "denoised": true,
+      "seconds": 96.79,
+      "imageSha256": "517e1119e9c55ae6b5f13e820e2b39d6955aaab4687db394a248bbeb3a287124",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "e92c320a2a6bdb28b071d0287b7309a8b63f9627d850d1186141edaa92652699",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.003565669059753418,
+          "meanNormalizedLinearError": 5.0873783038696274e-05
+        },
+        "mobile": {
+          "rgbaSha256": "d30371ba2050160aaab8c906c6e8d54636ebfe5e097d788d445625d9f1c7cb2c",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0033141374588012695,
+          "meanNormalizedLinearError": 5.097554821986705e-05
+        }
+      }
+    },
+    "W0": {
+      "topologySha256": "96c1352538cfb154aee473363b6256e188a3a3da56b89cc57f52e2e683c8a9f2",
+      "loopCount": 12984,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 12984,
+      "uvSha256": "ba6b151afc1f9b658d98a81c520657eba1531f0c4d3df4748f3c210f3ecf1f22",
+      "resolution": 4096,
+      "samples": 256,
+      "irradianceScale": 32,
+      "rawSha256": "7c19b23b4a4c28b16cf394da5126633059af122ef1dc7b38a0b367b8dfe57208",
+      "denoised": true,
+      "seconds": 405.72,
+      "imageSha256": "16c7fd1e0d8a4e4ef478c6d6e795156924f27a4aefed3d703438094588c8941e",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "0a304d43680338262189bf40930622c831d909bbf31a4a38007765e05646196e",
+          "width": 4096,
+          "height": 4096,
+          "maxNormalizedLinearError": 0.002238452434539795,
+          "meanNormalizedLinearError": 1.7394730093656108e-05
+        },
+        "mobile": {
+          "rgbaSha256": "c1a8e53d8426a39adf3235cafef9dc92189b75250566db51214244180651b084",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.002411484718322754,
+          "meanNormalizedLinearError": 1.7254005797440186e-05
+        }
+      }
+    },
+    "W0_walk": {
+      "topologySha256": "18ab0f253a0ca880794f9d7d8c8c2f5d66f403f3db87a3e1a98ea4f14786459d",
+      "loopCount": 66528,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -7.388000011444092,
+        0.0,
+        1.0,
+        0.0,
+        -3.0880000591278076,
+        0.0,
+        0.0,
+        1.0,
+        -0.006000000052154064,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 66528,
+      "uvSha256": "edc9c12f36fe077e842fa8caa6662c834321a40ed1c7289c1bed8756ddfd572b",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 8,
+      "rawSha256": "e992b84547a59f6cc7152d45c65f5d3d02f796f35d55ee26378e21c4f93a5a4c",
+      "denoised": true,
+      "seconds": 103.31,
+      "imageSha256": "745a794430c4902f0aa1fab3a60e97021f443ab1e4a2665cf61b9df291073ddf",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "7e882a160c93135d4c2b457fc3dc1d1d79c4de9d04dbb50527f60dea93699208",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.002905428409576416,
+          "meanNormalizedLinearError": 6.29696951364167e-05
+        },
+        "mobile": {
+          "rgbaSha256": "dbfa849390bbcc1d3df05e171268bc39771781d9e1e6c0c4fbf698f3017d137f",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.002028912305831909,
+          "meanNormalizedLinearError": 6.450992805184796e-05
+        }
+      }
+    },
+    "W0_ceiling": {
+      "topologySha256": "e909ded8dc6d5a8343f27cd5ef9c8c5ade2cf5540c4f12d85ee515930a55f912",
+      "loopCount": 69120,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -7.607999801635742,
+        0.0,
+        1.0,
+        0.0,
+        -2.2690000534057617,
+        0.0,
+        0.0,
+        1.0,
+        3.0625,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 69120,
+      "uvSha256": "332ca002017083683610acf6749524cb3bf2173feef984b99ca498c21eb1a5ef",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 8,
+      "rawSha256": "361ba2ce28dc3896c64fa2121c8849d662a25b6f0dbc73cbdc2ffff8d6b45db2",
+      "denoised": true,
+      "seconds": 78.77,
+      "imageSha256": "099213e51507053e2aee3e035c4828513043ae2c1e8c318b05f7898a75623244",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "3162f933af9b19b2da4e30f44ae60c417b877bb6cb76cd6519fa593bed898b94",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.0024293065071105957,
+          "meanNormalizedLinearError": 4.304202229832299e-05
+        },
+        "mobile": {
+          "rgbaSha256": "e220ee4df92d978d65f0498ae906c08fa565b56c73d7496af952deef49e4bcc6",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.002440929412841797,
+          "meanNormalizedLinearError": 4.304380854591727e-05
+        }
+      }
+    },
+    "W1": {
+      "topologySha256": "ca4ea3c36eb52ecde83d6f04785bb38d8ac1037c63c4db25403fa90041a74363",
+      "loopCount": 18480,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 18480,
+      "uvSha256": "f75573f5c586ba4604f8d596a0543fa7757c84348771e517b2fd0036cda41e3f",
+      "resolution": 4096,
+      "samples": 256,
+      "irradianceScale": 32,
+      "rawSha256": "c58e5185d8c9cc791b8392bc2fb447d6420084f34702a565089c12285e1608ec",
+      "denoised": true,
+      "seconds": 469.03,
+      "imageSha256": "a6a3085ccb1a0cbfb74f955a9949b795207b1fa45437110ef5055288e7f15d62",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "505a216edd9cb617819fd3639bbd6360cfe33d4fdc32183513712c5fb1721d92",
+          "width": 4096,
+          "height": 4096,
+          "maxNormalizedLinearError": 0.003704845905303955,
+          "meanNormalizedLinearError": 1.9248527678428218e-05
+        },
+        "mobile": {
+          "rgbaSha256": "0f32e96518839408ac125c1818e0a994e7854e76aefdd86c1ceffb59fa5ba8a8",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.002857387065887451,
+          "meanNormalizedLinearError": 1.9426055587246083e-05
+        }
+      }
+    },
+    "W1_walk": {
+      "topologySha256": "fca44db1e23a30022dd9385135d3658002418f1786804c63a428c59fb16d39c8",
+      "loopCount": 126144,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -7.607999801635742,
+        0.0,
+        1.0,
+        0.0,
+        -2.48799991607666,
+        0.0,
+        0.0,
+        1.0,
+        3.3940000534057617,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 126144,
+      "uvSha256": "e0cb596feedfafd073379d75752feedd571f89fb062a6f44b37a67d9024f82b9",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 8,
+      "rawSha256": "afc014a07d14e30c5b10dd1b87316b25ebcf343a1cf296db0d357c8a581f9a15",
+      "denoised": true,
+      "seconds": 65.93,
+      "imageSha256": "ef326c5a33dbf6bfc5ead3659fc0fc6f09357013f7545fa1322dbfaaec074584",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "edb88d629ec6e1625e2a717bbd261c6c08ffecbcd3e1b6022239a5d4f0be243b",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.0036370158195495605,
+          "meanNormalizedLinearError": 9.757612860994413e-05
+        },
+        "mobile": {
+          "rgbaSha256": "84facb77d06aabf230cad5a9905613849becf70d1e2d96a357c3f92ddcf75162",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0032693147659301758,
+          "meanNormalizedLinearError": 9.800229599932209e-05
+        }
+      }
+    },
+    "W1_ceiling": {
+      "topologySha256": "2a62c609909afeab7953305a66c8981527e21a29a01f76d6fcc7938068ebe1ec",
+      "loopCount": 34560,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -7.607999801635742,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        6.462500095367432,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 34560,
+      "uvSha256": "428333f7bc0c211abb2db1f886ba04c09fc730f2e4881b9ca01a09b65443db8c",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 8,
+      "rawSha256": "db2f8f08f2a393a29eeb51635017903ad999b3734194f6533547131428c7feb4",
+      "denoised": true,
+      "seconds": 106.52,
+      "imageSha256": "485e28b58ef3cf7569fcf8f81ad55b76fa921ad56c19c7db9b28a2445ffbea36",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "2cbded3c679f8a9703ce00f5179c94633b491e339ec43496ad9920c94f63df35",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.002668023109436035,
+          "meanNormalizedLinearError": 7.836604345357046e-05
+        },
+        "mobile": {
+          "rgbaSha256": "0573edbb2aa6881fb80b8d5f4d0c9c2735f938a0b3a237e62c3231aaef4c204c",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.002789020538330078,
+          "meanNormalizedLinearError": 7.944743265397847e-05
+        }
+      }
+    },
+    "exterior": {
+      "topologySha256": "093bf9475a84d9866835a0821fc8f992d328186b480276f3c23c7009ce5b3c48",
+      "loopCount": 13824,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -4.5,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        6.642499923706055,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 13824,
+      "uvSha256": "3cf33379a6f1ef9856c5a1fc6267b68bb74fb8159aa62bdcac50304c7b843d82",
+      "resolution": 4096,
+      "samples": 256,
+      "irradianceScale": 2,
+      "rawSha256": "ffafe2fedd327c472998325e94635464349060520d7fae0a2fda98a7e4edd15e",
+      "denoised": true,
+      "seconds": 489.54,
+      "imageSha256": "6558b12d8b5a146d02936740a10761adc77c80315f09157f4a3d6b0bbc12eecc",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "05138e11a64eefc46d303e721a63dc744ddc640a6ca3039327841cb17fa97e2e",
+          "width": 4096,
+          "height": 4096,
+          "maxNormalizedLinearError": 0.00142669677734375,
+          "meanNormalizedLinearError": 5.338171376934042e-06
+        },
+        "mobile": {
+          "rgbaSha256": "eb96cd25c3c64199ecd75e75acfe2a3ffc169c93627cee6bb760761119d14531",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0009275823831558228,
+          "meanNormalizedLinearError": 5.3405215112434234e-06
+        }
+      }
+    },
+    "E0": {
+      "topologySha256": "f6fc761d19c1efb0495ed07f4582d5fbb24206c9316521f08e55e61aab705695",
+      "loopCount": 7152,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 7152,
+      "uvSha256": "26c2cf4a8097d999e5e786de6fea9935009b7c4fd08c8a5c8a6040c7eacb744c",
+      "resolution": 4096,
+      "samples": 256,
+      "irradianceScale": 128,
+      "rawSha256": "298e9ae2a2784ee4bb5ca61d4dac5dd98628454d54424b6681c813f704ad8e51",
+      "denoised": true,
+      "seconds": 386.17,
+      "imageSha256": "4fc924b34c8f20a8c885b4ca15c3bb35cac38592694d17abe20e70e042800346",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "cc984fba4a81a58019e261615d29f9022c8e71fd7094589d0d7eed373d0c4905",
+          "width": 4096,
+          "height": 4096,
+          "maxNormalizedLinearError": 0.002732515335083008,
+          "meanNormalizedLinearError": 1.1340353012201376e-06
+        },
+        "mobile": {
+          "rgbaSha256": "873051a47f43d97c71efaea1014420058316925f7c7741ff7e88cbdca2be194f",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0015157759189605713,
+          "meanNormalizedLinearError": 1.114134306590131e-06
+        }
+      }
+    },
+    "E0_walk": {
+      "topologySha256": "6526df24e0512ce73c1b7f860da7cf7802b3d119323a432a938334e7c03c45f6",
+      "loopCount": 34560,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        3.611999988555908,
+        0.0,
+        1.0,
+        0.0,
+        -0.5879999995231628,
+        0.0,
+        0.0,
+        1.0,
+        -0.006000000052154064,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 34560,
+      "uvSha256": "267a46a21d3dd2689dc8fbafc13709baa900d15c545d63553797c9f8958de26a",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 2,
+      "rawSha256": "e48f5a5bd11dfdf15747e76df46268c17a9d488becd7e0490c344dced6117405",
+      "denoised": true,
+      "seconds": 149.57,
+      "imageSha256": "c03c044cca3e23d4d6f6d47bbe8625351f58a03e725a6352f2fd0718e5b355fa",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "4a2530271b2b334354a90dc80bd9281347869e9ccd9d5571021e17815cc2761d",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.001867443323135376,
+          "meanNormalizedLinearError": 8.324404916493222e-05
+        },
+        "mobile": {
+          "rgbaSha256": "cf3365d6f5b4d72eb55fd14988175a356dbfdc34eaeba13bdc32f7cd461c5ad6",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.001922905445098877,
+          "meanNormalizedLinearError": 7.985551928868517e-05
+        }
+      }
+    },
+    "E0_ceiling": {
+      "topologySha256": "8373d3657a21813cdbb3f59c5b6aeb7efbd4066a49b6b06f856b0b46d409f6f9",
+      "loopCount": 24192,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        3.3919999599456787,
+        0.0,
+        1.0,
+        0.0,
+        1.25,
+        0.0,
+        0.0,
+        1.0,
+        3.0625,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 24192,
+      "uvSha256": "85560b1258aafdca5dc91264892fe0f8bf79c17e11fdc55fd6763a3f5bca413f",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 8,
+      "rawSha256": "1d34b5dda78bb78ec49137d9b3979f9e763ed7fe4106e8233f8ee84bc696e3a1",
+      "denoised": true,
+      "seconds": 121.2,
+      "imageSha256": "f39525750c3953d677c0515835a116843385aa7d735313c5a58f010f585be9c8",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "e84e327e42e79cb9d01accb672cdb42ebf3c921518d8ac97d16d07256212cd22",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.0017271935939788818,
+          "meanNormalizedLinearError": 1.0877872227865737e-05
+        },
+        "mobile": {
+          "rgbaSha256": "c6e642f791d4245550becff0a8aa1f4f432a183d8815c7e38ee072a12c94f371",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0016389787197113037,
+          "meanNormalizedLinearError": 1.0852826562768314e-05
+        }
+      }
+    },
+    "E1": {
+      "topologySha256": "9e25656e2219501c0ff1f7fdc1fcecf0892af131d12460b6cc836a3968210b2b",
+      "loopCount": 8912,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 8912,
+      "uvSha256": "4f06c4a8808cf0397944b24727a446370d3edc945e042a0b0ad48f6422499807",
+      "resolution": 4096,
+      "samples": 256,
+      "irradianceScale": 2,
+      "rawSha256": "8a660eb6a7154903aba541e1f54e54098d88ebb57491d1381536a7b0005f5530",
+      "denoised": true,
+      "seconds": 507.66,
+      "imageSha256": "a47c1dc4e75a6c711a406244dad4f5375c5d45f4ebf6c4345b2d6ee96d437671",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "d1037b96a2f5900f0858262e32d3603bd470685c5678ed559d90da0cc54f01dc",
+          "width": 4096,
+          "height": 4096,
+          "maxNormalizedLinearError": 0.0010197162628173828,
+          "meanNormalizedLinearError": 4.249999165040208e-06
+        },
+        "mobile": {
+          "rgbaSha256": "e64025e1665091a7569ff7fc185032000de03d5c06f5a133781b0ab31a6fdae6",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0007258504629135132,
+          "meanNormalizedLinearError": 4.296944553061621e-06
+        }
+      }
+    },
+    "E1_walk": {
+      "topologySha256": "e1e82bc833b4629196bf5131c8dd62513cbc1f20a3856064ccfb3ce775734e8d",
+      "loopCount": 72576,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        3.3919999599456787,
+        0.0,
+        1.0,
+        0.0,
+        0.012000000104308128,
+        0.0,
+        0.0,
+        1.0,
+        3.3940000534057617,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 72576,
+      "uvSha256": "593d7cf060173696d56aa7ae1d554f7f63df9a0c67af15bc158c38da6c95ec3a",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 1,
+      "rawSha256": "eb70d550a680be18088a7df3402873a52b371bd837e7985dad7fc9dd6184377b",
+      "denoised": true,
+      "seconds": 102.0,
+      "imageSha256": "cf05dcb2ed2d106d13ae78f5b472ae60d73d11ce659aa97f474ee94546893495",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "11f238c96841cfe315d6b4ca6059b273b887e478fae33f35652a07079dd69ac6",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.001878976821899414,
+          "meanNormalizedLinearError": 4.131770765525289e-05
+        },
+        "mobile": {
+          "rgbaSha256": "9c1a7d71cdb7ead11d99840c4aded407a11833fd6482bed09bbf79e8c37cd056",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0018923580646514893,
+          "meanNormalizedLinearError": 4.0005641494644806e-05
+        }
+      }
+    },
+    "E1_ceiling": {
+      "topologySha256": "8373d3657a21813cdbb3f59c5b6aeb7efbd4066a49b6b06f856b0b46d409f6f9",
+      "loopCount": 24192,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        3.3919999599456787,
+        0.0,
+        1.0,
+        0.0,
+        1.25,
+        0.0,
+        0.0,
+        1.0,
+        6.462500095367432,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 24192,
+      "uvSha256": "85560b1258aafdca5dc91264892fe0f8bf79c17e11fdc55fd6763a3f5bca413f",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 1,
+      "rawSha256": "6568954374088561950b97da36914d9fb6e6242f2f3bc0246026f49af78ae6e4",
+      "denoised": true,
+      "seconds": 97.27,
+      "imageSha256": "8f1befe77bb4bb5b17c26135cccc00cfefb7f6b166f2695f1a4fd12ed0134f99",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "3f08bdb13be8a7d2915790ba2e8fdb7b28a6287c356c882cb91daf8d6be0ad65",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.001081019639968872,
+          "meanNormalizedLinearError": 8.11762765806634e-06
+        },
+        "mobile": {
+          "rgbaSha256": "6985710e03b073063cd126ad393dd6db1a59e07ba19c3549535aa92172c54944",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.0005326271057128906,
+          "meanNormalizedLinearError": 8.162179256032687e-06
+        }
+      }
+    },
+    "bridge_walk": {
+      "topologySha256": "84f8027de37f4067295be232f2ab6b3828e5e6466386edf700a4b86f5450bfc2",
+      "loopCount": 864,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.699999988079071,
+        0.0,
+        0.0,
+        1.0,
+        3.302999973297119,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 864,
+      "uvSha256": "b289584c335a0da819ba45bbacc94ed7252a2407dc78207a19cf182d1ae2d622",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 2,
+      "rawSha256": "ec2d2615289d1c629d8b37867602da03fe1b57cad08d45398af54a97e2f8849f",
+      "denoised": true,
+      "seconds": 185.92,
+      "imageSha256": "5bac8f04f10dae3a628218e83a7720c7e60086a398c4ea311326069721893b2b",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "f0d0451593710592bf1d951076a7d433d5afb0b6ffd229cf798a81aecd94029e",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.0021894872188568115,
+          "meanNormalizedLinearError": 9.533254342386499e-05
+        },
+        "mobile": {
+          "rgbaSha256": "767d224e8cd73522ba703936a70173da5b9ab77a8e49c2b4eb3b845e9869497e",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.002116590738296509,
+          "meanNormalizedLinearError": 9.550857794238254e-05
+        }
+      }
+    },
+    "stairs_walk": {
+      "topologySha256": "886b7e4d990a552f2ee5168b5dd239af0aa43ed68085a345f481c4b839651aec",
+      "loopCount": 18144,
+      "transform": [
+        1.0,
+        0.0,
+        0.0,
+        -6.599999904632568,
+        0.0,
+        1.0,
+        0.0,
+        -0.30000001192092896,
+        0.0,
+        0.0,
+        1.0,
+        1.6100000143051147,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "uvCount": 18144,
+      "uvSha256": "48998b524789a09c2fc083ab57c90c16151c5b7cec7b5a25e17acc15d941c948",
+      "resolution": 2048,
+      "samples": 256,
+      "irradianceScale": 4,
+      "rawSha256": "0f1f637ea1287340e6826ff2ef2c3b7bc08488262b2a8dbccf3cf3d219041954",
+      "denoised": true,
+      "seconds": 113.47,
+      "imageSha256": "712da9322a8b3507f68afb12263689d11b99424b41fe68ca60706f8a4ee77342",
+      "retainedBitDepth": 16,
+      "ditherIntensity": 0,
+      "rgbm": {
+        "desktop": {
+          "rgbaSha256": "ed8839b850ed2827521bf5269a7a6f497aed07c6c8b2d04fdeae130401a5dc12",
+          "width": 2048,
+          "height": 2048,
+          "maxNormalizedLinearError": 0.003533601760864258,
+          "meanNormalizedLinearError": 0.00019715515372809023
+        },
+        "mobile": {
+          "rgbaSha256": "5b0cd44aa0c8df0d1e3f11d74a5ce7c74d8c9ebc9df3f2c121907515d6334e2d",
+          "width": 1024,
+          "height": 1024,
+          "maxNormalizedLinearError": 0.003669440746307373,
+          "meanNormalizedLinearError": 0.00019769796926993877
+        }
+      }
+    }
+  },
+  "postprocess": {
+    "encoding": "rgbm-srgb-lossless-webp",
+    "retainedBitDepth": 16,
+    "ditherIntensity": 0,
+    "mobileResize": "scene-linear-area-before-rgbm",
+    "pipelineSha256": {
+      "denoise.py": "d39e4fba39c4668645a73a3da3053cdc3d5563fa5fcc82cdc88bad3befde000c",
+      "night_rgbm.py": "cf91d984e82bceba2b9699abbdfbe392d4d1ee3d55951860e873a497463da829",
+      "night_reprocess.py": "3beca5089f9fde8b916f91c1a426caf2c42dbb90f11fdb82766bf3d196a7bbe9"
+    }
+  }
+}

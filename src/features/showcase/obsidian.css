@@ -36,7 +36,9 @@
 .obsidian__room-picker select { min-height:44px; max-width:240px; padding:8px 12px; background:#0d0f0ced; border:1px solid #ffffff40; color:#efeee8; font:12px Manrope,sans-serif; border-radius:3px; }
 .forest-house__lighting { position:absolute; top:192px; left:32px; display:grid; grid-template-columns:1fr 1fr; min-width:160px; border:1px solid #ffffff40; background:#0d0f0ced; }
 .forest-house__lighting button { min-height:44px; border:0; border-right:1px solid #ffffff24; background:transparent; color:#efeee8; text-transform:uppercase; letter-spacing:.12em; font:11px Manrope,sans-serif; }
-.forest-house__lighting button:last-child { border-right:0; }.forest-house__lighting button.is-active { background:#efeee8; color:#171916; }
+.forest-house__lighting button:nth-of-type(2) { border-right:0; }.forest-house__lighting button.is-active { background:#efeee8; color:#171916; }
+.forest-house__lighting button:disabled { cursor:wait; opacity:.65; }
+.forest-house__lighting [role=status] { grid-column:1/-1; max-width:220px; padding:8px 12px; color:#efeee8; font-size:11px; line-height:1.5; }
 .obsidian__zoom { right:24px; bottom:24px; }
 .obsidian__collection { padding:90px 5vw 40px; max-width:1700px; margin:auto; scroll-margin-top:20px; }
 .obsidian__collection-intro { max-width:560px; margin-bottom:64px; }

@@ -31,7 +31,10 @@ export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
   // Automatic gallery entries and matched world-space portals: +2 KB JS.
   // Next-world GPU warm-up and reduced-motion teardown: +256 B aggregate only.
   // The production fixture measures 626,280 B; entry, lazy and CSS stay fixed.
-  jsGzip: 626_512,
+  // Forest lighting: +4 KiB for atomic, on-demand night atlases, cached light
+  // environments, physical foliage response and viewpoint-correct mirrors.
+  // Feature-only allowance; public entry, Studio and CSS limits stay fixed.
+  jsGzip: 630_608,
   cssGzip: 58_500,
   largestLazyGzip: 195_000,
   entryGzip: 123_000,

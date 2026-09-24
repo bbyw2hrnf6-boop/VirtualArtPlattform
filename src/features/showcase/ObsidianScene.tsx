@@ -17,6 +17,10 @@ import { createWorldPortal } from './worldPortal';
 import { createShowcaseQuality } from './showcaseQuality';
 import { installForestIrradiance } from './forestIrradiance';
 import { prepareForestWater } from './forestWater';
+import { createForestMirrors } from './forestMirrors';
+import { createForestSky } from './forestSky';
+import { installForestFoliage } from './forestFoliage';
+import { createForestNight } from './forestNight';
 import type { VisitorTourState } from '../gallery/visitorTourState';
 
 export interface ShowcaseSceneConfig {
@@ -43,7 +47,7 @@ export interface ObsidianControls {
   reset(): void;
   zoom(direction: -1 | 1): void;
   pause(value: boolean): void;
-  lighting?(night: boolean): void;
+  lighting?(night: boolean): Promise<void>;
   tour(command: 'start' | 'stop' | 'pause' | number): void;
   flight(command: 'start' | 'stop' | 'pause' | number): void;
   seekFilm(progress: number): void;
@@ -76,7 +80,10 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     canvas.setAttribute('aria-label', `Explore ${config.title}. ${VISITOR_KEYBOARD_HINT}. Drag to look, tap the floor to walk, pinch or scroll to zoom.`);
     host.append(canvas);
     const scene = new THREE.Scene();
+    const forestSky = config.id === 'forest-fold-house' ? createForestSky() : undefined;
+    if (forestSky) renderer.toneMappingExposure = Math.SQRT2;
     scene.background = new THREE.Color(config.architecture ? '#acb7bb' : config.sculpture ? '#cac2b2' : '#100e0b');
+    if (forestSky) scene.background = forestSky.day;
     const walkMarker = new THREE.Mesh(new THREE.RingGeometry(.18, .25, 32), new THREE.MeshBasicMaterial({
       color: '#d9ff43', transparent: true, opacity: .78, side: THREE.DoubleSide, depthWrite: false,
     }));
@@ -95,6 +102,8 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     let mode: ObsidianMode = 'walk';
     let model: THREE.Group | undefined;
     let reflection: ReturnType<typeof createFloorReflection> | undefined;
+    let mirrors: ReturnType<typeof createForestMirrors> | undefined;
+    let forestNight: ReturnType<typeof createForestNight> | undefined;
     const overview = { value: false };
     const savedWalk = { position: camera.position.clone(), quaternion: camera.quaternion.clone() };
     const ray = new THREE.Raycaster();
@@ -178,21 +187,37 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       textures.forEach(t => t.dispose());
     };
     let mixer: THREE.AnimationMixer | undefined, environment: THREE.WebGLRenderTarget | undefined;
+    const environments = new Map<boolean, THREE.WebGLRenderTarget>();
+    const captureEnvironment = (size: number, position: number[]) => {
+      // Capture authored surfaces and current lighting, never the previous IBL
+      // or recursive planar passes. Only initial load / a new light state does this.
+      scene.environment = null;
+      const peers: THREE.Object3D[] = [walkMarker, ...(reflection ? [reflection] : []), ...(mirrors?.mirrors ?? [])];
+      const visibility = peers.map(o => o.visible);
+      peers.forEach(o => { o.visible = false; });
+      const cube = new THREE.WebGLCubeRenderTarget(size, { type: THREE.HalfFloatType });
+      const probe = new THREE.CubeCamera(.1,160,cube); probe.position.fromArray(position);
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      try { probe.update(renderer,scene); return pmrem.fromCubemap(cube.texture); }
+      finally { pmrem.dispose(); cube.dispose(); peers.forEach((o,i) => { o.visible = visibility[i]; }); }
+    };
     let architecturalSky: THREE.HemisphereLight | undefined, architecturalSun: THREE.DirectionalLight | undefined;
-    const architecturalBakes = new Map<THREE.MeshStandardMaterial, number>();
-    const setArchitectureLighting = (night: boolean) => {
+    let lightingRequest = 0;
+    const setArchitectureLighting = async (night: boolean) => {
       if (!config.architecture || !architecturalSky || !architecturalSun) return;
-      // The day bake remains the base transport. This preserves the mastered
-      // materials while providing a fast, real-time dusk treatment.
-      scene.background = new THREE.Color(night ? '#08111a' : '#acb7bb');
-      renderer.toneMappingExposure = night ? .72 : 1;
+      const request = ++lightingRequest;
+      await forestNight?.set(night);
+      if (disposed || request !== lightingRequest) return;
+      scene.background = forestSky ? night ? forestSky.night : forestSky.day : new THREE.Color(night ? '#08111a' : '#acb7bb');
+      // Match the source master's AgX exposure: +0.5 EV day / +1.3 EV night.
+      renderer.toneMappingExposure = night ? 2 ** 1.3 : Math.SQRT2;
       architecturalSky.color.set(night ? '#4c6688' : '#e4edf1');
       architecturalSky.groundColor.set(night ? '#101914' : '#333b28');
-      architecturalSky.intensity = night ? .38 : .85;
+      architecturalSky.intensity = night ? .08 : .85;
       architecturalSun.color.set(night ? '#9ebfff' : '#ffebc5');
-      architecturalSun.intensity = night ? 1.05 : 3;
-      architecturalBakes.forEach((intensity, material) => { material.emissiveIntensity = night ? intensity * .42 : intensity; });
-      if (reflection) (reflection.material as THREE.ShaderMaterial).opacity = night ? .72 : 1;
+      architecturalSun.intensity = night ? 0 : 3;
+      if (!environments.has(night)) environments.set(night, captureEnvironment(compact ? 128 : 256, [0,3,4]));
+      scene.environment = environments.get(night)!.texture;
       host.dataset.lighting = night ? 'night' : 'day';
       schedule();
     };
@@ -246,6 +271,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     const fullPixelRatio = () => Math.min(Math.max(devicePixelRatio, compact ? 1 : 1.5), 2);
     const quality = (full: boolean) => {
       renderer.setPixelRatio(full ? fullPixelRatio() : balancedPixelRatio());
+      mirrors?.quality(full);
       const size = full ? compact ? 1024 : 2048 : 512;
       if (reflection) {
         reflection.getRenderTarget().samples = full && !compact ? 2 : 0;
@@ -289,6 +315,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       animationTime = now; host.dataset.animation = animate ? 'playing' : 'paused';
       if(mixer)host.dataset.animationTime=mixer.time.toFixed(3);
       portal?.update(filmProgress);
+      mirrors?.update(overview.value);
       renderer.render(scene, camera);
       const moving = Boolean(resolution.warming() && model) || animate || (!paused && (director?.moving() || (!director?.active() && !cinematic && (mode === 'walk' ? walk.needsUpdate() : orbitMoving))));
       host.dataset.idle = String(!moving);
@@ -398,11 +425,12 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           });
           if (config.architecture && material instanceof THREE.MeshStandardMaterial) {
             installForestIrradiance(material);
-            architecturalBakes.set(material, material.emissiveIntensity);
+            if (forestSky) installForestFoliage(material);
           }
           // Cut roofs, glazing and coves together; retain full-height sculptures.
           if (!config.architecture && (!config.sculpture || !artworkMaterials.has(material))) installOverviewCutaway(material, overview, config.sculpture ? 1 : undefined);
         });
+        if (forestSky) forestNight = createForestNight([...materials].filter((m): m is THREE.MeshStandardMaterial => m instanceof THREE.MeshStandardMaterial), compact);
         scene.add(model);
         if (config.architecture) {
           renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;
@@ -415,14 +443,14 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           // Same source direction as the Blender afternoon: Z-up to Y-up.
           architecturalSun = new THREE.DirectionalLight('#ffebc5',3);architecturalSun.position.set(-14,15,16);
           architecturalSun.castShadow=true;architecturalSun.shadow.mapSize.set(compact?2048:4096,compact?2048:4096);architecturalSun.shadow.camera.left=-24;architecturalSun.shadow.camera.right=24;architecturalSun.shadow.camera.top=24;architecturalSun.shadow.camera.bottom=-24;architecturalSun.shadow.camera.far=100;architecturalSun.shadow.normalBias=.012;scene.add(architecturalSun);
+          architecturalSun.shadow.camera.updateProjectionMatrix();
           // Static house/woodland: render this detailed map once, not on each
           // walking frame. Camera movement does not change sun-space shadows.
           renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
           // Capture the actual house/woodland once for bronze and glass. Baked
           // diffuse transport remains independent of this specular environment.
-          const cube=new THREE.WebGLCubeRenderTarget(compact?128:256,{type:THREE.HalfFloatType});
-          const probe=new THREE.CubeCamera(.1,160,cube);probe.position.set(0,3,4);probe.update(renderer,scene);
-          const pmrem=new THREE.PMREMGenerator(renderer);environment=pmrem.fromCubemap(cube.texture);scene.environment=environment.texture;pmrem.dispose();cube.dispose();
+          environments.set(false,captureEnvironment(compact?128:256,[0,3,4]));
+          scene.environment=environments.get(false)!.texture;
           const shape=new THREE.Shape([[-1.1,-6.8],[6.9,-6.8],[8.5,-5.4],[8.5,-1.6],[3,-1.6],[3,0],[.4,0],[.4,-3.8],[-1.1,-3.8]].map(([x,y])=>new THREE.Vector2(x,y)));
           reflection=createFloorReflection(compact,{geometry:new THREE.ShapeGeometry(shape),center:new THREE.Vector3(0,-.176,0),seamless:true,water:config.id==='forest-fold-house'});
         } else if (config.sculpture) {
@@ -430,9 +458,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           // repeated environment rebuild while the visitor changes views.
           const hidden: THREE.Mesh[] = [];
           model.traverse(object => { if(object instanceof THREE.Mesh && object.userData.artwork_id){object.visible=false;hidden.push(object);} });
-          const cube = new THREE.WebGLCubeRenderTarget(128, { type: THREE.HalfFloatType });
-          const probe = new THREE.CubeCamera(.1,100,cube);probe.position.set(0,2.6,0);probe.update(renderer,scene);
-          const pmrem=new THREE.PMREMGenerator(renderer);environment=pmrem.fromCubemap(cube.texture);scene.environment=environment.texture;pmrem.dispose();cube.dispose();hidden.forEach(o=>{o.visible=true;});
+          environment=captureEnvironment(128,[0,2.6,0]);scene.environment=environment.texture;hidden.forEach(o=>{o.visible=true;});
           scene.add(new THREE.HemisphereLight('#eef4ff','#9c8563',2.4));
           for (const [x,y,z] of [[-4,8,3],[17,6,-5],[8,8,-15]]) {
             const light=new THREE.DirectionalLight('#fff2da',2.2);light.position.set(x,y,z);light.target.position.set(x,0,z-2);scene.add(light,light.target);
@@ -449,6 +475,10 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           if(gltf.animations.length){mixer=new THREE.AnimationMixer(model);gltf.animations.forEach(clip=>mixer!.clipAction(clip).play());}
         } else reflection = createFloorReflection(compact);
         if (reflection) scene.add(reflection);
+        if (forestSky && reflection) {
+          mirrors = createForestMirrors(compact,camera,reflection);
+          scene.add(...mirrors.mirrors);
+        }
         quality(false);
         walk.setEnabled(!cinematic); schedule();
       }).catch(error => { if (!disposed && error.name !== 'AbortError') onError(); });
@@ -464,6 +494,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       window.removeEventListener('blur', windowBlur); document.removeEventListener('visibilitychange', visibility);
       motion.removeEventListener('change', schedule);
       mixer?.stopAllAction(); if(model)mixer?.uncacheRoot(model);environment?.dispose();
+      environments.forEach(target => target.dispose()); forestSky?.dispose(); mirrors?.dispose(); forestNight?.dispose();
       walk.dispose(); orbit.dispose();
       if (model) disposeModel(model);
       walkMarker.geometry.dispose(); walkMarker.material.dispose(); portal?.dispose();
