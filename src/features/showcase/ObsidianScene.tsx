@@ -21,6 +21,7 @@ import { createForestMirrors } from './forestMirrors';
 import { createForestSky } from './forestSky';
 import { installForestFoliage } from './forestFoliage';
 import { createForestNight } from './forestNight';
+import { installForestPondOcclusion } from './forestPondOcclusion';
 import type { VisitorTourState } from '../gallery/visitorTourState';
 
 export interface ShowcaseSceneConfig {
@@ -103,6 +104,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
     let model: THREE.Group | undefined;
     let reflection: ReturnType<typeof createFloorReflection> | undefined;
     let mirrors: ReturnType<typeof createForestMirrors> | undefined;
+    let disposePondOcclusion: (() => void) | undefined;
     let forestNight: ReturnType<typeof createForestNight> | undefined;
     const overview = { value: false };
     const savedWalk = { position: camera.position.clone(), quaternion: camera.quaternion.clone() };
@@ -479,8 +481,18 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
         } else reflection = createFloorReflection(compact);
         if (reflection) scene.add(reflection);
         if (forestSky && reflection) {
+          disposePondOcclusion = installForestPondOcclusion(reflection, gl, camera);
           mirrors = createForestMirrors(compact,camera,reflection);
           scene.add(...mirrors.mirrors);
+        }
+        if (forestSky) {
+          // First pond view otherwise links/uploads on the visitor's first turn
+          // toward the courtyard. Warm the real reflection while still loading.
+          const warmCamera = camera.clone();
+          warmCamera.position.fromArray(config.rooms[4].start);
+          warmCamera.lookAt(2, 0, 3);
+          warmCamera.updateMatrixWorld();
+          renderer.render(scene, warmCamera);
         }
         quality(false);
         walk.setEnabled(!cinematic); schedule();
@@ -498,6 +510,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       motion.removeEventListener('change', schedule);
       mixer?.stopAllAction(); if(model)mixer?.uncacheRoot(model);environment?.dispose();
       environments.forEach(target => target.dispose()); forestSky?.dispose(); mirrors?.dispose(); forestNight?.dispose();
+      disposePondOcclusion?.();
       walk.dispose(); orbit.dispose();
       if (model) disposeModel(model);
       walkMarker.geometry.dispose(); walkMarker.material.dispose(); portal?.dispose();

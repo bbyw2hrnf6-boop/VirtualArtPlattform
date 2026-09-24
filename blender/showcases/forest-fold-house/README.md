@@ -42,6 +42,23 @@ rotation samples measured approximately 18–21 FPS before and 29–30 FPS with 
 final delivery/raster change. This is not a sustained benchmark or a physical
 phone claim. Final desktop/mobile Day/Night views were reviewed separately.
 
+The pond now uses a non-blocking WebGL visibility query against the already
+rendered opaque walls and floors. When no water pixel is visible, its last
+reflection is reused rather than drawing the garden again; the live reflection
+resumes as soon as the surface becomes visible. This does not alter geometry,
+texture resolution or the visible water material. In short, headless installed
+Chrome/ANGLE Metal M4 rotation samples at 1440 × 1000, the upper hall improved
+from about 28–30 to 37–39 FPS. The visible courtyard pond still costs a second
+scene pass and measured about 32 FPS in one rotation sample; **50 FPS is not yet
+verified on desktop Chrome**. A 390 × 844 emulated mobile Chrome viewport measured
+about 54 FPS in the upper hall, but is not a physical-phone qualification.
+The first pond view is rendered offscreen before Walk becomes ready. An eight-room
+headless Chrome rotation pass then made no asset requests and reported no
+post-ready long tasks; the same pass without this warm-up had repeatable first-
+view pauses around 150 ms. Some pond-facing angles still render below 30 FPS,
+so the 30–40 FPS sustained target remains open and needs further geometry/pond
+pass work rather than a claim that preloading alone fixes all frame pacing.
+
 Tradeoff: the corrected initial delivery is **165.82 MiB desktop / 86.96 MiB
 mobile**, up from 144.04 / 81.39 MiB. Encoded file size and GPU memory are different:
 decoded texture allocation remains approximately 1,952 / 448 MiB; only the
