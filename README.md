@@ -59,7 +59,7 @@ The largest modules are `src/App.tsx`, `src/features/gallery/GalleryScene.tsx` a
 - Visibility, review, Creator attribution, search indexing, access roles and lifecycle rules are server-owned. `discoverEligible` is never a client toggle.
 - Placement, navigation and accessibility must work on desktop and mobile, with reduced-motion and non-WebGL fallbacks.
 - Runtime assets require a real reference. Keep primary Blender sources and licensed originals; do not commit caches, backup blends, traces or duplicate generated outputs.
-- The opt-in 20-second three-world film plays with sound after a click; persistent Explore links open each showcase and reduced motion keeps still chapters. See the scoped showcase contract below.
+- The opt-in 20-second three-world film plays with sound after a click; the showcase cards below open each world, and reduced motion keeps a still preview. See the scoped showcase contract below.
 
 ## Read only when relevant
 

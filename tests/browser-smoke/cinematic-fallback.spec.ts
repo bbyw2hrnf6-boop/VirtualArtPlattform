@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 for (const width of [1440, 390]) {
-  test(`cinematic entry and still chapters need no showcase GPU at ${width}px`, async ({ page }) => {
+  test(`cinematic entry and still preview need no showcase GPU at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const requests: string[] = [];
@@ -11,13 +11,11 @@ for (const width of [1440, 390]) {
     await page.goto('/#/');
     const story = page.getByRole('region', { name: 'Three worlds cinematic story' });
     await story.scrollIntoViewIfNeeded();
-    await expect(story.getByRole('status')).toHaveText('Still views · Reduced motion');
+    await expect(story.getByRole('status')).toHaveText('Still view · Explore the worlds below');
     await expect(story).toHaveAttribute('data-playing', 'false');
-    for (const [i, name] of ['Obsidian', 'Sculpture Pavilion', 'Forest Fold House'].entries()) {
-      await story.getByRole('navigation', { name: 'Film chapters' }).getByRole('button', { name: `0${i + 1} ${i === 0 ? 'Art spaces' : name}` }).click();
-      await expect(story).toHaveAttribute('data-chapter', String(i));
-      await expect(story.getByRole('link', { name: `Explore ${name}`, exact: true })).toBeVisible();
-    }
+    await expect(story.getByRole('navigation', { name: 'Film chapters' })).toHaveCount(0);
+    for (const id of ['obsidian', 'sculpture-pavilion', 'forest-fold-house'])
+      await expect(page.locator(`.showcase-collection__grid a[href="#/showcase/${id}"]`).first()).toBeVisible();
     await expect(story.locator('canvas')).toHaveCount(0);
     await expect(story.locator('video[src]')).toHaveCount(0);
     expect(requests).toEqual([]);

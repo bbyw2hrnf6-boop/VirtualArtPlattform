@@ -1,60 +1,53 @@
-.world-story { margin:40px 0 72px; color:#f0eee6; background:#111511; scroll-margin-top:24px; }
-.world-story__stage { position:relative; aspect-ratio:16/9; overflow:hidden; isolation:isolate; background:#080b08; }
+.world-story { position:relative; isolation:isolate; overflow:hidden; margin:44px 0 72px; padding:clamp(28px,5vw,76px) clamp(20px,3.4vw,52px); border-radius:20px; background:#85796b; color:#faf8f2; scroll-margin-top:24px; }
+.world-story::before { content:""; position:absolute; z-index:0; inset:-48px; background:url('/assets/films/lieuva-three-worlds-poster.webp?v=3') center/cover no-repeat; filter:blur(36px) saturate(.72); }
+.world-story::after { content:""; position:absolute; z-index:0; inset:0; background:linear-gradient(120deg,#5b50488c,#c1b2a127 55%,#5b51487d); pointer-events:none; }
+.world-story__stage { position:relative; z-index:1; isolation:isolate; overflow:hidden; width:100%; max-width:1320px; margin:auto; aspect-ratio:16/9; border:1px solid #ffffffa8; border-radius:26px; background:#22211e; box-shadow:0 24px 65px #211d1973,inset 0 0 0 1px #ffffff21; }
+.world-story__stage:fullscreen { width:100vw; max-width:none; height:100dvh; aspect-ratio:auto; border:0; border-radius:0; background:#171612; }
 .world-story__poster,.world-story__video,.world-story__shade { position:absolute; inset:0; width:100%; height:100%; }
 .world-story__poster { object-fit:cover; }
-.world-story__video { display:block; object-fit:contain; opacity:0; transition:opacity .25s ease; }
+.world-story__video { display:block; object-fit:contain; opacity:0; transition:opacity .3s ease; }
 .world-story__video.is-ready { opacity:1; }
-.world-story__shade { pointer-events:none; background:linear-gradient(0deg,#080b08d9,transparent 80%); transition:opacity .3s ease; }
-.world-story__stage[data-started=true] .world-story__shade { opacity:0; }
-.world-story__caption { position:absolute; left:5%; bottom:8%; width:85%; transition:opacity .25s ease; }
-.world-story__caption.is-hidden { opacity:0; pointer-events:none; }
-.world-story__caption>span { letter-spacing:.2em; font-size:10px; color:#d9ff43; }
-.world-story__caption h3 { font:clamp(38px,5.5vw,86px)/1.02 Instrument,serif; letter-spacing:-.025em; margin:18px 0; border:0; }
-.world-story__caption p { margin:0; font:14px/1.6 Manrope,sans-serif; max-width:590px; color:#efede4; }
-.world-story__now { position:absolute; top:22px; left:24px; padding:9px 12px; background:#111511b8; color:#f0eee6; font:10px/1.4 Manrope,sans-serif; letter-spacing:.13em; text-transform:uppercase; pointer-events:none; }
-.world-story__controls { padding:22px 3% 18px; }
-.world-story button,.world-story__chapter a { font:12px/1.4 Manrope,sans-serif; min-height:44px; color:inherit; background:transparent; border:0; padding:10px 14px; cursor:pointer; }
-.world-story :focus-visible { outline:2px solid #d9ff43; outline-offset:3px; }
-.world-story__actions { display:flex; align-items:center; gap:12px; }
-.world-story__actions>button { display:inline-flex; align-items:center; justify-content:center; gap:22px; flex-shrink:0; }
-.world-story__actions>button[data-film-play] { background:#d9ff43; color:#111511; font-weight:650; }
-.world-story__actions>button.world-story__sound { border:1px solid #ffffff45; }
-.world-story__status { color:#b8bdaf; font:11px/1.6 Manrope,sans-serif; }
-.world-story__time { margin-left:auto; font:11px Manrope,sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap; color:#c7ccbf; }
-.world-story__scrub { display:block; font-size:0; margin:5px 0 2px; }
-.world-story__scrub input { width:100%; margin:0; height:44px; accent-color:#d9ff43; cursor:ew-resize; }
-.world-story__chapters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px; }
-.world-story__chapter { display:flex; align-items:center; gap:4px; border-top:1px solid #4a5143; min-width:0; }
-.world-story__chapter[data-current=true] { border-color:#d9ff43; }
-.world-story__chapter button { flex:1; min-width:0; display:flex; align-items:center; gap:12px; padding-left:0; text-align:left; }
-.world-story__chapter small { color:#d9ff43; font:10px Manrope,sans-serif; }
-.world-story__chapter a { display:inline-flex; align-items:center; gap:8px; padding-right:0; color:#d9ff43; text-decoration:none; white-space:nowrap; }
-.world-story__chapter a:hover { text-decoration:underline; text-underline-offset:5px; }
-.world-story__description { margin:13px 0 0; color:#949c8c; font:10px/1.6 Manrope,sans-serif; }
-@media(max-width:900px) {
-  .world-story__chapters { gap:14px; }
-  .world-story__chapter { flex-wrap:wrap; gap:0; }
-  .world-story__chapter button { flex-basis:100%; }
-  .world-story__chapter a { margin-left:23px; }
-}
+.world-story__shade { pointer-events:none; background:linear-gradient(180deg,#17120d66 0%,transparent 24%,transparent 58%,#17120d99 100%); }
+.world-story__topline { position:absolute; z-index:2; top:30px; left:38px; right:30px; display:flex; align-items:start; justify-content:space-between; gap:20px; }
+.world-story__chapter-name { display:flex; flex-direction:column; gap:6px; color:#fffdfa; text-shadow:0 1px 12px #18140f6b; }
+.world-story__chapter-name span { font:600 clamp(11px,1vw,15px)/1.3 Manrope,sans-serif; letter-spacing:.16em; text-transform:uppercase; }
+.world-story__chapter-name small { font:12px/1.3 Manrope,sans-serif; letter-spacing:.17em; }
+.world-story button { display:grid; place-items:center; flex:none; min-width:44px; min-height:44px; padding:0; border:0; background:transparent; color:inherit; cursor:pointer; }
+.world-story :focus-visible { outline:2px solid #e1ee99; outline-offset:3px; }
+.world-story__fullscreen { width:44px; height:44px; border-radius:50%; background:#2c292240!important; backdrop-filter:blur(10px); }
+.world-story__fullscreen svg { width:22px; height:22px; }
+.world-story__hero-play { position:absolute; z-index:2; top:50%; left:50%; width:112px; height:112px; transform:translate(-50%,-50%); border:1px solid #ffffffb3!important; border-radius:50%; background:#ffffff30!important; box-shadow:0 10px 45px #211a1555; backdrop-filter:blur(15px); transition:background .2s ease,scale .2s ease; }
+.world-story__hero-play:hover { background:#ffffff4d!important; scale:1.04; }
+.world-story__hero-play:disabled { cursor:progress; opacity:.65; }
+.world-story__hero-play svg { width:34px; height:34px; margin-left:4px; }
+.world-story__controls { position:absolute; z-index:2; right:30px; bottom:24px; left:30px; display:flex; align-items:center; gap:14px; min-height:44px; }
+.world-story__transport,.world-story__sound { width:44px; height:44px; }
+.world-story__transport svg,.world-story__sound svg { width:23px; height:23px; }
+.world-story__time { white-space:nowrap; font:13px/1 Manrope,sans-serif; letter-spacing:.05em; font-variant-numeric:tabular-nums; text-shadow:0 1px 8px #000a; }
+.world-story__scrub { display:flex; align-items:center; flex:1; height:44px; min-width:0; }
+.world-story__scrub input { appearance:none; width:100%; height:44px; margin:0; background:transparent; cursor:ew-resize; }
+.world-story__scrub input::-webkit-slider-runnable-track { height:4px; border-radius:3px; background:linear-gradient(to right,#f8f8f4 var(--film-progress),#ffffffb8 var(--film-progress)); }
+.world-story__scrub input::-moz-range-track { height:4px; border-radius:3px; background:#ffffffb8; }
+.world-story__scrub input::-moz-range-progress { height:4px; border-radius:3px; background:#f8f8f4; }
+.world-story__scrub input::-webkit-slider-thumb { appearance:none; width:16px; height:16px; margin-top:-6px; border:0; border-radius:50%; background:#fffefa; box-shadow:0 1px 9px #0007; }
+.world-story__scrub input::-moz-range-thumb { width:16px; height:16px; border:0; border-radius:50%; background:#fffefa; box-shadow:0 1px 9px #0007; }
+.world-story__status:not(:empty) { position:absolute; z-index:2; bottom:82px; left:50%; max-width:calc(100% - 48px); padding:8px 14px; transform:translateX(-50%); background:#24221ec9; border-radius:20px; color:#fffdfa; text-align:center; font:11px/1.4 Manrope,sans-serif; white-space:nowrap; }
+.world-story[data-motion=reduced] .world-story__status:not(:empty) { bottom:24px; }
+.world-story__visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @media(max-width:700px) {
-  .world-story { margin:26px -20px 44px; scroll-margin-top:0; }
-  .world-story__caption { left:20px; bottom:22px; width:calc(100% - 40px); }
-  .world-story__caption>span { font-size:8px; letter-spacing:.16em; }
-  .world-story__caption h3 { font-size:clamp(28px,8vw,50px); margin:10px 0; }
-  .world-story__caption p { display:none; }
-  .world-story__controls { padding:16px 20px 18px; }
-  .world-story__actions { flex-wrap:wrap; gap:10px; }
-  .world-story__actions>button { font-size:11px; gap:12px; padding:10px 12px; }
-  .world-story__status { order:3; flex-basis:calc(100% - 84px); font-size:10px; }
-  .world-story__time { order:4; font-size:10px; }
-  .world-story__chapters { grid-template-columns:1fr; gap:0; }
-  .world-story__chapter { flex-wrap:nowrap; min-height:58px; }
-  .world-story__chapter button { flex:1; font-size:13px; padding-top:14px; padding-bottom:14px; }
-  .world-story__chapter a { margin-left:0; font-size:12px; padding-left:16px; }
-  .world-story__now { top:12px; left:12px; font-size:8px; padding:6px 8px; }
-  .world-story__description { max-width:310px; }
+  .world-story { margin:26px -20px 44px; padding:22px 14px; border-radius:0; scroll-margin-top:0; }
+  .world-story__stage { aspect-ratio:16/11; border-radius:15px; }
+  .world-story__topline { top:13px; left:16px; right:11px; }
+  .world-story__chapter-name { gap:3px; }
+  .world-story__chapter-name span { font-size:10px; letter-spacing:.11em; }
+  .world-story__chapter-name small { font-size:10px; }
+  .world-story__hero-play { width:72px; height:72px; }
+  .world-story__hero-play svg { width:27px; height:27px; }
+  .world-story__controls { right:9px; bottom:8px; left:9px; gap:5px; }
+  .world-story__transport,.world-story__sound { width:40px; }
+  .world-story__transport svg,.world-story__sound svg { width:20px; height:20px; }
+  .world-story__time { font-size:10px; }
+  .world-story__status:not(:empty) { bottom:58px; font-size:10px; }
+  .world-story[data-motion=reduced] .world-story__status:not(:empty) { bottom:14px; }
 }
-@media(prefers-reduced-motion:reduce) {
-  .world-story__video,.world-story__shade,.world-story__caption { transition:none; }
-}
+@media(prefers-reduced-motion:reduce) { .world-story__video,.world-story__hero-play { transition:none; } }

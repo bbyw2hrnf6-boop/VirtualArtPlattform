@@ -40,19 +40,21 @@ Art spaces 0–7 s (White Cube, Grand Forum and Obsidian), Sculpture Pavilion
 It is a pre-rendered montage in the visual style of the product-briefing intro,
 with a warm original instrumental soundtrack and three brief English teaser lines.
 It replaces the homepage's WebGL scroll journey. Its art chapter includes views of existing Studio templates and the bespoke
-Obsidian gallery; the first Explore action is explicitly labelled Obsidian. It does
+Obsidian gallery; its showcase card remains labelled Obsidian. It does
 not change the standalone showcases or Studio story.
 
 The header and Beyond Studio buttons start the film with sound on an explicit
-click. A native HTML video receives its source only after Play. Desktop uses
+click. The homepage player is an inset film card over a softened frame from the
+film, with a central Play button and compact controls over the image. The former
+chapter shortcut row is removed because the three showcase cards immediately
+below already open the original routes, including when the film is unavailable.
+A native HTML video receives its source only after Play. Desktop uses
 1080p and narrow viewports use 720p; both share the exact chapter timing.
-Pause/resume/replay, mute, a reversible scrubber and paused chapter selection
-are available. Three persistent Explore links open the original showcase routes,
-including before playback and when media loading fails. Scrolling remains native
+Pause/resume/replay, mute, full screen and a reversible scrubber remain available. Scrolling remains native
 and does not scrub or move with the film. Playback pauses when the section leaves
 the viewport, the tab becomes hidden or the window loses focus.
 
-Reduced motion keeps static chapter covers and Explore links, with no film
+Reduced motion keeps a still preview and the showcase cards below, with no film
 source or autoplay. Changing the preference while playing pauses and unloads
 media. The film mounts no Three.js scene and downloads no showcase GLB.
 Sources, shot timing, sound synthesis and encoding instructions live in
@@ -63,8 +65,8 @@ Sources, shot timing, sound synthesis and encoding instructions live in
 The homepage film requires no WebGL context. Standalone showcase pages load a
 single scene after entry and retain their existing disposal/readiness boundary.
 Scene disposal releases geometries, textures and renderer; readiness waits for
-shader warm-up draws. Loading retains a poster, failure retains static navigation,
-and reduced motion keeps still chapters without automatic motion.
+shader warm-up draws. Loading retains a poster, failure retains the showcase cards,
+and reduced motion keeps a still preview without automatic motion.
 
 The raster adapts to sustained slow frames and can recover after a cooldown and
 sustained fast visitor-driven frames. It never renders idle frames to probe for
@@ -116,9 +118,9 @@ the authored shot durations; guided paths instead interpolate by travelled dista
 
 `showcaseDirector.test.ts` checks rail continuity, all guided stop reachability,
 pause/resume, reduced motion and safe handback. `cinematic-fallback.spec.ts` keeps
-static chapter entry, Explore links and no-eager-media/GLB behavior in the blocking
+the still preview, showcase links and no-eager-media/GLB behavior in the blocking
 smoke suite. Homepage cases in `showcase-cinematics.spec.ts` cover sound controls,
-chapter timing, reversible seeking, replay and off-screen pause without WebGL.
+chapter timing, reversible seeking, full screen, replay and off-screen pause without WebGL.
 
 After building, run `npm run test:browser-cinematic` on a GPU-capable machine for
 desktop/mobile visits, framing and film controls. These
