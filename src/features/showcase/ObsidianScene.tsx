@@ -16,6 +16,7 @@ import { forestRooms } from './forestRooms';
 import { createWorldPortal } from './worldPortal';
 import { createShowcaseQuality } from './showcaseQuality';
 import { installForestIrradiance } from './forestIrradiance';
+import { prepareForestWater } from './forestWater';
 import type { VisitorTourState } from '../gallery/visitorTourState';
 
 export interface ShowcaseSceneConfig {
@@ -186,8 +187,8 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
       scene.background = new THREE.Color(night ? '#08111a' : '#acb7bb');
       renderer.toneMappingExposure = night ? .72 : 1;
       architecturalSky.color.set(night ? '#4c6688' : '#e4edf1');
-      architecturalSky.groundColor.set(night ? '#101914' : '#444b32');
-      architecturalSky.intensity = night ? .38 : 1.4;
+      architecturalSky.groundColor.set(night ? '#101914' : '#333b28');
+      architecturalSky.intensity = night ? .38 : .85;
       architecturalSun.color.set(night ? '#9ebfff' : '#ffebc5');
       architecturalSun.intensity = night ? 1.05 : 3;
       architecturalBakes.forEach((intensity, material) => { material.emissiveIntensity = night ? intensity * .42 : intensity; });
@@ -408,8 +409,9 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           model.traverse(o=>{if(o instanceof THREE.Mesh){
             const ms=Array.isArray(o.material)?o.material:[o.material];
             o.castShadow=!ms.some(m=>m.transparent);o.receiveShadow=!o.userData.baked_diffuse;
+            if(config.id==='forest-fold-house')prepareForestWater(o);
           }});
-          architecturalSky=new THREE.HemisphereLight('#e4edf1','#444b32',1.4);scene.add(architecturalSky);
+          architecturalSky=new THREE.HemisphereLight('#e4edf1','#333b28',.85);scene.add(architecturalSky);
           // Same source direction as the Blender afternoon: Z-up to Y-up.
           architecturalSun = new THREE.DirectionalLight('#ffebc5',3);architecturalSun.position.set(-14,15,16);
           architecturalSun.castShadow=true;architecturalSun.shadow.mapSize.set(compact?2048:4096,compact?2048:4096);architecturalSun.shadow.camera.left=-24;architecturalSun.shadow.camera.right=24;architecturalSun.shadow.camera.top=24;architecturalSun.shadow.camera.bottom=-24;architecturalSun.shadow.camera.far=100;architecturalSun.shadow.normalBias=.012;scene.add(architecturalSun);
@@ -422,7 +424,7 @@ export default function ObsidianScene({ controlsRef, onReady, onError, onRoom, o
           const probe=new THREE.CubeCamera(.1,160,cube);probe.position.set(0,3,4);probe.update(renderer,scene);
           const pmrem=new THREE.PMREMGenerator(renderer);environment=pmrem.fromCubemap(cube.texture);scene.environment=environment.texture;pmrem.dispose();cube.dispose();
           const shape=new THREE.Shape([[-1.1,-6.8],[6.9,-6.8],[8.5,-5.4],[8.5,-1.6],[3,-1.6],[3,0],[.4,0],[.4,-3.8],[-1.1,-3.8]].map(([x,y])=>new THREE.Vector2(x,y)));
-          reflection=createFloorReflection(compact,{geometry:new THREE.ShapeGeometry(shape),center:new THREE.Vector3(0,-.176,0),seamless:true});
+          reflection=createFloorReflection(compact,{geometry:new THREE.ShapeGeometry(shape),center:new THREE.Vector3(0,-.176,0),seamless:true,water:config.id==='forest-fold-house'});
         } else if (config.sculpture) {
           // Capture the actual baked architecture once. No external HDRI and no
           // repeated environment rebuild while the visitor changes views.

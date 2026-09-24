@@ -1,17 +1,46 @@
 {
   "showcase": "forest-fold-house",
+  "deliveryRevision": 5,
   "source": "forest-fold-house.blend",
-  "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
+  "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
   "models": {
-    "desktop-v4/forest-fold-house-desktop.gltf": {
-      "bytes": 150066466,
-      "sha256": "da13fc307a9b02a497141c25a84e3f9628fec0b9bd6054e3f552ec75359ca47a",
-      "triangles": 9263334,
-      "uniqueMeshTriangles": 4953821,
-      "instancedBatches": 503,
-      "primitives": 363,
-      "materials": 39,
-      "decodedRgbaMipBytesEstimate": 1962934272,
+    "desktop-v5/forest-fold-house-desktop.gltf": {
+      "bytes": 151032841,
+      "sha256": "70254c118914f6c5aa9565cdae62a2772c15975da17caedbeef7bef35043107a",
+      "triangles": 16772685,
+      "uniqueMeshTriangles": 4577733,
+      "instancedBatches": 538,
+      "primitives": 424,
+      "materials": 86,
+      "transport": {
+        "mode": "irradiance-with-tiled-albedo",
+        "groups": [
+          "E0",
+          "E0_ceiling",
+          "E0_furniture",
+          "E0_walk",
+          "E1",
+          "E1_ceiling",
+          "E1_furniture",
+          "E1_walk",
+          "W0",
+          "W0_ceiling",
+          "W0_furniture",
+          "W0_walk",
+          "W1",
+          "W1_ceiling",
+          "W1_furniture",
+          "W1_walk",
+          "bridge_walk",
+          "courtyard_walk",
+          "exterior",
+          "stairs_walk"
+        ],
+        "materials": 65,
+        "tiledSurfaceMaterials": 22
+      },
+      "packagingComparedWithRaw": true,
+      "decodedRgbaMipBytesEstimate": 2046820352,
       "textures": [
         {
           "name": "bark_brown_02_nor_gl_2k",
@@ -34,192 +63,17 @@
           "height": 2048
         },
         {
-          "name": "bridge_walk-normal",
+          "name": "oak_veneer_01_nor_gl_2k",
           "width": 2048,
           "height": 2048
         },
         {
-          "name": "bridge_walk-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_ceiling",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E0_ceiling-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E0_ceiling-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_furniture",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E0_furniture-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E0_furniture-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0",
+          "name": "surface-oak_veneer_01",
           "width": 4096,
           "height": 4096
         },
         {
-          "name": "E0-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E0-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_walk",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E0_walk-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E0_walk-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_ceiling",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E1_ceiling-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E1_ceiling-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_furniture",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E1_furniture-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E1_furniture-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1",
-          "width": 4096,
-          "height": 4096
-        },
-        {
-          "name": "E1-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E1-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_walk",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E1_walk-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "E1_walk-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "leafy_grass_nor_gl_2k",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "leafy_grass_diff_2k",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "leafy_grass_rough_2k",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "exterior",
-          "width": 4096,
-          "height": 4096
-        },
-        {
-          "name": "exterior-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "exterior-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "rock_08_nor_gl_2k",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "rock_08_diff_4k",
-          "width": 4096,
-          "height": 4096
-        },
-        {
-          "name": "rock_08_rough_2k",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "mossy_rock_nor_gl_2k",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "mossy_rock_diff_2k",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "mossy_rock_rough_2k",
+          "name": "oak_veneer_01_rough_2k",
           "width": 2048,
           "height": 2048
         },
@@ -250,6 +104,196 @@
         },
         {
           "name": "periwinkle_plant_rough",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "courtyard_walk",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "rock_08_nor_gl_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "surface-rock_08",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "rock_08_rough_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0_ceiling",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0_furniture",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0_furniture-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0_furniture-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_furniture-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "E0-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_walk",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0_walk-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E0_walk-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_walk-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_ceiling",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E1_furniture",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E1_furniture-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E1_furniture-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_furniture-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "E1-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "E1-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_walk",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "forest_ground_04_nor_gl_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "forest_ground_04_diff_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "forest_ground_04_rough_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "exterior",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "exterior-normal",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "exterior-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "exterior-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "rock_08_diff_4k",
+          "width": 4096,
+          "height": 4096
+        },
+        {
+          "name": "mossy_rock_nor_gl_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "mossy_rock_diff_2k",
+          "width": 2048,
+          "height": 2048
+        },
+        {
+          "name": "mossy_rock_rough_2k",
           "width": 2048,
           "height": 2048
         },
@@ -304,29 +348,9 @@
           "height": 2048
         },
         {
-          "name": "stairs_walk-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "stairs_walk-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
           "name": "W0_ceiling",
           "width": 2048,
           "height": 2048
-        },
-        {
-          "name": "W0_ceiling-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "W0_ceiling-roughness",
-          "width": 1024,
-          "height": 1024
         },
         {
           "name": "W0_furniture",
@@ -337,6 +361,11 @@
           "name": "W0_furniture-normal",
           "width": 2048,
           "height": 2048
+        },
+        {
+          "name": "W0_furniture-albedo",
+          "width": 1024,
+          "height": 1024
         },
         {
           "name": "W0_furniture-roughness",
@@ -354,6 +383,11 @@
           "height": 2048
         },
         {
+          "name": "W0-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W0-roughness",
           "width": 1024,
           "height": 1024
@@ -369,6 +403,11 @@
           "height": 2048
         },
         {
+          "name": "W0_walk-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W0_walk-roughness",
           "width": 1024,
           "height": 1024
@@ -379,16 +418,6 @@
           "height": 2048
         },
         {
-          "name": "W1_ceiling-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "W1_ceiling-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
           "name": "W1_furniture",
           "width": 2048,
           "height": 2048
@@ -397,6 +426,11 @@
           "name": "W1_furniture-normal",
           "width": 2048,
           "height": 2048
+        },
+        {
+          "name": "W1_furniture-albedo",
+          "width": 1024,
+          "height": 1024
         },
         {
           "name": "W1_furniture-roughness",
@@ -414,6 +448,11 @@
           "height": 2048
         },
         {
+          "name": "W1-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W1-roughness",
           "width": 1024,
           "height": 1024
@@ -422,16 +461,6 @@
           "name": "W1_walk",
           "width": 2048,
           "height": 2048
-        },
-        {
-          "name": "W1_walk-normal",
-          "width": 2048,
-          "height": 2048
-        },
-        {
-          "name": "W1_walk-roughness",
-          "width": 1024,
-          "height": 1024
         }
       ],
       "extensionsRequired": [
@@ -440,445 +469,473 @@
       ],
       "files": [
         {
-          "path": "desktop-v4/baseColor_1.jpg",
+          "path": "desktop-v5/baseColor_1.jpg",
           "bytes": 2356592,
           "sha256": "285051e34826ace29f4ab438ad35cc1201b2aae0a6157a5f3c0bf6667bbc539e"
         },
         {
-          "path": "desktop-v4/baseColor_2.jpg",
-          "bytes": 4766204,
-          "sha256": "8e1c6d21365d4b89bc5a35ab664da98a78dbc3ab9ba6100474881c8619a5b113"
+          "path": "desktop-v5/baseColor_10.jpg",
+          "bytes": 138805,
+          "sha256": "dc80d24f6f0b95423fd29e71ef5436336d57d3f1ee1db61c2af9122b6419f797"
         },
         {
-          "path": "desktop-v4/baseColor_3.jpg",
+          "path": "desktop-v5/baseColor_11.jpg",
+          "bytes": 4529321,
+          "sha256": "24b8aaf4c8547305d80b0e029ec365219ab1b90748d4ca5651bdc9e75bfde5e6"
+        },
+        {
+          "path": "desktop-v5/baseColor_12.jpg",
+          "bytes": 151891,
+          "sha256": "1af6dbed29ecbdefe17e4866881b0a1fd85f8a30d839b2434c25e8adcd79b0af"
+        },
+        {
+          "path": "desktop-v5/baseColor_13.jpg",
           "bytes": 9919017,
           "sha256": "676d63d8a10dc2be8e979b9cc97fd52c276b9d355deba6465ec78b0c6ad5c84f"
         },
         {
-          "path": "desktop-v4/baseColor_4.jpg",
+          "path": "desktop-v5/baseColor_14.jpg",
           "bytes": 4535360,
           "sha256": "98ecbd1d19953433f5909b79958992b1da2b45addbee772d1d4c27287f368499"
         },
         {
-          "path": "desktop-v4/baseColor_5.png",
-          "bytes": 3558365,
-          "sha256": "f5da54e9f2ba7409e59833d12591dd1ba381bdeded2af0a0c870081a839f08b2"
-        },
-        {
-          "path": "desktop-v4/baseColor_6.png",
-          "bytes": 3267509,
-          "sha256": "c010627ab8174a6a3e41ecdf68a60e635efbe0b15b07bfd4d256f0f798135f44"
-        },
-        {
-          "path": "desktop-v4/baseColor_7.jpg",
+          "path": "desktop-v5/baseColor_15.jpg",
           "bytes": 292760,
           "sha256": "b519732a06972cef77d88f9ce28f3289703dde1b46e70fb36b30668723dc1714"
         },
         {
-          "path": "desktop-v4/baseColor_8.png",
+          "path": "desktop-v5/baseColor_16.png",
           "bytes": 2451601,
           "sha256": "f1540e6c1908874dd2504d1e74966897d0265990765a89c93d4cdd9041e03c26"
         },
         {
-          "path": "desktop-v4/baseColor_9.jpg",
+          "path": "desktop-v5/baseColor_17.jpg",
           "bytes": 3170612,
           "sha256": "4ab3210b6ec6bb1181145500bca71d1c1f81ead6baaa8600f5979c2cec50c6a4"
         },
         {
-          "path": "desktop-v4/emissive_1.jpg",
-          "bytes": 257986,
-          "sha256": "d480a76dd21f560b14619fa895a60d97c7c9ef4883e31ec0f4ea3e6e7f735523"
+          "path": "desktop-v5/baseColor_18.jpg",
+          "bytes": 131401,
+          "sha256": "eb9e2b1522c76444c0f8beda5dda5d954c5013f46b1aaf3468a7aab5489e5e9a"
         },
         {
-          "path": "desktop-v4/emissive_10.jpg",
-          "bytes": 910561,
-          "sha256": "13de1cf2299601a107182a969f92541762fc8843fb4d78d277c4963c725efca7"
+          "path": "desktop-v5/baseColor_19.jpg",
+          "bytes": 112969,
+          "sha256": "8b739c9a7f8a90d6b42d70f899470441d8f25e2060e46d277122ca652c3aa83d"
         },
         {
-          "path": "desktop-v4/emissive_11.jpg",
-          "bytes": 285162,
-          "sha256": "25c023671c3b3856abc5a8eeb7177a474020315f41fd564a16e426dacc58e426"
+          "path": "desktop-v5/baseColor_2.jpg",
+          "bytes": 2552830,
+          "sha256": "fc103bf84df1ef563c830bd3171be5171cba5a5fe028fd3acc44140afca8bfeb"
         },
         {
-          "path": "desktop-v4/emissive_12.jpg",
-          "bytes": 352376,
-          "sha256": "4a53d0894185a5644fb6ebf6e24024247df58a1fbf2934400fb99581f668d101"
+          "path": "desktop-v5/baseColor_20.jpg",
+          "bytes": 40780,
+          "sha256": "b5c66eb53695cbfcc08e915baf5d48c6ea6b29cbf3406ba9ab8734bf505b2d34"
         },
         {
-          "path": "desktop-v4/emissive_13.jpg",
-          "bytes": 445601,
-          "sha256": "1b1e7174107af8405d105028e396dbc8f3a795877f469f8b3373fd767d25a1e4"
+          "path": "desktop-v5/baseColor_21.jpg",
+          "bytes": 119048,
+          "sha256": "ab60830edf457922ed0d5b70ed0396aedbe2aef95d053b880bd594d2025c5249"
         },
         {
-          "path": "desktop-v4/emissive_14.jpg",
-          "bytes": 810318,
-          "sha256": "a8d4e8e88b7d0e0a55a1db88fbbd5d53ce13706d6181caa082aa58bad685b8d9"
+          "path": "desktop-v5/baseColor_22.jpg",
+          "bytes": 132091,
+          "sha256": "816f17596d29c32eb336a584460fffe26d857f89f2857504b2d6d30e2b9f0e85"
         },
         {
-          "path": "desktop-v4/emissive_15.jpg",
-          "bytes": 221889,
-          "sha256": "e884b8e243fc4c03e2da6f956dda66ebe284b6e8e9c264a780ae6e8a788ae21a"
+          "path": "desktop-v5/baseColor_3.png",
+          "bytes": 3558365,
+          "sha256": "f5da54e9f2ba7409e59833d12591dd1ba381bdeded2af0a0c870081a839f08b2"
         },
         {
-          "path": "desktop-v4/emissive_16.jpg",
-          "bytes": 385892,
-          "sha256": "2ece20f1163cfa121e4907af0d548ce039d6088ca004b455392f7f84a786d00d"
+          "path": "desktop-v5/baseColor_4.png",
+          "bytes": 3267509,
+          "sha256": "c010627ab8174a6a3e41ecdf68a60e635efbe0b15b07bfd4d256f0f798135f44"
         },
         {
-          "path": "desktop-v4/emissive_17.jpg",
-          "bytes": 325903,
-          "sha256": "ed135fdc77194a1800f3117c9df5a7ac769bc93735d5edfffcafb92e93c61f54"
+          "path": "desktop-v5/baseColor_5.jpg",
+          "bytes": 3342728,
+          "sha256": "27c525903ed780639ec2dd7c3a0dfa73399f13f90adf9fd44cee3df819afda8c"
         },
         {
-          "path": "desktop-v4/emissive_18.jpg",
-          "bytes": 974734,
-          "sha256": "ed54090ca8a5314cc65b8a43a00624044d7a4793a25f9afee07763aa84d95a41"
+          "path": "desktop-v5/baseColor_6.jpg",
+          "bytes": 114598,
+          "sha256": "8c94e11371eea0e34540734d32cec5d2aefd4b57429a53e24a3e471c7aa1446d"
         },
         {
-          "path": "desktop-v4/emissive_19.jpg",
-          "bytes": 252101,
-          "sha256": "d7c9b713aabe188c1f1d008dc76fbb599a04d135748fffa6d9407fcb2ee53d46"
+          "path": "desktop-v5/baseColor_7.jpg",
+          "bytes": 165791,
+          "sha256": "c7143f659e2ec07b6cf2ca2a698d3577658e7b613eb89c470f4246e8faf59104"
         },
         {
-          "path": "desktop-v4/emissive_2.jpg",
-          "bytes": 305577,
-          "sha256": "cfcbc188fa102b158f90818fb086ca068d5b860920f6eddd616291cd5306160d"
+          "path": "desktop-v5/baseColor_8.jpg",
+          "bytes": 39630,
+          "sha256": "6408bc1c9a46bca9a103d325463fb9fbfd390d62281863ddee1873b71be2e61e"
         },
         {
-          "path": "desktop-v4/emissive_3.jpg",
-          "bytes": 233243,
-          "sha256": "b3ed66d752a8634e398f9330362a6c3b50a40bbc04a1712badd345d9989902e4"
+          "path": "desktop-v5/baseColor_9.jpg",
+          "bytes": 134141,
+          "sha256": "aef0c0db2a8dc03685e0a2995d55c676e238df8bc99cad2b5b03639c5b985554"
         },
         {
-          "path": "desktop-v4/emissive_4.jpg",
-          "bytes": 767975,
-          "sha256": "290a81c241bc3cb01c8022f8afb4e835688a6be3fc44aff7ab09c72b4aaff927"
+          "path": "desktop-v5/emissive_1.jpg",
+          "bytes": 99862,
+          "sha256": "9461c019a040a7858f620b3c6abd3ba7493ce923d867d73e7762ddc4ef11c75f"
         },
         {
-          "path": "desktop-v4/emissive_5.jpg",
-          "bytes": 174151,
-          "sha256": "0d2b867bc822d6f1f1a144ef5832dd73e1f3c6a32a402464ecf059549c95ce22"
+          "path": "desktop-v5/emissive_10.jpg",
+          "bytes": 214242,
+          "sha256": "5099ff751ed6b22d9aeaddf367a1773ef8e948d30884b86b7a566693dfa1df5f"
         },
         {
-          "path": "desktop-v4/emissive_6.jpg",
-          "bytes": 262399,
-          "sha256": "74dbd3bd4dd431327364d9a36210cefecf2ec6bdc28f4875ad3e136d7d2cd03a"
+          "path": "desktop-v5/emissive_11.jpg",
+          "bytes": 1049107,
+          "sha256": "13c2fbdb9bd92837f7289fb76a02129e33c0f637f76c763b5b0027dc23ec729b"
         },
         {
-          "path": "desktop-v4/emissive_7.jpg",
-          "bytes": 272026,
-          "sha256": "962b96116a4c694ae956baaee8c4d30d98531a8e3e3bd1d4c03d8188506f48ad"
+          "path": "desktop-v5/emissive_12.jpg",
+          "bytes": 192499,
+          "sha256": "53deee99a625c714198305d9f88e75f80d5ac3a4ee195e86215b10ce3a4f31b6"
         },
         {
-          "path": "desktop-v4/emissive_8.jpg",
-          "bytes": 760116,
-          "sha256": "e7f168a424bcbb6c38e980dae8103ee409b313cbaebf82a1082c83e9f367585a"
+          "path": "desktop-v5/emissive_13.jpg",
+          "bytes": 262756,
+          "sha256": "77d53d2bb56bc1c7b705529fe137675169ccdd97d3b67cd641f7f9c9fa392827"
         },
         {
-          "path": "desktop-v4/emissive_9.jpg",
-          "bytes": 223946,
-          "sha256": "87ee35fcea3d539a780b7ce491ad9626c1cc732aa612dd0e33ca520891b5f9ff"
+          "path": "desktop-v5/emissive_14.jpg",
+          "bytes": 268197,
+          "sha256": "0e4b035aab38406e7a3b98cfebd412c59020a1d2633521af62fa4602c10e2d7e"
         },
         {
-          "path": "desktop-v4/forest-fold-house-desktop.bin",
-          "bytes": 75770828,
-          "sha256": "6a7d9e204bce01fba0427e89184fb3ce706fdfae2be5e44ddffe3ebd355f0ff1"
+          "path": "desktop-v5/emissive_15.jpg",
+          "bytes": 478723,
+          "sha256": "18eaf3fcfa7de4f4f844ff5eb92f5619db1ca5bfbeeed1345da7717ee67e6a03"
         },
         {
-          "path": "desktop-v4/forest-fold-house-desktop.gltf",
-          "bytes": 2554310,
-          "sha256": "da13fc307a9b02a497141c25a84e3f9628fec0b9bd6054e3f552ec75359ca47a"
+          "path": "desktop-v5/emissive_16.jpg",
+          "bytes": 177607,
+          "sha256": "81f9c26648e4df3053195fdf198a26275110c846f07e38718e38137f2ed5fbe5"
         },
         {
-          "path": "desktop-v4/metallicRoughness_1.jpg",
+          "path": "desktop-v5/emissive_17.jpg",
+          "bytes": 330413,
+          "sha256": "237cb3d9317ea21e8e4f5eb117e3ec5f2f37225b100c2c9b402ec74ec4281f08"
+        },
+        {
+          "path": "desktop-v5/emissive_18.jpg",
+          "bytes": 224892,
+          "sha256": "9af5ab9feb1d76b9dd6201175c733d7e5c6b2aa903015cf1d43c315a2d0ad2fd"
+        },
+        {
+          "path": "desktop-v5/emissive_19.jpg",
+          "bytes": 509130,
+          "sha256": "8a365a528f1ae5be0e2ee5d0a356e6ab49cbd2ce1da2ea938d985368ec4d1d12"
+        },
+        {
+          "path": "desktop-v5/emissive_2.jpg",
+          "bytes": 199451,
+          "sha256": "1b41048925ecc3d7278ae2b3f4b13194fd745b20ff90c9a2277b23dd6619bef5"
+        },
+        {
+          "path": "desktop-v5/emissive_20.jpg",
+          "bytes": 251899,
+          "sha256": "47d954535b3ff5b190340bd4871f7b40f335338f042848dc985ee6152ccbc67e"
+        },
+        {
+          "path": "desktop-v5/emissive_3.jpg",
+          "bytes": 281739,
+          "sha256": "f435f4e6f93fdd0b0b0af939f8b0a13610e9dffa7844b8101de8f4b32036a66e"
+        },
+        {
+          "path": "desktop-v5/emissive_4.jpg",
+          "bytes": 229966,
+          "sha256": "b0ac45dd1736f5a59dfa85e5fac19f0cf5f56b7916a2966548dbee9560f76fae"
+        },
+        {
+          "path": "desktop-v5/emissive_5.jpg",
+          "bytes": 326157,
+          "sha256": "a57e6fb57e78c9d45cff6871536264f5c1a971049882683cb75eb57b61ea8310"
+        },
+        {
+          "path": "desktop-v5/emissive_6.jpg",
+          "bytes": 158652,
+          "sha256": "67a60e09f257e6f5c1c48145f0fb7f39c22dc681e26d715f689e7cf6f7cbbc93"
+        },
+        {
+          "path": "desktop-v5/emissive_7.jpg",
+          "bytes": 285851,
+          "sha256": "a64e3b9bc7b21397db64d05d6ed51018a32d8396ee5cce18aaffd8c125d23927"
+        },
+        {
+          "path": "desktop-v5/emissive_8.jpg",
+          "bytes": 224434,
+          "sha256": "d203c545e7e65a459fa456d826f95cf1cb54149133c1a93eeb360e44c9ba8c59"
+        },
+        {
+          "path": "desktop-v5/emissive_9.jpg",
+          "bytes": 585750,
+          "sha256": "8edcd95c739b25814b3ce8cf2731cd9c6f58fd7d99df663b940709b9acc70a9e"
+        },
+        {
+          "path": "desktop-v5/forest-fold-house-desktop.bin",
+          "bytes": 72210572,
+          "sha256": "6c2a7b36b69064e062b495edf6af5edfcc41a55b603af159b87cd3066ff96b4d"
+        },
+        {
+          "path": "desktop-v5/forest-fold-house-desktop.gltf",
+          "bytes": 2891001,
+          "sha256": "70254c118914f6c5aa9565cdae62a2772c15975da17caedbeef7bef35043107a"
+        },
+        {
+          "path": "desktop-v5/metallicRoughness_1.jpg",
           "bytes": 427656,
           "sha256": "0fd4fc710c7ddf5899b009c791264f4e0c74421d8bb7e5373600162ee5091012"
         },
         {
-          "path": "desktop-v4/metallicRoughness_10.jpg",
-          "bytes": 220012,
-          "sha256": "23136cc70385c7af1bdf3aa5790830d55b71e000dfef12253402ae42dd977bff"
+          "path": "desktop-v5/metallicRoughness_10.jpg",
+          "bytes": 73178,
+          "sha256": "d5c7e60616d018690ff2261990311b76581ad0b181b6e56e916192153936cdf4"
         },
         {
-          "path": "desktop-v4/metallicRoughness_11.jpg",
-          "bytes": 259515,
-          "sha256": "fb16e52624a4f40e5c3785bf49174538478fd903366158cc2b71c34c20a6e6d5"
+          "path": "desktop-v5/metallicRoughness_11.jpg",
+          "bytes": 426462,
+          "sha256": "6644e3b51c743d66a72816b399147a3b36d984776a6208527b72972805cc475f"
         },
         {
-          "path": "desktop-v4/metallicRoughness_12.jpg",
-          "bytes": 62608,
-          "sha256": "ef8a7e86d529867451d0c382b59298b6b69aa2e0d778e1265ba9b6ace111e1f0"
+          "path": "desktop-v5/metallicRoughness_12.jpg",
+          "bytes": 64336,
+          "sha256": "d41e71759b215ca783527ef680cc87b41b9e811ec6137121c9d3119e14af5525"
         },
         {
-          "path": "desktop-v4/metallicRoughness_13.jpg",
-          "bytes": 346146,
-          "sha256": "4b4624103e89e10fb6a18850921cb39dec249a737474376410e0e5e1bb17b20b"
-        },
-        {
-          "path": "desktop-v4/metallicRoughness_14.jpg",
+          "path": "desktop-v5/metallicRoughness_13.jpg",
           "bytes": 666105,
           "sha256": "42e62bb1888ed9b336a46eed783f6c299642840c5af76468f3740182f342fbcf"
         },
         {
-          "path": "desktop-v4/metallicRoughness_15.jpg",
-          "bytes": 205803,
-          "sha256": "472ac74e44fe6fe980814e169ccedcc6a255ff3a3257051ed5d3cebea720c07f"
-        },
-        {
-          "path": "desktop-v4/metallicRoughness_16.jpg",
-          "bytes": 107709,
-          "sha256": "b06a79b572aae006d07afaaae6074f998b8a40f019826de10ee8880911c41f91"
-        },
-        {
-          "path": "desktop-v4/metallicRoughness_17.jpg",
+          "path": "desktop-v5/metallicRoughness_14.jpg",
           "bytes": 144790,
           "sha256": "cefe8bccff081527d4e7a35c5d85629894fd57b2f546ff1191a237913c96e9f3"
         },
         {
-          "path": "desktop-v4/metallicRoughness_18.jpg",
+          "path": "desktop-v5/metallicRoughness_15.jpg",
           "bytes": 193594,
           "sha256": "77fd90253d820f12efdf525bd7ce8892337f560977ddce2567b609405ddbff8c"
         },
         {
-          "path": "desktop-v4/metallicRoughness_19.jpg",
+          "path": "desktop-v5/metallicRoughness_16.jpg",
           "bytes": 295062,
           "sha256": "d185a52efb66032f84ffbf3eafe68b8a444329a1c8266c8f7c278b6d8333a9d9"
         },
         {
-          "path": "desktop-v4/metallicRoughness_2.jpg",
-          "bytes": 239387,
-          "sha256": "5d49a098441ee2f48fff78f5cc59b85cbc2aaa21efc90138a86adb1758754555"
+          "path": "desktop-v5/metallicRoughness_17.jpg",
+          "bytes": 165890,
+          "sha256": "a2e2418e89ca712ddb716b3dc17d6b82a1fac21f2a53c568573d9206adf417b6"
         },
         {
-          "path": "desktop-v4/metallicRoughness_20.jpg",
-          "bytes": 215025,
-          "sha256": "9fa17e34ad773f972e2c9039233853fcf41f99e328f8085deeb73dab7e3a020b"
+          "path": "desktop-v5/metallicRoughness_18.jpg",
+          "bytes": 67211,
+          "sha256": "a1d23e8ebf9f8938e88682b1a26733c6f0b2c3e94536ec9e29fb2097ee0e5e63"
         },
         {
-          "path": "desktop-v4/metallicRoughness_21.jpg",
-          "bytes": 220510,
-          "sha256": "2a52348a8bc4043f38131bcc6c48909adb6bf4c532ebd617011cb6d8eba3dfd7"
+          "path": "desktop-v5/metallicRoughness_19.jpg",
+          "bytes": 21763,
+          "sha256": "bf8d54ad939ddb0375223550b4ce8a5866b0a865951addc44d449492e53e1bf9"
         },
         {
-          "path": "desktop-v4/metallicRoughness_22.jpg",
-          "bytes": 160110,
-          "sha256": "e131323d2c829cb952c7fac783313f178cf98d42ea76d517a48cb25a4a5653f6"
+          "path": "desktop-v5/metallicRoughness_2.jpg",
+          "bytes": 1016026,
+          "sha256": "317b19018c8ebed98bb3939cfaf8b644a50f5ea35db8ebeb72e9428c34c20e9b"
         },
         {
-          "path": "desktop-v4/metallicRoughness_23.jpg",
-          "bytes": 70713,
-          "sha256": "6984b397f0cb1f989c5bf7c632d72174f4d9a9d40fe1dd7f3f2a97f3331e67ec"
+          "path": "desktop-v5/metallicRoughness_20.jpg",
+          "bytes": 159920,
+          "sha256": "6170b1049a05707960df864c2c72328115b0c31d81b6ca65182f509ef05c67f5"
         },
         {
-          "path": "desktop-v4/metallicRoughness_24.jpg",
-          "bytes": 21494,
-          "sha256": "f8ff77253212134ba5c8166f27d5a42bfe354d9a6f71a60deb3dde1bfbdb67db"
+          "path": "desktop-v5/metallicRoughness_21.jpg",
+          "bytes": 78659,
+          "sha256": "88394ae203c5ed1605407532b8753c7da438ab591328c5beaf4f42ad59c545c2"
         },
         {
-          "path": "desktop-v4/metallicRoughness_25.jpg",
-          "bytes": 227396,
-          "sha256": "cf09e556c4a796630dc298cbc89d3c32bfb7c556e9f833129534216976b855a1"
+          "path": "desktop-v5/metallicRoughness_3.jpg",
+          "bytes": 205803,
+          "sha256": "472ac74e44fe6fe980814e169ccedcc6a255ff3a3257051ed5d3cebea720c07f"
         },
         {
-          "path": "desktop-v4/metallicRoughness_26.jpg",
-          "bytes": 160629,
-          "sha256": "cae55c0fe6a4095e3109d44760cdd0e7c3a85ef38acfdf63a1f03568a15ccd4c"
+          "path": "desktop-v5/metallicRoughness_4.jpg",
+          "bytes": 107709,
+          "sha256": "b06a79b572aae006d07afaaae6074f998b8a40f019826de10ee8880911c41f91"
         },
         {
-          "path": "desktop-v4/metallicRoughness_27.jpg",
-          "bytes": 78621,
-          "sha256": "bc96b0dc8f7c6e2cfc6a67d711b8c57385270a8c875d328c1611456143b553b4"
+          "path": "desktop-v5/metallicRoughness_5.jpg",
+          "bytes": 346146,
+          "sha256": "4b4624103e89e10fb6a18850921cb39dec249a737474376410e0e5e1bb17b20b"
         },
         {
-          "path": "desktop-v4/metallicRoughness_28.jpg",
-          "bytes": 201276,
-          "sha256": "2ef01ac83d640b841859b600820818bd02702638e5760f3f7d02914c2a7fd88d"
+          "path": "desktop-v5/metallicRoughness_6.jpg",
+          "bytes": 130535,
+          "sha256": "b4cfadf1f5826c8491b0b46d6b9b92bcc5833bc6e0c019becb62f09c60df5470"
         },
         {
-          "path": "desktop-v4/metallicRoughness_3.jpg",
-          "bytes": 233868,
-          "sha256": "bfc6c6606518af6071fc449f6c26ad4158df611bad9e7129fd50d9a51d2575fd"
+          "path": "desktop-v5/metallicRoughness_7.jpg",
+          "bytes": 80823,
+          "sha256": "fc4f67c4f8932f36f512a2da20b54983556230b0e20161d7ae371b4e09d3f572"
         },
         {
-          "path": "desktop-v4/metallicRoughness_4.jpg",
-          "bytes": 139566,
-          "sha256": "76d02a4b3afc9112854529a770655a6dee1328bf23e85d7ed9513061e43aa786"
+          "path": "desktop-v5/metallicRoughness_8.jpg",
+          "bytes": 22131,
+          "sha256": "d54aa8cbd31c6a21d1d16028aecdf9df1b33bbf6ec62673df943085eef615ef1"
         },
         {
-          "path": "desktop-v4/metallicRoughness_5.jpg",
-          "bytes": 85190,
-          "sha256": "d5de36df87228a97e832b6c48af43fb8f426d9f5f91b74a1dff6c5935cab293c"
+          "path": "desktop-v5/metallicRoughness_9.jpg",
+          "bytes": 104070,
+          "sha256": "bcd29763410327196d50e580b21e1253808a7e8092ce4b542b65e5c05269934e"
         },
         {
-          "path": "desktop-v4/metallicRoughness_6.jpg",
-          "bytes": 23137,
-          "sha256": "b331acf98523461216eb351a8ef1e7a54546c33afc711b48675c7eed3999c268"
-        },
-        {
-          "path": "desktop-v4/metallicRoughness_7.jpg",
-          "bytes": 233004,
-          "sha256": "1aa03129041a3e8d5008daecfa419cdd02014a0f670911c97385ad43ec6c7ac9"
-        },
-        {
-          "path": "desktop-v4/metallicRoughness_8.jpg",
-          "bytes": 156759,
-          "sha256": "c3f7d0e80f6f31750ca0fdc109604d3d7c1733feae8d9a9011d4f1b05b90e13c"
-        },
-        {
-          "path": "desktop-v4/metallicRoughness_9.jpg",
-          "bytes": 90474,
-          "sha256": "631d23bddb817a0672047abee837d72e76d498fb2cdd7b0769f28c6383fa09c7"
-        },
-        {
-          "path": "desktop-v4/normal_1.jpg",
+          "path": "desktop-v5/normal_1.jpg",
           "bytes": 3707907,
           "sha256": "aaba4529c3167a7811b4dbf5b4327d054a166c2fc8ea08ebd249a2692adace41"
         },
         {
-          "path": "desktop-v4/normal_10.jpg",
-          "bytes": 142485,
-          "sha256": "bf3a435cfee3e4ed1028074fba6d34a928f0ead5346bed9e849a214b945ada00"
+          "path": "desktop-v5/normal_10.jpg",
+          "bytes": 237123,
+          "sha256": "055258f33987d2b20bb9ad7a61ab45c7ac9a996f26fb0f88ae9331465b277573"
         },
         {
-          "path": "desktop-v4/normal_11.jpg",
-          "bytes": 6047262,
-          "sha256": "df0cf0ce96e653f033e5b934d5b12995464bda027aa53bd12e329be889aa9f45"
+          "path": "desktop-v5/normal_11.jpg",
+          "bytes": 5288849,
+          "sha256": "b37ac799ed410976541e0011c246fca254e74eaa3f096ae7a7d74178db5a6d9b"
         },
         {
-          "path": "desktop-v4/normal_12.jpg",
-          "bytes": 533016,
-          "sha256": "d5de470da7f8fda54607f06ec161f9761cd40350168c465093eb8958a61d264d"
+          "path": "desktop-v5/normal_12.jpg",
+          "bytes": 553742,
+          "sha256": "94219f4d823cbd0ed418be44730cbb12246bca034e594b008c7387c711f86241"
         },
         {
-          "path": "desktop-v4/normal_13.jpg",
-          "bytes": 3406692,
-          "sha256": "5577d9766de427110c43b4d50be021389599421fd3f0249b1ee07e40bf27738e"
-        },
-        {
-          "path": "desktop-v4/normal_14.jpg",
+          "path": "desktop-v5/normal_13.jpg",
           "bytes": 4033031,
           "sha256": "78c05b52eb78617fcce4fde7a9ac4872a9725fb2d13aff33248cbdb9c6330563"
         },
         {
-          "path": "desktop-v4/normal_15.jpg",
-          "bytes": 269507,
-          "sha256": "48e405efd1e7cd813b26bd1bbd56a70bf6dede120839ce929f5e3ba2ae9bc4ef"
-        },
-        {
-          "path": "desktop-v4/normal_16.jpg",
-          "bytes": 236952,
-          "sha256": "223a5eec832a0cff33e5d4b205f57bfa20f241248c64943b1f769cbc85f43caa"
-        },
-        {
-          "path": "desktop-v4/normal_17.jpg",
+          "path": "desktop-v5/normal_14.jpg",
           "bytes": 375530,
           "sha256": "6a1a261ec172bd4fb6bb71686d209000b797cd3c3671bb521422c092d4ed34df"
         },
         {
-          "path": "desktop-v4/normal_18.jpg",
+          "path": "desktop-v5/normal_15.jpg",
           "bytes": 423995,
           "sha256": "215f01567525b31cbdfeee0f9bfa4127542fa8db945db6d5e617860b5e5dd8fb"
         },
         {
-          "path": "desktop-v4/normal_19.jpg",
+          "path": "desktop-v5/normal_16.jpg",
           "bytes": 1095648,
           "sha256": "9e73579f76ddf04fc51f1423333034b3ccdbfb7c19c55f3be670c90243f41e5b"
         },
         {
-          "path": "desktop-v4/normal_2.jpg",
-          "bytes": 147193,
-          "sha256": "6ad51c822515a0f0cbd829dbf372780a4659ce43ac59806e7a9145f18e8c358f"
+          "path": "desktop-v5/normal_17.jpg",
+          "bytes": 133821,
+          "sha256": "41b3fe2ae24d42d385032642c536eef99ced7c702bf3f7890246b35cb7dec66e"
         },
         {
-          "path": "desktop-v4/normal_20.jpg",
-          "bytes": 146288,
-          "sha256": "4406085c17d701f5a1b232b68eba6837380aca2fe8fc416302de4a2da94bb256"
+          "path": "desktop-v5/normal_18.jpg",
+          "bytes": 187035,
+          "sha256": "865eaaac13bee1b28ce015ee7e824c4743d05ba4c313b720bf015bf3f7242c5c"
         },
         {
-          "path": "desktop-v4/normal_21.jpg",
-          "bytes": 147912,
-          "sha256": "d610d0a5b36f7ddc97e353d7f6602f0a6e6f606bd884b869e0c4762ca4544d4a"
+          "path": "desktop-v5/normal_19.jpg",
+          "bytes": 119000,
+          "sha256": "dd3c2502210f04f691caaf29eae7aa3737a9226a8c8c4fb32ba54fcfe603eb00"
         },
         {
-          "path": "desktop-v4/normal_22.jpg",
-          "bytes": 125064,
-          "sha256": "98f963d2931e9f0e5153269ca41b32282a8b410f17cd557696ce02f68756da50"
+          "path": "desktop-v5/normal_2.jpg",
+          "bytes": 2429019,
+          "sha256": "e74a9d3ddcd86473a21815a28464f4dac4ceb8f86e7f170226dede8ed70d8eb9"
         },
         {
-          "path": "desktop-v4/normal_23.jpg",
-          "bytes": 356126,
-          "sha256": "18e5234c1a4436f08d2eff1b5f6d9d48c9f3bf3be94b3ad7eefac3200ec4fd6e"
+          "path": "desktop-v5/normal_20.jpg",
+          "bytes": 154648,
+          "sha256": "e342b35790a359ead79fde59c8d2e52882cfe3cc77c7387d61adfb5ee645e0ba"
         },
         {
-          "path": "desktop-v4/normal_24.jpg",
-          "bytes": 119850,
-          "sha256": "693d972cd895c7168ac4794f58853ec69bc94bbbc954f08603864efa71849813"
+          "path": "desktop-v5/normal_21.jpg",
+          "bytes": 206709,
+          "sha256": "f90212f2094614b8b34183a03d0398d6cf49d9ddcab90cf3736aaa6b62ac26cc"
         },
         {
-          "path": "desktop-v4/normal_25.jpg",
-          "bytes": 143899,
-          "sha256": "65716dfc8317c0abdb8ef86a9771af5976fba70c1467dae77fd3f98c480fb90f"
+          "path": "desktop-v5/normal_3.jpg",
+          "bytes": 269507,
+          "sha256": "48e405efd1e7cd813b26bd1bbd56a70bf6dede120839ce929f5e3ba2ae9bc4ef"
         },
         {
-          "path": "desktop-v4/normal_26.jpg",
-          "bytes": 150799,
-          "sha256": "3171bb91c29696a364a8ffa958e8fd655f0787156b687dc8c33bae914aa2a95b"
+          "path": "desktop-v5/normal_4.jpg",
+          "bytes": 236952,
+          "sha256": "223a5eec832a0cff33e5d4b205f57bfa20f241248c64943b1f769cbc85f43caa"
         },
         {
-          "path": "desktop-v4/normal_27.jpg",
-          "bytes": 328582,
-          "sha256": "608107d5374d8fdd8f36366cf25a4e71451e5bbb85014621d08491fb4a4b99f8"
+          "path": "desktop-v5/normal_5.jpg",
+          "bytes": 3406692,
+          "sha256": "5577d9766de427110c43b4d50be021389599421fd3f0249b1ee07e40bf27738e"
         },
         {
-          "path": "desktop-v4/normal_28.jpg",
-          "bytes": 136332,
-          "sha256": "b37743ccdd0acba78df0e0f6deea35e5c4bc8ea3b7743378d1963749d474322a"
+          "path": "desktop-v5/normal_6.jpg",
+          "bytes": 172153,
+          "sha256": "0e9e029723fd6210fe8564d9547556ec237855af07110e6f183ff1808cd5d25f"
         },
         {
-          "path": "desktop-v4/normal_3.jpg",
-          "bytes": 154292,
-          "sha256": "6e5b4e3f413ab68455e8ac86102466c013159d8a3b8d822eca82ab219a265178"
+          "path": "desktop-v5/normal_7.jpg",
+          "bytes": 274226,
+          "sha256": "0e05efe88cf4c8c4e8f4b51d669bab936c0bb00d8bfd882d627b6cc0e304d7db"
         },
         {
-          "path": "desktop-v4/normal_4.jpg",
-          "bytes": 189004,
-          "sha256": "6fb1d5e53befcaacd4e2b49aff6543dd66b249089dcca869cbdacc9710397e43"
+          "path": "desktop-v5/normal_8.jpg",
+          "bytes": 117214,
+          "sha256": "13ae629185943ef14c9003a9c653fe474c41b7c10e6fe818b624e7752ce2f9a7"
         },
         {
-          "path": "desktop-v4/normal_5.jpg",
-          "bytes": 564949,
-          "sha256": "58853310bd9b6530aec0a3dc64caa521bf03e02e0fef1df366e40bae7964f77b"
-        },
-        {
-          "path": "desktop-v4/normal_6.jpg",
-          "bytes": 123322,
-          "sha256": "917e51b44578b65fac3c707367f61c73d808f7eddc6274ebd52c01f74ce127f8"
-        },
-        {
-          "path": "desktop-v4/normal_7.jpg",
-          "bytes": 154409,
-          "sha256": "624f5e8774e28eba1794b6fd83beb5d87689b472b7a5a9eafaf506bb83e038a7"
-        },
-        {
-          "path": "desktop-v4/normal_8.jpg",
-          "bytes": 116715,
-          "sha256": "8c883553aff23132e19c2858022329a039ec50785a4711079ce1f234a6fedbf4"
-        },
-        {
-          "path": "desktop-v4/normal_9.jpg",
-          "bytes": 338432,
-          "sha256": "6b3d15a7496bd6c7dbcd3b30e96619a713847c55c594037f252671fc6b2a681f"
+          "path": "desktop-v5/normal_9.jpg",
+          "bytes": 101431,
+          "sha256": "4d5a874fd9c04deb353a994141d4184b8d6bd45de56478fdc577092b250b6f21"
         }
       ]
     },
     "forest-fold-house-mobile.glb": {
-      "bytes": 89532412,
-      "sha256": "6c134de4d0c6df01cbdfe3899f3d49295ec7d34cca7c9d3b726b48821566aa32",
-      "triangles": 9263334,
-      "uniqueMeshTriangles": 4953821,
-      "instancedBatches": 503,
-      "primitives": 363,
-      "materials": 39,
+      "bytes": 85338124,
+      "sha256": "41df271b8791908ab4bdcec90a336b3cc4381de5abeac1106947575f4e6990d7",
+      "triangles": 16772685,
+      "uniqueMeshTriangles": 4577733,
+      "instancedBatches": 538,
+      "primitives": 424,
+      "materials": 86,
+      "transport": {
+        "mode": "irradiance-with-tiled-albedo",
+        "groups": [
+          "E0",
+          "E0_ceiling",
+          "E0_furniture",
+          "E0_walk",
+          "E1",
+          "E1_ceiling",
+          "E1_furniture",
+          "E1_walk",
+          "W0",
+          "W0_ceiling",
+          "W0_furniture",
+          "W0_walk",
+          "W1",
+          "W1_ceiling",
+          "W1_furniture",
+          "W1_walk",
+          "bridge_walk",
+          "courtyard_walk",
+          "exterior",
+          "stairs_walk"
+        ],
+        "materials": 65,
+        "tiledSurfaceMaterials": 22
+      },
+      "packagingComparedWithRaw": true,
       "decodedRgbaMipBytesEstimate": 469762048,
       "textures": [
         {
@@ -902,192 +959,17 @@
           "height": 1024
         },
         {
-          "name": "bridge_walk-normal",
+          "name": "oak_veneer_01_nor_gl_2k",
           "width": 1024,
           "height": 1024
         },
         {
-          "name": "bridge_walk-roughness",
+          "name": "surface-oak_veneer_01",
           "width": 1024,
           "height": 1024
         },
         {
-          "name": "E0_ceiling",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_ceiling-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_ceiling-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_furniture",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_furniture-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_furniture-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_walk",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_walk-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E0_walk-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_ceiling",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_ceiling-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_ceiling-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_furniture",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_furniture-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_furniture-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_walk",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_walk-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "E1_walk-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "leafy_grass_nor_gl_2k",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "leafy_grass_diff_2k",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "leafy_grass_rough_2k",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "exterior",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "exterior-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "exterior-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "rock_08_nor_gl_2k",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "rock_08_diff_4k",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "rock_08_rough_2k",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "mossy_rock_nor_gl_2k",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "mossy_rock_diff_2k",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "mossy_rock_rough_2k",
+          "name": "oak_veneer_01_rough_2k",
           "width": 1024,
           "height": 1024
         },
@@ -1118,6 +1000,196 @@
         },
         {
           "name": "periwinkle_plant_rough",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "courtyard_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "rock_08_nor_gl_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "surface-rock_08",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "rock_08_rough_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_ceiling",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_furniture",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_furniture-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_furniture-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_furniture-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_walk-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_walk-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E0_walk-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_ceiling",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_furniture",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_furniture-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_furniture-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_furniture-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "E1_walk",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "forest_ground_04_nor_gl_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "forest_ground_04_diff_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "forest_ground_04_rough_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "exterior",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "exterior-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "exterior-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "exterior-roughness",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "rock_08_diff_4k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "mossy_rock_nor_gl_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "mossy_rock_diff_2k",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "mossy_rock_rough_2k",
           "width": 1024,
           "height": 1024
         },
@@ -1172,27 +1244,7 @@
           "height": 1024
         },
         {
-          "name": "stairs_walk-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "stairs_walk-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
           "name": "W0_ceiling",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "W0_ceiling-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "W0_ceiling-roughness",
           "width": 1024,
           "height": 1024
         },
@@ -1203,6 +1255,11 @@
         },
         {
           "name": "W0_furniture-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W0_furniture-albedo",
           "width": 1024,
           "height": 1024
         },
@@ -1222,6 +1279,11 @@
           "height": 1024
         },
         {
+          "name": "W0-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W0-roughness",
           "width": 1024,
           "height": 1024
@@ -1237,6 +1299,11 @@
           "height": 1024
         },
         {
+          "name": "W0_walk-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W0_walk-roughness",
           "width": 1024,
           "height": 1024
@@ -1247,22 +1314,17 @@
           "height": 1024
         },
         {
-          "name": "W1_ceiling-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "W1_ceiling-roughness",
-          "width": 1024,
-          "height": 1024
-        },
-        {
           "name": "W1_furniture",
           "width": 1024,
           "height": 1024
         },
         {
           "name": "W1_furniture-normal",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "name": "W1_furniture-albedo",
           "width": 1024,
           "height": 1024
         },
@@ -1282,22 +1344,17 @@
           "height": 1024
         },
         {
+          "name": "W1-albedo",
+          "width": 1024,
+          "height": 1024
+        },
+        {
           "name": "W1-roughness",
           "width": 1024,
           "height": 1024
         },
         {
           "name": "W1_walk",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "W1_walk-normal",
-          "width": 1024,
-          "height": 1024
-        },
-        {
-          "name": "W1_walk-roughness",
           "width": 1024,
           "height": 1024
         }
@@ -1309,8 +1366,8 @@
       "files": [
         {
           "path": "forest-fold-house-mobile.glb",
-          "bytes": 89532412,
-          "sha256": "6c134de4d0c6df01cbdfe3899f3d49295ec7d34cca7c9d3b726b48821566aa32"
+          "bytes": 85338124,
+          "sha256": "41df271b8791908ab4bdcec90a336b3cc4381de5abeac1106947575f4e6990d7"
         }
       ]
     }
@@ -1318,73 +1375,113 @@
   "images": [
     {
       "name": "C01-afternoon.png",
+      "camera": "C01",
+      "lighting": "afternoon",
+      "samples": 512,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 50145990,
-      "sha256": "3525c015923fb1fde1e31b7905dbdd33ea6dab72c0055f5c6e26ef3563f66571"
+      "bytes": 49910651,
+      "sha256": "5e5e225c41d70226121aa2f4291b50c4756a797a18bccac127b47723285da0ef"
     },
     {
       "name": "C01-evening.png",
+      "camera": "C01",
+      "lighting": "evening",
+      "samples": 256,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 42701715,
-      "sha256": "0cf015070a483cc5f6c14a349ed169e05e1735a810dfdbecfd554ebd47016339"
+      "bytes": 41268419,
+      "sha256": "7ae1fe9b3ffd4b5c23c093b9aaa9682381c37578765100ea9007b7fdec5dca70"
     },
     {
       "name": "C01-overcast.png",
+      "camera": "C01",
+      "lighting": "overcast",
+      "samples": 256,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 50119445,
-      "sha256": "939fde842ae9fdcf0aebb872f9dbb0adf8dd2ec6eaafaf86cb3ad841698a30a1"
+      "bytes": 49996095,
+      "sha256": "36ec59b11d39e832fd1ee48d03eaa29c870c947673b3eb80a6070e9a7b2ac2e6"
     },
     {
       "name": "C07-afternoon.png",
+      "camera": "C07",
+      "lighting": "afternoon",
+      "samples": 256,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 45718635,
-      "sha256": "fe2c265a81e6a3972af58f4b5cf332d536ae994f7bbe043311950794335d63c5"
+      "bytes": 45583942,
+      "sha256": "d946785663805d22d5c4b5c5a8bd17f3e460991622079270b66cd45ebe77410d"
     },
     {
       "name": "C08-afternoon.png",
+      "camera": "C08",
+      "lighting": "afternoon",
+      "samples": 256,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 47068946,
-      "sha256": "0fe2333e86e402e699e8af816b7a4b59796f399238388510046a21ddc0854bdc"
+      "bytes": 46385379,
+      "sha256": "4786faff236a41810929ff0ff5afc6c992c83426c7a4524b43e43fae6b4c8688"
     },
     {
       "name": "C09-afternoon.png",
+      "camera": "C09",
+      "lighting": "afternoon",
+      "samples": 256,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 38876861,
-      "sha256": "95b62c29920e62cb721af285082e9e880f1c2ea268ca32b9114d4977058ba654"
+      "bytes": 38796041,
+      "sha256": "855326c2b15586b8c670ce89f9230f1703137e0b4925169bfcbe78a133a7019a"
     },
     {
       "name": "C10-afternoon.png",
+      "camera": "C10",
+      "lighting": "afternoon",
+      "samples": 256,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 48903404,
-      "sha256": "2d60a87e071f7c5057189201ae4ebf9be054720f47c827fd481e1678e0052dec"
+      "bytes": 47988055,
+      "sha256": "6746cdbb3c3c08e07817c9ce990455b2b6df8a97f7593ae8c4db55ab65ed0dcc"
     },
     {
       "name": "C11-afternoon.png",
+      "camera": "C11",
+      "lighting": "afternoon",
+      "samples": 256,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 46021905,
-      "sha256": "c836603b25cb922b6a1dd51bd20473d792103b1b86b654e30587e0ac5ac1ccd8"
+      "bytes": 45651138,
+      "sha256": "66a8de3487721a65af8fba7e5b9805c49695907ecc7c6d7c40d4593815ce0a1d"
     },
     {
       "name": "C12-afternoon.png",
+      "camera": "C12",
+      "lighting": "afternoon",
+      "samples": 256,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 49098508,
-      "sha256": "f189ccb378ebfa5d867833b5ab915f6afd783c56e1752e10663c99e4a23e3a41"
+      "bytes": 48963806,
+      "sha256": "666f608b62da86ab5089ea04e3fe1ac2fd03b6939cbd4264db2627398eaa573e"
     },
     {
       "name": "C13-afternoon.png",
+      "camera": "C13",
+      "lighting": "afternoon",
+      "samples": 256,
+      "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
       "width": 3840,
       "height": 2160,
-      "bytes": 42044246,
-      "sha256": "2887be9b7f657bf44ff5898a6737fee672ca8bdfbe468799c7308b115f101ebd"
+      "bytes": 41172870,
+      "sha256": "f4bcc90f7c382166efb224ea85ea945458570713c7b97db64453ad6abcf375ea"
     }
   ],
   "openQualification": [

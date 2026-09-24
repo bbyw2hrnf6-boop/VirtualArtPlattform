@@ -73,6 +73,16 @@ raster/reflection sizes adapt. Forest materials marked `forest_irradiance` combi
 their separate baked irradiance and tiled albedo in linear space, keeping live
 specular highlights without adding a second diffuse-light contribution. Original
 combined bakes and other showcases retain their existing material behavior.
+Forest's M09 water does not cast an opaque shadow. Its joined waterfall receives
+area-weighted normals at coincident quantized positions; the flat pond normals,
+positions, indices and source assets remain unchanged.
+Its opaque StandardMaterial uses zero metalness and the original linear tint
+multiplied by .45 once per shared material, preserving the former diffuse share.
+Roughness stays at .13; this is a bounded non-transmissive browser approximation,
+not physical refraction or a change to the Blender water.
+Only the Forest pond uses a water Fresnel curve and mip-filtered planar target
+to reduce distant foliage aliasing in its reflection. Other showcase floors
+retain their original stone response and render-target filtering.
 Forest revision 5 loads desktop dependencies from `desktop-v5/`; the mobile GLB,
 house photographs and homepage cover use revision-5 URLs to invalidate cached
 assets after the geometry and material export changes.

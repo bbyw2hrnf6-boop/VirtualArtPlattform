@@ -5,8 +5,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 512,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 1049.97
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 1258.03
   },
   {
     "camera": "C07",
@@ -14,8 +14,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 518.73
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 717.93
   },
   {
     "camera": "C08",
@@ -23,8 +23,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 568.91
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 578.43
   },
   {
     "camera": "C09",
@@ -32,8 +32,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 691.42
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 656.47
   },
   {
     "camera": "C10",
@@ -41,8 +41,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 623.58
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 647.92
   },
   {
     "camera": "C11",
@@ -50,8 +50,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 561.08
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 558.51
   },
   {
     "camera": "C12",
@@ -59,8 +59,8 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 657.08
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 619.33
   },
   {
     "camera": "C13",
@@ -68,7 +68,7 @@
     "width": 3840,
     "height": 2160,
     "samples": 256,
-    "sourceSha256": "1465500a777e5b4f5f6bd7c8a27898b09b937d4ec663af0d3a11cd78cc38ed68",
-    "seconds": 524.63
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 520.67
   }
 ]

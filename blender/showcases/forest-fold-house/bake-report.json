@@ -108,5 +108,115 @@
     "roughnessResolution": 1024,
     "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
     "seconds": 71.28
+  },
+  {
+    "group": "W1_ceiling",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 8,
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 125.77
+  },
+  {
+    "group": "exterior",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 2,
+    "resolution": 4096,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 589.48
+  },
+  {
+    "group": "E0",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 64,
+    "resolution": 4096,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 431.12
+  },
+  {
+    "group": "E0_walk",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 156.08
+  },
+  {
+    "group": "E0_ceiling",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 118.21
+  },
+  {
+    "group": "E1",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
+    "resolution": 4096,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 444.0
+  },
+  {
+    "group": "E1_walk",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 110.84
+  },
+  {
+    "group": "E1_ceiling",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 2,
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 104.14
+  },
+  {
+    "group": "bridge_walk",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 189.44
+  },
+  {
+    "group": "stairs_walk",
+    "mode": "irradiance-with-tiled-albedo",
+    "irradianceScale": 4,
+    "resolution": 2048,
+    "samples": 256,
+    "normalResolution": 2048,
+    "roughnessResolution": 1024,
+    "sourceSha256": "329276010ea565017be453356c9e41bed35ca2458b7162132910429fe4e0fbbb",
+    "seconds": 138.77
   }
 ]

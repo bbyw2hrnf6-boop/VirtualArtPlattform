@@ -49,7 +49,7 @@ pending=[];report=[]
 # A completed atlas may be reused only for this exact source and bake revision.
 # This makes a long local GPU job resumable without mixing old/new lighting.
 source_hash=hashlib.sha256((H/'forest-fold-house.blend').read_bytes()).hexdigest()
-cache_path=MAP/'cache-irradiance-v5.json'
+cache_path=H.parents[2]/'artifacts/forest/cache-irradiance-v5.json'
 cache=json.loads(cache_path.read_text()) if cache_path.exists() else {}
 if cache.get('source')!=source_hash:cache={'source':source_hash,'groups':{}}
 for name,obs in groups.items():

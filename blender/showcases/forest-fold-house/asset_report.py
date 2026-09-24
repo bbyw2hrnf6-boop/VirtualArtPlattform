@@ -1,7 +1,9 @@
 """Measure actual retained masters and delivered assets, not target budgets."""
 from pathlib import Path
+from urllib.parse import unquote,urlsplit
 import hashlib,json,struct,io,math
 from PIL import Image
+from master_contract import validate_master_set,validate_master
 H=Path(__file__).resolve().parent;OUT=H.parents[2]/'public/assets/showcases/forest-fold-house'
 report={'showcase':'forest-fold-house','deliveryRevision':5,'source':'forest-fold-house.blend','sourceSha256':hashlib.sha256((H/'forest-fold-house.blend').read_bytes()).hexdigest(),'models':{},'images':[],'openQualification':['Physical phone GPU, thermals and sustained frame rate','Real slow-network loading; browser emulation is not a physical-device measurement']}
 EXPECTED_GROUPS={room+suffix for room in ['W0','W1','E0','E1'] for suffix in ['', '_walk', '_ceiling', '_furniture']}|{'exterior','bridge_walk','stairs_walk','courtyard_walk'}
@@ -22,7 +24,9 @@ def load(path):
  return json.loads(b),None
 
 def resource(path,uri):
- file=(path.parent/uri).resolve()
+ parsed=urlsplit(uri)
+ assert not (parsed.scheme or parsed.netloc or parsed.query or parsed.fragment), f'Non-local model resource: {uri}'
+ file=(path.parent/unquote(parsed.path)).resolve()
  assert file.is_relative_to(path.parent.resolve()), f'External resource outside model directory: {uri}'
  assert file.is_file(), f'Missing model dependency: {file}'
  return file
@@ -58,7 +62,7 @@ def validate_irradiance(j,textures,tier):
  baked={i:m for i,m in enumerate(j['materials']) if m.get('extras',{}).get('forest_irradiance') is True}
  groups={m['extras'].get('forest_atlas_group') for m in baked.values()}
  assert groups==EXPECTED_GROUPS, f'Missing or unexpected irradiance groups: {groups ^ EXPECTED_GROUPS}'
- atlas_textures={};tiled_count=0
+ atlas_sources={};atlas_samplers={};tiled_count=0
  for index,material in baked.items():
   name=material.get('name',str(index));extras=material['extras'];group=extras['forest_atlas_group']
   pbr=material['pbrMetallicRoughness']
@@ -69,9 +73,13 @@ def validate_irradiance(j,textures,tier):
   assert material.get('emissiveFactor',[0,0,0])==[1,1,1], f'Unexpected irradiance tint: {name}'
   strength=material.get('extensions',{}).get('KHR_materials_emissive_strength',{}).get('emissiveStrength',1)
   assert strength==bakes[group]['irradianceScale'], f'Lost HDR irradiance scale: {name}'
-  atlas=material['emissiveTexture']['index']
-  assert group not in atlas_textures or atlas_textures[group]==atlas, f'Split irradiance within one group: {group}'
-  atlas_textures[group]=atlas
+  # Blender can create distinct texture records for the same image/sampler
+  # across material graphs. The image identity, not texture index, is the atlas.
+  atlas=j['textures'][material['emissiveTexture']['index']]
+  sampler=j.get('samplers',[])[atlas['sampler']] if 'sampler' in atlas else {}
+  assert group not in atlas_sources or atlas_sources[group]==atlas['source'], f'Split irradiance within one group: {group}'
+  assert group not in atlas_samplers or atlas_samplers[group]==sampler, f'Inconsistent irradiance sampling: {group}'
+  atlas_sources[group]=atlas['source'];atlas_samplers[group]=sampler
   size=texture_size(j,textures,material['emissiveTexture'])
   expected=min(bakes[group]['resolution'],1024) if tier=='mobile' else bakes[group]['resolution']
   assert (size['width'],size['height'])==(expected,expected), f'Irradiance texture resolution: {name}'
@@ -84,7 +92,7 @@ def validate_irradiance(j,textures,tier):
    assert texture_uv(texture)==uv, f'Wrong surface UV{uv}: {name}'
   assert pbr.get('baseColorFactor',[1,1,1,1])==[1,1,1,1], f'Double-tinted surface albedo: {name}'
  assert tiled_count>0, 'All tiled PBR detail was lost'
- assert len(set(atlas_textures.values()))==len(EXPECTED_GROUPS), 'Distinct bake groups share a wrong irradiance atlas'
+ assert len(set(atlas_sources.values()))==len(EXPECTED_GROUPS), 'Distinct bake groups share a wrong irradiance atlas'
  used=set()
  for mesh in j['meshes']:
   for primitive in mesh['primitives']:
@@ -123,11 +131,13 @@ for tier in ['desktop','mobile']:
   assert material.get('alphaMode')=='MASK' and 'baseColorTexture' in material['pbrMetallicRoughness'], name
  if tier=='mobile':assert all(max(t['width'],t['height'])<=1024 for t in textures), 'Mobile texture cap exceeded'
  report['models'][str(path.relative_to(OUT))]={'bytes':sum(file.stat().st_size for file in files),'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'triangles':scene_triangles(j),'uniqueMeshTriangles':sum(j['accessors'][p['indices']]['count']//3 for p in ps),'instancedBatches':sum('EXT_mesh_gpu_instancing' in node.get('extensions',{}) for node in j['nodes']),'primitives':len(ps),'materials':len(j['materials']),'transport':transport,'packagingComparedWithRaw':raw.exists(),'decodedRgbaMipBytesEstimate':round(sum(p['width']*p['height']*4*4/3 for p in textures)),'textures':textures,'extensionsRequired':j.get('extensionsRequired',[]),'files':[{'path':str(file.relative_to(OUT)),'bytes':file.stat().st_size,'sha256':hashlib.sha256(file.read_bytes()).hexdigest()} for file in sorted(files)]}
-for path in sorted((H/'masters').glob('C*.png')):
+masters=sorted((H/'masters').glob('C*.png'))
+validate_master_set(path.name for path in masters)
+for path in masters:
  evidence=json.loads(path.with_suffix('.json').read_text())
- assert evidence['sourceSha256']==report['sourceSha256'], f'Stale master from another model revision: {path}'
- im=Image.open(path);small=im.convert('RGB').resize((1,1));assert max(small.getpixel((0,0)))>10, f'Black render: {path}'
- report['images'].append({'name':path.name,'width':im.width,'height':im.height,'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+ im=Image.open(path);validate_master(path.name,evidence,im.size,report['sourceSha256'])
+ small=im.convert('RGB').resize((1,1));assert max(small.getpixel((0,0)))>10, f'Black render: {path}'
+ report['images'].append({'name':path.name,'camera':evidence['camera'],'lighting':evidence['lighting'],'samples':evidence['samples'],'sourceSha256':evidence['sourceSha256'],'width':im.width,'height':im.height,'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
 manifest=json.loads((H/'materials/sources.json').read_text())
 for source in manifest['files']:
  assert hashlib.sha256((H/'materials'/source['path']).read_bytes()).hexdigest()==source['sha256'], source['path']

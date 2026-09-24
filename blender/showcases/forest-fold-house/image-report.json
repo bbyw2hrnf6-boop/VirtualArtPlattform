@@ -1,65 +1,65 @@
 [
   {
     "source": "C01-afternoon.png",
-    "sha256": "3525c015923fb1fde1e31b7905dbdd33ea6dab72c0055f5c6e26ef3563f66571",
+    "sha256": "5e5e225c41d70226121aa2f4291b50c4756a797a18bccac127b47723285da0ef",
     "output": "cover.webp",
-    "bytes": 656746,
+    "bytes": 642344,
     "width": 1920,
     "height": 1080
   },
   {
     "source": "C07-afternoon.png",
-    "sha256": "fe2c265a81e6a3972af58f4b5cf332d536ae994f7bbe043311950794335d63c5",
+    "sha256": "d946785663805d22d5c4b5c5a8bd17f3e460991622079270b66cd45ebe77410d",
     "output": "C07.webp",
-    "bytes": 335846,
+    "bytes": 348068,
     "width": 1920,
     "height": 1080
   },
   {
     "source": "C08-afternoon.png",
-    "sha256": "0fe2333e86e402e699e8af816b7a4b59796f399238388510046a21ddc0854bdc",
+    "sha256": "4786faff236a41810929ff0ff5afc6c992c83426c7a4524b43e43fae6b4c8688",
     "output": "C08.webp",
-    "bytes": 436130,
+    "bytes": 377926,
     "width": 1920,
     "height": 1080
   },
   {
     "source": "C09-afternoon.png",
-    "sha256": "95b62c29920e62cb721af285082e9e880f1c2ea268ca32b9114d4977058ba654",
+    "sha256": "855326c2b15586b8c670ce89f9230f1703137e0b4925169bfcbe78a133a7019a",
     "output": "C09.webp",
-    "bytes": 110390,
+    "bytes": 100910,
     "width": 1920,
     "height": 1080
   },
   {
     "source": "C10-afternoon.png",
-    "sha256": "2d60a87e071f7c5057189201ae4ebf9be054720f47c827fd481e1678e0052dec",
+    "sha256": "6746cdbb3c3c08e07817c9ce990455b2b6df8a97f7593ae8c4db55ab65ed0dcc",
     "output": "C10.webp",
-    "bytes": 618528,
+    "bytes": 573018,
     "width": 1920,
     "height": 1080
   },
   {
     "source": "C11-afternoon.png",
-    "sha256": "c836603b25cb922b6a1dd51bd20473d792103b1b86b654e30587e0ac5ac1ccd8",
+    "sha256": "66a8de3487721a65af8fba7e5b9805c49695907ecc7c6d7c40d4593815ce0a1d",
     "output": "C11.webp",
-    "bytes": 390354,
+    "bytes": 393914,
     "width": 1920,
     "height": 1080
   },
   {
     "source": "C12-afternoon.png",
-    "sha256": "f189ccb378ebfa5d867833b5ab915f6afd783c56e1752e10663c99e4a23e3a41",
+    "sha256": "666f608b62da86ab5089ea04e3fe1ac2fd03b6939cbd4264db2627398eaa573e",
     "output": "C12.webp",
-    "bytes": 584780,
+    "bytes": 526804,
     "width": 1920,
     "height": 1080
   },
   {
     "source": "C13-afternoon.png",
-    "sha256": "2887be9b7f657bf44ff5898a6737fee672ca8bdfbe468799c7308b115f101ebd",
+    "sha256": "f4bcc90f7c382166efb224ea85ea945458570713c7b97db64453ad6abcf375ea",
     "output": "C13.webp",
-    "bytes": 132272,
+    "bytes": 99136,
     "width": 1920,
     "height": 1080
   }

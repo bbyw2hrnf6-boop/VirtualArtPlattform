@@ -3,7 +3,7 @@ import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
 
 /** One clipped planar pass for the continuous floor. Diffuse transport and
  * contact shadows stay in the Cycles bake; only the moving glossy lobe is added. */
-export function createFloorReflection(compact: boolean, options?: { geometry: THREE.BufferGeometry; center: THREE.Vector3; seamless: boolean }) {
+export function createFloorReflection(compact: boolean, options?: { geometry: THREE.BufferGeometry; center: THREE.Vector3; seamless: boolean; water?: boolean }) {
   const size = compact ? 1024 : 2048;
   const floor = new Reflector(options?.geometry ?? new THREE.PlaneGeometry(33.98, 7.98), {
     textureWidth: size, textureHeight: size, multisample: compact ? 0 : 2,
@@ -13,6 +13,7 @@ export function createFloorReflection(compact: boolean, options?: { geometry: TH
       uniforms: {
         color: { value: new THREE.Color(1, 1, 1) },
         seamless: { value: Boolean(options?.seamless) },
+        water: { value: Boolean(options?.water) },
         tDiffuse: { value: null }, textureMatrix: { value: new THREE.Matrix4() },
         texel: { value: new THREE.Vector2(1 / size, 1 / size) },
       },
@@ -29,6 +30,7 @@ export function createFloorReflection(compact: boolean, options?: { geometry: TH
       fragmentShader: `
         uniform sampler2D tDiffuse;
         uniform bool seamless;
+        uniform bool water;
         uniform vec2 texel;
         varying vec4 reflectionUv;
         varying vec3 floorWorld;
@@ -49,13 +51,20 @@ export function createFloorReflection(compact: boolean, options?: { geometry: TH
           light += texture2D(tDiffuse, uv + vec2(-radius.x, radius.y)).rgb * .06;
           vec2 grid = abs(fract(floorWorld.xz + .5) - .5);
           float joint = smoothstep(.0008, .002 + max(fwidth(grid.x), fwidth(grid.y)), min(grid.x, grid.y));
-          float fresnel = (.08 + .65 * pow(grazing, 4.0)) * mix(.94, 1.0, polish);
-          gl_FragColor = vec4(light, fresnel * (seamless ? .72 : joint));
+          float fresnel = water ? .0204 + .9796 * pow(grazing, 5.0) : (.08 + .65 * pow(grazing, 4.0)) * mix(.94, 1.0, polish);
+          gl_FragColor = vec4(light, fresnel * (water ? 1.0 : (seamless ? .72 : joint)));
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }`,
     },
   });
+  if (options?.water) {
+    // Minified woodland reflections need a mip chain, especially on mobile.
+    // The existing floor passes retain their original filtering and Fresnel.
+    const texture = floor.getRenderTarget().texture;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+  }
   floor.name = 'Obsidian planar floor reflection';
   floor.rotation.x = -Math.PI / 2;
   floor.position.copy(options?.center ?? new THREE.Vector3(17,.002,-4));
