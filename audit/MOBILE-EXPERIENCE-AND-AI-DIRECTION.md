@@ -54,16 +54,18 @@ Implemented in the current working change:
 - a short-screen tool sheet that overlays rather than compresses the remaining canvas;
 - reduced blur and shadow cost on mobile canvas overlays;
 - an actionable lightweight poster when the browser reports Data Saver through `navigator.connection.saveData`; and
-- compact visitor actions whose labels remain readable instead of being clipped.
+- compact visitor actions whose labels remain readable instead of being clipped;
+- equal **Enter 3D** and **View works** choices on published Spaces and the Danny reference, with the works path leaving WebGL uninitialized and unsupported WebGL opening the directory; and
+- state-preserving context recovery: the mounted scene pauses during context loss, keeps the selected mode and camera/artwork state, and returns to 3D only after a restored frame is rendered. A failed recovery leaves the complete directory available without retrying automatically.
 
 Still open and not claimed by this document:
 
 - the physical iOS Safari, Android Chrome and in-app-browser release gate;
 - an explicit cross-browser lightweight-mode control before claiming Data Saver coverage on Safari/iOS;
 - persistent orientation state, map/zone overview and visited-state validation;
-- a direct **Enter 3D** versus **View works** choice at Space entry;
-- state-preserving WebGL context-loss recovery with directory fallback; and
 - any real GPT-6 Astra pilot, provider data flow or production AI endpoint.
+
+The new entry and recovery journeys have Chromium coverage at desktop and 390 × 844 mobile emulation, including a forced context loss and a browser without WebGL. That coverage does not replace the physical-device soak or release gate above.
 
 ### Repository journey audit
 

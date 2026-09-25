@@ -114,6 +114,7 @@ test('Danny uses the same mobile lens and session settings after Overview and re
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/#/demo');
+  await page.getByRole('button', { name: /Enter 3D/ }).click();
   const scene = page.locator('.gallery-scene');
   const trigger = scene.locator('.walk-preferences summary');
   await trigger.click();

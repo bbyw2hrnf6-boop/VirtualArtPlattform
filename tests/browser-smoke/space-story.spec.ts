@@ -144,9 +144,119 @@ for (const room of ['white-cube', 'nocturne', 'pavilion']) {
   });
 }
 
+test.describe('mobile Danny entry', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('offers direct works access before creating a WebGL context', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/#/demo');
+    const viewer = page.locator('main.viewer');
+    const entry = viewer.getByRole('group', { name: 'Choose how to explore.' });
+    await expect(entry).toBeVisible();
+    await expect(viewer.locator('.gallery-scene')).toHaveCount(0);
+    const bounds = await entry.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
+    for (const label of ['Enter 3D', 'View works']) {
+      const button = entry.getByRole('button', { name: new RegExp(label) });
+      await expect(button).toBeVisible();
+      const box = await button.boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+    }
+
+    await entry.getByRole('button', { name: /View works/ }).tap();
+    const directory = page.getByRole('dialog', { name: /Threshold.*Artwork directory/ });
+    await expect(directory).toBeVisible();
+    await expect(directory.locator('.artwork-directory-list > li')).toHaveCount(7);
+    await expect(viewer.locator('.gallery-scene')).toHaveCount(0);
+    await directory.getByRole('button', { name: 'Close artwork directory' }).tap();
+    await expect(entry).toBeVisible();
+    await entry.getByRole('button', { name: /Enter 3D/ }).tap();
+    await expect(viewer.locator('.gallery-scene')).toHaveAttribute('data-load-progress', '100', { timeout: 30_000 });
+  });
+});
+
+test('Danny falls back to all works when WebGL cannot start', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+      if (typeof type === 'string' && /^webgl2?$|^experimental-webgl$/i.test(type)) return null;
+      return original.call(this, type, ...args);
+    };
+  });
+  await page.goto('/#/demo');
+  await page.getByRole('button', { name: /Enter 3D/ }).click();
+  const directory = page.getByRole('dialog', { name: /Threshold.*Artwork directory/ });
+  await expect(directory).toBeVisible();
+  await expect(directory.getByRole('status')).toContainText('3D view could not start');
+  await expect(directory.locator('.artwork-directory-list > li')).toHaveCount(7);
+  await directory.getByRole('button', { name: 'Close artwork directory' }).click();
+  const entry = page.getByRole('group', { name: 'Choose how to explore.' });
+  await expect(entry).toBeVisible();
+  await expect(entry.getByRole('status')).toContainText('3D is unavailable');
+  await expect(entry.getByRole('button', { name: /Enter 3D/ })).toBeDisabled();
+  await expect(entry.getByRole('button', { name: /View works/ })).toBeEnabled();
+});
+
+for (const viewport of [
+  { width: 1440, height: 1000 },
+  { width: 390, height: 844 },
+]) {
+  test(`Danny restores the same visit state after forced WebGL loss at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/#/demo');
+    await page.getByRole('button', { name: /Enter 3D/ }).click();
+    const viewer = page.locator('main.viewer');
+    const scene = viewer.locator('.gallery-scene');
+    await expect(scene).toHaveAttribute('data-load-progress', '100', { timeout: 30_000 });
+    await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await expect(scene).toHaveClass(/gallery-scene--overview/);
+    const before = {
+      position: await scene.getAttribute('data-camera-position'),
+      yaw: await scene.getAttribute('data-camera-yaw'),
+      fov: await scene.getAttribute('data-camera-fov'),
+      frames: Number(await scene.getAttribute('data-render-frames')),
+    };
+    const lost = await page.evaluate(() => {
+      const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-scene-canvas="danny"]');
+      const context = canvas?.getContext('webgl2') ?? canvas?.getContext('webgl');
+      const extension = context?.getExtension('WEBGL_lose_context');
+      if (!extension) return false;
+      extension.loseContext();
+      return true;
+    });
+    test.skip(!lost, 'The browser does not expose WEBGL_lose_context.');
+    const directory = page.getByRole('dialog', { name: /Threshold.*Artwork directory/ });
+    await expect(directory).toBeVisible();
+    await expect(directory).toContainText('The 3D view could not start');
+    const heldPosition = await scene.getAttribute('data-camera-position');
+    await page.evaluate(() => {
+      const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-scene-canvas="danny"]');
+      const context = canvas?.getContext('webgl2') ?? canvas?.getContext('webgl');
+      context?.getExtension('WEBGL_lose_context')?.restoreContext();
+    });
+    await expect.poll(async () => Number(await scene.getAttribute('data-render-frames')), {
+      timeout: 30_000,
+    }).toBeGreaterThan(before.frames);
+    await expect(directory).toBeVisible();
+    await expect(directory).not.toContainText('The 3D view could not start');
+    await expect(scene).toHaveClass(/gallery-scene--overview/);
+    await expect(scene).toHaveAttribute('data-camera-position', heldPosition!);
+    await expect(scene).toHaveAttribute('data-camera-yaw', before.yaw!);
+    await expect(scene).toHaveAttribute('data-camera-fov', before.fov!);
+    await directory.getByRole('button', { name: 'Close artwork directory' }).click();
+    await expect(directory).toHaveCount(0);
+    await expect(scene.locator('canvas[data-scene-canvas="danny"]')).toBeVisible();
+  });
+}
+
 test('Danny reference route keeps its metadata and accessible artwork directory', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/#/demo');
+  await page.getByRole('button', { name: /Enter 3D/ }).click();
   const viewer = page.locator('main.viewer');
   const scene = viewer.locator('.gallery-scene');
   await expect(scene).toHaveAttribute('data-load-progress', '100', { timeout: 30_000 });

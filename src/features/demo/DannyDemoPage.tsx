@@ -14,6 +14,7 @@ import {
   ArtworkDirectory,
   ArtworkInfoCard,
   MovementHint,
+  VisitorEntryChoice,
   type ArtworkFocus,
   type DirectoryArtwork,
   type ViewMode,
@@ -156,17 +157,16 @@ export interface DannyDemoPageProps {
 export default function DannyDemoPage({ onNavigate }: DannyDemoPageProps) {
   const viewer = useRef<HTMLElement>(null);
   const directoryButton = useRef<HTMLButtonElement>(null);
+  const entryWorksButton = useRef<HTMLButtonElement>(null);
+  const [sceneRequested, setSceneRequested] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("walk");
   const [artworkFocus, setArtworkFocus] = useState<ArtworkFocus | null>(null);
   const [loadProgress, setLoadProgress] = useState(0);
   const [directoryOpen, setDirectoryOpen] = useState(false);
-  const openFallbackDirectory = useCallback(() => {
-    setArtworkFocus(null);
-    setDirectoryOpen(true);
-  }, []);
+  const openFallbackDirectory = useCallback(() => setDirectoryOpen(true), []);
   const sceneUnavailable = useViewerSceneUnavailable(
     viewer,
-    true,
+    sceneRequested,
     openFallbackDirectory,
   );
   const { images: dannyImages, status: imageStatus } =
@@ -212,32 +212,42 @@ export default function DannyDemoPage({ onNavigate }: DannyDemoPageProps) {
         </div>
       </header>
       <div className="viewer-scene-layer">
-        <DannyDemoScene
-          viewMode={viewMode}
-          playIntro
-          onArtworkFocus={setArtworkFocus}
-          onLoadProgress={setLoadProgress}
-          onViewModeChange={changeView}
-          artworkCount={directoryArtworks.length}
-          artworkDirectoryExpanded={directoryOpen}
-          artworkDirectoryUnavailable={sceneUnavailable}
-          artworkButtonRef={directoryButton}
-          onOpenArtworkDirectory={() => {
-            setArtworkFocus(null);
-            setDirectoryOpen(true);
-          }}
-        />
-        <DemoLoadingPoster
-          progress={loadProgress}
-          ready={loadProgress >= 100}
-        />
+        {sceneRequested && (
+          <>
+            <DannyDemoScene
+              viewMode={viewMode}
+              playIntro
+              onArtworkFocus={setArtworkFocus}
+              onLoadProgress={setLoadProgress}
+              onViewModeChange={changeView}
+              artworkCount={directoryArtworks.length}
+              artworkDirectoryExpanded={directoryOpen}
+              artworkDirectoryUnavailable={sceneUnavailable}
+              artworkButtonRef={directoryButton}
+              onOpenArtworkDirectory={() => setDirectoryOpen(true)}
+            />
+            <DemoLoadingPoster
+              progress={loadProgress}
+              ready={loadProgress >= 100}
+            />
+          </>
+        )}
       </div>
+      {(!sceneRequested || (sceneUnavailable && !directoryOpen)) && (
+        <VisitorEntryChoice
+          exhibitionTitle={DANNY_DEMO_METADATA.title}
+          unavailable={sceneUnavailable}
+          returnFocus={entryWorksButton}
+          onEnter3D={() => setSceneRequested(true)}
+          onViewWorks={() => setDirectoryOpen(true)}
+        />
+      )}
       {sceneUnavailable && (
         <span className="visually-hidden" role="status">
           3D view unavailable. The artwork directory has opened.
         </span>
       )}
-      {artworkFocus && (
+      {artworkFocus && !directoryOpen && (
         <ArtworkInfoCard
           artwork={artworkFocus}
           onClose={() => setArtworkFocus(null)}
@@ -257,7 +267,7 @@ export default function DannyDemoPage({ onNavigate }: DannyDemoPageProps) {
           sourceNote={DANNY_DEMO_METADATA.directorySource}
           unavailable={sceneUnavailable}
           imagesLoading={imageStatus === "loading"}
-          returnFocus={directoryButton}
+          returnFocus={sceneRequested ? directoryButton : entryWorksButton}
           onClose={() => setDirectoryOpen(false)}
         />
       )}
