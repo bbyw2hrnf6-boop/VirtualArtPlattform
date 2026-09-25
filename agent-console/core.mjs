@@ -176,3 +176,40 @@ export function buildExecutionPrompt(proposal) {
     "Führe die für geänderten Code in AGENTS.md verlangten Prüfungen aus. Berichte am Ende Worktree-Pfad, geänderte Dateien, Prüfergebnisse und offene Risiken. Antworte auf Deutsch.",
   ].join("\n\n");
 }
+
+export function buildCodexArgs(run, { projectRoot, outputFile, schemaFile }) {
+  const structured = run.type === "agent" || run.proposalSnapshot?.executionMode === "research";
+  const localCode = run.type === "proposal" && run.proposalSnapshot?.executionMode === "local-code";
+  const args = [
+    "exec",
+    ...(localCode ? ["--worktree"] : ["--ephemeral", "--ignore-user-config"]),
+    "--disable", "multi_agent", "--json",
+    "-m", run.model,
+    "-c", `model_reasoning_effort=${JSON.stringify(run.effort)}`,
+    "-c", `web_search=${JSON.stringify(run.webSearch)}`,
+    "-c", 'approval_policy="never"',
+    "--sandbox", localCode ? "workspace-write" : "read-only",
+    "-C", projectRoot,
+    "-o", outputFile,
+  ];
+  if (structured) args.push("--output-schema", schemaFile);
+  args.push("-");
+  return { args, structured, localCode };
+}
+
+export function recoverInterruptedState(state, now = new Date()) {
+  for (const run of state.runs) {
+    if (["queued", "running"].includes(run.status)) {
+      run.status = "interrupted";
+      run.finishedAt = now.toISOString();
+      run.message = "Server wurde während des Laufs beendet.";
+    }
+  }
+  for (const proposal of state.proposals) {
+    if (proposal.status === "executing") {
+      proposal.status = "approved";
+      proposal.updatedAt = now.toISOString();
+    }
+  }
+  return state;
+}

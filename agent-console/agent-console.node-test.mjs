@@ -2,21 +2,49 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+  buildCodexArgs,
   buildResearchPrompt,
   cleanReport,
   dueAgents,
   localClock,
   mergeMasterProposals,
+  recoverInterruptedState,
   validateConfig,
 } from "./core.mjs";
 
 const config = validateConfig(JSON.parse(readFileSync(new URL("./config.json", import.meta.url), "utf8")));
 
-test("initial profiles use GPT-6 Luna with low reasoning and exactly one master", () => {
+test("editable profiles still contain exactly one master", () => {
   assert.equal(config.agents[0].kind, "master");
   assert.equal(config.agents.filter((item) => item.kind === "master").length, 1);
-  assert.ok(config.agents.every((item) => item.model === "gpt-6-luna" && item.effort === "low"));
   assert.throws(() => validateConfig({ ...config, agents: [...config.agents, config.agents[1]] }), /eindeutig/);
+});
+
+test("Codex worktree arguments avoid incompatible ignore-user-config flag", () => {
+  const paths = { projectRoot: "/repo", outputFile: "/tmp/result", schemaFile: "/repo/report.schema.json" };
+  const base = { model: "gpt-6-luna", effort: "low", webSearch: "disabled" };
+  const code = buildCodexArgs({ ...base, type: "proposal", proposalSnapshot: { executionMode: "local-code" } }, paths);
+  assert.equal(code.localCode, true);
+  assert.ok(code.args.includes("--worktree"));
+  assert.ok(!code.args.includes("--ignore-user-config"));
+  assert.ok(!code.args.includes("--ephemeral"));
+  assert.ok(code.args.includes("workspace-write"));
+  const research = buildCodexArgs({ ...base, type: "agent" }, paths);
+  assert.ok(research.args.includes("--ignore-user-config"));
+  assert.ok(research.args.includes("--ephemeral"));
+  assert.ok(!research.args.includes("--worktree"));
+  assert.ok(research.args.includes("--output-schema"));
+});
+
+test("interrupted proposal runs become reviewable again after restart", () => {
+  const state = {
+    runs: [{ status: "running", message: "Codex startet" }],
+    proposals: [{ status: "executing", updatedAt: "" }],
+  };
+  recoverInterruptedState(state, new Date("2026-09-25T12:00:00Z"));
+  assert.equal(state.runs[0].status, "interrupted");
+  assert.equal(state.proposals[0].status, "approved");
+  assert.equal(state.proposals[0].updatedAt, "2026-09-25T12:00:00.000Z");
 });
 
 test("daily and weekly schedules use the configured local date", () => {

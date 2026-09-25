@@ -26,3 +26,4 @@ Konfiguration liegt in `agent-console/config.json` und ist Teil des Repos. Laufd
 - Webrecherche verwendet je nach Agent `live`, `cached` oder `disabled`. Fehlender Zugriff erscheint als fehlgeschlagener Lauf oder wird im Bericht gekennzeichnet.
 - Die Qualität der Empfehlungen hängt von Quellen und Eingaben ab. Der Master soll alte Berichte datieren und fehlende Nutzer- oder Analytics-Daten offenlegen.
 - Nach einer lokalen Codeausführung müssen der neue Worktree, der Diff und die in `AGENTS.md` verlangten Prüfergebnisse vor einer Übernahme betrachtet werden.
+- Für `--worktree` lädt die Codex-CLI die lokale Benutzerkonfiguration; sie verbietet gleichzeitig `--ignore-user-config`. Die Agentenzentrale setzt Modell, Reasoning, Websuche, Sandbox und Freigabepolitik für jeden Lauf ausdrücklich.

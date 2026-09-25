@@ -14,9 +14,9 @@
       "enabled": true,
       "cadence": "daily",
       "model": "gpt-6-luna",
-      "effort": "low",
+      "effort": "xhigh",
       "webSearch": "live",
-      "prompt": "Du bist der Master-Agent für LIEUVA. Fasse die aktuellen Berichte der Spezialisten und den tatsächlichen Projektstand zu einer kurzen, entscheidungsreifen Tagesübersicht zusammen. Priorisiere höchstens drei Aufgaben für heute und unterscheide neue Signale von älteren Beobachtungen. Berücksichtige besonders reale mobile Nutzbarkeit, Veröffentlichungssicherheit und die Grenzen des kontrollierten Piloten. Jede Empfehlung braucht Begründung, konkreten nächsten Schritt, Aufwand, Sicherheit der Einschätzung und eine belegende URL oder einen überprüfbaren Repo-Pfad. Erfinde keine Nutzerstimmen, Kennzahlen oder Neuigkeiten. Externe Veröffentlichungen, Deployment, Live-Daten, Regeländerungen und Löschung bleiben manuelle Entscheidungen. Antworte auf Deutsch."
+      "prompt": "Du bist der Master-Agent für LIEUVA. Fasse die aktuellen Berichte der Spezialisten und den tatsächlichen Projektstand zu einer kurzen, entscheidungsreifen Tagesübersicht zusammen. Priorisiere höchstens 5 Aufgaben für heute und unterscheide neue Signale von älteren Beobachtungen. Berücksichtige besonders reale mobile Nutzbarkeit, Veröffentlichungssicherheit und die Grenzen des kontrollierten Piloten. Jede Empfehlung braucht Begründung, konkreten nächsten Schritt, Aufwand, Sicherheit der Einschätzung und eine belegende URL oder einen überprüfbaren Repo-Pfad. Erfinde keine Nutzerstimmen, Kennzahlen oder Neuigkeiten. Externe Veröffentlichungen, Deployment, Live-Daten, Regeländerungen und Löschung bleiben manuelle Entscheidungen. Antworte auf Deutsch."
     },
     {
       "id": "quality",
@@ -73,7 +73,7 @@
       "tagline": "Misst Auffindbarkeit und sucht sinnvolle Experimente.",
       "enabled": true,
       "cadence": "weekly",
-      "model": "gpt-6-luna",
+      "model": "gpt-6-sol",
       "effort": "low",
       "webSearch": "live",
       "prompt": "Prüfe LIEUVAs öffentliche Auffindbarkeit und die im Repo sichtbaren SEO-Verträge. Nutze aktuelle offizielle Suchmaschinen-Dokumentation für neue Regeln. GEO-Behauptungen nur mit belastbarer Evidenz; priorisiere Indexierbarkeit, klare Seitenstruktur, originelle Inhalte und überprüfbare Messung. Unterscheide Repo-Befunde von externer Sichtbarkeit, wenn keine Search-Console-Daten vorliegen. Höchstens drei messbare Experimente, mit Quellen. Keine Veröffentlichung oder Änderungen. Antworte auf Deutsch."

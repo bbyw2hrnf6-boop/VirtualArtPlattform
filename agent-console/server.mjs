@@ -5,12 +5,14 @@ import { createServer } from "node:http";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  buildCodexArgs,
   buildExecutionPrompt,
   buildResearchPrompt,
   cleanReport,
   dueAgents,
   localClock,
   mergeMasterProposals,
+  recoverInterruptedState,
   validateConfig,
 } from "./core.mjs";
 
@@ -43,13 +45,7 @@ state.runs ??= [];
 state.reports ??= {};
 state.proposals ??= [];
 state.daily ??= freshState().daily;
-for (const run of state.runs) {
-  if (["queued", "running"].includes(run.status)) {
-    run.status = "interrupted";
-    run.finishedAt = new Date().toISOString();
-    run.message = "Server wurde während des Laufs beendet.";
-  }
-}
+recoverInterruptedState(state);
 writeJson(stateFile, state);
 
 const pending = [];
@@ -70,6 +66,10 @@ function appendEvent(run, event) {
   run.events.push(line.slice(0, 1000));
   run.events = run.events.slice(-24);
   if (typeof event === "object") {
+    if (event.type === "stderr") {
+      const message = String(event.text ?? "").slice(0, 400);
+      if (/^Error:/i.test(message) || !run.lastError) run.lastError = message;
+    }
     if (event.type === "thread.started") run.threadId = event.thread_id;
     if (event.type === "turn.completed") run.usage = event.usage;
     if (event.type === "item.completed" && event.item?.type === "agent_message") {
@@ -137,22 +137,8 @@ function runNext() {
   run.message = "Codex startet …";
   persist();
 
-  const structured = run.type === "agent" || run.proposalSnapshot?.executionMode === "research";
-  const localCode = run.type === "proposal" && run.proposalSnapshot?.executionMode === "local-code";
   const outputFile = join(runFiles, `${run.id}.final.txt`);
-  const args = [
-    "exec", ...(localCode ? [] : ["--ephemeral"]), "--ignore-user-config", "--disable", "multi_agent", "--json",
-    "-m", run.model,
-    "-c", `model_reasoning_effort=${JSON.stringify(run.effort)}`,
-    "-c", `web_search=${JSON.stringify(run.webSearch)}`,
-    "-c", 'approval_policy="never"',
-    "--sandbox", localCode ? "workspace-write" : "read-only",
-    "-C", projectRoot,
-    "-o", outputFile,
-  ];
-  if (structured) args.push("--output-schema", schemaFile);
-  if (localCode) args.push("--worktree");
-  args.push("-");
+  const { args, structured, localCode } = buildCodexArgs(run, { projectRoot, outputFile, schemaFile });
 
   const prompt = run.type === "agent"
     ? buildResearchPrompt(run.agentSnapshot, config, state.reports, new Date())
@@ -179,7 +165,7 @@ function runNext() {
       run.message = "Lauf abgebrochen.";
     } else if (error || exitCode !== 0) {
       run.status = "failed";
-      run.message = error?.message || `Codex beendete den Lauf mit Code ${exitCode}.`;
+      run.message = error?.message || run.lastError || `Codex beendete den Lauf mit Code ${exitCode}.`;
     } else if (structured) {
       try {
         run.report = cleanReport(JSON.parse(raw));
@@ -332,6 +318,14 @@ const server = createServer(async (request, response) => {
         if (index >= 0) pending.splice(index, 1);
         run.status = "cancelled";
         run.finishedAt = nowIso();
+        run.message = "Lauf abgebrochen.";
+        if (run.type === "proposal") {
+          const proposal = state.proposals.find((item) => item.id === run.proposalId);
+          if (proposal) {
+            proposal.status = "approved";
+            proposal.updatedAt = nowIso();
+          }
+        }
         persist();
       } else {
         cancellationRequested = true;
