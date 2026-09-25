@@ -1,6 +1,6 @@
 # LIEUVA WP3 — data, rules, and security lifecycle assurance
 
-> Durable lifecycle contract matching active `wp3-*` tooling. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
+> **Read as:** normative lifecycle/security boundary matching `wp3-*` tooling plus dated local verification. The status and verdict below apply to that checkpoint; use [`CURRENT-STATE.md`](./CURRENT-STATE.md) and current repository/live checks for present status.
 
 **Date:** 2026-09-04  
 **Implementation baseline:** `bd35fbb` (`WP1 -2`)  

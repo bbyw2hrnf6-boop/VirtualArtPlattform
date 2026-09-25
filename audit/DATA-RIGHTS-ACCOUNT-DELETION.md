@@ -1,6 +1,6 @@
 # Data Rights, Account Export & Account Deletion
 
-> Durable lifecycle specification with dated evidence. For current status and test coverage, use [`CURRENT-STATE.md`](./CURRENT-STATE.md) and run the repository gates.
+> **Read as:** durable export/deletion lifecycle contract plus dated local evidence and unresolved policy decisions. The verdict below applies to its checkpoint, not today's live release. Use [`CURRENT-STATE.md`](./CURRENT-STATE.md) for current risks and the repository/live gates for current state.
 
 Date: 2026-09-04
 Updated: 2026-09-11 — site-administrator deletion fence and retention inventory
@@ -8,6 +8,8 @@ Work packages: WP2 export; WP3 resumable deletion
 Verdict: **LOCAL PASS WITH EXTERNAL AND LEGAL CONDITIONS**
 
 This evidence records the product-side implementation only. No production data was read or changed, no Function or Rule was deployed, and no account was deleted during verification.
+
+**Jump to:** [data map](#1-complete-user-data-map) · [export contents](#3-export-contents) · [deletion lifecycle](#4-deletion-lifecycle) · [retention](#6-retention-and-purge-behavior) · [security](#8-security-model) · [open owner/legal decisions](#12-externallegal-decisions-still-required).
 
 ## 1. Complete user-data map
 

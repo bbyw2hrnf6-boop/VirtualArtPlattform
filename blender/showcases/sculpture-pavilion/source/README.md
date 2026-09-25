@@ -1,6 +1,8 @@
 # LIEUVA — Sculpture Pavilion
 
-ZIP vollständig entpacken und `index.html` öffnen. Bilder anklicken; mit Pfeiltasten blättern. Für Codex/Astra das gesamte Paket bereitstellen und `CODEX-START.md` verwenden.
+> Dieses Verzeichnis bewahrt das ursprüngliche Referenzpaket. Die Angaben zum fehlenden `.blend`/GLB und zum späteren Nachbau gelten für den damaligen Paketstand. Für den aktuellen Build, Export und Browserstand den [Showcase-Vertrag](../README.md) lesen.
+
+Für die ursprünglichen Konzeptreferenzen `index.html` öffnen; Bilder anklicken und mit Pfeiltasten blättern. `CODEX-START.md` dokumentiert den damaligen Startauftrag. Für Änderungen am bestehenden Showcase zuerst den [aktuellen Vertrag](../README.md) lesen.
 
 ## Inhalt
 - 30 Raumansichten für drei Räume: vier Umfangsperspektiven, vier Wandrichtungen, Decke und Boden.

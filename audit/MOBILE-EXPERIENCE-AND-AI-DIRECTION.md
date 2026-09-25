@@ -1,10 +1,14 @@
 # LIEUVA Mobile Experience and AI Direction
 
+> **Read as:** reviewed product direction and a dated repository journey audit. Proposed criteria remain proposals until adopted; completed/open findings describe the review baseline below. Use [`CURRENT-STATE.md`](./CURRENT-STATE.md) for current priorities and source/tests for implemented behavior.
+
 - **Status:** durable direction draft; implementation remains subject to product review and measured validation
 - **Reviewed:** 2026-09-11
 - **Repository review baseline:** `a532c01546f9a53048c0c641848f2d4d5a617329`
 - **Live baseline at review:** `3e6e58226c3b6204e06033b1e5df0957fa2fc2d5`
 - **Scope:** visitor mobile experience, mobile Studio, WebGL resilience and bounded AI assistance
+
+**Jump to:** [decision](#executive-decision) · [prioritized direction](#prioritized-direction) · [mobile journey](#complete-mobile-journey) · [AI trust contract](#astra-role-and-ai-trust-contract) · [measurement plan](#measurement-plan) · [sources](#sources).
 
 ## Executive decision
 

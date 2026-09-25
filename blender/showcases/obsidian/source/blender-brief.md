@@ -1,5 +1,7 @@
 # OBSIDIAN — drei zusammenhängende Galerieräume
 
+> Ursprüngliches Modellierungsbriefing. Für den aktuellen Blender-Build, Export und Browserstand zuerst den [Showcase-Vertrag](../README.md) lesen. Aussagen über den damaligen Planungsstand sind keine aktuelle Lieferanweisung.
+
 ## Ziel und verbindliche Grundlage
 
 Eine hochwertige, begehbare LIEUVA-Kunstausstellung mit drei linear verbundenen Räumen. Dunkler Stein, Walnussholz, klare Architektur und dramatisch beleuchtete originale KI-Kunst mit Naturbezug. **Keine Fenster, keine Oberlichter, kein Tageslicht.**

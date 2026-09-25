@@ -3,14 +3,16 @@
 `/#/showcase/sculpture-pavilion` is the homepage Sculpture & 3D showcase. Both
 its preview and “Explore Sculpture Pavilion” action open the same exhibition.
 It is separate from Studio templates, publications, Firebase identities and the
-Danny reference. Architecture remains the future showcase.
+Danny reference. The Architecture card opens the separate
+[Forest Fold House](../forest-fold-house/README.md).
 
 ## Authoring source
 
 The owner supplied the complete Sculpture-Pavilion reference package. All 65
 concept images, sculpture specifications, source prompts/index and metric plans
-are retained under `source/`. The references are declared AI-generated; they
-are visual directions, not scans or a pre-existing coherent model. The five
+are retained under `source/` as original inputs. This README governs the current
+build and delivery. The references are declared AI-generated; they are visual
+directions, not scans or a pre-existing coherent model. The five
 works here are original procedural reconstructions with real geometry.
 
 `prepare_plan.py` reads the metric layout with Shapely. `build.py` creates the

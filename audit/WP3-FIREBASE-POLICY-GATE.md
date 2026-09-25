@@ -1,8 +1,10 @@
 # WP3 — Firebase Policy Gate
 
-> Durable policy-release contract matching active `wp3-*` tooling. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
+> **Read as:** normative policy-release procedure matching `wp3-*` tooling. The implementation/promotion status below is a document checkpoint, not current live evidence. Use [`CURRENT-STATE.md`](./CURRENT-STATE.md), current workflow results and live policy checks for present status.
 
-Status: implemented in the repository; production promotion has not been run.
+Original document checkpoint: implemented in the repository; no production promotion recorded here.
+
+Evidence baseline: this document records no dated promotion run or live policy revision; verify current workflow results and active policy before treating the status line as current.
 
 ## Executable authorization proof
 

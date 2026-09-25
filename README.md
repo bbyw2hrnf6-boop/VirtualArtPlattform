@@ -9,6 +9,7 @@ Live product: [lieuva.com](https://lieuva.com/)
 - **Studio:** Arrange and Walk Preview share one Three.js scene. The three current templates are White Cube, Warm Gallery (`nocturne`) and Grand Forum (`pavilion`).
 - **Delivery:** published Spaces keep the existing `galleries/{galleryId}` identity; clean delivery is `/spaces/{galleryId}`. Legacy AURA/gallery names remain contracts.
 - **Bespoke demos:** Obsidian, Sculpture Pavilion and Forest Fold House are read-only, lazy-loaded showcases. They are not Studio templates or Firebase publications.
+- **Homepage:** the Studio story demonstrates creation in the shared scene; a separate optional film and cards present the three bespoke worlds. The [homepage contract](./src/features/landing/README.md) defines the product message and page acceptance criteria.
 - **Pilot boundary:** the product is a controlled production pilot. Current launch risks and priorities are in [current state](./audit/CURRENT-STATE.md).
 
 ## Toolchain and common commands
@@ -66,6 +67,7 @@ The largest modules are `src/App.tsx`, `src/features/gallery/GalleryScene.tsx` a
 | Need | Source |
 | --- | --- |
 | Working conventions and document routing | [AGENTS.md](./AGENTS.md) |
+| Homepage promise, copy and page journey | [homepage contract](./src/features/landing/README.md) |
 | Current boundary and open launch work | [audit/CURRENT-STATE.md](./audit/CURRENT-STATE.md) |
 | Audit/operations contract index | [audit/README.md](./audit/README.md) |
 | Firebase setup, release and rollback | [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) |

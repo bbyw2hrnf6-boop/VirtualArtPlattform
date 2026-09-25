@@ -1,6 +1,6 @@
 # LIEUVA Observability Contract
 
-> Normative telemetry contract. Implementation status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md); generated evidence belongs in ignored `artifacts/`.
+> **Read as:** normative telemetry schema and data boundary. The implementation status/date below is a dated record; use [`CURRENT-STATE.md`](./CURRENT-STATE.md) for current risks and source/tests for current behavior. Generated evidence belongs in ignored `artifacts/`.
 
 Status: implemented contract for WP6, 2026-08-24. This document is normative for product telemetry. Existing AURA technical identifiers remain compatibility-sensitive.
 

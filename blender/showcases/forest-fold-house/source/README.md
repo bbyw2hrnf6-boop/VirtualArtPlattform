@@ -1,12 +1,14 @@
 # Forest Fold House - LIEUVA Architektur-Showcase
 
+> Dieses Verzeichnis bewahrt das ursprüngliche Konzeptpaket. Die Aussagen zu noch fehlenden `.blend`/GLB-Dateien und späteren Renderings gelten für den damaligen Paketstand. Für den aktuellen Build, Export und Browserstand den [Showcase-Vertrag](../README.md) lesen.
+
 Kompaktes Waldhaus als Mix aus Gravity Garden und Tidal Fault: zwei Ebenen, eine Glasbrücke, blühende Dachgärten, Wasserhof, möblierte Wohnräume und teilweise eingegrabene Lounge.
 
 ## Einstieg
 
 1. `index.html` lokal im Browser öffnen: alle Bilder, Pläne und Dokumente.
 2. `Forest-Fold-House-Konzept.pdf` durchblättern (41 Seiten).
-3. Für den Nachbau `CODEX-START.md` zusammen mit dem gesamten Ordner an Codex / Astra geben.
+3. `CODEX-START.md` als archivierten Startauftrag lesen; für Änderungen am bestehenden Showcase zuerst den [aktuellen Vertrag](../README.md) lesen.
 
 ## Inhalt
 

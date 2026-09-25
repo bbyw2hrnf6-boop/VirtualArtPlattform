@@ -1,6 +1,6 @@
 # Publish / Update / Access Release Gate
 
-> Durable acceptance matrix with dated evidence. For current status and test coverage, use [`CURRENT-STATE.md`](./CURRENT-STATE.md) and run the repository gates.
+> **Read as:** publication/update acceptance criteria plus dated WP1 test evidence. The `PASS WITH CONDITIONS` verdict below applies only to that checkpoint. Use [`CURRENT-STATE.md`](./CURRENT-STATE.md) for current risks and rerun relevant gates for current behavior.
 
 **Date:** 23 August 2026  
 **Scope:** Work Package 1 only  

@@ -1,6 +1,8 @@
 # LIEUVA live access and lifecycle matrix
 
-> Customer-facing naming is LIEUVA; AURA/gallery identifiers inside the procedure remain compatibility contracts. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
+> **Read as:** normative live acceptance procedure, to run only with explicit authorization and disposable fixtures. Customer-facing naming is LIEUVA; AURA/gallery identifiers remain compatibility contracts. Results from any earlier run do not establish current rollout status; see [`CURRENT-STATE.md`](./CURRENT-STATE.md) and fresh live evidence.
+
+**Evidence baseline:** this procedure records no completed live matrix run.
 
 Run this only with disposable test content after the trusted room Functions,
 App Check key, Firestore rules, and Storage rules are live. Never use a real

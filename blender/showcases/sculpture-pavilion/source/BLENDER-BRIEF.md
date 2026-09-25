@@ -1,5 +1,7 @@
 # LIEUVA — Sculpture Pavilion / Future Nature
 
+> Ursprüngliches Entwurfsbriefing. Der [Showcase-Vertrag](../README.md) beschreibt den aktuellen Build, Export und Browserstand; die unten genannten fehlenden `.blend`/GLB-Dateien beziehen sich nur auf den damaligen Paketstand.
+
 ## Ziel
 Drei zusammenhängende, begehbare Ausstellungsräume für fünf originale Skulpturen. Helle organische Architektur, weißer Mineralputz, heller Terrazzo, Travertin und Tageslicht von oben. Das Paket dient dem späteren Nachbau mit Codex/Astra in Blender. Es enthält fotorealistische KI-Referenzen, noch keine .blend-, STEP- oder GLB-Datei.
 

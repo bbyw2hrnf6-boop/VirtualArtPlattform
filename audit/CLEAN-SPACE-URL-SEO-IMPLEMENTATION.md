@@ -1,11 +1,12 @@
 # WP5 — Clean Space URL & SEO implementation evidence
 
-> Durable delivery specification with dated evidence. For current status and test coverage, use [`CURRENT-STATE.md`](./CURRENT-STATE.md) and run the repository gates.
+> **Read as:** durable clean-URL/SEO delivery contract plus evidence from the dated WP5 checkpoint. The verdict and deployment fields below describe that checkpoint, not today's live release. Use [`CURRENT-STATE.md`](./CURRENT-STATE.md) for current risks and the repository/live gates for current state.
 
 **Date:** 2026-08-24  
 **Verdict:** **PASS WITH CONDITIONS**  
-**Deployment:** none  
-**Production data/rules/DNS:** untouched
+**Initial WP5 checkpoint:** no deployment or production data/rules/DNS change. The later approved cutover is recorded in [section 19](#19-external-deployment-steps).
+
+**Jump to:** [canonical URL](#4-canonical-url-contract) · [visibility and indexing](#9-visibility-and-indexing-matrix) · [cache and privacy](#14-cache-and-invalidation-strategy) · [dated test results](#18-test-and-build-results) · [deployment record](#19-external-deployment-steps) · [rollback](#20-rollback-plan).
 
 ## 1. Architecture chosen
 
@@ -251,7 +252,9 @@ Firestore and Storage with explicit legacy visibility without adding an index.
 
 Do not delete Functions first, and never delete/migrate Firestore records, Storage assets, IDs, revisions, ACL, drafts or exports during rollback.
 
-## 21. Remaining risks
+## 21. Risks recorded before the cutover
+
+This list preserves the original pre-cutover assessment. For the later deployment result and remaining follow-up, use [section 19](#19-external-deployment-steps); for present risks, use [`CURRENT-STATE.md`](./CURRENT-STATE.md).
 
 - Firebase Hosting and the three HTTP Functions have not been deployed or exercised against a safe external Firebase test fixture.
 - The exact Hosting custom-domain/DNS records and certificate timing are external state.

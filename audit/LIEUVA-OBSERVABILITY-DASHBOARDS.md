@@ -1,8 +1,10 @@
 # LIEUVA Observability Dashboards and Alerts
 
-> Operational specification. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
+> **Read as:** operational specification. The implemented-admin section describes repository behavior at this document's last edit; the dashboard and alert sections are target criteria. Verify current behavior in source/tests and current rollout risks in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
 
-Status: provider-neutral production specification. Data source today is Google Cloud Logging through the App Check protected telemetry callable and structured Firebase Function logs.
+Scope: provider-neutral production specification. The described data source is Google Cloud Logging through the App Check protected telemetry callable and structured Firebase Function logs; verify the current transport in source and live operations.
+
+Evidence baseline: no dated rollout verification is recorded in this specification; check source/tests and live operator evidence before claiming deployment or alert coverage.
 
 ## Implemented admin operations
 

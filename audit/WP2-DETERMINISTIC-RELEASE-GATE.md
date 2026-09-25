@@ -1,14 +1,16 @@
 # WP2 — Deterministic Release Gate
 
-> Durable release contract matching active `wp2-*` scripts. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
+> **Read as:** normative release procedure matching `wp2-*` scripts plus a dated implementation checkpoint. The completion and external-setup lines below are that checkpoint's evidence; use [`CURRENT-STATE.md`](./CURRENT-STATE.md) and current workflow/live checks for present status.
 
 Date: 2026-09-03
 
-Local repository implementation: **complete**
+Local repository implementation at the 2026-09-03 checkpoint: **complete**
 
-External GitHub/GCP setup and first production run: **still required**
+External GitHub/GCP setup and first production run at that checkpoint: **still required**
 
-Production mutation by WP2 implementation: **none**
+Production mutation during that implementation checkpoint: **none**
+
+**Jump to:** [local commands](#local-commands) · [artifact and promotion](#artifact-resolution-and-production-promotion) · [variables and environments](#variables-and-environments) · [rollback](#traceability-and-rollback) · [external setup](#external-setup-still-required).
 
 ## Scope and compatibility
 

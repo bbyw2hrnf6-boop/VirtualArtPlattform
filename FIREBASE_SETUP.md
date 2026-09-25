@@ -1,6 +1,8 @@
 # Firebase setup for LIEUVA — Firestore, Storage and Functions
 
-> This is the operational source of truth. Dated WP sections document rollout history; use `audit/CURRENT-STATE.md` and current commands for present status and test coverage.
+> **Read as:** operational setup and release procedure. Dated WP records and live observations describe their stated checkpoint only. Use `audit/CURRENT-STATE.md` for current product risks, source and tests for checked-out behavior, and the protected workflow plus live checks for deployed state.
+
+**Jump to:** [authentication and mail](#2-authentication) · [rules and indexes](#4-promote-reviewed-rules-and-indexes) · [App Check and trusted mutations](#6-app-check-and-trusted-room-mutations) · [lifecycle and GitHub auth](#8-lifecycle-cleanup-and-keyless-github-authentication) · [live verification](#9-live-verification) · [clean Space delivery and rollback](#10-clean-space-url-delivery-wp5) · [troubleshooting](#12-troubleshooting).
 
 LIEUVA uses Anonymous, Email/Password, and Google Authentication; Firestore for Space metadata and access roles; and Firebase Storage for work images and Space covers. Legacy AURA/gallery identifiers remain intentionally unchanged. Firebase requires the Blaze pay-as-you-go plan for Storage access as of 3 February 2026. No-cost quotas still apply, but configure billing alerts.
 

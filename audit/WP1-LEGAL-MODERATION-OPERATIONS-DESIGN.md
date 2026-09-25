@@ -1,6 +1,6 @@
 # LIEUVA WP1 — legal inputs and moderation operations design
 
-> Durable owner-decision and operations record, not a current roadmap. Current rollout status belongs in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
+> **Read as:** owner-decision questions and controlled-pilot moderation procedure, with dated production records and superseding notes below. Historical implementation/status statements apply to their checkpoint. Current rollout risks belong in [`CURRENT-STATE.md`](./CURRENT-STATE.md).
 
 **Date:** 2026-09-02
 
@@ -9,6 +9,8 @@ deployed on 2026-09-02; owner/legal inputs and public-beta controls remain open.
 This is not legal advice or a production-readiness claim.
 
 **Scope:** current legal/data-rights copy, Creator reporting, Space/image uploads, operator workflow
+
+**Jump to:** [owner/legal questions](#2-facts-the-ownerlegal-reviewer-must-supply) · [pilot moderation runbook](#3-controlled-pilot-moderation-runbook) · [case design and tools](#4-firebase-compatible-case-design) · [upload safety](#5-upload-safety-design) · [go/no-go gate](#7-gono-go-gate).
 
 **Superseding product decision (2026-09-06):** Creator-profile publication is
 self-service. `profilePublic` alone controls whether a Creator profile is

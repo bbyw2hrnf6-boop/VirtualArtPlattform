@@ -1,6 +1,6 @@
 # LIEUVA Blender production
 
-The three template environments now use `premium-v3` by default in the shared Studio and visitor renderer. This is a local implementation awaiting the owner's normal release workflow. Nothing here deploys or publishes.
+The checked-out Studio and visitor renderer use `premium-v3` by default for all three templates. This document covers local authoring and reproduction; it does not establish the live release revision. Use [`audit/CURRENT-STATE.md`](../../audit/CURRENT-STATE.md) for current product risks and the deployed `/release.json` plus the protected workflow for live identity. The original September 2026 production checkpoint awaited the owner's release workflow.
 
 ## Four separate deliverables
 

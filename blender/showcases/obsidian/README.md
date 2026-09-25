@@ -2,13 +2,17 @@
 
 This is a bespoke, read-only three-room exhibition at `/#/showcase/obsidian`.
 It is not a Studio template, publication, Firebase record or replacement for the
-Danny reference. The homepage's Art exhibitions image and “Explore Obsidian” action both open it. The neighboring Sculpture & 3D card opens the separate [Sculpture Pavilion](../sculpture-pavilion/README.md); Architecture retains its future-showcase state.
+Danny reference. The homepage's Art exhibitions image and “Explore Obsidian”
+action both open it. The neighboring cards open
+[Sculpture Pavilion](../sculpture-pavilion/README.md) and
+[Forest Fold House](../forest-fold-house/README.md).
 
 ## Source and geometry
 
 The owner supplied `Obsidian-Three-Rooms`. `source/layout.json`, `plan.svg` and
-`blender-brief.md` govern the reconstruction; the AI-generated room references
-are atmosphere references, not photographs or a consistent pre-existing mesh.
+`blender-brief.md` record the original reconstruction inputs. This README
+governs the current build and delivery. The AI-generated room references are
+atmosphere references, not photographs or a consistent pre-existing mesh.
 Eleven original PNG artworks are retained byte-for-byte under `source/artworks`.
 The source asset index records their supplied dimensions and SHA-256 values.
 

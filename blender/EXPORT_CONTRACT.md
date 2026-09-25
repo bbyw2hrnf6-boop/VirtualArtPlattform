@@ -1,15 +1,14 @@
 # LIEUVA Blender → GLB contract
 
-This is the authored-space contract for LIEUVA templates. Legacy `aura_*` keys remain compatibility identifiers. One Blender unit equals one metre. Blender sources are Z-up; exported glTF files are Y-up for Three.js.
-
+This is the current authored-space contract for LIEUVA Studio templates. Legacy `aura_*` keys remain compatibility identifiers. One Blender unit equals one metre. Blender sources are Z-up; exported glTF files are Y-up for Three.js.
 
 ## Current production path — 9 September 2026
 
-The shared Studio/visitor renderer loads `public/assets/templates/premium-v3/{id}-{desktop,mobile}.glb` by default. Use `blender/production/build_premium.py` and `npm run validate:premium`; see [production instructions](./production/README.md). The older `create_templates.py` and `blender/templates/` files below are retained historical concepts and are not the current Studio-compatible export path.
+The shared Studio/visitor renderer loads `public/assets/templates/premium-v3/{id}-{desktop,mobile}.glb` by default. Use `blender/production/build_premium.py` and `npm run validate:premium`; see [production instructions](./production/README.md). The older `create_templates.py` and `blender/templates/` are historical concepts and are not the current Studio-compatible export path.
 
 Additional required metadata: `lieuva_production_version=premium-v3`, `aura_dimensions=[width, depth, hanging-height]`. Exactly four exterior `shell` meshes plus one `floor`; stable IDs come from `galleryWalls()` (4/4/14). `architecture` and `ceiling` are visual batches; `lieuva_overhead` controls their visibility independently from hidden collision geometry. Overhead visual height may exceed the protected hanging datum (Grand Forum rooflight 8.9 m).
 
-Architecture AO uses `occlusionTexture.texCoord=1` with a separate atlas; albedo remains sRGB and metric/repeating. Imported materials preserve AO, normal and alpha state. Functional helpers never render. The existing placement planes and collision/path controller remain authoritative: imported colliders are consumed; navmesh and anchors are verified export data, not an alternative controller. Current Studio artwork eye line and WALK_START are 1.75 m; the older 1.55–1.60 m recommendation below is historical, not the current default.
+Architecture AO uses `occlusionTexture.texCoord=1` with a separate atlas; albedo remains sRGB and metric/repeating. Imported materials preserve AO, normal and alpha state. Functional helpers never render. The existing placement planes and collision/path controller remain authoritative: imported colliders are consumed; navmesh and anchors are verified export data, not an alternative controller. Current Studio artwork eye line, `aura_eye_line` anchors and WALK_START are 1.75 m.
 
 ## Required scene metadata
 
@@ -43,7 +42,7 @@ Collider and navmesh nodes must remain in the GLB. The runtime hides their meshe
 - Its origin is centered on the usable area.
 - Door, reveal, corner, plinth, and ceiling clearances are excluded from the usable surface.
 - Grand Forum surfaces also carry a stable `aura_zone`.
-- Art anchors store `aura_eye_line` in metres; the default target is 1.55–1.60 m.
+- Art anchors store `aura_eye_line` in metres; the current target is 1.75 m.
 
 ## Material requirements
 
@@ -56,19 +55,19 @@ Collider and navmesh nodes must remain in the GLB. The runtime hides their meshe
 
 ## Export and validation
 
-Generate sources and GLBs with Blender 4.2 or newer:
+Generate current sources and GLBs with Blender 4.2 or newer. Run from the repository root, once per room (`white-cube`, `nocturne`, `pavilion`):
 
 ```bash
-blender --background --python blender/create_templates.py
+/Applications/Blender.app/Contents/MacOS/Blender -b --python blender/production/build_premium.py -- --room white-cube --round 5 --width 3840 --samples 96 --device CPU --export --bake-ao
 ```
 
-Then validate the node/extras contract:
+Use your local Blender executable path and substitute the room ID. The [production instructions](./production/README.md) describe the render and no-render variants. Validate all six current exports without refreshing measurements:
 
 ```bash
-npm run validate:glb -- public/assets/templates/white-cube.glb
+npm run validate:premium
 ```
 
-Before replacing a runtime space, visually compare Arrange, Walk, Overview, and reduced-motion fallbacks on desktop and mobile. Compress the approved GLB with Meshopt and textures with KTX2 or WebP without stripping names, extras, anchors, or animations.
+Before replacing a runtime space, visually compare Arrange, Walk, Overview, and reduced-motion fallbacks on desktop and mobile. Preserve the current export's names, extras, anchors, animations and texture limits. Any new compression or delivery format needs loader compatibility and asset validation before use; the current premium-v3 package does not require Meshopt or KTX2.
 
 ## Independent bespoke sculpture showcase
 

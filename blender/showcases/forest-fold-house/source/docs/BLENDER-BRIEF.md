@@ -1,5 +1,7 @@
 # Blender-Briefing - Forest Fold House
 
+> Ursprüngliches Entwurfsbriefing. Für den aktuellen Build, Export und Browserstand zuerst den [Showcase-Vertrag](../../README.md) lesen; frühere Zukunftsaussagen gelten nur für den damaligen Paketstand.
+
 ## Ziel
 
 Ein vollständig begehbares, möbliertes Architektur-Showcase für LIEUVA. Das Ergebnis soll aus Besucherperspektive wie ein sorgfältig fotografiertes kleines Architektenhaus wirken. Zwei Ebenen, zwei Flügel, eine Brücke; visuelle Größe und Grundriss beibehalten.
