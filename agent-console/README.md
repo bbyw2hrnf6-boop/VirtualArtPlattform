@@ -1,6 +1,6 @@
 # LIEUVA Agentenzentrale
 
-Lokales Arbeitsinstrument für die Entscheidungsvorbereitung. Die sieben Agenten stehen in [`config.json`](./config.json); dort und in der Oberfläche sind Auftrag, Modell, Reasoning, Websuche, Aktivierung und Rhythmus änderbar. Alle starten mit `gpt-6-luna` und `low`.
+Lokales Arbeitsinstrument für die Entscheidungsvorbereitung. Die sieben Agenten stehen in [`config.json`](./config.json); dort und in der Oberfläche sind Auftrag, Modell, Reasoning, Websuche, Aktivierung und Rhythmus änderbar. Die jeweils gespeicherten Werte gelten für den nächsten Lauf.
 
 ## Start
 
@@ -11,12 +11,16 @@ Bei einem anderen CLI-Pfad kann `CODEX_BIN=/absoluter/pfad/zum/codex npm run age
 ## Ablauf
 
 1. **Tagesbriefing starten** führt fällige Spezialisten aus und danach den Master. **Alle Spezialisten neu prüfen** erzwingt einen frischen vollständigen Lauf. Einzelne Agenten lassen sich jederzeit manuell starten.
-2. Spezialisten recherchieren lesend. Der Master erhält ihre letzten Berichte mit Zeitstempel und erstellt höchstens drei Tagesprioritäten. Tages- und Wochenrhythmen sind pro Agent einstellbar.
+2. Spezialisten recherchieren lesend. Nach neuen Fachberichten oder abgeschlossenen Aufträgen erhält der Master automatisch die strukturierten Berichte, Laufstatus, relevante Protokollauszüge, Ergebniszusammenfassungen und bisherige Nutzerentscheidungen. Die vollständigen lokalen Logs stehen ihm bei Unklarheit zur gezielten Prüfung bereit. Er erstellt daraus eine neue Übersicht; die Zahl der Prioritäten folgt seinem konfigurierten Auftrag.
 3. Vorschläge erscheinen unter **Vorschläge**. Titel, Begründung, Auftrag, Priorität und Ausführungsart können vor der Freigabe bearbeitet werden.
 4. **Freigeben** speichert die Entscheidung. **Ausführen** startet erst nach einem weiteren ausdrücklichen Klick. Recherche bleibt lesend. Lokale Codearbeit läuft in einem neuen Codex-Worktree. Externe Kontaktaufnahme, Veröffentlichungen, Deployment, Live-Daten, Regeländerungen und Löschungen bleiben manuelle Vorgänge.
-5. **Läufe** zeigt Warteschlange, Fortschritt, Bericht, Tokenzahlen soweit verfügbar und das lokale Codex-Protokoll. Laufende und wartende Aufgaben können abgebrochen werden.
+5. **Läufe** zeigt Warteschlangenposition, Laufzeit, letzten Arbeitsschritt und letzte CLI-Ausgabe, Prozessstatus, Bericht, Tokenzahlen soweit verfügbar und das lokale Codex-Protokoll. Nach längerer Zeit ohne neuen Arbeitsschritt erscheint ein Hinweis; ein aktiver Prozess wird dadurch nicht automatisch beendet. Laufende und wartende Aufgaben können abgebrochen werden.
 
 Der automatische Tageslauf ist auf 09:00 Uhr `Europe/Amsterdam` eingestellt. Er läuft, solange der Server offen ist. Beim nächsten Start wird ein für denselben Tag verpasster Lauf nachgeholt. Ein Wochenagent wird nur neu gestartet, wenn sein letzter erfolgreicher Bericht mindestens sieben Tage alt ist. Die Uhrzeit und Automatik sind unter **Einstellungen** änderbar.
+
+Die Master-Zusammenführung wartet, bis die aktuelle Warteschlange abgearbeitet ist, bündelt nahe beieinander liegende Ergebnisse für 15 Sekunden und startet nur einmal pro neuem Ergebnisstand. Ihr Stand erscheint als **Master-Abgleich** auf der Übersicht. Automatische Zusammenführung und die Warnschwelle für fehlende CLI-Ausgabe sind unter **Einstellungen** änderbar. Ein fehlgeschlagener Masterlauf wird nicht endlos automatisch wiederholt; der nächste neue Ergebnisstand oder ein manueller Masterstart löst einen neuen Versuch aus.
+
+Bei lokaler Codearbeit zeigt **Läufe → Details** den Pfad des separaten Worktrees, sobald die CLI eine Dateiänderung meldet. Den Pfad kannst du dort kopieren und den Worktree in [GitHub Desktop](https://docs.github.com/en/desktop/making-changes-in-a-branch/managing-worktrees-in-github-desktop) auswählen oder als lokales Repository öffnen. Die von Codex angelegten Worktrees stehen häufig auf `detached HEAD`; lege [vor einem Commit einen Branch an](https://docs.github.com/en/desktop/making-changes-in-a-branch/managing-branches-in-github-desktop). Commit, Merge und Übernahme in den Haupt-Checkout erfolgen bewusst durch dich nach der Prüfung.
 
 Konfiguration liegt in `agent-console/config.json` und ist Teil des Repos. Laufdaten, Berichte und Protokolle liegen in `artifacts/agent-console/` und werden nicht in Git aufgenommen. Die Oberfläche bindet nur an `127.0.0.1` und benötigt keinen API-Schlüssel im Browser. Codex verwendet die lokale Anmeldung der CLI. Es werden keine direkten Änderungen am LIEUVA-Produkt ausgelöst, bevor ein freigegebener lokaler Auftrag ausdrücklich gestartet wird.
 

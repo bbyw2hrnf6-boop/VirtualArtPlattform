@@ -5,6 +5,7 @@ const rootUrl = "http://127.0.0.1:43821";
 const labels = {
   overview: "Übersicht", agents: "Agenten", proposals: "Vorschläge", runs: "Läufe", settings: "Einstellungen",
   ready: "Bereit", disabled: "Inaktiv", queued: "Wartet", running: "Läuft", completed: "Fertig", failed: "Fehler", cancelled: "Abgebrochen", interrupted: "Unterbrochen",
+  current: "Aktuell", updating: "Wird aktualisiert", pending: "Ausstehend", quiet: "Lange ohne Ausgabe",
   proposed: "Zur Prüfung", approved: "Freigegeben", deferred: "Zurückgestellt", rejected: "Verworfen", executing: "In Arbeit", done: "Erledigt",
   daily: "Täglich", weekly: "Wöchentlich", manual: "Manuell",
   today: "Heute", soon: "Demnächst", watch: "Beobachten",
@@ -24,6 +25,22 @@ function dateText(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Unbekannt";
   return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short", timeZone: data?.config.settings.timeZone || "Europe/Amsterdam" }).format(date);
+}
+function durationText(milliseconds) {
+  const minutes = Math.floor(Math.max(0, milliseconds || 0) / 60_000);
+  if (minutes < 1) return "unter 1 Min.";
+  if (minutes < 60) return `${minutes} Min.`;
+  return `${Math.floor(minutes / 60)} Std. ${minutes % 60} Min.`;
+}
+function activityText(run) {
+  const progress = run.progress;
+  if (run.status === "queued") return `Warteschlange · Position ${progress?.queuePosition || "?"}`;
+  if (run.status !== "running") return run.finishedAt ? `Beendet: ${dateText(run.finishedAt)}` : "";
+  const runtime = `Läuft seit ${durationText(progress?.elapsedMs)}`;
+  const silence = `letzter Arbeitsschritt vor ${durationText(progress?.quietMs)}`;
+  if (progress?.signal === "quiet") return `${runtime} · ${silence} · Prozess aktiv, bitte prüfen`;
+  if (progress?.signal === "unknown") return `${runtime} · ${silence} · Prozessstatus unklar`;
+  return `${runtime} · ${silence} · Codex-Prozess aktiv`;
 }
 function evidence(value) {
   const text = String(value || "").trim();
@@ -83,6 +100,19 @@ function reportBlock(report, emptyText) {
 function masterArt() {
   return `<div class="constellation" aria-hidden="true"><div class="orbit"></div><div class="orbit two"></div><div class="line a"></div><div class="line b"></div><div class="line c"></div><div class="line d"></div><div class="node a"></div><div class="node b"></div><div class="node c"></div><div class="node d"></div><div class="core">L</div></div>`;
 }
+function coordinationPanel() {
+  const coordination = data.coordination;
+  if (!coordination) return "";
+  const pending = coordination.pending;
+  const names = [...new Set([...pending.reports, ...pending.agentRuns].map((item) => item.agentName))];
+  const summary = coordination.status === "updating" ? "Master führt neue Ergebnisse gerade zusammen."
+    : coordination.status === "failed" ? "Die letzte Zusammenführung ist fehlgeschlagen. Starte den Master erneut."
+      : coordination.pendingCount && !data.config.agents[0].enabled ? "Neue Ergebnisse warten. Aktiviere den Master für die Zusammenführung."
+        : coordination.pendingCount && !data.config.settings.autoSynthesize ? "Neue Ergebnisse warten. Starte den Master manuell oder aktiviere die Automatik."
+          : coordination.pendingCount ? "Neue Ergebnisse warten auf die automatische Zusammenführung."
+        : "Alle erfassten Agenten- und Auftragsergebnisse sind im letzten Masterlauf berücksichtigt.";
+  return `<section class="panel sync-panel"><div class="panel-title"><h3>Master-Abgleich</h3>${status(coordination.status)}</div><p class="body-copy">${summary}</p><div class="chip-row"><span class="chip">${pending.reports.length} neue Berichte</span><span class="chip">${pending.agentRuns.length} neue Laufstatus</span><span class="chip">${pending.outcomes.length} Auftragsergebnisse</span><span class="chip">Letzter Abgleich: ${dateText(coordination.lastSyncedAt)}</span></div>${names.length ? `<p class="meta">Offene Agenten: ${esc(names.join(", "))}</p>` : ""}</section>`;
+}
 function overview() {
   const master = reportFor("master");
   const running = data.runs.filter((run) => ["queued", "running"].includes(run.status)).length;
@@ -91,15 +121,17 @@ function overview() {
   const finished = data.runs.filter((run) => run.status === "completed").length;
   const top = data.proposals.filter((proposal) => proposal.status === "proposed" || proposal.status === "approved").slice(0, 3);
   const specialistReports = data.config.agents.filter((agent) => agent.kind === "specialist").map((agent) => ({ agent, report: data.reports[agent.id] }));
+  const activeRun = data.runs.find((run) => run.status === "running");
   return pageHead("MISSION CONTROL", "Dein Überblick für LIEUVA", "Signale der Agenten, Entscheidungen für heute und der Zustand aller Läufe an einem Ort.") +
     `<div class="grid stats"><div class="stat"><div class="stat-label">Aktive Agenten</div><div class="stat-value">${active}</div><div class="stat-detail">inklusive Master</div></div><div class="stat"><div class="stat-label">Zur Entscheidung</div><div class="stat-value">${queued}</div><div class="stat-detail">Vorschläge prüfen</div></div><div class="stat"><div class="stat-label">Laufende Jobs</div><div class="stat-value">${running}</div><div class="stat-detail">seriell verarbeitet</div></div><div class="stat"><div class="stat-label">Abgeschlossene Läufe</div><div class="stat-value">${finished}</div><div class="stat-detail">lokal protokolliert</div></div></div>` +
     `<section class="master-card"><div class="master-copy"><div class="master-kicker">✦ MASTER · CHIEF OF STAFF</div><h2>${esc(master?.headline || "Ein klarer Tagesplan aus allen wichtigen Signalen.")}</h2><p>${esc(master?.summary || "Starte den ersten Tageslauf. Die Spezialisten recherchieren in ihrem Rhythmus, danach fasst der Master die Ergebnisse zu prüfbaren Vorschlägen zusammen.")}</p><div class="master-actions">${button("✦ Tagesbriefing starten", "daily", 'data-full="false"', "btn primary")}${button("Alle Spezialisten neu prüfen", "daily", 'data-full="true"', "btn ghost")}</div></div>${masterArt()}</section>` +
+    `<div class="monitor-grid">${activeRun ? `<section class="panel monitor-panel"><div class="panel-title"><h3>Aktiver Auftrag</h3>${status(activeRun.progress?.signal === "quiet" ? "quiet" : "running")}</div><strong>${esc(activeRun.agentName)}</strong><p class="body-copy">${esc(activityText(activeRun))}</p><div class="button-row">${button("Lauf ansehen", "view-run", `data-id="${esc(activeRun.id)}"`, "btn ghost small")}${button("Abbrechen", "cancel-run", `data-id="${esc(activeRun.id)}"`, "btn danger small")}</div></section>` : ""}${coordinationPanel()}</div>` +
     `<div class="two-columns"><section>${sectionHead("Entscheidungen", `<span>${queued} offen</span>`)}${top.length ? top.map((proposal) => `<div class="proposal-card"><div class="proposal-top"><span class="priority ${esc(proposal.priority)}">${esc(labels[proposal.priority])}</span>${status(proposal.status)}</div><h3>${esc(proposal.title)}</h3><p>${esc(proposal.rationale)}</p>${button("Prüfen →", "open-proposal", `data-id="${esc(proposal.id)}"`, "btn subtle")}</div>`).join("") : `<div class="empty">Noch keine Vorschläge. Der Master erzeugt sie nach einem Tageslauf.</div>`}</section><section>${sectionHead("Spezialistenberichte", `<span>${specialistReports.filter((item) => item.report).length} von ${specialistReports.length} vorhanden</span>`)}<div class="panel">${specialistReports.map(({ agent, report }) => `<div class="finding"><strong>${esc(agent.name)}</strong><p>${esc(report?.report.headline || "Noch kein Bericht")}</p><small>${report ? dateText(report.finishedAt) : esc(labels[agent.cadence])}</small></div>`).join("")}</div></section></div>`;
 }
 function agentCard(agent) {
   const run = latestRun(agent.id);
   const report = reportFor(agent.id);
-  return `<article class="agent-card ${agent.enabled ? "" : "disabled"}"><div class="agent-top"><div class="agent-icon ${esc(agent.id)}">${esc(symbols[agent.id] || "◇")}</div>${status(run?.status || (agent.enabled ? "ready" : "disabled"))}</div><div><h3>${esc(agent.name)}</h3><p>${esc(agent.tagline)}</p></div><div class="chip-row"><span class="chip accent">${esc(agent.model)} · ${esc(agent.effort)}</span><span class="chip">${esc(labels[agent.cadence])}</span><span class="chip">Web: ${esc(agent.webSearch)}</span></div><div class="last">${report ? `Letzter Bericht: ${dateText(data.reports[agent.id].finishedAt)} · ${esc(report.headline)}` : "Noch kein Bericht"}</div><div class="card-actions">${button("Starten", "run-agent", `data-id="${esc(agent.id)}" ${agent.enabled ? "" : "disabled"}`, "btn primary small")}${button("Einstellen", "edit-agent", `data-id="${esc(agent.id)}"`, "btn ghost small")}</div></article>`;
+  return `<article class="agent-card ${agent.enabled ? "" : "disabled"}"><div class="agent-top"><div class="agent-icon ${esc(agent.id)}">${esc(symbols[agent.id] || "◇")}</div>${status(run?.progress?.signal === "quiet" ? "quiet" : run?.status || (agent.enabled ? "ready" : "disabled"))}</div><div><h3>${esc(agent.name)}</h3><p>${esc(agent.tagline)}</p></div><div class="chip-row"><span class="chip accent">${esc(agent.model)} · ${esc(agent.effort)}</span><span class="chip">${esc(labels[agent.cadence])}</span><span class="chip">Web: ${esc(agent.webSearch)}</span></div><div class="last">${run && ["running", "queued"].includes(run.status) ? esc(activityText(run)) : report ? `Letzter Bericht: ${dateText(data.reports[agent.id].finishedAt)} · ${esc(report.headline)}` : "Noch kein Bericht"}</div><div class="card-actions">${button("Starten", "run-agent", `data-id="${esc(agent.id)}" ${agent.enabled ? "" : "disabled"}`, "btn primary small")}${button("Einstellen", "edit-agent", `data-id="${esc(agent.id)}"`, "btn ghost small")}</div></article>`;
 }
 function option(value, current, title) { return `<option value="${esc(value)}" ${value === current ? "selected" : ""}>${esc(title)}</option>`; }
 function agentEditor() {
@@ -124,23 +156,36 @@ function proposalsView() {
   const matches = data.proposals.filter((item) => filter === "open" ? item.status === "proposed" : item.status === filter);
   return pageHead("DECISION DESK", "Vorschläge prüfen", "Passe Aufgaben an und gib sie frei. Lokale Codearbeit läuft anschließend in einem eigenen Worktree.") + `<div class="tabs">${groups.map((group) => `<button type="button" class="tab ${filter === group ? "active" : ""}" data-action="proposal-filter" data-filter="${group}">${groupLabel[group]} · ${data.proposals.filter((item) => group === "open" ? item.status === "proposed" : item.status === group).length}</button>`).join("")}</div>${matches.length ? matches.map(proposalCard).join("") : `<div class="empty">In diesem Bereich gibt es noch keine Vorschläge.</div>`}`;
 }
+function worktreeBlock(run) {
+  if (!run.worktreePath) return "";
+  return `<div class="worktree-box"><strong>Änderungen im separaten Worktree</strong><code>${esc(run.worktreePath)}</code><div class="button-row">${button("Pfad kopieren", "copy-worktree", `data-id="${esc(run.id)}"`, "btn ghost small")}</div><p class="meta">In GitHub Desktop den Worktree wählen oder den Pfad als lokales Repository öffnen. Vor dem Commit prüfen, ob ein Branch angelegt werden muss; Codex-Worktrees starten oft mit detached HEAD. Der Haupt-Checkout übernimmt diese Änderungen nicht automatisch.</p></div>`;
+}
 function runDetail() {
   const run = data.runs.find((item) => item.id === ui.runId);
   if (!run) return "";
-  return `<section class="panel details run-details"><div class="panel-title"><h3>${esc(run.agentName)}</h3>${status(run.status)}</div><p class="body-copy">${esc(run.message)}</p><div class="chip-row"><span class="chip">${esc(run.model)} · ${esc(run.effort)}</span><span class="chip">Start: ${dateText(run.startedAt)}</span><span class="chip">Ende: ${dateText(run.finishedAt)}</span>${run.usage ? `<span class="chip">Tokens: ${esc(run.usage.input_tokens ?? "?")} in / ${esc(run.usage.output_tokens ?? "?")} out</span>` : ""}</div><div class="subtle-divider"></div>${run.report ? reportBlock(run.report, "") : run.finalText ? `<pre class="log">${esc(run.finalText)}</pre>` : ""}<div class="section-heading log-heading"><h2>Protokoll</h2><div class="button-row"><a class="btn ghost small" href="/api/runs/${encodeURIComponent(run.id)}/log" target="_blank" rel="noopener noreferrer">Ganzes Log ↗</a>${["queued", "running"].includes(run.status) ? button("Abbrechen", "cancel-run", `data-id="${esc(run.id)}"`, "btn danger small") : ""}</div></div><pre class="log">${esc((run.events || []).join("\n"))}</pre>${run.threadId ? `<p class="meta">Codex-Task-ID: ${esc(run.threadId)}</p>` : ""}</section>`;
+  const progress = run.progress;
+  const warning = run.status === "running" && progress?.signal === "quiet"
+    ? `<p class="note activity-warning">Der Codex-Prozess ist noch aktiv, hat aber seit ${durationText(progress.quietMs)} keinen neuen Arbeitsschritt gemeldet. Prüfe das vollständige Log oder brich den Lauf ab, wenn er nicht weiterkommt.</p>`
+    : "";
+  return `<section class="panel details run-details"><div class="panel-title"><h3>${esc(run.agentName)}</h3>${status(run.status)}</div><p class="body-copy">${esc(run.message)}</p><p class="activity-line">${esc(activityText(run))}</p>${warning}<div class="chip-row"><span class="chip">${esc(run.model)} · ${esc(run.effort)}</span><span class="chip">Start: ${dateText(run.startedAt)}</span><span class="chip">Letzte Aktivität: ${dateText(run.lastActivityAt || run.finishedAt || run.startedAt)}</span><span class="chip">Ende: ${dateText(run.finishedAt)}</span>${run.usage ? `<span class="chip">Tokens: ${esc(run.usage.input_tokens ?? "?")} in / ${esc(run.usage.output_tokens ?? "?")} out</span>` : ""}</div>${run.currentStep ? `<p class="meta">Aktueller Schritt: ${esc(run.currentStep)}</p>` : ""}${worktreeBlock(run)}<div class="subtle-divider"></div>${run.report ? reportBlock(run.report, "") : run.finalText ? `<pre class="log">${esc(run.finalText)}</pre>` : ""}<div class="section-heading log-heading"><h2>Protokoll</h2><div class="button-row"><a class="btn ghost small" href="/api/runs/${encodeURIComponent(run.id)}/log" target="_blank" rel="noopener noreferrer">Ganzes Log ↗</a>${["queued", "running"].includes(run.status) ? button("Abbrechen", "cancel-run", `data-id="${esc(run.id)}"`, "btn danger small") : ""}</div></div><pre class="log" data-run-log>${esc((run.events || []).join("\n"))}</pre>${run.threadId ? `<p class="meta">Codex-Task-ID: ${esc(run.threadId)}</p>` : ""}</section>`;
 }
 function runsView() {
-  return pageHead("ACTIVITY", "Alle Läufe", "Start, Status, Ergebnis und Codex-Protokoll jedes Agentenlaufs.") + (data.runs.length ? `<div class="run-list">${data.runs.map((run) => `<div class="run-row"><div><strong>${esc(run.agentName)}</strong><p>${dateText(run.createdAt)} · ${esc(run.reason)} · ${esc(run.message)}</p></div><div class="right">${status(run.status)}${button("Details", "view-run", `data-id="${esc(run.id)}"`, "btn ghost small")}</div></div>`).join("")}</div>${runDetail()}` : `<div class="empty">Noch keine Läufe. Starte einen Agenten oder den Tageslauf.</div>`);
+  return pageHead("ACTIVITY", "Alle Läufe", "Laufzeit, letzte Ausgabe, Prozessstatus und Ergebnis jedes Agentenlaufs.") + (data.runs.length ? `<div class="run-list">${data.runs.map((run) => `<div class="run-row"><div><strong>${esc(run.agentName)}</strong><p>${dateText(run.createdAt)} · ${esc(run.reason)} · ${esc(run.message)}</p><p class="run-activity">${esc(activityText(run))}</p></div><div class="right">${status(run.progress?.signal === "quiet" ? "quiet" : run.status)}${button("Details", "view-run", `data-id="${esc(run.id)}"`, "btn ghost small")}</div></div>`).join("")}</div>${runDetail()}` : `<div class="empty">Noch keine Läufe. Starte einen Agenten oder den Tageslauf.</div>`);
 }
 function settingsView() {
   const s = data.config.settings;
-  return pageHead("SETUP", "Einstellungen", "Steuere den Tageslauf. Die Uhr gilt in der eingestellten Zeitzone, während der lokale Server läuft.") + `<div class="settings-grid"><section class="panel"><div class="panel-title"><h3>Tagesbriefing</h3></div><form id="settingsForm"><label class="checkline"><input type="checkbox" name="autoDaily" ${s.autoDaily ? "checked" : ""}> Automatisch täglich starten</label><div class="field"><label for="dailyTime">Uhrzeit</label><input type="time" id="dailyTime" name="dailyTime" required value="${esc(s.dailyTime)}"></div><div class="field"><label for="timeZone">Zeitzone</label><input id="timeZone" name="timeZone" required value="${esc(s.timeZone)}"><small>IANA-Zeitzone, z. B. Europe/Amsterdam.</small></div><p class="note">Nach dem Start holt der Server den heutigen Lauf nach, wenn die Uhrzeit bereits vorbei ist. Wochenagenten laufen nur, wenn ihr letzter Bericht mindestens sieben Tage alt ist.</p><button type="submit" class="btn primary">Zeitplan speichern</button></form></section><section class="panel"><div class="panel-title"><h3>Lokale Ausführung</h3></div><div class="finding"><strong>Codex CLI</strong><p>${esc(data.server.codexBin)}</p></div><div class="finding"><strong>Arbeitsweise</strong><p>Recherche läuft lesend. Freigegebene Codearbeit startet in einem eigenen Codex-Worktree. Protokolle und Berichte liegen unter artifacts/agent-console/.</p></div><div class="finding"><strong>Aktiver Lauf</strong><p>${data.server.activeRunId ? esc(data.runs.find((run) => run.id === data.server.activeRunId)?.agentName || "Läuft") : "Keiner"} · ${data.server.queueLength} in der Warteschlange</p></div><div class="finding"><strong>Letztes Tagesbriefing</strong><p>${dateText(data.daily.lastCompletedAt)}</p></div></section></div>`;
+  return pageHead("SETUP", "Einstellungen", "Steuere den Tageslauf. Die Uhr gilt in der eingestellten Zeitzone, während der lokale Server läuft.") + `<div class="settings-grid"><section class="panel"><div class="panel-title"><h3>Tagesbriefing</h3></div><form id="settingsForm"><label class="checkline"><input type="checkbox" name="autoDaily" ${s.autoDaily ? "checked" : ""}> Automatisch täglich starten</label><label class="checkline"><input type="checkbox" name="autoSynthesize" ${s.autoSynthesize ? "checked" : ""}> Master nach neuen Ergebnissen automatisch aktualisieren</label><div class="field"><label for="quietWarningMinutes">Hinweis nach Minuten ohne Ausgabe</label><input type="number" id="quietWarningMinutes" name="quietWarningMinutes" min="1" max="60" required value="${esc(s.quietWarningMinutes)}"><small>Ein stiller Prozess kann weiterarbeiten. Der Hinweis bricht ihn nicht automatisch ab.</small></div><div class="field"><label for="dailyTime">Uhrzeit</label><input type="time" id="dailyTime" name="dailyTime" required value="${esc(s.dailyTime)}"></div><div class="field"><label for="timeZone">Zeitzone</label><input id="timeZone" name="timeZone" required value="${esc(s.timeZone)}"><small>IANA-Zeitzone, z. B. Europe/Amsterdam.</small></div><p class="note">Nach dem Start holt der Server den heutigen Lauf nach, wenn die Uhrzeit bereits vorbei ist. Wochenagenten laufen nur, wenn ihr letzter Bericht mindestens sieben Tage alt ist.</p><button type="submit" class="btn primary">Zeitplan speichern</button></form></section><section class="panel"><div class="panel-title"><h3>Lokale Ausführung</h3></div><div class="finding"><strong>Codex CLI</strong><p>${esc(data.server.codexBin)}</p></div><div class="finding"><strong>Arbeitsweise</strong><p>Recherche läuft lesend. Freigegebene Codearbeit startet in einem eigenen Codex-Worktree. Protokolle und Berichte liegen unter artifacts/agent-console/.</p></div><div class="finding"><strong>Aktiver Lauf</strong><p>${data.server.activeRunId ? esc(data.runs.find((run) => run.id === data.server.activeRunId)?.agentName || "Läuft") : "Keiner"} · ${data.server.queueLength} in der Warteschlange</p></div><div class="finding"><strong>Letztes Tagesbriefing</strong><p>${dateText(data.daily.lastCompletedAt)}</p></div></section></div>`;
 }
 function draw() {
   if (!data) return;
   document.getElementById("viewLabel").textContent = labels[ui.view];
   document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === ui.view));
+  const previousLog = app.querySelector("[data-run-log]");
+  const followLog = !previousLog || previousLog.scrollTop + previousLog.clientHeight >= previousLog.scrollHeight - 20;
+  const previousScroll = previousLog?.scrollTop ?? 0;
   app.innerHTML = ({ overview, agents: agentsView, proposals: proposalsView, runs: runsView, settings: settingsView })[ui.view]();
+  const nextLog = app.querySelector("[data-run-log]");
+  if (nextLog) nextLog.scrollTop = followLog ? nextLog.scrollHeight : previousScroll;
   if (ui.agentId && ui.view === "agents") document.getElementById("agent-editor")?.scrollIntoView({ block: "nearest" });
 }
 function offline() {
@@ -191,7 +236,7 @@ async function saveAgent() {
 async function saveSettings() {
   const values = new FormData(document.getElementById("settingsForm"));
   const next = structuredClone(data.config);
-  next.settings = { autoDaily: values.has("autoDaily"), dailyTime: String(values.get("dailyTime")), timeZone: String(values.get("timeZone")) };
+  next.settings = { autoDaily: values.has("autoDaily"), autoSynthesize: values.has("autoSynthesize"), quietWarningMinutes: Number(values.get("quietWarningMinutes")), dailyTime: String(values.get("dailyTime")), timeZone: String(values.get("timeZone")) };
   await api("PUT", "/api/config", next);
   ui.dirty = false;
   await refresh();
@@ -256,6 +301,12 @@ document.addEventListener("click", async (event) => {
       ui.view = "runs"; await refresh();
     }
     if (action === "view-run") { ui.runId = id; ui.view = "runs"; draw(); document.querySelector(".details")?.scrollIntoView({ block: "start", behavior: "smooth" }); }
+    if (action === "copy-worktree") {
+      const path = data.runs.find((run) => run.id === id)?.worktreePath;
+      if (!path) throw new Error("Worktree-Pfad fehlt noch.");
+      await navigator.clipboard.writeText(path);
+      notify("Worktree-Pfad kopiert.");
+    }
     if (action === "cancel-run") { await api("POST", `/api/runs/${id}/cancel`, {}); notify("Abbruch angefordert."); await refresh(); }
   } catch (error) { notify(error.message, true); }
 });

@@ -10,10 +10,17 @@ import {
   buildResearchPrompt,
   cleanReport,
   dueAgents,
+  initializeMasterSync,
   localClock,
+  masterInputSignature,
+  masterInputs,
   mergeMasterProposals,
+  pendingMasterInputs,
   recoverInterruptedState,
+  runProgress,
+  shouldQueueMaster,
   validateConfig,
+  worktreeRootFromChange,
 } from "./core.mjs";
 
 const directory = dirname(fileURLToPath(import.meta.url));
@@ -46,12 +53,27 @@ state.reports ??= {};
 state.proposals ??= [];
 state.daily ??= freshState().daily;
 recoverInterruptedState(state);
+initializeMasterSync(state, config);
+for (const run of state.runs) {
+  if (run.type !== "proposal" || run.proposalSnapshot?.executionMode !== "local-code" || run.worktreePath) continue;
+  const file = join(runFiles, `${run.id}.jsonl`);
+  if (!existsSync(file)) continue;
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    if (!line.includes('"file_change"')) continue;
+    try {
+      const event = JSON.parse(line);
+      const path = event.item?.changes?.map((change) => worktreeRootFromChange(change.path)).find(Boolean);
+      if (path && existsSync(join(path, ".git"))) { run.worktreePath = path; break; }
+    } catch { /* Unvollständige Log-Zeile */ }
+  }
+}
 writeJson(stateFile, state);
 
 const pending = [];
 let active = null;
 let activeChild = null;
 let cancellationRequested = false;
+let masterSyncTimer = null;
 
 function persist() {
   state.runs = state.runs.slice(0, 100);
@@ -61,6 +83,10 @@ function persist() {
 function nowIso() { return new Date().toISOString(); }
 
 function appendEvent(run, event) {
+  run.lastActivityAt = nowIso();
+  if (typeof event === "object" && ["thread.started", "turn.started", "turn.completed", "item.started", "item.completed"].includes(event.type)) {
+    run.lastProgressAt = run.lastActivityAt;
+  }
   const line = typeof event === "string" ? event : JSON.stringify(event);
   appendFileSync(join(runFiles, `${run.id}.jsonl`), `${line}\n`);
   run.events.push(line.slice(0, 1000));
@@ -72,6 +98,16 @@ function appendEvent(run, event) {
     }
     if (event.type === "thread.started") run.threadId = event.thread_id;
     if (event.type === "turn.completed") run.usage = event.usage;
+    if (event.type === "item.started") {
+      run.currentStep = event.item?.type === "command_execution" ? "Befehl läuft"
+        : event.item?.type === "file_change" ? "Dateien werden bearbeitet"
+          : "Arbeitsschritt läuft";
+    }
+    if (event.item?.type === "file_change" && run.proposalSnapshot?.executionMode === "local-code") {
+      const path = event.item.changes?.map((change) => worktreeRootFromChange(change.path)).find(Boolean);
+      if (path && existsSync(join(path, ".git"))) run.worktreePath = path;
+    }
+    if (event.type === "item.completed") run.currentStep = "Arbeitsschritt abgeschlossen";
     if (event.type === "item.completed" && event.item?.type === "agent_message") {
       run.message = String(event.item.text ?? "").slice(0, 400);
     }
@@ -96,7 +132,7 @@ function parseStream(run, stream, name) {
       persist();
     }
   });
-  stream.on("end", () => { if (buffer.trim()) appendEvent(run, buffer.trim()); });
+  stream.on("end", () => { if (buffer.trim()) { appendEvent(run, buffer.trim()); persist(); } });
 }
 
 function enqueue(run) {
@@ -128,20 +164,79 @@ function makeProposalRun(proposal) {
   });
 }
 
+function masterContext() {
+  const inputs = masterInputs(state, config);
+  const newSignals = pendingMasterInputs(inputs, state.masterSync.lastInputs);
+  const indexedRuns = new Map(state.runs.map((run) => [run.id, run]));
+  const digest = (item) => {
+    const run = indexedRuns.get(item.runId);
+    const recentLog = run?.events?.flatMap((line) => {
+      try {
+        const event = JSON.parse(line);
+        if (event.type === "item.completed" && event.item?.type === "agent_message") return [String(event.item.text ?? "").slice(0, 300)];
+        if (event.type === "item.completed" && event.item?.type === "file_change") return [`Dateien geändert: ${event.item.changes?.length ?? 0}`];
+        if (event.type === "item.completed" && event.item?.type === "command_execution") return [`Befehl beendet: Code ${event.item.exit_code}`];
+        if (event.type === "stderr" && /^Error:/i.test(event.text)) return [String(event.text).slice(0, 300)];
+      } catch { /* Unvollständige Ereigniszeile */ }
+      return [];
+    }).slice(-4) ?? [];
+    return {
+      ...item,
+      message: run?.message?.slice(0, 500),
+      result: (run?.report?.summary || run?.finalText || "").slice(0, 800),
+      error: run?.lastError?.slice(0, 400),
+      logPath: run ? join(runFiles, `${run.id}.jsonl`) : null,
+      recentLog,
+    };
+  };
+  return [
+    "Prüfe für jeden neuen Lauf den kompakten Protokollauszug und das Ergebnis. Bei Fehlern oder Unklarheiten lies das vollständige Protokoll gezielt unter logPath. Werte Status und Fehler ausdrücklich aus; kennzeichne ältere Signale. Worktree-Änderungen sind nicht in main übernommen oder veröffentlicht. Schlage kein Thema erneut als neuen Auftrag vor, wenn bereits ein gleicher oder sinngleicher Vorschlag vorhanden ist, unabhängig von dessen Status. Aktualisiere dessen Lage stattdessen im Briefing und respektiere die Nutzerentscheidung.",
+    JSON.stringify({
+      existingProposals: state.proposals.slice(0, 30)
+        .map((item) => ({ id: item.id, title: item.title, status: item.status, action: item.action.slice(0, 180) })),
+      newSignals,
+      specialistRuns: inputs.agentRuns.map(digest),
+      proposalRuns: inputs.outcomes.map(digest),
+    }).slice(0, 22000),
+  ].join("\n");
+}
+
+function maybeQueueMaster() {
+  if (!shouldQueueMaster(state, config, active, pending)) return;
+  makeAgentRun(config.agents[0], "sync");
+}
+
+function scheduleMasterSync(delayMs = 15_000) {
+  if (masterSyncTimer) clearTimeout(masterSyncTimer);
+  masterSyncTimer = setTimeout(() => {
+    masterSyncTimer = null;
+    maybeQueueMaster();
+  }, delayMs);
+  masterSyncTimer.unref();
+}
+
 function runNext() {
   if (active || pending.length === 0) return;
   const run = pending.shift();
   active = run;
   run.status = "running";
   run.startedAt = nowIso();
+  run.lastActivityAt = run.startedAt;
+  run.lastProgressAt = run.startedAt;
   run.message = "Codex startet …";
+  run.currentStep = "Codex startet";
+  if (run.type === "agent" && run.agentId === "master") {
+    run.sourceInputs = masterInputs(state, config);
+    run.sourceSignature = masterInputSignature(run.sourceInputs);
+    state.masterSync.lastAttemptSignature = run.sourceSignature;
+  }
   persist();
 
   const outputFile = join(runFiles, `${run.id}.final.txt`);
   const { args, structured, localCode } = buildCodexArgs(run, { projectRoot, outputFile, schemaFile });
 
   const prompt = run.type === "agent"
-    ? buildResearchPrompt(run.agentSnapshot, config, state.reports, new Date())
+    ? buildResearchPrompt(run.agentSnapshot, config, state.reports, new Date(), run.agentId === "master" ? masterContext() : "")
     : localCode
       ? buildExecutionPrompt(run.proposalSnapshot)
       : buildResearchPrompt({
@@ -154,6 +249,9 @@ function runNext() {
     if (finished) return;
     finished = true;
     run.finishedAt = nowIso();
+    run.lastActivityAt = run.finishedAt;
+    run.lastProgressAt = run.finishedAt;
+    run.currentStep = "Lauf beendet";
     const cancelled = cancellationRequested;
     cancellationRequested = false;
     active = null;
@@ -176,6 +274,9 @@ function runNext() {
           if (run.agentId === "master") {
             state.proposals = mergeMasterProposals(state.proposals, run.report, run.id);
             state.daily.lastCompletedAt = run.finishedAt;
+            state.masterSync.lastInputs = run.sourceInputs;
+            state.masterSync.lastCompletedSignature = run.sourceSignature;
+            state.masterSync.lastCompletedAt = run.finishedAt;
           }
         }
       } catch (parseError) {
@@ -195,6 +296,7 @@ function runNext() {
       }
     }
     persist();
+    if (run.type === "proposal" || run.type === "agent" && run.agentId !== "master") scheduleMasterSync();
     setImmediate(runNext);
   };
 
@@ -256,13 +358,32 @@ async function body(request) {
 }
 
 function publicState() {
+  const now = new Date();
+  const inputs = masterInputs(state, config);
+  const pendingInputs = pendingMasterInputs(inputs, state.masterSync.lastInputs);
+  const pendingCount = pendingInputs.reports.length + pendingInputs.agentRuns.length + pendingInputs.outcomes.length;
+  const latestMaster = state.runs.find((run) => run.type === "agent" && run.agentId === "master");
+  const masterUpdating = latestMaster && ["queued", "running"].includes(latestMaster.status);
+  const currentSignature = masterInputSignature(inputs);
   return {
     config,
-    runs: state.runs.slice(0, 60).map(({ agentSnapshot, proposalSnapshot, ...run }) => run),
+    runs: state.runs.slice(0, 60).map(({ agentSnapshot, proposalSnapshot, ...run }) => {
+      const position = pending.findIndex((item) => item.id === run.id);
+      const childAlive = active?.id === run.id && activeChild?.exitCode === null && activeChild?.signalCode === null;
+      return { ...run, progress: runProgress(run, now, config.settings.quietWarningMinutes, childAlive, position >= 0 ? position + 1 : null) };
+    }),
     reports: state.reports,
     proposals: state.proposals,
     daily: state.daily,
-    server: { port, codexBin, activeRunId: active?.id ?? null, queueLength: pending.length },
+    coordination: {
+      status: masterUpdating ? "updating" : pendingCount === 0 ? "current"
+        : ["failed", "interrupted", "cancelled"].includes(latestMaster?.status) && state.masterSync.lastAttemptSignature === currentSignature ? "failed" : "pending",
+      pending: pendingInputs,
+      pendingCount,
+      lastSyncedAt: state.masterSync.lastCompletedAt,
+      masterRunId: latestMaster?.id ?? null,
+    },
+    server: { port, codexBin, activeRunId: active?.id ?? null, queueLength: pending.length, heartbeatAt: now.toISOString() },
   };
 }
 
@@ -295,6 +416,7 @@ const server = createServer(async (request, response) => {
       const nextConfig = validateConfig(await body(request));
       writeJson(configFile, nextConfig);
       config = nextConfig;
+      scheduleMasterSync();
       return json(response, 200, { config });
     }
     if (request.method === "POST" && url.pathname === "/api/daily/run") {
@@ -327,6 +449,7 @@ const server = createServer(async (request, response) => {
           }
         }
         persist();
+        scheduleMasterSync();
       } else {
         cancellationRequested = true;
         activeChild?.kill("SIGTERM");
@@ -390,6 +513,7 @@ server.listen(port, "127.0.0.1", () => {
   console.log(`Laufdaten: ${artifacts}`);
   if (process.argv.includes("--open") && process.platform === "darwin") execFile("open", [address]);
   setTimeout(checkSchedule, 2000);
+  scheduleMasterSync(3000);
   setInterval(checkSchedule, 30_000).unref();
 });
 

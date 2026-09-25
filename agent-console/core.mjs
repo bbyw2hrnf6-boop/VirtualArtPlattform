@@ -20,6 +20,12 @@ export function validateConfig(input) {
   const settings = input.settings;
   if (!settings || typeof settings !== "object") throw new Error("Einstellungen fehlen.");
   if (typeof settings.autoDaily !== "boolean") throw new Error("autoDaily muss ein Boolean sein.");
+  const autoSynthesize = settings.autoSynthesize ?? true;
+  const quietWarningMinutes = settings.quietWarningMinutes ?? 5;
+  if (typeof autoSynthesize !== "boolean") throw new Error("autoSynthesize muss ein Boolean sein.");
+  if (!Number.isInteger(quietWarningMinutes) || quietWarningMinutes < 1 || quietWarningMinutes > 60) {
+    throw new Error("Ruhe-Warnschwelle muss zwischen 1 und 60 Minuten liegen.");
+  }
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(settings.dailyTime)) {
     throw new Error("Tageszeit muss HH:MM sein.");
   }
@@ -63,7 +69,7 @@ export function validateConfig(input) {
   }
   return {
     version: 1,
-    settings: { autoDaily: settings.autoDaily, dailyTime: settings.dailyTime, timeZone },
+    settings: { autoDaily: settings.autoDaily, autoSynthesize, quietWarningMinutes, dailyTime: settings.dailyTime, timeZone },
     agents,
   };
 }
@@ -130,7 +136,6 @@ export function mergeMasterProposals(existing, report, runId, now = new Date()) 
     if (!item.title || !item.action) continue;
     const key = item.title.toLocaleLowerCase("de-DE").replace(/\s+/g, " ");
     const duplicate = proposals.find((proposal) =>
-      proposal.status !== "rejected" && proposal.status !== "done" &&
       proposal.title.toLocaleLowerCase("de-DE").replace(/\s+/g, " ") === key);
     if (duplicate) continue;
     proposals.unshift({
@@ -151,8 +156,22 @@ export function buildResearchPrompt(agent, config, reports, now = new Date(), ex
     ? JSON.stringify(config.agents.filter((item) => item.kind === "specialist").map((item) => ({
       agent: item.name,
       reportAge: reports[item.id]?.finishedAt ?? "Noch kein Bericht",
-      report: reports[item.id]?.report ?? null,
-    }))).slice(0, 28000)
+      reportRunId: reports[item.id]?.runId ?? null,
+      report: reports[item.id]?.report ? {
+        headline: reports[item.id].report.headline,
+        summary: String(reports[item.id].report.summary ?? "").slice(0, 1200),
+        findings: (reports[item.id].report.findings ?? []).slice(0, 5).map((finding) => ({
+          title: finding.title, detail: String(finding.detail ?? "").slice(0, 450), evidence: String(finding.evidence ?? "").slice(0, 250), confidence: finding.confidence,
+        })),
+        furtherFindingTitles: (reports[item.id].report.findings ?? []).slice(5).map((finding) => finding.title),
+        proposals: (reports[item.id].report.proposals ?? []).slice(0, 5).map((proposal) => ({
+          title: proposal.title, action: String(proposal.action ?? "").slice(0, 450), priority: proposal.priority,
+          rationale: String(proposal.rationale ?? "").slice(0, 250), evidence: String(proposal.evidence ?? "").slice(0, 250),
+        })),
+        furtherProposalTitles: (reports[item.id].report.proposals ?? []).slice(5).map((proposal) => proposal.title),
+        watchlist: (reports[item.id].report.watchlist ?? []).map((entry) => String(entry).slice(0, 200)),
+      } : null,
+    })))
     : "";
   return [
     `Datum: ${date}; Zeitzone: ${config.settings.timeZone}. Du arbeitest im LIEUVA-Repository.`,
@@ -212,4 +231,82 @@ export function recoverInterruptedState(state, now = new Date()) {
     }
   }
   return state;
+}
+
+const finishedStatuses = new Set(["completed", "failed", "cancelled", "interrupted"]);
+
+export function masterInputs(state, config) {
+  const specialists = config.agents.filter((agent) => agent.kind === "specialist");
+  return {
+    reports: specialists.flatMap((agent) => {
+      const report = state.reports[agent.id];
+      return report ? [{ agentId: agent.id, agentName: agent.name, runId: report.runId, finishedAt: report.finishedAt }] : [];
+    }),
+    agentRuns: specialists.flatMap((agent) => {
+      const run = state.runs.find((item) => item.type === "agent" && item.agentId === agent.id && finishedStatuses.has(item.status));
+      return run ? [{ agentId: agent.id, agentName: agent.name, runId: run.id, status: run.status, finishedAt: run.finishedAt }] : [];
+    }),
+    outcomes: state.runs.filter((run) => run.type === "proposal" && finishedStatuses.has(run.status))
+      .slice(0, 12).map((run) => ({ runId: run.id, proposalId: run.proposalId, status: run.status, finishedAt: run.finishedAt })),
+  };
+}
+
+export function masterInputSignature(inputs) {
+  return JSON.stringify({
+    reports: inputs.reports.map((item) => item.runId),
+    agentRuns: inputs.agentRuns.map((item) => [item.runId, item.status]),
+    outcomes: inputs.outcomes.map((item) => [item.runId, item.status]),
+  });
+}
+
+export function pendingMasterInputs(current, previous = { reports: [], agentRuns: [], outcomes: [] }) {
+  const oldReports = new Set((previous.reports || []).map((item) => item.runId));
+  const oldRuns = new Set((previous.agentRuns || []).map((item) => item.runId));
+  const oldOutcomes = new Set((previous.outcomes || []).map((item) => item.runId));
+  return {
+    reports: current.reports.filter((item) => !oldReports.has(item.runId)),
+    agentRuns: current.agentRuns.filter((item) => !oldRuns.has(item.runId)),
+    outcomes: current.outcomes.filter((item) => !oldOutcomes.has(item.runId)),
+  };
+}
+
+export function initializeMasterSync(state, config) {
+  if (state.masterSync) return state.masterSync;
+  const finishedAt = state.reports.master?.finishedAt ?? null;
+  const inputs = masterInputs(state, config);
+  const beforeMaster = (item) => finishedAt && item.finishedAt && Date.parse(item.finishedAt) <= Date.parse(finishedAt);
+  const lastInputs = {
+    reports: inputs.reports.filter(beforeMaster),
+    agentRuns: inputs.agentRuns.filter(beforeMaster),
+    outcomes: [],
+  };
+  const signature = finishedAt ? masterInputSignature(lastInputs) : null;
+  state.masterSync = { lastInputs, lastCompletedAt: finishedAt, lastCompletedSignature: signature, lastAttemptSignature: signature };
+  return state.masterSync;
+}
+
+export function shouldQueueMaster(state, config, active, pending) {
+  if (!config.settings.autoSynthesize || !config.agents[0].enabled || active || pending.length) return false;
+  const inputs = masterInputs(state, config);
+  if (!inputs.reports.length && !inputs.agentRuns.length && !inputs.outcomes.length) return false;
+  const signature = masterInputSignature(inputs);
+  return signature !== state.masterSync.lastCompletedSignature && signature !== state.masterSync.lastAttemptSignature;
+}
+
+export function runProgress(run, now = new Date(), quietWarningMinutes = 5, processAlive = false, queuePosition = null) {
+  const started = run.startedAt ? Date.parse(run.startedAt) : NaN;
+  const lastActivity = run.lastProgressAt ? Date.parse(run.lastProgressAt)
+    : run.lastActivityAt ? Date.parse(run.lastActivityAt) : started;
+  const elapsedMs = Number.isFinite(started) ? Math.max(0, now.getTime() - started) : 0;
+  const quietMs = Number.isFinite(lastActivity) ? Math.max(0, now.getTime() - lastActivity) : null;
+  const signal = run.status === "queued" ? "queued"
+    : run.status === "running" ? (!processAlive ? "unknown" : quietMs !== null && quietMs >= quietWarningMinutes * 60_000 ? "quiet" : "active")
+      : "finished";
+  return { elapsedMs, quietMs, signal, processAlive, queuePosition };
+}
+
+export function worktreeRootFromChange(path) {
+  if (typeof path !== "string") return null;
+  const match = path.match(/^(.*\/\.codex\/worktrees\/[^/]+\/[^/]+)(?:\/|$)/);
+  return match?.[1] ?? null;
 }
