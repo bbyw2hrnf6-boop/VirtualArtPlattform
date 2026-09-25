@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["headline", "summary", "findings", "proposals", "watchlist"],
+  "properties": {
+    "headline": { "type": "string" },
+    "summary": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "detail", "evidence", "confidence"],
+        "properties": {
+          "title": { "type": "string" },
+          "detail": { "type": "string" },
+          "evidence": { "type": "string" },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+        }
+      }
+    },
+    "proposals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "rationale", "action", "priority", "effort", "confidence", "executionMode", "evidence"],
+        "properties": {
+          "title": { "type": "string" },
+          "rationale": { "type": "string" },
+          "action": { "type": "string" },
+          "priority": { "type": "string", "enum": ["today", "soon", "watch"] },
+          "effort": { "type": "string", "enum": ["small", "medium", "large"] },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "executionMode": { "type": "string", "enum": ["research", "local-code", "manual"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "watchlist": { "type": "array", "items": { "type": "string" } }
+  }
+}

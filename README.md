@@ -24,6 +24,7 @@ npm run dev
 | Command | Use |
 | --- | --- |
 | `npm run check` | Default client quality gate: lint, tests, GLB validation, build, budgets. |
+| `npm run agents:dashboard` | Open the local agent console for research, daily briefs and reviewed proposals. |
 | `npm run check:functions` | Functions type, test, build and release-manifest gate. |
 | `npm run test:firebase-rules` | Firestore and Storage rules in emulators. |
 | `npm run test:browser-smoke` | Built Chromium journeys. |
@@ -48,6 +49,7 @@ public/assets/         Referenced deployment assets only
 blender/production/v3/ Current Studio sources, maps and retained masters
 blender/showcases/     Independent Obsidian, Sculpture and Forest sources
 scripts/               Build, validation, release and operator tools
+agent-console/         Local master and specialist agent console; runtime data stays in ignored artifacts/
 audit/                 Indexed durable contracts and current risks
 ```
 
