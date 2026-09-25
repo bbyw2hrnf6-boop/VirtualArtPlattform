@@ -23,6 +23,105 @@ export interface ArtworkFocus {
 
 export type DirectoryArtwork = ArtworkFocus & { imageKey?: string };
 
+export function VisitorEntryChoice({
+  exhibitionTitle,
+  unavailable = false,
+  returnFocus,
+  onEnter3D,
+  onViewWorks,
+}: {
+  exhibitionTitle: string;
+  unavailable?: boolean;
+  returnFocus: RefObject<HTMLButtonElement | null>;
+  onEnter3D: () => void;
+  onViewWorks: () => void;
+}) {
+  const titleId = useId();
+  return (
+    <section
+      className="space-share__panel"
+      role="group"
+      aria-labelledby={titleId}
+      aria-describedby={`${titleId}-description`}
+      style={{
+        position: "absolute",
+        zIndex: 5,
+        top: "50%",
+        left: "50%",
+        width: "min(620px, calc(100% - 32px))",
+        maxHeight: "calc(100dvh - 112px - env(safe-area-inset-top))",
+        overflow: "auto",
+        margin: 0,
+        transform: "translate(-50%, -50%)",
+      }}
+    >
+      <p className="eyebrow">A visit to {exhibitionTitle}</p>
+      <h2
+        id={titleId}
+        style={{
+          margin: 0,
+          font: "400 clamp(38px, 6vw, 64px)/.96 Instrument, serif",
+          letterSpacing: "-.035em",
+        }}
+      >
+        Choose how to explore.
+      </h2>
+      <p id={`${titleId}-description`}>
+        Enter the 3D space or go straight to the complete artwork directory.
+      </p>
+      {unavailable && (
+        <p className="visitor-entry-choice__status" role="status">
+          3D is unavailable in this browser. The artwork directory is ready.
+        </p>
+      )}
+      <div className="space-share__actions" style={{ display: "grid" }}>
+        <button
+          type="button"
+          onClick={onEnter3D}
+          disabled={unavailable}
+          style={{
+            width: "100%",
+            minHeight: 60,
+            display: "grid",
+            alignContent: "center",
+            gap: 4,
+            borderColor: "#5c5e56",
+            background: "#292a26",
+            color: "#efeee8",
+            textAlign: "left",
+          }}
+        >
+          <span>Enter 3D</span>
+          <small style={{ color: "#b8bab1", fontSize: 11, lineHeight: 1.4 }}>
+            Walk through the exhibition
+          </small>
+        </button>
+        <button
+          ref={returnFocus}
+          type="button"
+          onClick={onViewWorks}
+          style={{
+            width: "100%",
+            minHeight: 60,
+            display: "grid",
+            alignContent: "center",
+            gap: 4,
+            borderColor: "#5c5e56",
+            background: "#292a26",
+            color: "#efeee8",
+            textAlign: "left",
+          }}
+        >
+          <span>View works</span>
+          <small style={{ color: "#b8bab1", fontSize: 11, lineHeight: 1.4 }}>
+            Browse every work and its details
+          </small>
+        </button>
+      </div>
+    </section>
+  );
+}
+
 type ArtworkDetailKey = "year" | "medium" | "dimensions" | "availability";
 
 const ARTWORK_DETAILS: ReadonlyArray<

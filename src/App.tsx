@@ -132,6 +132,7 @@ import {
   ArtworkDirectory,
   ArtworkInfoCard,
   MovementHint,
+  VisitorEntryChoice,
   type ArtworkFocus,
   type DirectoryArtwork,
   type ViewMode,
@@ -3347,6 +3348,7 @@ function SpaceLoadingPoster() {
 function PublishedGallery({ id }: { id: string }) {
   const viewer = useRef<HTMLElement>(null);
   const directoryButton = useRef<HTMLButtonElement>(null);
+  const entryWorksButton = useRef<HTMLButtonElement>(null);
   const serverSpaceState = document
     .querySelector('meta[name="lieuva:space-state"]')
     ?.getAttribute("content");
@@ -3356,6 +3358,7 @@ function PublishedGallery({ id }: { id: string }) {
       : { status: "loading" },
   );
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [sceneRequested, setSceneRequested] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("walk");
   const [artworkFocus, setArtworkFocus] = useState<ArtworkFocus | null>(null);
   const [directoryOpen, setDirectoryOpen] = useState(false);
@@ -3372,12 +3375,11 @@ function PublishedGallery({ id }: { id: string }) {
     setLoadAttempt((attempt) => attempt + 1);
   }, []);
   const openFallbackDirectory = useCallback(() => {
-    setArtworkFocus(null);
     setDirectoryOpen(true);
   }, []);
   const sceneUnavailable = useViewerSceneUnavailable(
     viewer,
-    loadState.status === "ready",
+    loadState.status === "ready" && sceneRequested,
     openFallbackDirectory,
   );
   useEffect(() => {
@@ -3450,6 +3452,23 @@ function PublishedGallery({ id }: { id: string }) {
       count: artworkLoad.total,
     });
   }, [artworkLoad.loaded, artworkLoad.total, loadState]);
+  useEffect(() => {
+    if (!directoryFocus) return;
+    let attempts = 0;
+    let frame = 0;
+    const focusSceneCanvas = () => {
+      const canvas = viewer.current?.querySelector<HTMLCanvasElement>(
+        ".gallery-scene canvas",
+      );
+      if (canvas) {
+        canvas.focus({ preventScroll: true });
+        return;
+      }
+      if (attempts++ < 60) frame = requestAnimationFrame(focusSceneCanvas);
+    };
+    frame = requestAnimationFrame(focusSceneCanvas);
+    return () => cancelAnimationFrame(frame);
+  }, [directoryFocus]);
   if (loadState.status === "loading")
     return <SpaceLoadingPoster />;
   if (loadState.status === "error")
@@ -3550,32 +3569,40 @@ function PublishedGallery({ id }: { id: string }) {
           <button onClick={() => navigate("/create")}>Create a Space ↗</button>
         </div>
       </header>
-      <GalleryScene
-        draft={gallery}
-        contentReady={artworkLoad.failed || artworkLoad.loaded >= artworkLoad.total}
-        onRetryContent={() => setLoadAttempt((attempt) => attempt + 1)}
-        visitor
-        viewMode={viewMode}
-        playIntro
-        focusArtwork={directoryFocus}
-        onArtworkFocus={setArtworkFocus}
-        onViewModeChange={changeView}
-        artworkCount={directoryArtworks.length}
-        artworkDirectoryExpanded={directoryOpen}
-        artworkDirectoryUnavailable={sceneUnavailable}
-        artworkButtonRef={directoryButton}
-        onOpenArtworkDirectory={() => {
-          setArtworkFocus(null);
-          setDirectoryOpen(true);
-        }}
-        onExitSpace={() => navigate("/")}
-      />
+      {sceneRequested && (
+        <GalleryScene
+          draft={gallery}
+          contentReady={artworkLoad.failed || artworkLoad.loaded >= artworkLoad.total}
+          onRetryContent={() => setLoadAttempt((attempt) => attempt + 1)}
+          visitor
+          viewMode={viewMode}
+          playIntro
+          focusArtwork={directoryFocus}
+          onArtworkFocus={setArtworkFocus}
+          onViewModeChange={changeView}
+          artworkCount={directoryArtworks.length}
+          artworkDirectoryExpanded={directoryOpen}
+          artworkDirectoryUnavailable={sceneUnavailable}
+          artworkButtonRef={directoryButton}
+          onOpenArtworkDirectory={() => setDirectoryOpen(true)}
+          onExitSpace={() => navigate("/")}
+        />
+      )}
+      {(!sceneRequested || (sceneUnavailable && !directoryOpen)) && (
+        <VisitorEntryChoice
+          exhibitionTitle={gallery.title}
+          unavailable={sceneUnavailable}
+          returnFocus={entryWorksButton}
+          onEnter3D={() => setSceneRequested(true)}
+          onViewWorks={() => setDirectoryOpen(true)}
+        />
+      )}
       {sceneUnavailable && (
         <span className="visually-hidden" role="status">
           3D view unavailable. The artwork directory has opened.
         </span>
       )}
-      {artworkFocus && (
+      {artworkFocus && !directoryOpen && (
         <ArtworkInfoCard
           artwork={artworkFocus}
           onClose={() => setArtworkFocus(null)}
@@ -3601,10 +3628,11 @@ function PublishedGallery({ id }: { id: string }) {
           artworks={directoryArtworks}
           sourceNote="Artwork images and notes are shown as supplied with this exhibition."
           unavailable={sceneUnavailable}
-          returnFocus={directoryButton}
+          returnFocus={sceneRequested ? directoryButton : entryWorksButton}
           onViewArtwork={(artworkId) => {
             setDirectoryOpen(false);
             setArtworkFocus(null);
+            setSceneRequested(true);
             setViewMode("walk");
             setDirectoryFocus({ id: artworkId, token: Date.now() });
           }}

@@ -3488,17 +3488,6 @@ function GallerySceneRenderer({
       trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "renderer_failed" });
       return showSceneError(element);
     }
-    const handleContextLost = (event: Event) => {
-      event.preventDefault();
-      trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "context_lost" });
-    };
-    const handleContextRestored = () => {
-      sceneRevision += 1;
-      renderer.shadowMap.needsUpdate = true;
-      trackTelemetry("three_runtime_health", { runtime: "studio_viewer", outcome: "context_restored" });
-    };
-    renderer.domElement.addEventListener("webglcontextlost", handleContextLost);
-    renderer.domElement.addEventListener("webglcontextrestored", handleContextRestored);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const updateMotionPreference = () => {
       element.dataset.motion = reducedMotion.matches ? "reduced" : "full";
@@ -5441,6 +5430,58 @@ function GallerySceneRenderer({
       renderRunning = true;
       frame = requestAnimationFrame(animate);
     };
+    let contextLostAt: number | undefined;
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      contextLostAt = performance.now();
+      cancelAnimationFrame(frame);
+      renderRunning = false;
+      navigation.setEnabled(false);
+      controls.enabled = false;
+      trackTelemetry("three_runtime_health", {
+        runtime: "studio_viewer",
+        outcome: "context_lost",
+      });
+    };
+    const handleContextRestored = () => {
+      if (contextLostAt !== undefined) {
+        const suspendedFor = performance.now() - contextLostAt;
+        if (activeGuidedTour && activeGuidedTour.pausedAt === undefined)
+          activeGuidedTour.startedAt += suspendedFor;
+        if (modeTransition) modeTransition.startedAt += suspendedFor;
+        if (wallCameraAnimation) wallCameraAnimation.start += suspendedFor;
+        if (orbitAnimation) orbitAnimation.start += suspendedFor;
+        contextLostAt = undefined;
+      }
+      sceneRevision += 1;
+      renderer.shadowMap.needsUpdate = true;
+      const introRunning = Boolean(intro && !intro.isComplete());
+      const guidedTourPlaying = Boolean(
+        activeGuidedTour && activeGuidedTour.pausedAt === undefined,
+      );
+      if (mode === "walk") {
+        controls.enabled = false;
+        navigation.setEnabled(
+          arrivalReady && !introRunning && !modeTransition && !guidedTourPlaying,
+        );
+      } else {
+        navigation.setEnabled(false);
+        controls.enabled = Boolean(
+          arrivalReady && !introRunning && !modeTransition &&
+          !wallCameraAnimation && !orbitAnimation && !activeGuidedTour,
+        );
+      }
+      trackTelemetry("three_runtime_health", {
+        runtime: "studio_viewer",
+        outcome: "context_restored",
+      });
+      wakeRender();
+    };
+    renderer.domElement.addEventListener("webglcontextlost", handleContextLost);
+    renderer.domElement.addEventListener(
+      "webglcontextrestored",
+      handleContextRestored,
+    );
     const animate = (now = performance.now()) => {
       if (!renderActivity.active()) {
         renderRunning = false;
@@ -6269,14 +6310,6 @@ export function DannyDemoScene({
       trackTelemetry("three_runtime_health", { runtime: "danny", outcome: "renderer_failed" });
       return showSceneError(element);
     }
-    const handleDannyContextLost = (event: Event) => {
-      event.preventDefault();
-      trackTelemetry("three_runtime_health", { runtime: "danny", outcome: "context_lost" });
-    };
-    const handleDannyContextRestored = () =>
-      trackTelemetry("three_runtime_health", { runtime: "danny", outcome: "context_restored" });
-    renderer.domElement.addEventListener("webglcontextlost", handleDannyContextLost);
-    renderer.domElement.addEventListener("webglcontextrestored", handleDannyContextRestored);
     renderer.setPixelRatio(quality.dpr);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -7576,6 +7609,7 @@ export function DannyDemoScene({
       delete element.dataset.tourAutoplay;
     });
     let lastDannyDiagnosticsAt = Number.NEGATIVE_INFINITY;
+    let renderedFrames = 0;
     let renderRunning = false;
     const renderActivity: ReturnType<typeof observeRenderActivity> = {
       active: () => true,
@@ -7586,6 +7620,50 @@ export function DannyDemoScene({
       renderRunning = true;
       frame = requestAnimationFrame(animate);
     };
+    let contextLostAt: number | undefined;
+    const handleDannyContextLost = (event: Event) => {
+      event.preventDefault();
+      contextLostAt = performance.now();
+      cancelAnimationFrame(frame);
+      renderRunning = false;
+      navigation.setEnabled(false);
+      controls.enabled = false;
+      trackTelemetry("three_runtime_health", {
+        runtime: "danny",
+        outcome: "context_lost",
+      });
+    };
+    const handleDannyContextRestored = () => {
+      const restoredAt = performance.now();
+      if (contextLostAt !== undefined) {
+        const suspendedFor = restoredAt - contextLostAt;
+        if (activeTour && activeTour.pausedAt === undefined)
+          activeTour.startedAt += suspendedFor;
+        if (modeTransition) modeTransition.startedAt += suspendedFor;
+        contextLostAt = undefined;
+      }
+      previousFrame = restoredAt;
+      if (
+        loaded && !modeTransition &&
+        (!activeTour || activeTour.pausedAt !== undefined) &&
+        (!intro || intro.isComplete())
+      )
+        resumeInteraction();
+      renderer.shadowMap.needsUpdate = true;
+      trackTelemetry("three_runtime_health", {
+        runtime: "danny",
+        outcome: "context_restored",
+      });
+      wakeRender();
+    };
+    renderer.domElement.addEventListener(
+      "webglcontextlost",
+      handleDannyContextLost,
+    );
+    renderer.domElement.addEventListener(
+      "webglcontextrestored",
+      handleDannyContextRestored,
+    );
     const animate = (now = performance.now()) => {
       if (!renderActivity.active()) {
         renderRunning = false;
@@ -7663,6 +7741,7 @@ export function DannyDemoScene({
       }
       adaptiveDpr.update(now);
       renderer.render(scene, camera);
+      element.dataset.renderFrames = String(++renderedFrames);
       frame = requestAnimationFrame(animate);
     };
     let inactiveAt: number | undefined;
