@@ -88,6 +88,10 @@ jobs:
         if: github.event_name != 'push' || github.ref != 'refs/heads/main'
         run: npm run build
 
+      - name: Check production-only bundle branches before merge
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: npm run check:production-build
+
       - name: Install the locked Chromium browser
         if: github.event_name != 'push' || github.ref != 'refs/heads/main'
         run: ./node_modules/.bin/playwright install --with-deps chromium
@@ -95,10 +99,25 @@ jobs:
       - name: Smoke the preview build in Chromium
         timeout-minutes: 27
         if: github.event_name != 'push' || github.ref != 'refs/heads/main'
-        run: npm run test:browser-smoke
+        run: npm run test:browser-smoke -- --grep-invert @showcase-gpu
+
+      - name: Qualify detailed showcases on preview software GPU (advisory)
+        id: preview-showcase-gpu
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        continue-on-error: true
+        timeout-minutes: 6
+        run: npm run test:browser-smoke -- --grep @showcase-gpu --retries=0 --global-timeout=300000
+
+      - name: Record preview showcase GPU qualification
+        if: always() && steps.preview-showcase-gpu.outcome != 'skipped'
+        env:
+          QUALIFICATION: ${{ steps.preview-showcase-gpu.outcome }}
+        run: |
+          echo "### Preview detailed showcase GPU qualification: ${QUALIFICATION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Advisory on software-only runners by owner request. Showcase routes/assets and all other browser journeys remain release-blocking. A failure is not a hardware-performance pass." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Retain failed preview browser diagnostics
-        if: failure()
+        if: failure() || steps.preview-showcase-gpu.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: browser-smoke-preview-${{ github.run_id }}-${{ github.run_attempt }}

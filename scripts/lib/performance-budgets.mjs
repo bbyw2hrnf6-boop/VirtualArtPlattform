@@ -34,7 +34,9 @@ export const PERFORMANCE_RELEASE_CEILINGS = Object.freeze({
   // Forest lighting: +4 KiB for atomic, on-demand night atlases, cached light
   // environments, physical foliage response and viewpoint-correct mirrors.
   // Feature-only allowance; public entry, Studio and CSS limits stay fixed.
-  jsGzip: 630_608,
+  // Direct artwork entry and WebGL context-loss recovery: +2 KB aggregate JS.
+  // The Linux production candidate measured 631,461 B; all other limits stay fixed.
+  jsGzip: 632_608,
   // Current verified aggregate is 58,501 B after the showcase CSS build.
   // Ten bytes of headroom avoid a one-byte release failure; target stays fixed.
   cssGzip: 58_510,
