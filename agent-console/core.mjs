@@ -150,6 +150,43 @@ export function mergeMasterProposals(existing, report, runId, now = new Date()) 
   return proposals.slice(0, 120);
 }
 
+const titleKey = (value) => String(value || "").toLocaleLowerCase("de-DE").replace(/\s+/g, " ").trim();
+
+export function selectDailyFocus(proposals, report, runs, previousIds, localDate, timeZone) {
+  const byId = new Map(proposals.map((proposal) => [proposal.id, proposal]));
+  const byTitle = new Map(proposals.map((proposal) => [titleKey(proposal.title), proposal]));
+  const runById = new Map(runs.map((run) => [run.id, run]));
+  const finishedToday = (proposal) => {
+    const value = proposal.completedAt || runById.get(proposal.executionRunId)?.finishedAt;
+    return proposal.status === "done" && value && !Number.isNaN(Date.parse(value))
+      && localClock(new Date(value), timeZone).date === localDate;
+  };
+  const eligible = (proposal) => proposal && (["proposed", "approved", "executing"].includes(proposal.status) || finishedToday(proposal));
+  const focus = [];
+  const add = (proposal) => {
+    if (eligible(proposal) && !focus.includes(proposal.id) && focus.length < 3) focus.push(proposal.id);
+  };
+
+  for (const id of previousIds || []) {
+    const proposal = byId.get(id);
+    if (proposal?.status === "executing" || finishedToday(proposal || {})) add(proposal);
+  }
+  for (const proposal of proposals) {
+    if (proposal.status === "executing" || finishedToday(proposal)) add(proposal);
+  }
+  for (const item of report?.proposals || []) {
+    if (item.priority === "today") add(byId.get(item.proposalId) || byTitle.get(titleKey(item.title)));
+  }
+  for (const proposal of proposals) if (proposal.priority === "today") add(proposal);
+  for (const item of report?.proposals || []) {
+    if (item.priority !== "today") add(byId.get(item.proposalId) || byTitle.get(titleKey(item.title)));
+  }
+  for (const priority of ["soon", "watch"]) {
+    for (const proposal of proposals) if (proposal.priority === priority) add(proposal);
+  }
+  return focus;
+}
+
 export function buildResearchPrompt(agent, config, reports, now = new Date(), extra = "") {
   const date = localClock(now, config.settings.timeZone).date;
   const specialistContext = agent.kind === "master"
@@ -248,25 +285,33 @@ export function masterInputs(state, config) {
     }),
     outcomes: state.runs.filter((run) => run.type === "proposal" && finishedStatuses.has(run.status))
       .slice(0, 12).map((run) => ({ runId: run.id, proposalId: run.proposalId, status: run.status, finishedAt: run.finishedAt })),
+    decisions: state.proposals.filter((proposal) => proposal.decisionAt)
+      .sort((a, b) => Date.parse(b.decisionAt) - Date.parse(a.decisionAt))
+      .slice(0, 30).map((proposal) => ({ proposalId: proposal.id, title: proposal.title,
+        status: proposal.status, updatedAt: proposal.decisionAt, completionNote: (proposal.completionNote || "").slice(0, 500) })),
   };
 }
 
 export function masterInputSignature(inputs) {
-  return JSON.stringify({
+  const signature = {
     reports: inputs.reports.map((item) => item.runId),
     agentRuns: inputs.agentRuns.map((item) => [item.runId, item.status]),
     outcomes: inputs.outcomes.map((item) => [item.runId, item.status]),
-  });
+  };
+  if (inputs.decisions?.length) signature.decisions = inputs.decisions.map((item) => [item.proposalId, item.status, item.updatedAt]);
+  return JSON.stringify(signature);
 }
 
-export function pendingMasterInputs(current, previous = { reports: [], agentRuns: [], outcomes: [] }) {
+export function pendingMasterInputs(current, previous = { reports: [], agentRuns: [], outcomes: [], decisions: [] }) {
   const oldReports = new Set((previous.reports || []).map((item) => item.runId));
   const oldRuns = new Set((previous.agentRuns || []).map((item) => item.runId));
   const oldOutcomes = new Set((previous.outcomes || []).map((item) => item.runId));
+  const oldDecisions = new Set((previous.decisions || []).map((item) => `${item.proposalId}:${item.updatedAt}`));
   return {
     reports: current.reports.filter((item) => !oldReports.has(item.runId)),
     agentRuns: current.agentRuns.filter((item) => !oldRuns.has(item.runId)),
     outcomes: current.outcomes.filter((item) => !oldOutcomes.has(item.runId)),
+    decisions: (current.decisions || []).filter((item) => !oldDecisions.has(`${item.proposalId}:${item.updatedAt}`)),
   };
 }
 
@@ -288,7 +333,7 @@ export function initializeMasterSync(state, config) {
 export function shouldQueueMaster(state, config, active, pending) {
   if (!config.settings.autoSynthesize || !config.agents[0].enabled || active || pending.length) return false;
   const inputs = masterInputs(state, config);
-  if (!inputs.reports.length && !inputs.agentRuns.length && !inputs.outcomes.length) return false;
+  if (!inputs.reports.length && !inputs.agentRuns.length && !inputs.outcomes.length && !inputs.decisions.length) return false;
   const signature = masterInputSignature(inputs);
   return signature !== state.masterSync.lastCompletedSignature && signature !== state.masterSync.lastAttemptSignature;
 }

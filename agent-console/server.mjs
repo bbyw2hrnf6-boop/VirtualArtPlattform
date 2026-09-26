@@ -18,6 +18,7 @@ import {
   pendingMasterInputs,
   recoverInterruptedState,
   runProgress,
+  selectDailyFocus,
   shouldQueueMaster,
   validateConfig,
   worktreeRootFromChange,
@@ -81,6 +82,27 @@ function persist() {
 }
 
 function nowIso() { return new Date().toISOString(); }
+
+function doneToday(proposal, localDate) {
+  if (proposal.status !== "done") return false;
+  const completedAt = proposal.completedAt || state.runs.find((run) => run.id === proposal.executionRunId)?.finishedAt;
+  return completedAt && !Number.isNaN(Date.parse(completedAt))
+    && localClock(new Date(completedAt), config.settings.timeZone).date === localDate;
+}
+
+function refreshDailyFocus(now = new Date()) {
+  const localDate = localClock(now, config.settings.timeZone).date;
+  const previousIds = state.daily.focusDate === localDate ? state.daily.focusIds || [] : [];
+  const focusIds = selectDailyFocus(state.proposals, state.reports.master?.report, state.runs,
+    previousIds, localDate, config.settings.timeZone);
+  if (state.daily.focusDate !== localDate || JSON.stringify(previousIds) !== JSON.stringify(focusIds)) {
+    state.daily.focusDate = localDate;
+    state.daily.focusIds = focusIds;
+    state.daily.focusUpdatedAt = now.toISOString();
+    persist();
+  }
+  return localDate;
+}
 
 function appendEvent(run, event) {
   run.lastActivityAt = nowIso();
@@ -190,10 +212,12 @@ function masterContext() {
     };
   };
   return [
-    "Prüfe für jeden neuen Lauf den kompakten Protokollauszug und das Ergebnis. Bei Fehlern oder Unklarheiten lies das vollständige Protokoll gezielt unter logPath. Werte Status und Fehler ausdrücklich aus; kennzeichne ältere Signale. Worktree-Änderungen sind nicht in main übernommen oder veröffentlicht. Schlage kein Thema erneut als neuen Auftrag vor, wenn bereits ein gleicher oder sinngleicher Vorschlag vorhanden ist, unabhängig von dessen Status. Aktualisiere dessen Lage stattdessen im Briefing und respektiere die Nutzerentscheidung.",
+    "Prüfe für jeden neuen Lauf den kompakten Protokollauszug und das Ergebnis. Bei Fehlern oder Unklarheiten lies das vollständige Protokoll gezielt unter logPath. Werte Status und Fehler ausdrücklich aus; kennzeichne ältere Signale. Worktree-Änderungen sind nicht in main übernommen oder veröffentlicht. Plane höchstens drei konkrete Tagesaufgaben und nenne bestehende Aufgaben mit exakt ihrem gespeicherten Titel, damit sie direkt geöffnet werden können. Weitere Themen gehören in die Beobachtungsliste. Schlage kein Thema erneut als neuen Auftrag vor, wenn bereits ein gleicher oder sinngleicher Vorschlag vorhanden ist, unabhängig von dessen Status. Aktualisiere dessen Lage stattdessen im Briefing und respektiere die Nutzerentscheidung.",
     JSON.stringify({
       existingProposals: state.proposals.slice(0, 30)
-        .map((item) => ({ id: item.id, title: item.title, status: item.status, action: item.action.slice(0, 180) })),
+        .map((item) => ({ id: item.id, title: item.title, status: item.status, action: item.action.slice(0, 180), completionNote: (item.completionNote || "").slice(0, 300) })),
+      dailyFocus: (state.daily.focusIds || []).map((id) => state.proposals.find((item) => item.id === id))
+        .filter(Boolean).map((item) => ({ id: item.id, title: item.title, status: item.status })),
       newSignals,
       specialistRuns: inputs.agentRuns.map(digest),
       proposalRuns: inputs.outcomes.map(digest),
@@ -273,6 +297,10 @@ function runNext() {
           state.reports[run.agentId] = { runId: run.id, finishedAt: run.finishedAt, report: run.report };
           if (run.agentId === "master") {
             state.proposals = mergeMasterProposals(state.proposals, run.report, run.id);
+            run.report.proposals = run.report.proposals.map((item) => ({ ...item,
+              proposalId: state.proposals.find((proposal) =>
+                proposal.title.toLocaleLowerCase("de-DE").replace(/\s+/g, " ").trim()
+                  === item.title.toLocaleLowerCase("de-DE").replace(/\s+/g, " ").trim())?.id || null }));
             state.daily.lastCompletedAt = run.finishedAt;
             state.masterSync.lastInputs = run.sourceInputs;
             state.masterSync.lastCompletedSignature = run.sourceSignature;
@@ -293,10 +321,11 @@ function runNext() {
         proposal.status = run.status === "completed" ? "done" : "approved";
         proposal.updatedAt = nowIso();
         proposal.executionRunId = run.id;
+        if (run.status === "completed") proposal.completedAt = run.finishedAt;
       }
     }
     persist();
-    if (run.type === "proposal" || run.type === "agent" && run.agentId !== "master") scheduleMasterSync();
+    scheduleMasterSync();
     setImmediate(runNext);
   };
 
@@ -331,8 +360,6 @@ function startDaily(full = false) {
 function checkSchedule() {
   if (process.env.AGENT_CONSOLE_DISABLE_SCHEDULE === "1" || !config.settings.autoDaily) return;
   const clock = localClock(new Date(), config.settings.timeZone);
-  const masterFinishedAt = state.reports.master?.finishedAt;
-  if (masterFinishedAt && localClock(new Date(masterFinishedAt), config.settings.timeZone).date === clock.date) return;
   if (clock.time >= config.settings.dailyTime && state.daily.lastLocalDate !== clock.date) {
     try { startDaily(false); } catch (error) { console.error(`Tageslauf: ${error.message}`); }
   }
@@ -359,9 +386,10 @@ async function body(request) {
 
 function publicState() {
   const now = new Date();
+  const localDate = refreshDailyFocus(now);
   const inputs = masterInputs(state, config);
   const pendingInputs = pendingMasterInputs(inputs, state.masterSync.lastInputs);
-  const pendingCount = pendingInputs.reports.length + pendingInputs.agentRuns.length + pendingInputs.outcomes.length;
+  const pendingCount = pendingInputs.reports.length + pendingInputs.agentRuns.length + pendingInputs.outcomes.length + pendingInputs.decisions.length;
   const latestMaster = state.runs.find((run) => run.type === "agent" && run.agentId === "master");
   const masterUpdating = latestMaster && ["queued", "running"].includes(latestMaster.status);
   const currentSignature = masterInputSignature(inputs);
@@ -374,7 +402,7 @@ function publicState() {
     }),
     reports: state.reports,
     proposals: state.proposals,
-    daily: state.daily,
+    daily: { ...state.daily, completedTodayIds: state.proposals.filter((proposal) => doneToday(proposal, localDate)).map((proposal) => proposal.id) },
     coordination: {
       status: masterUpdating ? "updating" : pendingCount === 0 ? "current"
         : ["failed", "interrupted", "cancelled"].includes(latestMaster?.status) && state.masterSync.lastAttemptSignature === currentSignature ? "failed" : "pending",
@@ -472,8 +500,10 @@ const server = createServer(async (request, response) => {
       for (const field of ["title", "rationale", "action"]) {
         if (typeof nextProposal[field] !== "string" || !nextProposal[field].trim() || nextProposal[field].length > 4000) throw new Error("Textfeld fehlt oder ist zu lang.");
       }
-      Object.assign(proposal, nextProposal, { updatedAt: nowIso() });
+      const updatedAt = nowIso();
+      Object.assign(proposal, nextProposal, { updatedAt, decisionAt: updatedAt });
       persist();
+      scheduleMasterSync();
       return json(response, 200, { proposal });
     }
     const executeRoute = url.pathname.match(/^\/api\/proposals\/([a-f0-9-]+)\/execute$/);
@@ -481,11 +511,59 @@ const server = createServer(async (request, response) => {
       await body(request);
       const proposal = state.proposals.find((item) => item.id === executeRoute[1]);
       if (!proposal || proposal.status !== "approved") throw new Error("Vorschlag muss zuerst freigegeben sein.");
-      if (proposal.executionMode === "manual") throw new Error("Diese Aktion braucht eine manuelle Durchführung.");
+      const startedAt = nowIso();
       proposal.status = "executing";
-      proposal.updatedAt = nowIso();
+      proposal.startedAt = startedAt;
+      proposal.updatedAt = startedAt;
+      if (proposal.executionMode === "manual") {
+        proposal.decisionAt = startedAt;
+        persist();
+        scheduleMasterSync();
+        return json(response, 200, { manual: true });
+      }
       const run = makeProposalRun(proposal);
       return json(response, 202, { runId: run.id });
+    }
+    const completeRoute = url.pathname.match(/^\/api\/proposals\/([a-f0-9-]+)\/complete$/);
+    if (request.method === "POST" && completeRoute) {
+      const input = await body(request);
+      const proposal = state.proposals.find((item) => item.id === completeRoute[1]);
+      if (!proposal || proposal.status !== "executing" || proposal.executionMode !== "manual") {
+        throw new Error("Nur ein gestarteter manueller Auftrag kann so abgeschlossen werden.");
+      }
+      const note = typeof input.note === "string" ? input.note.trim() : "";
+      if (note.length < 5 || note.length > 2000) throw new Error("Bitte das Ergebnis mit 5–2000 Zeichen festhalten.");
+      const finishedAt = nowIso();
+      const runId = randomUUID();
+      const logLine = JSON.stringify({ type: "manual", text: note, completedAt: finishedAt });
+      writeFileSync(join(runFiles, `${runId}.jsonl`), `${logLine}\n`, { mode: 0o600 });
+      const run = {
+        id: runId, type: "proposal", proposalId: proposal.id, agentId: "manual",
+        agentName: `Manuell · ${proposal.title}`, reason: "manual", model: "Manuell", effort: "—",
+        status: "completed", createdAt: proposal.startedAt || finishedAt,
+        startedAt: proposal.startedAt || finishedAt, finishedAt,
+        lastActivityAt: finishedAt, lastProgressAt: finishedAt, currentStep: "Manuell abgeschlossen",
+        message: note.slice(0, 300), finalText: note, events: [logLine], usage: null,
+      };
+      state.runs.unshift(run);
+      Object.assign(proposal, { status: "done", updatedAt: finishedAt, decisionAt: finishedAt,
+        completedAt: finishedAt, completionNote: note, executionRunId: run.id });
+      persist();
+      scheduleMasterSync();
+      return json(response, 200, { runId: run.id, proposal });
+    }
+    const reopenRoute = url.pathname.match(/^\/api\/proposals\/([a-f0-9-]+)\/reopen$/);
+    if (request.method === "POST" && reopenRoute) {
+      await body(request);
+      const proposal = state.proposals.find((item) => item.id === reopenRoute[1]);
+      if (!proposal || proposal.status !== "executing" || proposal.executionMode !== "manual") {
+        throw new Error("Nur ein gestarteter manueller Auftrag kann zurückgesetzt werden.");
+      }
+      const updatedAt = nowIso();
+      Object.assign(proposal, { status: "approved", startedAt: null, updatedAt, decisionAt: updatedAt });
+      persist();
+      scheduleMasterSync();
+      return json(response, 200, { proposal });
     }
     if (request.method === "GET" && staticFiles.has(url.pathname)) {
       const [file, contentType] = staticFiles.get(url.pathname);

@@ -13,7 +13,7 @@ const labels = {
   research: "Recherche", "local-code": "Lokale Codearbeit", manualMode: "Manuell",
 };
 const symbols = { master: "✦", quality: "◇", ux: "◎", product: "◈", market: "◌", growth: "↗", "three-d": "⬡" };
-const ui = { view: "overview", agentId: null, runId: null, proposalId: null, proposalFilter: "open", dirty: false };
+const ui = { view: "overview", agentId: null, runId: null, proposalId: null, proposalFilter: "all", dirty: false };
 let data = null;
 let toastTimer;
 
@@ -56,6 +56,15 @@ function latestRun(id) { return data?.runs.find((run) => run.agentId === id && r
 function reportFor(id) { return data?.reports[id]?.report; }
 function availableAgents() { return data?.config.agents.filter((agent) => agent.enabled) || []; }
 function openProposals() { return data?.proposals.filter((proposal) => ["proposed", "approved"].includes(proposal.status)) || []; }
+function dailyFocus() { return (data?.daily.focusIds || []).map((id) => data.proposals.find((proposal) => proposal.id === id)).filter(Boolean); }
+function completedToday() { return data?.proposals.filter((proposal) => (data.daily.completedTodayIds || []).includes(proposal.id)) || []; }
+function proposalLink(proposal, label = "Aufgabe öffnen →") {
+  return `<a class="btn ghost small" href="#proposal/${esc(proposal.id)}" data-proposal-link="${esc(proposal.id)}">${esc(label)}</a>`;
+}
+function proposalForRecommendation(item) {
+  return data.proposals.find((proposal) => proposal.id === item.proposalId)
+    || data.proposals.find((proposal) => proposal.title.toLocaleLowerCase("de-DE").trim() === item.title.toLocaleLowerCase("de-DE").trim());
+}
 function button(text, action, extra = "", className = "btn") { return `<button type="button" class="${className}" data-action="${action}" ${extra}>${text}</button>`; }
 function notify(message, error = false) {
   toast.textContent = message;
@@ -80,6 +89,8 @@ async function refresh(render = true) {
     document.getElementById("navProposalCount").textContent = openProposals().length;
     document.getElementById("todayLabel").textContent = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeZone: data.config.settings.timeZone }).format(new Date());
     if (render && !ui.dirty) draw();
+    const routeId = location.hash.match(/^#proposal\/([a-f0-9-]+)$/)?.[1];
+    if (routeId && ui.proposalId !== routeId && data.proposals.some((proposal) => proposal.id === routeId)) showProposal(routeId, false);
   } catch (error) {
     document.getElementById("connectionLabel").textContent = "Server nicht erreichbar";
     if (!data) offline();
@@ -93,9 +104,13 @@ function pageHead(kicker, title, description, actions = "") {
 function finding(item) {
   return `<div class="finding"><strong>${esc(item.title)}</strong><p>${esc(item.detail)}</p><small>${evidence(item.evidence)} · ${esc(item.confidence)}</small></div>`;
 }
-function reportBlock(report, emptyText) {
+function reportBlock(report, emptyText, master = false) {
   if (!report) return `<div class="empty">${esc(emptyText)}</div>`;
-  return `<h3 class="report-headline">${esc(report.headline)}</h3><p class="body-copy">${esc(report.summary)}</p>${report.findings.length ? `<div class="subtle-divider"></div>${report.findings.map(finding).join("")}` : ""}${report.proposals.length ? `<div class="subtle-divider"></div>${sectionHead("Empfehlungen")}${report.proposals.map((item) => `<div class="finding"><strong>${esc(item.title)} · ${esc(labels[item.priority])}</strong><p>${esc(item.action)}</p><small>${evidence(item.evidence)}</small></div>`).join("")}` : ""}${report.watchlist.length ? `<div class="subtle-divider"></div>${sectionHead("Beobachten")}${report.watchlist.map((item) => `<p class="body-copy">${esc(item)}</p>`).join("")}` : ""}`;
+  const recommendations = report.proposals.map((item) => {
+    const proposal = master ? proposalForRecommendation(item) : null;
+    return `<div class="finding"><strong>${esc(item.title)} · ${esc(labels[item.priority])}</strong><p>${esc(item.action)}</p><small>${evidence(item.evidence)}</small>${proposal ? `<div class="finding-action">${proposalLink(proposal)}</div>` : ""}</div>`;
+  }).join("");
+  return `<h3 class="report-headline">${esc(report.headline)}</h3><p class="body-copy">${esc(report.summary)}</p>${report.findings.length ? `<div class="subtle-divider"></div>${report.findings.map(finding).join("")}` : ""}${report.proposals.length ? `<div class="subtle-divider"></div>${sectionHead("Empfehlungen")}${recommendations}` : ""}${report.watchlist.length ? `<div class="subtle-divider"></div>${sectionHead("Beobachten")}${report.watchlist.map((item) => `<p class="body-copy">${esc(item)}</p>`).join("")}` : ""}`;
 }
 function masterArt() {
   return `<div class="constellation" aria-hidden="true"><div class="orbit"></div><div class="orbit two"></div><div class="line a"></div><div class="line b"></div><div class="line c"></div><div class="line d"></div><div class="node a"></div><div class="node b"></div><div class="node c"></div><div class="node d"></div><div class="core">L</div></div>`;
@@ -111,22 +126,31 @@ function coordinationPanel() {
         : coordination.pendingCount && !data.config.settings.autoSynthesize ? "Neue Ergebnisse warten. Starte den Master manuell oder aktiviere die Automatik."
           : coordination.pendingCount ? "Neue Ergebnisse warten auf die automatische Zusammenführung."
         : "Alle erfassten Agenten- und Auftragsergebnisse sind im letzten Masterlauf berücksichtigt.";
-  return `<section class="panel sync-panel"><div class="panel-title"><h3>Master-Abgleich</h3>${status(coordination.status)}</div><p class="body-copy">${summary}</p><div class="chip-row"><span class="chip">${pending.reports.length} neue Berichte</span><span class="chip">${pending.agentRuns.length} neue Laufstatus</span><span class="chip">${pending.outcomes.length} Auftragsergebnisse</span><span class="chip">Letzter Abgleich: ${dateText(coordination.lastSyncedAt)}</span></div>${names.length ? `<p class="meta">Offene Agenten: ${esc(names.join(", "))}</p>` : ""}</section>`;
+  return `<section class="panel sync-panel"><div class="panel-title"><h3>Master-Abgleich</h3>${status(coordination.status)}</div><p class="body-copy">${summary}</p><div class="chip-row"><span class="chip">${pending.reports.length} neue Berichte</span><span class="chip">${pending.agentRuns.length} neue Laufstatus</span><span class="chip">${pending.outcomes.length} Auftragsergebnisse</span><span class="chip">${(pending.decisions || []).length} Entscheidungen</span><span class="chip">Letzter Abgleich: ${dateText(coordination.lastSyncedAt)}</span></div>${names.length ? `<p class="meta">Offene Agenten: ${esc(names.join(", "))}</p>` : ""}<div class="button-row sync-actions">${coordination.masterRunId ? button("Masterbericht ansehen", "view-run", `data-id="${esc(coordination.masterRunId)}"`, "btn ghost small") : ""}${coordination.status === "failed" ? button("Master erneut starten", "run-agent", 'data-id="master"', "btn ghost small") : ""}</div></section>`;
 }
 function overview() {
   const master = reportFor("master");
   const running = data.runs.filter((run) => ["queued", "running"].includes(run.status)).length;
   const active = availableAgents().length;
   const queued = openProposals().length;
-  const finished = data.runs.filter((run) => run.status === "completed").length;
-  const top = data.proposals.filter((proposal) => proposal.status === "proposed" || proposal.status === "approved").slice(0, 3);
+  const focus = dailyFocus();
+  const masterLinks = (master?.proposals || []).slice(0, 3).map((item) => proposalForRecommendation(item))
+    .filter(Boolean).map((proposal) => proposalLink(proposal, proposal.title)).join("");
+  const completed = completedToday();
+  const completedIds = new Set(completed.map((proposal) => proposal.id));
+  const focusDone = focus.filter((proposal) => completedIds.has(proposal.id)).length;
+  const focusIds = new Set(focus.map((proposal) => proposal.id));
+  const remainingOpen = openProposals().filter((proposal) => !focusIds.has(proposal.id)).length;
+  const extraCompleted = completed.filter((proposal) => !focusIds.has(proposal.id));
+  const otherOpen = openProposals().filter((proposal) => !focusIds.has(proposal.id)).slice(0, 3);
   const specialistReports = data.config.agents.filter((agent) => agent.kind === "specialist").map((agent) => ({ agent, report: data.reports[agent.id] }));
   const activeRun = data.runs.find((run) => run.status === "running");
-  return pageHead("MISSION CONTROL", "Dein Überblick für LIEUVA", "Signale der Agenten, Entscheidungen für heute und der Zustand aller Läufe an einem Ort.") +
-    `<div class="grid stats"><div class="stat"><div class="stat-label">Aktive Agenten</div><div class="stat-value">${active}</div><div class="stat-detail">inklusive Master</div></div><div class="stat"><div class="stat-label">Zur Entscheidung</div><div class="stat-value">${queued}</div><div class="stat-detail">Vorschläge prüfen</div></div><div class="stat"><div class="stat-label">Laufende Jobs</div><div class="stat-value">${running}</div><div class="stat-detail">seriell verarbeitet</div></div><div class="stat"><div class="stat-label">Abgeschlossene Läufe</div><div class="stat-value">${finished}</div><div class="stat-detail">lokal protokolliert</div></div></div>` +
-    `<section class="master-card"><div class="master-copy"><div class="master-kicker">✦ MASTER · CHIEF OF STAFF</div><h2>${esc(master?.headline || "Ein klarer Tagesplan aus allen wichtigen Signalen.")}</h2><p>${esc(master?.summary || "Starte den ersten Tageslauf. Die Spezialisten recherchieren in ihrem Rhythmus, danach fasst der Master die Ergebnisse zu prüfbaren Vorschlägen zusammen.")}</p><div class="master-actions">${button("✦ Tagesbriefing starten", "daily", 'data-full="false"', "btn primary")}${button("Alle Spezialisten neu prüfen", "daily", 'data-full="true"', "btn ghost")}</div></div>${masterArt()}</section>` +
+  return pageHead("MISSION CONTROL", "Dein Überblick für LIEUVA", "Drei Aufgaben für heute, weitere Vorschläge und der Stand aller Agenten an einem Ort.") +
+    `<div class="grid stats"><div class="stat"><div class="stat-label">Aktive Agenten</div><div class="stat-value">${active}</div><div class="stat-detail">inklusive Master</div></div><div class="stat"><div class="stat-label">Zur Entscheidung</div><div class="stat-value">${queued}</div><div class="stat-detail">Vorschläge prüfen</div></div><div class="stat"><div class="stat-label">Laufende Jobs</div><div class="stat-value">${running}</div><div class="stat-detail">seriell verarbeitet</div></div><div class="stat"><div class="stat-label">Heute erledigt</div><div class="stat-value">${completed.length}</div><div class="stat-detail">${focusDone} von 3 im Tagesfokus</div></div></div>` +
+    `<section class="master-card"><div class="master-copy"><div class="master-kicker">✦ MASTER · CHIEF OF STAFF</div><h2>${esc(master?.headline || "Ein klarer Tagesplan aus allen wichtigen Signalen.")}</h2><p>${esc(master?.summary || "Starte den ersten Tageslauf. Die Spezialisten recherchieren in ihrem Rhythmus, danach fasst der Master die Ergebnisse zu prüfbaren Vorschlägen zusammen.")}</p>${masterLinks ? `<div class="master-recommendations"><strong>Empfohlen · direkt öffnen</strong><div class="button-row">${masterLinks}</div></div>` : ""}<div class="master-actions">${button("✦ Tagesbriefing starten", "daily", 'data-full="false"', "btn primary")}${button("Alle Spezialisten neu prüfen", "daily", 'data-full="true"', "btn ghost")}${data.reports.master?.runId ? button("Ganzen Bericht ansehen", "view-run", `data-id="${esc(data.reports.master.runId)}"`, "btn ghost") : ""}</div></div>${masterArt()}</section>` +
     `<div class="monitor-grid">${activeRun ? `<section class="panel monitor-panel"><div class="panel-title"><h3>Aktiver Auftrag</h3>${status(activeRun.progress?.signal === "quiet" ? "quiet" : "running")}</div><strong>${esc(activeRun.agentName)}</strong><p class="body-copy">${esc(activityText(activeRun))}</p><div class="button-row">${button("Lauf ansehen", "view-run", `data-id="${esc(activeRun.id)}"`, "btn ghost small")}${button("Abbrechen", "cancel-run", `data-id="${esc(activeRun.id)}"`, "btn danger small")}</div></section>` : ""}${coordinationPanel()}</div>` +
-    `<div class="two-columns"><section>${sectionHead("Entscheidungen", `<span>${queued} offen</span>`)}${top.length ? top.map((proposal) => `<div class="proposal-card"><div class="proposal-top"><span class="priority ${esc(proposal.priority)}">${esc(labels[proposal.priority])}</span>${status(proposal.status)}</div><h3>${esc(proposal.title)}</h3><p>${esc(proposal.rationale)}</p>${button("Prüfen →", "open-proposal", `data-id="${esc(proposal.id)}"`, "btn subtle")}</div>`).join("") : `<div class="empty">Noch keine Vorschläge. Der Master erzeugt sie nach einem Tageslauf.</div>`}</section><section>${sectionHead("Spezialistenberichte", `<span>${specialistReports.filter((item) => item.report).length} von ${specialistReports.length} vorhanden</span>`)}<div class="panel">${specialistReports.map(({ agent, report }) => `<div class="finding"><strong>${esc(agent.name)}</strong><p>${esc(report?.report.headline || "Noch kein Bericht")}</p><small>${report ? dateText(report.finishedAt) : esc(labels[agent.cadence])}</small></div>`).join("")}</div></section></div>`;
+    `<section class="daily-focus"><div class="section-heading"><div><div class="eyebrow">TAGESCHALLENGE</div><h2>Deine drei Aufgaben heute</h2></div><span>${focusDone} / 3 erledigt</span></div><p class="meta">Der Master aktualisiert seine Einschätzung nach Entscheidungen und Ergebnissen. Erledigte Aufgaben bleiben für heute sichtbar.</p><div class="focus-grid">${focus.length ? focus.map((proposal, index) => proposalCard(proposal, true, index + 1)).join("") : `<div class="empty">Noch kein Tagesfokus. Starte das Briefing oder prüfe die Vorschläge.</div>`}</div>${extraCompleted.length ? `<div class="today-extra"><strong>Zusätzlich heute erledigt</strong><div class="button-row">${extraCompleted.map((proposal) => proposalLink(proposal, `✓ ${proposal.title}`)).join("")}</div></div>` : ""}</section>` +
+    `<div class="two-columns"><section>${sectionHead("Weitere Aufgaben", `<span>${remainingOpen} weitere offen</span>`)}${otherOpen.length ? otherOpen.map((proposal) => proposalCard(proposal)).join("") : `<div class="empty">Keine weiteren offenen Aufgaben.</div>`}${button("Alle Vorschläge ansehen →", "view-proposals", "", "btn ghost small")}</section><section>${sectionHead("Spezialistenberichte", `<span>${specialistReports.filter((item) => item.report).length} von ${specialistReports.length} vorhanden</span>`)}<div class="panel">${specialistReports.map(({ agent, report }) => `<div class="finding"><strong>${esc(agent.name)}</strong><p>${esc(report?.report.headline || "Noch kein Bericht")}</p><small>${report ? dateText(report.finishedAt) : esc(labels[agent.cadence])}</small></div>`).join("")}</div></section></div>`;
 }
 function agentCard(agent) {
   const run = latestRun(agent.id);
@@ -144,17 +168,31 @@ function agentEditor() {
 function agentsView() {
   return pageHead("TEAM", "Deine Agenten", "Jeder Agent hat einen Auftrag, ein Modell und einen eigenen Rhythmus. Alles lässt sich hier anpassen.", button("+ Spezialist", "new-agent", "", "btn primary")) + `<div class="grid agents-grid">${data.config.agents.map(agentCard).join("")}</div>${agentEditor()}`;
 }
-function proposalCard(proposal) {
-  const action = proposal.status === "approved" && proposal.executionMode !== "manual"
-    ? button("Ausführen", "execute-proposal", `data-id="${esc(proposal.id)}"`, "btn primary small") : "";
-  return `<article class="proposal-card"><div class="proposal-top"><span class="priority ${esc(proposal.priority)}">${esc(labels[proposal.priority])}</span>${status(proposal.status)}</div><h3>${esc(proposal.title)}</h3><p>${esc(proposal.rationale)}</p><div class="chip-row"><span class="chip">${esc(labels[proposal.effort])}er Aufwand</span><span class="chip">${esc(labels[proposal.executionMode] || labels.manualMode)}</span><span class="chip">Sicherheit: ${esc(proposal.confidence)}</span></div><div class="proposal-actions">${button("Prüfen & anpassen", "open-proposal", `data-id="${esc(proposal.id)}"`, "btn ghost small")}${action}<span class="meta">${dateText(proposal.createdAt)}</span></div></article>`;
+function proposalCard(proposal, focus = false, slot = 0) {
+  const completed = (data.daily.completedTodayIds || []).includes(proposal.id);
+  const priorityLabel = focus ? "Heute" : proposal.priority === "today" ? "Backlog · hohe Priorität" : labels[proposal.priority];
+  const run = data.runs.find((item) => item.type === "proposal" && item.proposalId === proposal.id && ["queued", "running"].includes(item.status));
+  const action = proposal.status === "approved"
+    ? button(proposal.executionMode === "manual" ? "Manuell starten" : "Ausführen", "execute-proposal", `data-id="${esc(proposal.id)}"`, "btn primary small")
+    : proposal.status === "executing" && proposal.executionMode === "manual"
+      ? button("Ergebnis eintragen", "open-proposal", `data-id="${esc(proposal.id)}"`, "btn primary small")
+      : run ? button("Lauf ansehen", "view-run", `data-id="${esc(run.id)}"`, "btn ghost small")
+        : proposal.executionRunId ? button("Ergebnis ansehen", "view-run", `data-id="${esc(proposal.executionRunId)}"`, "btn ghost small") : "";
+  return `<article class="proposal-card ${focus ? "focus-card" : ""} ${completed ? "is-complete" : ""}"><div class="proposal-top"><div class="proposal-priority">${focus ? `<span class="focus-check" aria-label="${completed ? "Heute erledigt" : "Heute offen"}">${completed ? "✓" : slot}</span>` : ""}<span class="priority ${esc(proposal.priority)}">${esc(priorityLabel)}</span></div>${status(proposal.status)}</div><h3>${esc(proposal.title)}</h3><p>${esc(proposal.rationale)}</p><div class="chip-row"><span class="chip">${esc(labels[proposal.effort])}er Aufwand</span><span class="chip">${esc(labels[proposal.executionMode] || labels.manualMode)}</span></div>${completed ? `<p class="done-line">✓ Heute abgeschlossen${proposal.completionNote ? ` · ${esc(proposal.completionNote)}` : ""}</p>` : ""}<div class="proposal-actions">${proposalLink(proposal, proposal.status === "proposed" ? "Prüfen →" : "Aufgabe öffnen →")}${action}</div></article>`;
 }
 function proposalsView() {
-  const groups = ["open", "approved", "deferred", "done", "rejected"];
-  const groupLabel = { open: "Offen", approved: "Freigegeben", deferred: "Später", done: "Erledigt", rejected: "Verworfen" };
+  const groups = ["all", "open", "approved", "executing", "deferred", "done", "rejected"];
+  const groupLabel = { all: "Alle", open: "Offen", approved: "Freigegeben", executing: "In Arbeit", deferred: "Später", done: "Erledigt", rejected: "Verworfen" };
   const filter = ui.proposalFilter;
+  const focus = dailyFocus();
+  const focusIds = new Set(focus.map((proposal) => proposal.id));
+  const statusOrder = { executing: 0, approved: 1, proposed: 2, deferred: 3, done: 4, rejected: 5 };
+  const other = data.proposals.filter((proposal) => !focusIds.has(proposal.id))
+    .sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
   const matches = data.proposals.filter((item) => filter === "open" ? item.status === "proposed" : item.status === filter);
-  return pageHead("DECISION DESK", "Vorschläge prüfen", "Passe Aufgaben an und gib sie frei. Lokale Codearbeit läuft anschließend in einem eigenen Worktree.") + `<div class="tabs">${groups.map((group) => `<button type="button" class="tab ${filter === group ? "active" : ""}" data-action="proposal-filter" data-filter="${group}">${groupLabel[group]} · ${data.proposals.filter((item) => group === "open" ? item.status === "proposed" : item.status === group).length}</button>`).join("")}</div>${matches.length ? matches.map(proposalCard).join("") : `<div class="empty">In diesem Bereich gibt es noch keine Vorschläge.</div>`}`;
+  const tabs = `<div class="tabs">${groups.map((group) => `<button type="button" class="tab ${filter === group ? "active" : ""}" data-action="proposal-filter" data-filter="${group}">${groupLabel[group]} · ${group === "all" ? data.proposals.length : data.proposals.filter((item) => group === "open" ? item.status === "proposed" : item.status === group).length}</button>`).join("")}</div>`;
+  const all = `<section class="daily-focus"><div class="section-heading"><div><div class="eyebrow">TAGESCHALLENGE</div><h2>Deine drei Aufgaben heute</h2></div><span>${focus.filter((proposal) => (data.daily.completedTodayIds || []).includes(proposal.id)).length} / 3 erledigt</span></div><div class="focus-grid">${focus.length ? focus.map((proposal, index) => proposalCard(proposal, true, index + 1)).join("") : `<div class="empty">Noch kein Tagesfokus vorhanden.</div>`}</div></section>${sectionHead("Weitere Aufgaben", `<span>${other.length} im Überblick</span>`)}${other.length ? other.map((proposal) => proposalCard(proposal)).join("") : `<div class="empty">Keine weiteren Aufgaben.</div>`}`;
+  return pageHead("DECISION DESK", "Aufgaben steuern", "Drei Tagesaufgaben oben, alle weiteren Vorschläge darunter. Freigabe und Ausführung sind getrennte Schritte.") + tabs + (filter === "all" ? all : matches.length ? matches.map((proposal) => proposalCard(proposal, focusIds.has(proposal.id), focus.findIndex((item) => item.id === proposal.id) + 1)).join("") : `<div class="empty">In diesem Bereich gibt es noch keine Vorschläge.</div>`);
 }
 function worktreeBlock(run) {
   if (!run.worktreePath) return "";
@@ -167,7 +205,7 @@ function runDetail() {
   const warning = run.status === "running" && progress?.signal === "quiet"
     ? `<p class="note activity-warning">Der Codex-Prozess ist noch aktiv, hat aber seit ${durationText(progress.quietMs)} keinen neuen Arbeitsschritt gemeldet. Prüfe das vollständige Log oder brich den Lauf ab, wenn er nicht weiterkommt.</p>`
     : "";
-  return `<section class="panel details run-details"><div class="panel-title"><h3>${esc(run.agentName)}</h3>${status(run.status)}</div><p class="body-copy">${esc(run.message)}</p><p class="activity-line">${esc(activityText(run))}</p>${warning}<div class="chip-row"><span class="chip">${esc(run.model)} · ${esc(run.effort)}</span><span class="chip">Start: ${dateText(run.startedAt)}</span><span class="chip">Letzte Aktivität: ${dateText(run.lastActivityAt || run.finishedAt || run.startedAt)}</span><span class="chip">Ende: ${dateText(run.finishedAt)}</span>${run.usage ? `<span class="chip">Tokens: ${esc(run.usage.input_tokens ?? "?")} in / ${esc(run.usage.output_tokens ?? "?")} out</span>` : ""}</div>${run.currentStep ? `<p class="meta">Aktueller Schritt: ${esc(run.currentStep)}</p>` : ""}${worktreeBlock(run)}<div class="subtle-divider"></div>${run.report ? reportBlock(run.report, "") : run.finalText ? `<pre class="log">${esc(run.finalText)}</pre>` : ""}<div class="section-heading log-heading"><h2>Protokoll</h2><div class="button-row"><a class="btn ghost small" href="/api/runs/${encodeURIComponent(run.id)}/log" target="_blank" rel="noopener noreferrer">Ganzes Log ↗</a>${["queued", "running"].includes(run.status) ? button("Abbrechen", "cancel-run", `data-id="${esc(run.id)}"`, "btn danger small") : ""}</div></div><pre class="log" data-run-log>${esc((run.events || []).join("\n"))}</pre>${run.threadId ? `<p class="meta">Codex-Task-ID: ${esc(run.threadId)}</p>` : ""}</section>`;
+  return `<section class="panel details run-details"><div class="panel-title"><h3>${esc(run.agentName)}</h3>${status(run.status)}</div><p class="body-copy">${esc(run.message)}</p><p class="activity-line">${esc(activityText(run))}</p>${warning}<div class="chip-row"><span class="chip">${esc(run.model)} · ${esc(run.effort)}</span><span class="chip">Start: ${dateText(run.startedAt)}</span><span class="chip">Letzte Aktivität: ${dateText(run.lastActivityAt || run.finishedAt || run.startedAt)}</span><span class="chip">Ende: ${dateText(run.finishedAt)}</span>${run.usage ? `<span class="chip">Tokens: ${esc(run.usage.input_tokens ?? "?")} in / ${esc(run.usage.output_tokens ?? "?")} out</span>` : ""}</div>${run.currentStep ? `<p class="meta">Aktueller Schritt: ${esc(run.currentStep)}</p>` : ""}${worktreeBlock(run)}<div class="subtle-divider"></div>${run.report ? reportBlock(run.report, "", run.type === "agent" && run.agentId === "master") : run.finalText ? `<pre class="log">${esc(run.finalText)}</pre>` : ""}<div class="section-heading log-heading"><h2>Protokoll</h2><div class="button-row"><a class="btn ghost small" href="/api/runs/${encodeURIComponent(run.id)}/log" target="_blank" rel="noopener noreferrer">Ganzes Log ↗</a>${["queued", "running"].includes(run.status) ? button("Abbrechen", "cancel-run", `data-id="${esc(run.id)}"`, "btn danger small") : ""}</div></div><pre class="log" data-run-log>${esc((run.events || []).join("\n"))}</pre>${run.threadId ? `<p class="meta">Codex-Task-ID: ${esc(run.threadId)}</p>` : ""}</section>`;
 }
 function runsView() {
   return pageHead("ACTIVITY", "Alle Läufe", "Laufzeit, letzte Ausgabe, Prozessstatus und Ergebnis jedes Agentenlaufs.") + (data.runs.length ? `<div class="run-list">${data.runs.map((run) => `<div class="run-row"><div><strong>${esc(run.agentName)}</strong><p>${dateText(run.createdAt)} · ${esc(run.reason)} · ${esc(run.message)}</p><p class="run-activity">${esc(activityText(run))}</p></div><div class="right">${status(run.progress?.signal === "quiet" ? "quiet" : run.status)}${button("Details", "view-run", `data-id="${esc(run.id)}"`, "btn ghost small")}</div></div>`).join("")}</div>${runDetail()}` : `<div class="empty">Noch keine Läufe. Starte einen Agenten oder den Tageslauf.</div>`);
@@ -195,15 +233,31 @@ function proposalModal(proposal) {
   if (!proposal) return;
   ui.proposalId = proposal.id;
   ui.dirty = false;
-  if (["done", "executing"].includes(proposal.status)) {
-    overlay.innerHTML = `<div class="overlay"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="proposalTitle"><div class="modal-head"><div><div class="eyebrow">VORSCHLAG · ${esc(labels[proposal.status])}</div><h2 id="proposalTitle">${esc(proposal.title)}</h2></div>${button("×", "close-modal", 'aria-label="Schließen"', "btn icon ghost")}</div><p class="body-copy">${esc(proposal.action)}</p><p class="note">${proposal.status === "executing" ? "Der Auftrag läuft. Fortschritt und Ergebnis findest du unter Läufe." : "Dieser Auftrag wurde bereits ausgeführt. Das Ergebnis findest du unter Läufe."}</p></section></div>`;
+  if (proposal.status === "done" || proposal.status === "executing") {
+    const manual = proposal.status === "executing" && proposal.executionMode === "manual";
+    const note = manual ? `<form id="manualCompletionForm"><div class="field"><label for="manualResult">Was wurde erledigt? Ergebnis oder Nachweis</label><textarea id="manualResult" name="note" minlength="5" maxlength="2000" required placeholder="Kurzes Ergebnis und ggf. Fundstelle festhalten"></textarea></div><p class="note">Manuelle Aufgaben werden erst nach deiner Bestätigung als erledigt gezählt. Externe Schritte führt die Agentenzentrale nicht selbst aus.</p><div class="modal-actions">${button("Zurück auf Freigegeben", "reopen-manual", `data-id="${esc(proposal.id)}"`, "btn ghost small")}${button("Erledigt melden", "complete-manual", `data-id="${esc(proposal.id)}"`, "btn primary small")}</div></form>` : `<p class="note">${proposal.status === "executing" ? "Der Auftrag läuft. Fortschritt und Ergebnis findest du unter Läufe." : "Dieser Auftrag wurde abgeschlossen."}</p>${proposal.completionNote ? `<p class="body-copy">Ergebnis: ${esc(proposal.completionNote)}</p>` : ""}${proposal.executionRunId && data.runs.some((run) => run.id === proposal.executionRunId) ? button("Ergebnis ansehen", "view-run", `data-id="${esc(proposal.executionRunId)}"`, "btn ghost small") : ""}`;
+    overlay.innerHTML = `<div class="overlay"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="proposalTitle"><div class="modal-head"><div><div class="eyebrow">AUFGABE · ${esc(labels[proposal.status])}</div><h2 id="proposalTitle">${esc(proposal.title)}</h2></div>${button("×", "close-modal", 'aria-label="Schließen"', "btn icon ghost")}</div><p class="body-copy">${esc(proposal.action)}</p>${note}</section></div>`;
     overlay.querySelector("button")?.focus();
     return;
   }
-  overlay.innerHTML = `<div class="overlay"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="proposalTitle"><div class="modal-head"><div><div class="eyebrow">VORSCHLAG · ${esc(labels[proposal.status])}</div><h2 id="proposalTitle">Prüfen und anpassen</h2></div>${button("×", "close-modal", "aria-label=" + '"Schließen"', "btn icon ghost")}</div><form id="proposalForm"><div class="field"><label for="proposalName">Titel</label><input id="proposalName" name="title" required value="${esc(proposal.title)}"></div><div class="field"><label for="proposalRationale">Warum?</label><textarea id="proposalRationale" name="rationale" required>${esc(proposal.rationale)}</textarea></div><div class="field"><label for="proposalAction">Konkreter Auftrag</label><textarea id="proposalAction" name="action" required>${esc(proposal.action)}</textarea></div><div class="form-row"><div class="field"><label for="proposalPriority">Priorität</label><select id="proposalPriority" name="priority">${["today", "soon", "watch"].map((item) => option(item, proposal.priority, labels[item])).join("")}</select></div><div class="field"><label for="proposalMode">Ausführung</label><select id="proposalMode" name="executionMode">${["research", "local-code", "manual"].map((item) => option(item, proposal.executionMode, labels[item] || labels.manualMode)).join("")}</select></div></div><div class="form-row"><div class="field"><label for="proposalEffort">Aufwand</label><select id="proposalEffort" name="effort">${["small", "medium", "large"].map((item) => option(item, proposal.effort, labels[item])).join("")}</select></div><div class="field"><label for="proposalConfidence">Sicherheit</label><select id="proposalConfidence" name="confidence">${["high", "medium", "low"].map((item) => option(item, proposal.confidence, item)).join("")}</select></div></div><p class="note">Quelle: ${evidence(proposal.evidence)}. Freigabe startet noch keinen Lauf. Du kannst den Auftrag danach ausdrücklich ausführen.</p><div class="subtle-divider"></div><div class="modal-actions">${button("Verwerfen", "proposal-reject", "", "btn danger small")}${button("Später", "proposal-defer", "", "btn ghost small")}${button("Speichern", "proposal-save", "", "btn ghost small")}${button("Freigeben", "proposal-approve", "", "btn primary small")}</div></form></section></div>`;
+  overlay.innerHTML = `<div class="overlay"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="proposalTitle"><div class="modal-head"><div><div class="eyebrow">AUFGABE · ${esc(labels[proposal.status])}</div><h2 id="proposalTitle">Prüfen und anpassen</h2></div>${button("×", "close-modal", 'aria-label="Schließen"', "btn icon ghost")}</div><form id="proposalForm"><div class="field"><label for="proposalName">Titel</label><input id="proposalName" name="title" required value="${esc(proposal.title)}"></div><div class="field"><label for="proposalRationale">Warum?</label><textarea id="proposalRationale" name="rationale" required>${esc(proposal.rationale)}</textarea></div><div class="field"><label for="proposalAction">Konkreter Auftrag</label><textarea id="proposalAction" name="action" required>${esc(proposal.action)}</textarea></div><div class="form-row"><div class="field"><label for="proposalPriority">Priorität</label><select id="proposalPriority" name="priority">${["today", "soon", "watch"].map((item) => option(item, proposal.priority, labels[item])).join("")}</select></div><div class="field"><label for="proposalMode">Ausführung</label><select id="proposalMode" name="executionMode">${["research", "local-code", "manual"].map((item) => option(item, proposal.executionMode, labels[item] || labels.manualMode)).join("")}</select></div></div><div class="form-row"><div class="field"><label for="proposalEffort">Aufwand</label><select id="proposalEffort" name="effort">${["small", "medium", "large"].map((item) => option(item, proposal.effort, labels[item])).join("")}</select></div><div class="field"><label for="proposalConfidence">Sicherheit</label><select id="proposalConfidence" name="confidence">${["high", "medium", "low"].map((item) => option(item, proposal.confidence, item)).join("")}</select></div></div><p class="note">Quelle: ${evidence(proposal.evidence)}. Freigabe startet noch keinen Lauf. „Manuell“ öffnet eine Aufgabe zum Nachhalten; Recherche und lokale Codearbeit starten Codex erst nach deinem Klick.</p><div class="subtle-divider"></div><div class="modal-actions">${button("Verwerfen", "proposal-reject", "", "btn danger small")}${button("Später", "proposal-defer", "", "btn ghost small")}${button("Speichern", "proposal-save", "", "btn ghost small")}${proposal.status === "approved" ? button(proposal.executionMode === "manual" ? "Manuell starten" : "Ausführen", "execute-proposal", `data-id="${esc(proposal.id)}"`, "btn primary small") : button("Freigeben", "proposal-approve", "", "btn primary small")}</div></form></section></div>`;
   overlay.querySelector("input")?.focus();
 }
-function closeModal() { overlay.innerHTML = ""; ui.proposalId = null; ui.dirty = false; }
+function closeModal() {
+  overlay.innerHTML = "";
+  ui.proposalId = null;
+  ui.dirty = false;
+  if (location.hash.startsWith("#proposal/")) history.replaceState(null, "", location.pathname + location.search);
+}
+function showProposal(id, updateHash = true) {
+  const proposal = data?.proposals.find((item) => item.id === id);
+  if (!proposal) return;
+  ui.view = "proposals";
+  ui.proposalFilter = "all";
+  draw();
+  proposalModal(proposal);
+  if (updateHash) history.replaceState(null, "", `#proposal/${encodeURIComponent(id)}`);
+}
 function slug(value) { return value.toLocaleLowerCase("de-DE").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "agent"; }
 
 async function saveAgent() {
@@ -248,12 +302,13 @@ async function saveProposal(newStatus) {
   const values = new FormData(document.getElementById("proposalForm"));
   const patch = { title: String(values.get("title")), rationale: String(values.get("rationale")), action: String(values.get("action")), priority: String(values.get("priority")), effort: String(values.get("effort")), confidence: String(values.get("confidence")), executionMode: String(values.get("executionMode")), status: newStatus || proposal.status };
   await api("PATCH", `/api/proposals/${proposal.id}`, patch);
+  if (newStatus === "approved") ui.proposalFilter = "all";
   closeModal();
   await refresh();
   notify(newStatus === "approved" ? "Vorschlag freigegeben. Ausführung wartet auf deinen Klick." : "Vorschlag gespeichert.");
 }
 
-document.addEventListener("input", (event) => { if (event.target.closest("#agentForm,#settingsForm,#proposalForm")) ui.dirty = true; });
+document.addEventListener("input", (event) => { if (event.target.closest("#agentForm,#settingsForm,#proposalForm,#manualCompletionForm")) ui.dirty = true; });
 document.addEventListener("submit", async (event) => {
   if (!["agentForm", "settingsForm"].includes(event.target.id)) return;
   event.preventDefault();
@@ -261,6 +316,12 @@ document.addEventListener("submit", async (event) => {
   catch (error) { notify(error.message, true); }
 });
 document.addEventListener("click", async (event) => {
+  const proposalAnchor = event.target.closest("[data-proposal-link]");
+  if (proposalAnchor) {
+    event.preventDefault();
+    showProposal(proposalAnchor.dataset.proposalLink);
+    return;
+  }
   const viewButton = event.target.closest("[data-view]");
   if (viewButton) {
     ui.view = viewButton.dataset.view;
@@ -287,20 +348,47 @@ document.addEventListener("click", async (event) => {
       ui.agentId = null; ui.dirty = false; await refresh(); notify("Agent entfernt.");
     }
     if (action === "proposal-filter") { ui.proposalFilter = target.dataset.filter; draw(); }
-    if (action === "open-proposal") proposalModal(data.proposals.find((item) => item.id === id));
+    if (action === "view-proposals") { ui.view = "proposals"; ui.proposalFilter = "all"; draw(); }
+    if (action === "open-proposal") showProposal(id);
     if (action === "close-modal") closeModal();
     if (action === "proposal-save") await saveProposal();
     if (action === "proposal-approve") await saveProposal("approved");
     if (action === "proposal-defer") await saveProposal("deferred");
     if (action === "proposal-reject") await saveProposal("rejected");
     if (action === "execute-proposal") {
+      if (ui.proposalId === id && ui.dirty) await saveProposal("approved");
       const proposal = data.proposals.find((item) => item.id === id);
       if (proposal?.executionMode === "local-code" && !window.confirm(`Lokale Codearbeit starten?\n\n${proposal.title}\n\nDer Agent arbeitet in einem eigenen Worktree.`)) return;
-      await api("POST", `/api/proposals/${id}/execute`, {});
-      notify("Freigegebener Auftrag gestartet.");
-      ui.view = "runs"; await refresh();
+      const result = await api("POST", `/api/proposals/${id}/execute`, {});
+      if (result.manual) {
+        await refresh();
+        showProposal(id);
+        notify("Manuelle Aufgabe gestartet. Trage das Ergebnis nach der Durchführung ein.");
+      } else {
+        closeModal();
+        ui.view = "runs";
+        ui.runId = result.runId;
+        await refresh();
+        notify("Freigegebener Auftrag gestartet.");
+      }
     }
-    if (action === "view-run") { ui.runId = id; ui.view = "runs"; draw(); document.querySelector(".details")?.scrollIntoView({ block: "start", behavior: "smooth" }); }
+    if (action === "complete-manual") {
+      const form = document.getElementById("manualCompletionForm");
+      if (!form?.reportValidity()) return;
+      const note = String(new FormData(form).get("note") || "");
+      await api("POST", `/api/proposals/${id}/complete`, { note });
+      closeModal();
+      ui.view = "overview";
+      await refresh();
+      notify("Für heute abgehakt. Der Master übernimmt das Ergebnis.");
+    }
+    if (action === "reopen-manual") {
+      await api("POST", `/api/proposals/${id}/reopen`, {});
+      closeModal();
+      await refresh();
+      notify("Aufgabe ist wieder freigegeben.");
+    }
+    if (action === "view-run") { closeModal(); ui.runId = id; ui.view = "runs"; draw(); document.querySelector(".details")?.scrollIntoView({ block: "start", behavior: "smooth" }); }
     if (action === "copy-worktree") {
       const path = data.runs.find((run) => run.id === id)?.worktreePath;
       if (!path) throw new Error("Worktree-Pfad fehlt noch.");
@@ -311,6 +399,11 @@ document.addEventListener("click", async (event) => {
   } catch (error) { notify(error.message, true); }
 });
 document.addEventListener("keydown", (event) => { if (event.key === "Escape" && ui.proposalId) closeModal(); });
+window.addEventListener("hashchange", () => {
+  const id = location.hash.match(/^#proposal\/([a-f0-9-]+)$/)?.[1];
+  if (id) showProposal(id, false);
+  else if (ui.proposalId) closeModal();
+});
 
 if (location.protocol === "file:") {
   fetch(`${rootUrl}/`, { mode: "no-cors" }).then(() => location.replace(`${rootUrl}/`)).catch(offline);
