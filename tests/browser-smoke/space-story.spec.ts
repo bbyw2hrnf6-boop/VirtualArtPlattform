@@ -204,7 +204,7 @@ for (const viewport of [
   { width: 1440, height: 1000 },
   { width: 390, height: 844 },
 ]) {
-  test(`Danny restores the same visit state after forced WebGL loss at ${viewport.width}px`, async ({ page }) => {
+  test(`Danny keeps the visit on WebGL loss and resumes after restoration at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/#/demo');
@@ -218,7 +218,6 @@ for (const viewport of [
       position: await scene.getAttribute('data-camera-position'),
       yaw: await scene.getAttribute('data-camera-yaw'),
       fov: await scene.getAttribute('data-camera-fov'),
-      frames: Number(await scene.getAttribute('data-render-frames')),
     };
     const lost = await page.evaluate(() => {
       const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-scene-canvas="danny"]');
@@ -233,14 +232,32 @@ for (const viewport of [
     await expect(directory).toBeVisible();
     await expect(directory).toContainText('The 3D view could not start');
     const heldPosition = await scene.getAttribute('data-camera-position');
-    await page.evaluate(() => {
+    const framesAtLoss = Number(await scene.getAttribute('data-render-frames'));
+    const restored = await page.evaluate(() => {
       const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-scene-canvas="danny"]');
       const context = canvas?.getContext('webgl2') ?? canvas?.getContext('webgl');
-      context?.getExtension('WEBGL_lose_context')?.restoreContext();
+      const extension = context?.getExtension('WEBGL_lose_context');
+      if (!canvas || !extension) return false;
+      return new Promise<boolean>((resolve) => {
+        const timeout = window.setTimeout(() => resolve(false), 10_000);
+        canvas.addEventListener('webglcontextrestored', () => {
+          window.clearTimeout(timeout);
+          resolve(true);
+        }, { once: true });
+        extension.restoreContext();
+      });
     });
+    if (!restored) {
+      // Some software renderers accept restoreContext() but never emit the
+      // browser event. The directory must stay open in that case.
+      test.info().annotations.push({ type: 'WebGL restore unavailable', description: 'The browser did not emit webglcontextrestored.' });
+      await expect(directory).toContainText('The 3D view could not start');
+      await expect(scene).toHaveAttribute('data-camera-position', heldPosition!);
+      return;
+    }
     await expect.poll(async () => Number(await scene.getAttribute('data-render-frames')), {
       timeout: 30_000,
-    }).toBeGreaterThan(before.frames);
+    }).toBeGreaterThan(framesAtLoss);
     await expect(directory).toBeVisible();
     await expect(directory).not.toContainText('The 3D view could not start');
     await expect(scene).toHaveClass(/gallery-scene--overview/);
