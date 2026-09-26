@@ -288,7 +288,9 @@ export function masterInputs(state, config) {
     decisions: state.proposals.filter((proposal) => proposal.decisionAt)
       .sort((a, b) => Date.parse(b.decisionAt) - Date.parse(a.decisionAt))
       .slice(0, 30).map((proposal) => ({ proposalId: proposal.id, title: proposal.title,
-        status: proposal.status, updatedAt: proposal.decisionAt, completionNote: (proposal.completionNote || "").slice(0, 500) })),
+        status: proposal.status, updatedAt: proposal.decisionAt,
+        decisionNote: (proposal.decisionNote || "").slice(0, 500),
+        completionNote: (proposal.completionNote || "").slice(0, 500) })),
   };
 }
 

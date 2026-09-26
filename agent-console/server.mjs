@@ -189,6 +189,7 @@ function makeProposalRun(proposal) {
 function masterContext() {
   const inputs = masterInputs(state, config);
   const newSignals = pendingMasterInputs(inputs, state.masterSync.lastInputs);
+  const { decisions: pendingDecisions, ...otherSignals } = newSignals;
   const indexedRuns = new Map(state.runs.map((run) => [run.id, run]));
   const digest = (item) => {
     const run = indexedRuns.get(item.runId);
@@ -212,13 +213,17 @@ function masterContext() {
     };
   };
   return [
-    "Prüfe für jeden neuen Lauf den kompakten Protokollauszug und das Ergebnis. Bei Fehlern oder Unklarheiten lies das vollständige Protokoll gezielt unter logPath. Werte Status und Fehler ausdrücklich aus; kennzeichne ältere Signale. Worktree-Änderungen sind nicht in main übernommen oder veröffentlicht. Plane höchstens drei konkrete Tagesaufgaben und nenne bestehende Aufgaben mit exakt ihrem gespeicherten Titel, damit sie direkt geöffnet werden können. Weitere Themen gehören in die Beobachtungsliste. Schlage kein Thema erneut als neuen Auftrag vor, wenn bereits ein gleicher oder sinngleicher Vorschlag vorhanden ist, unabhängig von dessen Status. Aktualisiere dessen Lage stattdessen im Briefing und respektiere die Nutzerentscheidung.",
+    "Prüfe für jeden neuen Lauf den kompakten Protokollauszug und das Ergebnis. Bei Fehlern oder Unklarheiten lies das vollständige Protokoll gezielt unter logPath. Werte Status und Fehler ausdrücklich aus; kennzeichne ältere Signale. Worktree-Änderungen sind nicht in main übernommen oder veröffentlicht. Plane höchstens drei konkrete Tagesaufgaben und nenne bestehende Aufgaben mit exakt ihrem gespeicherten Titel, damit sie direkt geöffnet werden können. Weitere Themen gehören in die Beobachtungsliste. Behandle Nutzerentscheidungen als verbindlich: verworfene Aufgaben nicht erneut empfehlen, geparkte Aufgaben nicht erneut in den Tagesfokus setzen, bis der Nutzer sie reaktiviert. Das gilt auch bei einer neuen Formulierung desselben Themas. Erwähne den Entscheid und eine eventuelle Notiz im Briefing, statt einen sinngleichen Vorschlag anzulegen.",
     JSON.stringify({
+      userDecisions: inputs.decisions.map((item) => ({ proposalId: item.proposalId, title: item.title,
+        status: item.status, updatedAt: item.updatedAt, decisionNote: item.decisionNote,
+        completionNote: item.completionNote })),
+      newDecisionIds: pendingDecisions.map((item) => item.proposalId),
+      newSignals: otherSignals,
       existingProposals: state.proposals.slice(0, 30)
         .map((item) => ({ id: item.id, title: item.title, status: item.status, action: item.action.slice(0, 180), completionNote: (item.completionNote || "").slice(0, 300) })),
       dailyFocus: (state.daily.focusIds || []).map((id) => state.proposals.find((item) => item.id === id))
         .filter(Boolean).map((item) => ({ id: item.id, title: item.title, status: item.status })),
-      newSignals,
       specialistRuns: inputs.agentRuns.map(digest),
       proposalRuns: inputs.outcomes.map(digest),
     }).slice(0, 22000),
@@ -499,6 +504,12 @@ const server = createServer(async (request, response) => {
       if (!["small", "medium", "large"].includes(nextProposal.effort) || !["high", "medium", "low"].includes(nextProposal.confidence)) throw new Error("Ungültige Einschätzung.");
       for (const field of ["title", "rationale", "action"]) {
         if (typeof nextProposal[field] !== "string" || !nextProposal[field].trim() || nextProposal[field].length > 4000) throw new Error("Textfeld fehlt oder ist zu lang.");
+      }
+      if (Object.hasOwn(input, "decisionNote")) {
+        if (typeof input.decisionNote !== "string" || input.decisionNote.length > 500) throw new Error("Entscheidungsnotiz ist zu lang.");
+        nextProposal.decisionNote = input.decisionNote.trim();
+      } else if (Object.hasOwn(input, "status") && !["deferred", "rejected"].includes(nextProposal.status)) {
+        nextProposal.decisionNote = "";
       }
       const updatedAt = nowIso();
       Object.assign(proposal, nextProposal, { updatedAt, decisionAt: updatedAt });

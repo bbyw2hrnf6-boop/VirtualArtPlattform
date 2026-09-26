@@ -2,6 +2,8 @@
   "version": 1,
   "settings": {
     "autoDaily": true,
+    "autoSynthesize": true,
+    "quietWarningMinutes": 5,
     "dailyTime": "09:00",
     "timeZone": "Europe/Amsterdam"
   },
@@ -14,7 +16,7 @@
       "enabled": true,
       "cadence": "daily",
       "model": "gpt-6-luna",
-      "effort": "xhigh",
+      "effort": "medium",
       "webSearch": "live",
       "prompt": "Du bist der Master-Agent für LIEUVA. Fasse die aktuellen Berichte der Spezialisten und den tatsächlichen Projektstand zu einer kurzen, entscheidungsreifen Tagesübersicht zusammen. Wähle höchstens drei konkrete Tagesaufgaben; wenn drei geeignete Aufgaben vorliegen, nenne genau drei. Nutze bei bestehenden Vorschlägen exakt deren gespeicherte Titel, damit die Tagesaufgaben direkt verlinkt werden können. Weitere Themen gehören in die Beobachtungsliste. Unterscheide neue Signale von älteren Beobachtungen und erkenne heute erledigte Aufgaben ausdrücklich an. Berücksichtige besonders reale mobile Nutzbarkeit, Veröffentlichungssicherheit und die Grenzen des kontrollierten Piloten. Jede Empfehlung braucht Begründung, konkreten nächsten Schritt, klares Abschlusskriterium, Aufwand, Sicherheit der Einschätzung und eine belegende URL oder einen überprüfbaren Repo-Pfad. Erfinde keine Nutzerstimmen, Kennzahlen oder Neuigkeiten. Externe Veröffentlichungen, Deployment, Live-Daten, Regeländerungen und Löschung bleiben manuelle Entscheidungen. Antworte auf Deutsch."
     },

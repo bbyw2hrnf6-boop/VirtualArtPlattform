@@ -135,7 +135,8 @@ function overview() {
   const queued = openProposals().length;
   const focus = dailyFocus();
   const masterLinks = (master?.proposals || []).slice(0, 3).map((item) => proposalForRecommendation(item))
-    .filter(Boolean).map((proposal) => proposalLink(proposal, proposal.title)).join("");
+    .filter((proposal) => proposal && ["proposed", "approved", "executing"].includes(proposal.status))
+    .map((proposal) => proposalLink(proposal, proposal.title)).join("");
   const completed = completedToday();
   const completedIds = new Set(completed.map((proposal) => proposal.id));
   const focusDone = focus.filter((proposal) => completedIds.has(proposal.id)).length;
@@ -170,6 +171,7 @@ function agentsView() {
 }
 function proposalCard(proposal, focus = false, slot = 0) {
   const completed = (data.daily.completedTodayIds || []).includes(proposal.id);
+  const skippable = focus && ["proposed", "approved"].includes(proposal.status);
   const priorityLabel = focus ? "Heute" : proposal.priority === "today" ? "Backlog · hohe Priorität" : labels[proposal.priority];
   const run = data.runs.find((item) => item.type === "proposal" && item.proposalId === proposal.id && ["queued", "running"].includes(item.status));
   const action = proposal.status === "approved"
@@ -178,7 +180,7 @@ function proposalCard(proposal, focus = false, slot = 0) {
       ? button("Ergebnis eintragen", "open-proposal", `data-id="${esc(proposal.id)}"`, "btn primary small")
       : run ? button("Lauf ansehen", "view-run", `data-id="${esc(run.id)}"`, "btn ghost small")
         : proposal.executionRunId ? button("Ergebnis ansehen", "view-run", `data-id="${esc(proposal.executionRunId)}"`, "btn ghost small") : "";
-  return `<article class="proposal-card ${focus ? "focus-card" : ""} ${completed ? "is-complete" : ""}"><div class="proposal-top"><div class="proposal-priority">${focus ? `<span class="focus-check" aria-label="${completed ? "Heute erledigt" : "Heute offen"}">${completed ? "✓" : slot}</span>` : ""}<span class="priority ${esc(proposal.priority)}">${esc(priorityLabel)}</span></div>${status(proposal.status)}</div><h3>${esc(proposal.title)}</h3><p>${esc(proposal.rationale)}</p><div class="chip-row"><span class="chip">${esc(labels[proposal.effort])}er Aufwand</span><span class="chip">${esc(labels[proposal.executionMode] || labels.manualMode)}</span></div>${completed ? `<p class="done-line">✓ Heute abgeschlossen${proposal.completionNote ? ` · ${esc(proposal.completionNote)}` : ""}</p>` : ""}<div class="proposal-actions">${proposalLink(proposal, proposal.status === "proposed" ? "Prüfen →" : "Aufgabe öffnen →")}${action}</div></article>`;
+  return `<article class="proposal-card ${focus ? "focus-card" : ""} ${completed ? "is-complete" : ""}"><div class="proposal-top"><div class="proposal-priority">${focus ? `<span class="focus-check" aria-label="${completed ? "Heute erledigt" : "Heute offen"}">${completed ? "✓" : slot}</span>` : ""}<span class="priority ${esc(proposal.priority)}">${esc(priorityLabel)}</span></div>${status(proposal.status)}</div><h3>${esc(proposal.title)}</h3><p>${esc(proposal.rationale)}</p><div class="chip-row"><span class="chip">${esc(labels[proposal.effort])}er Aufwand</span><span class="chip">${esc(labels[proposal.executionMode] || labels.manualMode)}</span></div>${completed ? `<p class="done-line">✓ Heute abgeschlossen${proposal.completionNote ? ` · ${esc(proposal.completionNote)}` : ""}</p>` : ""}${["deferred", "rejected"].includes(proposal.status) && proposal.decisionNote ? `<p class="decision-line">${esc(proposal.decisionNote)}</p>` : ""}<div class="proposal-actions">${proposalLink(proposal, proposal.status === "proposed" ? "Prüfen →" : "Aufgabe öffnen →")}${action}${skippable ? button("Überspringen", "skip-proposal", `data-id="${esc(proposal.id)}"`, "btn ghost small") : ""}</div></article>`;
 }
 function proposalsView() {
   const groups = ["all", "open", "approved", "executing", "deferred", "done", "rejected"];
@@ -243,6 +245,13 @@ function proposalModal(proposal) {
   overlay.innerHTML = `<div class="overlay"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="proposalTitle"><div class="modal-head"><div><div class="eyebrow">AUFGABE · ${esc(labels[proposal.status])}</div><h2 id="proposalTitle">Prüfen und anpassen</h2></div>${button("×", "close-modal", 'aria-label="Schließen"', "btn icon ghost")}</div><form id="proposalForm"><div class="field"><label for="proposalName">Titel</label><input id="proposalName" name="title" required value="${esc(proposal.title)}"></div><div class="field"><label for="proposalRationale">Warum?</label><textarea id="proposalRationale" name="rationale" required>${esc(proposal.rationale)}</textarea></div><div class="field"><label for="proposalAction">Konkreter Auftrag</label><textarea id="proposalAction" name="action" required>${esc(proposal.action)}</textarea></div><div class="form-row"><div class="field"><label for="proposalPriority">Priorität</label><select id="proposalPriority" name="priority">${["today", "soon", "watch"].map((item) => option(item, proposal.priority, labels[item])).join("")}</select></div><div class="field"><label for="proposalMode">Ausführung</label><select id="proposalMode" name="executionMode">${["research", "local-code", "manual"].map((item) => option(item, proposal.executionMode, labels[item] || labels.manualMode)).join("")}</select></div></div><div class="form-row"><div class="field"><label for="proposalEffort">Aufwand</label><select id="proposalEffort" name="effort">${["small", "medium", "large"].map((item) => option(item, proposal.effort, labels[item])).join("")}</select></div><div class="field"><label for="proposalConfidence">Sicherheit</label><select id="proposalConfidence" name="confidence">${["high", "medium", "low"].map((item) => option(item, proposal.confidence, item)).join("")}</select></div></div><p class="note">Quelle: ${evidence(proposal.evidence)}. Freigabe startet noch keinen Lauf. „Manuell“ öffnet eine Aufgabe zum Nachhalten; Recherche und lokale Codearbeit starten Codex erst nach deinem Klick.</p><div class="subtle-divider"></div><div class="modal-actions">${button("Verwerfen", "proposal-reject", "", "btn danger small")}${button("Später", "proposal-defer", "", "btn ghost small")}${button("Speichern", "proposal-save", "", "btn ghost small")}${proposal.status === "approved" ? button(proposal.executionMode === "manual" ? "Manuell starten" : "Ausführen", "execute-proposal", `data-id="${esc(proposal.id)}"`, "btn primary small") : button("Freigeben", "proposal-approve", "", "btn primary small")}</div></form></section></div>`;
   overlay.querySelector("input")?.focus();
 }
+function skipModal(proposal) {
+  if (!proposal || !["proposed", "approved"].includes(proposal.status)) return;
+  ui.proposalId = proposal.id;
+  ui.dirty = false;
+  overlay.innerHTML = `<div class="overlay"><section class="modal skip-modal" role="dialog" aria-modal="true" aria-labelledby="skipTitle"><div class="modal-head"><div><div class="eyebrow">TAGESAUFGABE ÜBERSPRINGEN</div><h2 id="skipTitle">${esc(proposal.title)}</h2></div>${button("×", "close-modal", 'aria-label="Schließen"', "btn icon ghost")}</div><p class="body-copy">Die Aufgabe verschwindet aus deinem Tagesfokus. Der Master bekommt deine Entscheidung beim nächsten Abgleich.</p><form id="skipForm"><div class="field"><label for="skipReason">Hinweis an den Master (optional)</label><textarea id="skipReason" name="reason" maxlength="430" placeholder="Warum passt diese Aufgabe gerade nicht?"></textarea></div><div class="modal-actions">${button("Für später parken", "skip-defer", "", "btn ghost small")}${button("Verwerfen", "skip-reject", "", "btn danger small")}</div></form></section></div>`;
+  overlay.querySelector("textarea")?.focus();
+}
 function closeModal() {
   overlay.innerHTML = "";
   ui.proposalId = null;
@@ -301,14 +310,33 @@ async function saveProposal(newStatus) {
   if (!proposal) return;
   const values = new FormData(document.getElementById("proposalForm"));
   const patch = { title: String(values.get("title")), rationale: String(values.get("rationale")), action: String(values.get("action")), priority: String(values.get("priority")), effort: String(values.get("effort")), confidence: String(values.get("confidence")), executionMode: String(values.get("executionMode")), status: newStatus || proposal.status };
+  if (["deferred", "rejected"].includes(newStatus)) {
+    patch.decisionNote = newStatus === "deferred" ? "Vom Nutzer für später geparkt." : "Vom Nutzer verworfen.";
+  }
   await api("PATCH", `/api/proposals/${proposal.id}`, patch);
   if (newStatus === "approved") ui.proposalFilter = "all";
   closeModal();
   await refresh();
-  notify(newStatus === "approved" ? "Vorschlag freigegeben. Ausführung wartet auf deinen Klick." : "Vorschlag gespeichert.");
+  notify(newStatus === "approved" ? "Vorschlag freigegeben. Ausführung wartet auf deinen Klick."
+    : newStatus === "deferred" ? "Für später geparkt. Der Master bekommt deine Entscheidung."
+      : newStatus === "rejected" ? "Verworfen. Der Master bekommt deine Entscheidung." : "Vorschlag gespeichert.");
+}
+async function decideSkip(statusValue) {
+  const proposal = data.proposals.find((item) => item.id === ui.proposalId);
+  if (!proposal || !["proposed", "approved"].includes(proposal.status)) return;
+  const reason = String(new FormData(document.getElementById("skipForm")).get("reason") || "").trim();
+  const prefix = statusValue === "deferred" ? "Tagesaufgabe vom Nutzer für später geparkt." : "Tagesaufgabe vom Nutzer verworfen.";
+  await api("PATCH", `/api/proposals/${proposal.id}`, {
+    status: statusValue,
+    decisionNote: reason ? `${prefix} Grund: ${reason}` : prefix,
+  });
+  closeModal();
+  await refresh();
+  notify(statusValue === "deferred" ? "Aus dem Tagesfokus entfernt und für später geparkt."
+    : "Aus dem Tagesfokus entfernt und verworfen.");
 }
 
-document.addEventListener("input", (event) => { if (event.target.closest("#agentForm,#settingsForm,#proposalForm,#manualCompletionForm")) ui.dirty = true; });
+document.addEventListener("input", (event) => { if (event.target.closest("#agentForm,#settingsForm,#proposalForm,#manualCompletionForm,#skipForm")) ui.dirty = true; });
 document.addEventListener("submit", async (event) => {
   if (!["agentForm", "settingsForm"].includes(event.target.id)) return;
   event.preventDefault();
@@ -350,7 +378,10 @@ document.addEventListener("click", async (event) => {
     if (action === "proposal-filter") { ui.proposalFilter = target.dataset.filter; draw(); }
     if (action === "view-proposals") { ui.view = "proposals"; ui.proposalFilter = "all"; draw(); }
     if (action === "open-proposal") showProposal(id);
+    if (action === "skip-proposal") skipModal(data.proposals.find((item) => item.id === id));
     if (action === "close-modal") closeModal();
+    if (action === "skip-defer") await decideSkip("deferred");
+    if (action === "skip-reject") await decideSkip("rejected");
     if (action === "proposal-save") await saveProposal();
     if (action === "proposal-approve") await saveProposal("approved");
     if (action === "proposal-defer") await saveProposal("deferred");
