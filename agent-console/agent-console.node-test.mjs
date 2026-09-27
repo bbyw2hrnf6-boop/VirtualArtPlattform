@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   buildCodexArgs,
   buildResearchPrompt,
+  buildExecutionPrompt,
   cleanReport,
   dueAgents,
   initializeMasterSync,
@@ -73,7 +74,16 @@ test("master prompt dates specialist reports instead of presenting old reports a
   const text = buildResearchPrompt(config.agents[0], config, reports, new Date("2026-09-25T08:00:00Z"));
   assert.match(text, /Altes Signal/);
   assert.match(text, /2026-09-15/);
-  assert.match(text, /ältere Berichte nicht als heutige Neuigkeit/);
+  assert.match(text, /do not present older reports as today\'s news/);
+});
+
+test("background prompts stay in English regardless of dashboard language", () => {
+  assert.ok(config.agents.every((agent) => agent.prompt.includes("Respond in English.")));
+  const research = buildResearchPrompt(config.agents[1], config, {});
+  assert.match(research, /Write all output in English/);
+  const code = buildExecutionPrompt({ title: "Aufgabe", action: "Prüfen", rationale: "Wichtig" });
+  assert.match(code, /Respond in English/);
+  assert.match(code, /Specific task: Prüfen/);
 });
 
 test("master prompt includes every specialist despite a long first report", () => {

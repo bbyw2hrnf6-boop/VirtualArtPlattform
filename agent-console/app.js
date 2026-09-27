@@ -3,44 +3,59 @@ const overlay = document.getElementById("overlay");
 const toast = document.getElementById("toast");
 const rootUrl = "http://127.0.0.1:43821";
 const labels = {
-  overview: "Übersicht", agents: "Agenten", proposals: "Vorschläge", runs: "Läufe", settings: "Einstellungen",
+  overview: "Übersicht", agents: "Agenten", proposals: "Vorschläge", runs: "Läufe", network: "Zusammenspiel", settings: "Einstellungen",
   ready: "Bereit", disabled: "Inaktiv", queued: "Wartet", running: "Läuft", completed: "Fertig", failed: "Fehler", cancelled: "Abgebrochen", interrupted: "Unterbrochen",
   current: "Aktuell", updating: "Wird aktualisiert", pending: "Ausstehend", quiet: "Lange ohne Ausgabe",
   proposed: "Zur Prüfung", approved: "Freigegeben", deferred: "Zurückgestellt", rejected: "Verworfen", executing: "In Arbeit", done: "Erledigt",
   daily: "Täglich", weekly: "Wöchentlich", manual: "Manuell",
   today: "Heute", soon: "Demnächst", watch: "Beobachten",
-  small: "Klein", medium: "Mittel", large: "Groß",
+  small: "Klein", medium: "Mittel", large: "Groß", high: "Hoch", low: "Niedrig",
   research: "Recherche", "local-code": "Lokale Codearbeit", manualMode: "Manuell",
 };
 const symbols = { master: "✦", quality: "◇", ux: "◎", product: "◈", market: "◌", growth: "↗", "three-d": "⬡" };
-const ui = { view: "overview", agentId: null, runId: null, proposalId: null, proposalFilter: "all", dirty: false };
+const ui = { view: "overview", agentId: null, runId: null, proposalId: null, proposalFilter: "all", networkId: null, networkDay: null, networkPlaying: false, networkEnded: false, networkSpeed: 1, networkMotion: true, networkFrozen: null, dirty: false };
 let data = null;
 let toastTimer;
+let networkTimer;
+const i18n = window.LIEUVA_I18N;
+function locale() { return i18n.language === "en" ? "en-US" : "de-DE"; }
+function tr(value) { return i18n.text(value); }
+function savePreference(key, value) { try { localStorage.setItem(key, value); } catch { /* Storage may be unavailable. */ } }
+function savedTheme() { try { return localStorage.getItem("lieuva-console-theme") === "clear" ? "clear" : "orbit"; } catch { return "orbit"; } }
+function setTheme(theme) {
+  const next = theme === "clear" ? "clear" : "orbit";
+  document.documentElement.dataset.theme = next;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "clear" ? "#f6f7f4" : "#090f1c");
+  document.getElementById("themeSelect").value = next;
+  savePreference("lieuva-console-theme", next);
+}
+setTheme(savedTheme());
+document.getElementById("languageSelect").value = i18n.language;
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 }
 function dateText(value) {
-  if (!value) return "Noch nie";
+  if (!value) return tr("Noch nie");
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unbekannt";
-  return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short", timeZone: data?.config.settings.timeZone || "Europe/Amsterdam" }).format(date);
+  if (Number.isNaN(date.getTime())) return tr("Unbekannt");
+  return new Intl.DateTimeFormat(locale(), { dateStyle: "medium", timeStyle: "short", timeZone: data?.config.settings.timeZone || "Europe/Amsterdam" }).format(date);
 }
 function durationText(milliseconds) {
   const minutes = Math.floor(Math.max(0, milliseconds || 0) / 60_000);
-  if (minutes < 1) return "unter 1 Min.";
-  if (minutes < 60) return `${minutes} Min.`;
-  return `${Math.floor(minutes / 60)} Std. ${minutes % 60} Min.`;
+  if (minutes < 1) return i18n.language === "en" ? "under 1 min" : "unter 1 Min.";
+  if (minutes < 60) return i18n.language === "en" ? `${minutes} min` : `${minutes} Min.`;
+  return i18n.language === "en" ? `${Math.floor(minutes / 60)} hr ${minutes % 60} min` : `${Math.floor(minutes / 60)} Std. ${minutes % 60} Min.`;
 }
 function activityText(run) {
   const progress = run.progress;
-  if (run.status === "queued") return `Warteschlange · Position ${progress?.queuePosition || "?"}`;
-  if (run.status !== "running") return run.finishedAt ? `Beendet: ${dateText(run.finishedAt)}` : "";
-  const runtime = `Läuft seit ${durationText(progress?.elapsedMs)}`;
-  const silence = `letzter Arbeitsschritt vor ${durationText(progress?.quietMs)}`;
-  if (progress?.signal === "quiet") return `${runtime} · ${silence} · Prozess aktiv, bitte prüfen`;
-  if (progress?.signal === "unknown") return `${runtime} · ${silence} · Prozessstatus unklar`;
-  return `${runtime} · ${silence} · Codex-Prozess aktiv`;
+  if (run.status === "queued") return i18n.language === "en" ? `Queue · position ${progress?.queuePosition || "?"}` : `Warteschlange · Position ${progress?.queuePosition || "?"}`;
+  if (run.status !== "running") return run.finishedAt ? `${tr("Beendet:")} ${dateText(run.finishedAt)}` : "";
+  const runtime = i18n.language === "en" ? `Running for ${durationText(progress?.elapsedMs)}` : `Läuft seit ${durationText(progress?.elapsedMs)}`;
+  const silence = i18n.language === "en" ? `last step ${durationText(progress?.quietMs)} ago` : `letzter Arbeitsschritt vor ${durationText(progress?.quietMs)}`;
+  if (progress?.signal === "quiet") return `${runtime} · ${silence} · ${tr("Prozess aktiv, bitte prüfen")}`;
+  if (progress?.signal === "unknown") return `${runtime} · ${silence} · ${tr("Prozessstatus unklar")}`;
+  return `${runtime} · ${silence} · ${tr("Codex-Prozess aktiv")}`;
 }
 function evidence(value) {
   const text = String(value || "").trim();
@@ -67,7 +82,7 @@ function proposalForRecommendation(item) {
 }
 function button(text, action, extra = "", className = "btn") { return `<button type="button" class="${className}" data-action="${action}" ${extra}>${text}</button>`; }
 function notify(message, error = false) {
-  toast.textContent = message;
+  toast.textContent = tr(message);
   toast.className = error ? "visible error" : "visible";
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { toast.className = ""; }, 4200);
@@ -84,15 +99,22 @@ async function api(method, path, payload) {
 }
 async function refresh(render = true) {
   try {
+    const previousNetwork = JSON.stringify(data?.networkTimeline || []);
+    const previousTimeZone = data?.config.settings.timeZone;
     data = await api("GET", "/api/state");
-    document.getElementById("connectionLabel").textContent = "Lokal verbunden";
+    if (previousTimeZone && previousTimeZone !== data.config.settings.timeZone) {
+      stopNetworkPlayback();
+      ui.networkFrozen = null; ui.networkDay = null; ui.networkId = null; ui.networkEnded = false;
+    }
+    document.getElementById("connectionLabel").textContent = tr("Lokal verbunden");
     document.getElementById("navProposalCount").textContent = openProposals().length;
-    document.getElementById("todayLabel").textContent = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeZone: data.config.settings.timeZone }).format(new Date());
-    if (render && !ui.dirty) draw();
+    document.getElementById("todayLabel").textContent = new Intl.DateTimeFormat(locale(), { dateStyle: "full", timeZone: data.config.settings.timeZone }).format(new Date());
+    const keepNetworkFrame = ui.view === "network" && app.querySelector(".network-experience") && previousTimeZone === data.config.settings.timeZone && (ui.networkPlaying || previousNetwork === JSON.stringify(data.networkTimeline || []));
+    if (render && !ui.dirty && !keepNetworkFrame) draw();
     const routeId = location.hash.match(/^#proposal\/([a-f0-9-]+)$/)?.[1];
     if (routeId && ui.proposalId !== routeId && data.proposals.some((proposal) => proposal.id === routeId)) showProposal(routeId, false);
   } catch (error) {
-    document.getElementById("connectionLabel").textContent = "Server nicht erreichbar";
+    document.getElementById("connectionLabel").textContent = tr("Server nicht erreichbar");
     if (!data) offline();
   }
 }
@@ -130,33 +152,36 @@ function coordinationPanel() {
 }
 function overview() {
   const master = reportFor("master");
-  const running = data.runs.filter((run) => ["queued", "running"].includes(run.status)).length;
-  const active = availableAgents().length;
-  const queued = openProposals().length;
+  const agents = data.config.agents;
+  const enabled = agents.filter((agent) => agent.enabled).length;
+  const pending = data.proposals.filter((proposal) => proposal.status === "proposed");
+  const running = data.runs.filter((run) => run.status === "running");
+  const waiting = data.runs.filter((run) => run.status === "queued");
   const focus = dailyFocus();
-  const masterLinks = (master?.proposals || []).slice(0, 3).map((item) => proposalForRecommendation(item))
-    .filter((proposal) => proposal && ["proposed", "approved", "executing"].includes(proposal.status))
-    .map((proposal) => proposalLink(proposal, proposal.title)).join("");
+  const completeIds = new Set(data.daily.completedTodayIds || []);
   const completed = completedToday();
-  const completedIds = new Set(completed.map((proposal) => proposal.id));
-  const focusDone = focus.filter((proposal) => completedIds.has(proposal.id)).length;
-  const focusIds = new Set(focus.map((proposal) => proposal.id));
-  const remainingOpen = openProposals().filter((proposal) => !focusIds.has(proposal.id)).length;
-  const extraCompleted = completed.filter((proposal) => !focusIds.has(proposal.id));
-  const otherOpen = openProposals().filter((proposal) => !focusIds.has(proposal.id)).slice(0, 3);
-  const specialistReports = data.config.agents.filter((agent) => agent.kind === "specialist").map((agent) => ({ agent, report: data.reports[agent.id] }));
-  const activeRun = data.runs.find((run) => run.status === "running");
-  return pageHead("MISSION CONTROL", "Dein Überblick für LIEUVA", "Drei Aufgaben für heute, weitere Vorschläge und der Stand aller Agenten an einem Ort.") +
-    `<div class="grid stats"><div class="stat"><div class="stat-label">Aktive Agenten</div><div class="stat-value">${active}</div><div class="stat-detail">inklusive Master</div></div><div class="stat"><div class="stat-label">Zur Entscheidung</div><div class="stat-value">${queued}</div><div class="stat-detail">Vorschläge prüfen</div></div><div class="stat"><div class="stat-label">Laufende Jobs</div><div class="stat-value">${running}</div><div class="stat-detail">seriell verarbeitet</div></div><div class="stat"><div class="stat-label">Heute erledigt</div><div class="stat-value">${completed.length}</div><div class="stat-detail">${focusDone} von 3 im Tagesfokus</div></div></div>` +
-    `<section class="master-card"><div class="master-copy"><div class="master-kicker">✦ MASTER · CHIEF OF STAFF</div><h2>${esc(master?.headline || "Ein klarer Tagesplan aus allen wichtigen Signalen.")}</h2><p>${esc(master?.summary || "Starte den ersten Tageslauf. Die Spezialisten recherchieren in ihrem Rhythmus, danach fasst der Master die Ergebnisse zu prüfbaren Vorschlägen zusammen.")}</p>${masterLinks ? `<div class="master-recommendations"><strong>Empfohlen · direkt öffnen</strong><div class="button-row">${masterLinks}</div></div>` : ""}<div class="master-actions">${button("✦ Tagesbriefing starten", "daily", 'data-full="false"', "btn primary")}${button("Alle Spezialisten neu prüfen", "daily", 'data-full="true"', "btn ghost")}${data.reports.master?.runId ? button("Ganzen Bericht ansehen", "view-run", `data-id="${esc(data.reports.master.runId)}"`, "btn ghost") : ""}</div></div>${masterArt()}</section>` +
-    `<div class="monitor-grid">${activeRun ? `<section class="panel monitor-panel"><div class="panel-title"><h3>Aktiver Auftrag</h3>${status(activeRun.progress?.signal === "quiet" ? "quiet" : "running")}</div><strong>${esc(activeRun.agentName)}</strong><p class="body-copy">${esc(activityText(activeRun))}</p><div class="button-row">${button("Lauf ansehen", "view-run", `data-id="${esc(activeRun.id)}"`, "btn ghost small")}${button("Abbrechen", "cancel-run", `data-id="${esc(activeRun.id)}"`, "btn danger small")}</div></section>` : ""}${coordinationPanel()}</div>` +
-    `<section class="daily-focus"><div class="section-heading"><div><div class="eyebrow">TAGESCHALLENGE</div><h2>Deine drei Aufgaben heute</h2></div><span>${focusDone} / 3 erledigt</span></div><p class="meta">Der Master aktualisiert seine Einschätzung nach Entscheidungen und Ergebnissen. Erledigte Aufgaben bleiben für heute sichtbar.</p><div class="focus-grid">${focus.length ? focus.map((proposal, index) => proposalCard(proposal, true, index + 1)).join("") : `<div class="empty">Noch kein Tagesfokus. Starte das Briefing oder prüfe die Vorschläge.</div>`}</div>${extraCompleted.length ? `<div class="today-extra"><strong>Zusätzlich heute erledigt</strong><div class="button-row">${extraCompleted.map((proposal) => proposalLink(proposal, `✓ ${proposal.title}`)).join("")}</div></div>` : ""}</section>` +
-    `<div class="two-columns"><section>${sectionHead("Weitere Aufgaben", `<span>${remainingOpen} weitere offen</span>`)}${otherOpen.length ? otherOpen.map((proposal) => proposalCard(proposal)).join("") : `<div class="empty">Keine weiteren offenen Aufgaben.</div>`}${button("Alle Vorschläge ansehen →", "view-proposals", "", "btn ghost small")}</section><section>${sectionHead("Spezialistenberichte", `<span>${specialistReports.filter((item) => item.report).length} von ${specialistReports.length} vorhanden</span>`)}<div class="panel">${specialistReports.map(({ agent, report }) => `<div class="finding"><strong>${esc(agent.name)}</strong><p>${esc(report?.report.headline || "Noch kein Bericht")}</p><small>${report ? dateText(report.finishedAt) : esc(labels[agent.cadence])}</small></div>`).join("")}</div></section></div>`;
+  const otherOpen = openProposals().filter((proposal) => !new Set(focus.map((item) => item.id)).has(proposal.id));
+  const nextAction = pending.length ? `${pending.length} Vorschläge prüfen` : running.length ? "Aktiven Lauf ansehen" : "Tagesbriefing starten";
+  const nextButton = pending.length ? button("Jetzt prüfen →", "view-proposals", "", "btn primary") : running.length ? button("Lauf ansehen →", "view-run", `data-id="${esc(running[0].id)}"`, "btn primary") : button("Briefing starten →", "daily", 'data-full="false"', "btn primary");
+  const roster = agents.map((agent) => {
+    const run = latestRun(agent.id);
+    const state = !agent.enabled ? "disabled" : run && ["running", "queued"].includes(run.status) ? run.status : "ready";
+    return `<div class="roster-row"><span class="agent-icon ${esc(agent.id)}">${esc(symbols[agent.id] || "◇")}</span><span class="roster-copy"><strong>${esc(agent.name)}</strong><small>${esc(agent.tagline)}</small></span>${status(state)}</div>`;
+  }).join("");
+  const focusRows = focus.length ? focus.map((proposal) => `<div class="focus-row"><span class="focus-check ${completeIds.has(proposal.id) ? "done" : ""}">${completeIds.has(proposal.id) ? "✓" : "·"}</span><strong>${esc(proposal.title)}</strong><span>${status(proposal.status)}</span>${proposalLink(proposal, "Öffnen →")}</div>`).join("") : `<div class="empty">Noch kein Tagesfokus. Starte das Briefing oder prüfe die Vorschläge.</div>`;
+  return pageHead("MISSION CONTROL", "Dein Tag. Klar priorisiert.", "Alle Agenten im Blick. Vorschläge prüfen. Wirkung erzielen – lokal und in deinem Tempo.") +
+    `<div class="overview-layout"><div class="overview-main"><section class="panel master-summary"><div class="master-summary-head"><span class="agent-icon master">✦</span><div><div class="eyebrow">MASTER · CHIEF OF STAFF</div><h2>Master</h2><small>${esc(data.coordination?.status === "updating" ? "Neue Ergebnisse werden zusammengeführt" : "Koordination & Priorisierung")}</small></div><div class="master-sync">${status(data.coordination?.status || "pending")}<small>${dateText(data.coordination?.lastSyncedAt)}</small></div></div><div class="master-summary-body"><p>${esc(master?.summary || "Starte den ersten Tageslauf. Master fasst Spezialistenberichte zu prüfbaren Vorschlägen zusammen.")}</p>${data.reports.master?.runId ? button("Bericht öffnen →", "view-run", `data-id="${esc(data.reports.master.runId)}"`, "btn ghost small") : ""}</div></section>` +
+    `<div class="grid overview-stats"><div class="stat"><span class="stat-label">Eingerichtet</span><div class="stat-value">${enabled}<small> / ${agents.length}</small></div><div class="stat-detail">Agenten bereit</div></div><div class="stat emphasis"><span class="stat-label">Zu prüfen</span><div class="stat-value">${pending.length}</div><div class="stat-detail">Vorschläge offen</div></div><div class="stat"><span class="stat-label">Aktiv</span><div class="stat-value">${running.length}</div><div class="stat-detail">Laufende Jobs</div></div><div class="stat"><span class="stat-label">Warten</span><div class="stat-value">${waiting.length}</div><div class="stat-detail">In Warteschlange</div></div></div>` +
+    `<section class="panel next-action"><div><div class="eyebrow">NÄCHSTER SCHRITT</div><h2>${esc(nextAction)}</h2><p>${pending.length ? "Du prüfst, gibst frei und startest separat." : running.length ? esc(activityText(running[0])) : "Aktuellen Stand zusammenfassen und priorisieren."}</p></div>${nextButton}</section>` +
+    `<section class="panel focus-list"><div class="section-heading"><h2>Heutiger Fokus</h2><span>${focus.filter((proposal) => completeIds.has(proposal.id)).length} von ${focus.length} erledigt</span></div>${focusRows}${completed.filter((proposal) => !focus.some((item) => item.id === proposal.id)).length ? `<p class="meta">${completed.length} Aufgaben insgesamt heute erledigt.</p>` : ""}</section>` +
+    `<div class="overview-actions">${button("✦ Tagesbriefing starten", "daily", 'data-full="false"', "btn primary")}${button("Alle Spezialisten neu prüfen", "daily", 'data-full="true"', "btn ghost")}</div>${coordinationPanel()}</div>` +
+    `<div class="overview-side"><section class="panel roster-panel"><div class="section-heading"><h2>Unsere Agenten <small>(${enabled}/${agents.length})</small></h2>${button("Alle anzeigen →", "view-agents", "", "btn subtle small")}</div>${roster}</section><section class="panel side-proposals"><div class="section-heading"><h2>Offene Vorschläge <small>(${otherOpen.length})</small></h2>${button("Alle anzeigen →", "view-proposals", "", "btn subtle small")}</div>${otherOpen.slice(0, 4).length ? otherOpen.slice(0, 4).map((proposal, index) => `<div class="side-proposal-row"><span>${index + 1}</span><div><strong>${esc(proposal.title)}</strong><small>${esc(proposal.rationale)}</small></div>${proposalLink(proposal, "Prüfen →")}</div>`).join("") : `<div class="empty">Keine weiteren offenen Aufgaben.</div>`}</section></div></div>`;
 }
+
 function agentCard(agent) {
   const run = latestRun(agent.id);
   const report = reportFor(agent.id);
-  return `<article class="agent-card ${agent.enabled ? "" : "disabled"}"><div class="agent-top"><div class="agent-icon ${esc(agent.id)}">${esc(symbols[agent.id] || "◇")}</div>${status(run?.progress?.signal === "quiet" ? "quiet" : run?.status || (agent.enabled ? "ready" : "disabled"))}</div><div><h3>${esc(agent.name)}</h3><p>${esc(agent.tagline)}</p></div><div class="chip-row"><span class="chip accent">${esc(agent.model)} · ${esc(agent.effort)}</span><span class="chip">${esc(labels[agent.cadence])}</span><span class="chip">Web: ${esc(agent.webSearch)}</span></div><div class="last">${run && ["running", "queued"].includes(run.status) ? esc(activityText(run)) : report ? `Letzter Bericht: ${dateText(data.reports[agent.id].finishedAt)} · ${esc(report.headline)}` : "Noch kein Bericht"}</div><div class="card-actions">${button("Starten", "run-agent", `data-id="${esc(agent.id)}" ${agent.enabled ? "" : "disabled"}`, "btn primary small")}${button("Einstellen", "edit-agent", `data-id="${esc(agent.id)}"`, "btn ghost small")}</div></article>`;
+  return `<article class="agent-card ${agent.enabled ? "" : "disabled"}"><div class="agent-top"><div class="agent-icon ${esc(agent.id)}">${esc(symbols[agent.id] || "◇")}</div>${status(!agent.enabled ? "disabled" : run && ["queued", "running"].includes(run.status) ? run.progress?.signal === "quiet" ? "quiet" : run.status : "ready")}</div><div><h3>${esc(agent.name)}</h3><p>${esc(agent.tagline)}</p></div><div class="chip-row"><span class="chip accent">${esc(agent.model)} · ${esc(agent.effort)}</span><span class="chip">${esc(labels[agent.cadence])}</span><span class="chip">Web: ${esc(agent.webSearch)}</span></div><div class="last">${run && ["running", "queued"].includes(run.status) ? esc(activityText(run)) : report ? `Letzter Bericht: ${dateText(data.reports[agent.id].finishedAt)} · ${esc(report.headline)}` : "Noch kein Bericht"}</div><div class="card-actions">${button("Starten", "run-agent", `data-id="${esc(agent.id)}" ${agent.enabled ? "" : "disabled"}`, "btn primary small")}${button("Einstellen", "edit-agent", `data-id="${esc(agent.id)}"`, "btn ghost small")}</div></article>`;
 }
 function option(value, current, title) { return `<option value="${esc(value)}" ${value === current ? "selected" : ""}>${esc(title)}</option>`; }
 function agentEditor() {
@@ -164,11 +189,12 @@ function agentEditor() {
   const isNew = ui.agentId === "new";
   const agent = isNew ? { id: "", kind: "specialist", name: "", tagline: "", enabled: true, cadence: "manual", model: "gpt-6-luna", effort: "low", webSearch: "live", prompt: "" } : data.config.agents.find((item) => item.id === ui.agentId);
   if (!agent) return "";
-  return `<section class="panel editor" id="agent-editor"><div class="panel-title"><div><div class="eyebrow">PROFIL</div><h2>${isNew ? "Neuen Spezialisten anlegen" : esc(agent.name)}</h2></div>${button("Schließen ×", "close-agent", "", "btn ghost small")}</div><p class="editor-desc">Änderungen gelten für künftige Läufe. Laufende Agenten verwenden ihren gestarteten Auftrag.</p><form id="agentForm"><div class="form-row"><div class="field"><label for="agentName">Name</label><input id="agentName" name="name" maxlength="80" required value="${esc(agent.name)}"></div><div class="field"><label for="agentTagline">Kurzbeschreibung</label><input id="agentTagline" name="tagline" maxlength="180" required value="${esc(agent.tagline)}"></div></div><div class="form-row"><div class="field"><label for="agentModel">Modell</label><select id="agentModel" name="model">${["gpt-6-luna", "gpt-6-sol", "gpt-6-astra"].map((model) => option(model, agent.model, model)).join("")}</select></div><div class="field"><label for="agentEffort">Reasoning</label><select id="agentEffort" name="effort">${["low", "medium", "high", "xhigh", "max"].map((effort) => option(effort, agent.effort, effort)).join("")}</select></div></div><div class="form-row"><div class="field"><label for="agentCadence">Rhythmus</label><select id="agentCadence" name="cadence" ${agent.kind === "master" ? "disabled" : ""}>${["daily", "weekly", "manual"].map((cadence) => option(cadence, agent.cadence, labels[cadence])).join("")}</select></div><div class="field"><label for="agentWeb">Websuche</label><select id="agentWeb" name="webSearch">${["live", "cached", "disabled"].map((mode) => option(mode, agent.webSearch, mode)).join("")}</select></div></div><label class="checkline"><input type="checkbox" name="enabled" ${agent.enabled ? "checked" : ""}> Agent aktiv</label><div class="field"><label for="agentPrompt">Auftrag und Regeln</label><textarea id="agentPrompt" name="prompt" maxlength="6000" required>${esc(agent.prompt)}</textarea><small>Der Agent liest zusätzlich die einschlägigen AGENTS.md-Dateien im Projekt.</small></div><div class="editor-actions"><div>${agent.kind === "specialist" && !isNew ? button("Agent entfernen", "delete-agent", `data-id="${esc(agent.id)}"`, "btn danger small") : ""}</div><button type="submit" class="btn primary">Profil speichern</button></div></form></section>`;
+  return `<section class="panel editor" id="agent-editor"><div class="panel-title"><div><div class="eyebrow">PROFIL</div><h2>${isNew ? "Neuen Spezialisten anlegen" : esc(agent.name)}</h2></div>${button("Schließen ×", "close-agent", "", "btn ghost small")}</div><p class="editor-desc">Änderungen gelten für künftige Läufe. Laufende Agenten verwenden ihren gestarteten Auftrag.</p><form id="agentForm"><div class="form-row"><div class="field"><label for="agentName">Name</label><input id="agentName" name="name" maxlength="80" required value="${esc(agent.name)}"></div><div class="field"><label for="agentTagline">Kurzbeschreibung</label><input id="agentTagline" name="tagline" maxlength="180" required value="${esc(agent.tagline)}"></div></div><div class="form-row"><div class="field"><label for="agentModel">Modell</label><select id="agentModel" name="model">${["gpt-6-luna", "gpt-6-sol", "gpt-6-astra"].map((model) => option(model, agent.model, model)).join("")}</select></div><div class="field"><label for="agentEffort">Reasoning</label><select id="agentEffort" name="effort">${["low", "medium", "high", "xhigh", "max"].map((effort) => option(effort, agent.effort, effort)).join("")}</select></div></div><div class="form-row"><div class="field"><label for="agentCadence">Rhythmus</label><select id="agentCadence" name="cadence" ${agent.kind === "master" ? "disabled" : ""}>${["daily", "weekly", "manual"].map((cadence) => option(cadence, agent.cadence, labels[cadence])).join("")}</select></div><div class="field"><label for="agentWeb">Websuche</label><select id="agentWeb" name="webSearch">${["live", "cached", "disabled"].map((mode) => option(mode, agent.webSearch, mode)).join("")}</select></div></div><label class="checkline"><input type="checkbox" name="enabled" ${agent.enabled ? "checked" : ""}> Agent aktiv</label><div class="field"><label for="agentPrompt">Auftrag und Regeln</label><textarea id="agentPrompt" name="prompt" lang="en" maxlength="6000" required>${esc(agent.prompt)}</textarea><small>Prompts auf Englisch schreiben. Der Agent liest zusätzlich die einschlägigen AGENTS.md-Dateien im Projekt.</small></div><div class="editor-actions"><div>${agent.kind === "specialist" && !isNew ? button("Agent entfernen", "delete-agent", `data-id="${esc(agent.id)}"`, "btn danger small") : ""}</div><button type="submit" class="btn primary">Profil speichern</button></div></form></section>`;
 }
 function agentsView() {
   return pageHead("TEAM", "Deine Agenten", "Jeder Agent hat einen Auftrag, ein Modell und einen eigenen Rhythmus. Alles lässt sich hier anpassen.", button("+ Spezialist", "new-agent", "", "btn primary")) + `<div class="grid agents-grid">${data.config.agents.map(agentCard).join("")}</div>${agentEditor()}`;
 }
+function effortText(value) { return ({ small: "Kleiner Aufwand", medium: "Mittlerer Aufwand", large: "Großer Aufwand" })[value] || value; }
 function proposalCard(proposal, focus = false, slot = 0) {
   const completed = (data.daily.completedTodayIds || []).includes(proposal.id);
   const skippable = focus && ["proposed", "approved"].includes(proposal.status);
@@ -180,7 +206,7 @@ function proposalCard(proposal, focus = false, slot = 0) {
       ? button("Ergebnis eintragen", "open-proposal", `data-id="${esc(proposal.id)}"`, "btn primary small")
       : run ? button("Lauf ansehen", "view-run", `data-id="${esc(run.id)}"`, "btn ghost small")
         : proposal.executionRunId ? button("Ergebnis ansehen", "view-run", `data-id="${esc(proposal.executionRunId)}"`, "btn ghost small") : "";
-  return `<article class="proposal-card ${focus ? "focus-card" : ""} ${completed ? "is-complete" : ""}"><div class="proposal-top"><div class="proposal-priority">${focus ? `<span class="focus-check" aria-label="${completed ? "Heute erledigt" : "Heute offen"}">${completed ? "✓" : slot}</span>` : ""}<span class="priority ${esc(proposal.priority)}">${esc(priorityLabel)}</span></div>${status(proposal.status)}</div><h3>${esc(proposal.title)}</h3><p>${esc(proposal.rationale)}</p><div class="chip-row"><span class="chip">${esc(labels[proposal.effort])}er Aufwand</span><span class="chip">${esc(labels[proposal.executionMode] || labels.manualMode)}</span></div>${completed ? `<p class="done-line">✓ Heute abgeschlossen${proposal.completionNote ? ` · ${esc(proposal.completionNote)}` : ""}</p>` : ""}${["deferred", "rejected"].includes(proposal.status) && proposal.decisionNote ? `<p class="decision-line">${esc(proposal.decisionNote)}</p>` : ""}<div class="proposal-actions">${proposalLink(proposal, proposal.status === "proposed" ? "Prüfen →" : "Aufgabe öffnen →")}${action}${skippable ? button("Überspringen", "skip-proposal", `data-id="${esc(proposal.id)}"`, "btn ghost small") : ""}</div></article>`;
+  return `<article class="proposal-card ${focus ? "focus-card" : ""} ${completed ? "is-complete" : ""}"><div class="proposal-top"><div class="proposal-priority">${focus ? `<span class="focus-check" aria-label="${completed ? "Heute erledigt" : "Heute offen"}">${completed ? "✓" : slot}</span>` : ""}<span class="priority ${esc(proposal.priority)}">${esc(priorityLabel)}</span></div>${status(proposal.status)}</div><h3>${esc(proposal.title)}</h3><p>${esc(proposal.rationale)}</p><div class="chip-row"><span class="chip">${esc(effortText(proposal.effort))}</span><span class="chip">${esc(labels[proposal.executionMode] || labels.manualMode)}</span></div>${completed ? `<p class="done-line">✓ Heute abgeschlossen${proposal.completionNote ? ` · ${esc(proposal.completionNote)}` : ""}</p>` : ""}${["deferred", "rejected"].includes(proposal.status) && proposal.decisionNote ? `<p class="decision-line">${esc(proposal.decisionNote)}</p>` : ""}<div class="proposal-actions">${proposalLink(proposal, proposal.status === "proposed" ? "Prüfen →" : "Aufgabe öffnen →")}${action}${skippable ? button("Überspringen", "skip-proposal", `data-id="${esc(proposal.id)}"`, "btn ghost small") : ""}</div></article>`;
 }
 function proposalsView() {
   const groups = ["all", "open", "approved", "executing", "deferred", "done", "rejected"];
@@ -216,17 +242,97 @@ function settingsView() {
   const s = data.config.settings;
   return pageHead("SETUP", "Einstellungen", "Steuere den Tageslauf. Die Uhr gilt in der eingestellten Zeitzone, während der lokale Server läuft.") + `<div class="settings-grid"><section class="panel"><div class="panel-title"><h3>Tagesbriefing</h3></div><form id="settingsForm"><label class="checkline"><input type="checkbox" name="autoDaily" ${s.autoDaily ? "checked" : ""}> Automatisch täglich starten</label><label class="checkline"><input type="checkbox" name="autoSynthesize" ${s.autoSynthesize ? "checked" : ""}> Master nach neuen Ergebnissen automatisch aktualisieren</label><div class="field"><label for="quietWarningMinutes">Hinweis nach Minuten ohne Ausgabe</label><input type="number" id="quietWarningMinutes" name="quietWarningMinutes" min="1" max="60" required value="${esc(s.quietWarningMinutes)}"><small>Ein stiller Prozess kann weiterarbeiten. Der Hinweis bricht ihn nicht automatisch ab.</small></div><div class="field"><label for="dailyTime">Uhrzeit</label><input type="time" id="dailyTime" name="dailyTime" required value="${esc(s.dailyTime)}"></div><div class="field"><label for="timeZone">Zeitzone</label><input id="timeZone" name="timeZone" required value="${esc(s.timeZone)}"><small>IANA-Zeitzone, z. B. Europe/Amsterdam.</small></div><p class="note">Nach dem Start holt der Server den heutigen Lauf nach, wenn die Uhrzeit bereits vorbei ist. Wochenagenten laufen nur, wenn ihr letzter Bericht mindestens sieben Tage alt ist.</p><button type="submit" class="btn primary">Zeitplan speichern</button></form></section><section class="panel"><div class="panel-title"><h3>Lokale Ausführung</h3></div><div class="finding"><strong>Codex CLI</strong><p>${esc(data.server.codexBin)}</p></div><div class="finding"><strong>Arbeitsweise</strong><p>Recherche läuft lesend. Freigegebene Codearbeit startet in einem eigenen Codex-Worktree. Protokolle und Berichte liegen unter artifacts/agent-console/.</p></div><div class="finding"><strong>Aktiver Lauf</strong><p>${data.server.activeRunId ? esc(data.runs.find((run) => run.id === data.server.activeRunId)?.agentName || "Läuft") : "Keiner"} · ${data.server.queueLength} in der Warteschlange</p></div><div class="finding"><strong>Letztes Tagesbriefing</strong><p>${dateText(data.daily.lastCompletedAt)}</p></div></section></div>`;
 }
+function networkDayFor(at) {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: data.config.settings.timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(at));
+  return ["year", "month", "day"].map((type) => parts.find((part) => part.type === type).value).join("-");
+}
+function networkDays() {
+  const days = data.networkDays || [...new Set((data.networkTimeline || []).map((event) => networkDayFor(event.at)))].sort();
+  return days.length ? days : [networkDayFor(new Date())];
+}
+function networkEvents(fresh = false) {
+  const days = networkDays();
+  if (!ui.networkDay) ui.networkDay = days[days.length - 1];
+  if (!fresh && ui.networkFrozen) return ui.networkFrozen;
+  return (data.networkTimeline || []).filter((event) => networkDayFor(event.at) === ui.networkDay);
+}
+function networkView() {
+  const events = networkEvents();
+  if (!events.some((event) => event.id === ui.networkId)) ui.networkId = events[0]?.id || null;
+  return window.LIEUVA_NETWORK.render({ data, state: ui, events, days: networkDays(), timeZone: data.config.settings.timeZone, language: i18n.language, esc, tr, status });
+}
+function stopNetworkPlayback() {
+  clearTimeout(networkTimer);
+  networkTimer = null;
+  ui.networkPlaying = false;
+}
+function scrollNetworkSelection() {
+  const list = app.querySelector(".day-event-list");
+  const selected = list?.querySelector(".is-selected");
+  if (list && selected) list.scrollTop = selected.offsetTop - list.offsetTop - list.clientHeight / 2 + selected.clientHeight / 2;
+}
+function scheduleNetworkFrame() {
+  clearTimeout(networkTimer);
+  networkTimer = setTimeout(() => {
+    if (ui.view !== "network" || !ui.networkPlaying) { stopNetworkPlayback(); return; }
+    const events = networkEvents();
+    const current = events.findIndex((event) => event.id === ui.networkId);
+    if (current >= events.length - 1) {
+      stopNetworkPlayback();
+      ui.networkEnded = true;
+    } else ui.networkId = events[current + 1].id;
+    draw();
+    scrollNetworkSelection();
+    if (ui.networkPlaying) scheduleNetworkFrame();
+  }, 2800 / ui.networkSpeed);
+}
+function revealNetworkScene() {
+  app.querySelector(".orbital-layout")?.scrollIntoView({ block: "start", behavior: "auto" });
+}
+function startNetworkPlayback(restart = false) {
+  stopNetworkPlayback();
+  if (restart || ui.networkEnded || !ui.networkFrozen) ui.networkFrozen = networkEvents(true).slice();
+  const events = networkEvents();
+  if (!events.length) { draw(); return; }
+  const current = events.findIndex((event) => event.id === ui.networkId);
+  if (restart || ui.networkEnded || current < 0 || current === events.length - 1) ui.networkId = events[0].id;
+  ui.networkEnded = false;
+  ui.networkPlaying = true;
+  draw();
+  scrollNetworkSelection();
+  revealNetworkScene();
+  scheduleNetworkFrame();
+}
+function selectNetworkEvent(id) {
+  stopNetworkPlayback();
+  ui.networkEnded = false;
+  ui.networkId = id;
+  draw();
+  scrollNetworkSelection();
+}
+
 function draw() {
   if (!data) return;
   document.getElementById("viewLabel").textContent = labels[ui.view];
   document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === ui.view));
+  const focusedId = app.contains(document.activeElement) ? document.activeElement?.id : null;
+  const oldAtmosphere = ui.view === "network" ? app.querySelector(".sphere-atmosphere") : null;
+  const oldEventScroll = app.querySelector(".day-event-list")?.scrollTop || 0;
+  const focusedAction = app.contains(document.activeElement) && document.activeElement?.dataset?.action
+    ? { action: document.activeElement.dataset.action, id: document.activeElement.dataset.id, filter: document.activeElement.dataset.filter } : null;
   const previousLog = app.querySelector("[data-run-log]");
   const followLog = !previousLog || previousLog.scrollTop + previousLog.clientHeight >= previousLog.scrollHeight - 20;
   const previousScroll = previousLog?.scrollTop ?? 0;
-  app.innerHTML = ({ overview, agents: agentsView, proposals: proposalsView, runs: runsView, settings: settingsView })[ui.view]();
+  app.innerHTML = ({ overview, agents: agentsView, proposals: proposalsView, runs: runsView, network: networkView, settings: settingsView })[ui.view]();
+  if (oldAtmosphere) app.querySelector(".sphere-atmosphere")?.replaceWith(oldAtmosphere);
+  const nextEvents = app.querySelector(".day-event-list");
+  if (nextEvents) nextEvents.scrollTop = oldEventScroll;
+  if (focusedId) document.getElementById(focusedId)?.focus({ preventScroll: true });
   const nextLog = app.querySelector("[data-run-log]");
   if (nextLog) nextLog.scrollTop = followLog ? nextLog.scrollHeight : previousScroll;
+  if (focusedAction) [...app.querySelectorAll("[data-action]")].find((element) => element.dataset.action === focusedAction.action && element.dataset.id === focusedAction.id && element.dataset.filter === focusedAction.filter)?.focus({ preventScroll: true });
   if (ui.agentId && ui.view === "agents") document.getElementById("agent-editor")?.scrollIntoView({ block: "nearest" });
+  i18n.apply(document);
 }
 function offline() {
   app.innerHTML = `<div class="page-head"><div><div class="eyebrow">OFFLINE PREVIEW</div><h1>Die Agentenzentrale ist bereit.</h1><p>Diese HTML-Datei zeigt die lokale Oberfläche. Zum Starten der Agenten wird der lokale Node-Server benötigt.</p></div></div><section class="master-card"><div class="master-copy"><div class="master-kicker">✦ MASTER · CHIEF OF STAFF</div><h2>Ein Tagesplan aus Spezialistenberichten.</h2><p>Öffne im Projektordner <strong>agent-console/start.command</strong> per Doppelklick oder führe <strong>npm run agents:dashboard</strong> aus. Danach steht die interaktive Oberfläche unter <a href="${rootUrl}/">${rootUrl}/</a> bereit.</p></div>${masterArt()}</section><div class="grid agents-grid">${["Qualität & Risiken", "UX & Nutzungsforschung", "Produktstrategie", "Markt & Wettbewerb", "SEO, GEO & Wachstum", "3D & Blender R&D"].map((name) => `<div class="agent-card"><div class="agent-icon">◇</div><h3>${name}</h3><div class="chip-row"><span class="chip accent">gpt-6-luna · low</span></div></div>`).join("")}</div>`;
@@ -239,10 +345,12 @@ function proposalModal(proposal) {
     const manual = proposal.status === "executing" && proposal.executionMode === "manual";
     const note = manual ? `<form id="manualCompletionForm"><div class="field"><label for="manualResult">Was wurde erledigt? Ergebnis oder Nachweis</label><textarea id="manualResult" name="note" minlength="5" maxlength="2000" required placeholder="Kurzes Ergebnis und ggf. Fundstelle festhalten"></textarea></div><p class="note">Manuelle Aufgaben werden erst nach deiner Bestätigung als erledigt gezählt. Externe Schritte führt die Agentenzentrale nicht selbst aus.</p><div class="modal-actions">${button("Zurück auf Freigegeben", "reopen-manual", `data-id="${esc(proposal.id)}"`, "btn ghost small")}${button("Erledigt melden", "complete-manual", `data-id="${esc(proposal.id)}"`, "btn primary small")}</div></form>` : `<p class="note">${proposal.status === "executing" ? "Der Auftrag läuft. Fortschritt und Ergebnis findest du unter Läufe." : "Dieser Auftrag wurde abgeschlossen."}</p>${proposal.completionNote ? `<p class="body-copy">Ergebnis: ${esc(proposal.completionNote)}</p>` : ""}${proposal.executionRunId && data.runs.some((run) => run.id === proposal.executionRunId) ? button("Ergebnis ansehen", "view-run", `data-id="${esc(proposal.executionRunId)}"`, "btn ghost small") : ""}`;
     overlay.innerHTML = `<div class="overlay"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="proposalTitle"><div class="modal-head"><div><div class="eyebrow">AUFGABE · ${esc(labels[proposal.status])}</div><h2 id="proposalTitle">${esc(proposal.title)}</h2></div>${button("×", "close-modal", 'aria-label="Schließen"', "btn icon ghost")}</div><p class="body-copy">${esc(proposal.action)}</p>${note}</section></div>`;
+    i18n.apply(overlay);
     overlay.querySelector("button")?.focus();
     return;
   }
-  overlay.innerHTML = `<div class="overlay"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="proposalTitle"><div class="modal-head"><div><div class="eyebrow">AUFGABE · ${esc(labels[proposal.status])}</div><h2 id="proposalTitle">Prüfen und anpassen</h2></div>${button("×", "close-modal", 'aria-label="Schließen"', "btn icon ghost")}</div><form id="proposalForm"><div class="field"><label for="proposalName">Titel</label><input id="proposalName" name="title" required value="${esc(proposal.title)}"></div><div class="field"><label for="proposalRationale">Warum?</label><textarea id="proposalRationale" name="rationale" required>${esc(proposal.rationale)}</textarea></div><div class="field"><label for="proposalAction">Konkreter Auftrag</label><textarea id="proposalAction" name="action" required>${esc(proposal.action)}</textarea></div><div class="form-row"><div class="field"><label for="proposalPriority">Priorität</label><select id="proposalPriority" name="priority">${["today", "soon", "watch"].map((item) => option(item, proposal.priority, labels[item])).join("")}</select></div><div class="field"><label for="proposalMode">Ausführung</label><select id="proposalMode" name="executionMode">${["research", "local-code", "manual"].map((item) => option(item, proposal.executionMode, labels[item] || labels.manualMode)).join("")}</select></div></div><div class="form-row"><div class="field"><label for="proposalEffort">Aufwand</label><select id="proposalEffort" name="effort">${["small", "medium", "large"].map((item) => option(item, proposal.effort, labels[item])).join("")}</select></div><div class="field"><label for="proposalConfidence">Sicherheit</label><select id="proposalConfidence" name="confidence">${["high", "medium", "low"].map((item) => option(item, proposal.confidence, item)).join("")}</select></div></div><p class="note">Quelle: ${evidence(proposal.evidence)}. Freigabe startet noch keinen Lauf. „Manuell“ öffnet eine Aufgabe zum Nachhalten; Recherche und lokale Codearbeit starten Codex erst nach deinem Klick.</p><div class="subtle-divider"></div><div class="modal-actions">${button("Verwerfen", "proposal-reject", "", "btn danger small")}${button("Später", "proposal-defer", "", "btn ghost small")}${button("Speichern", "proposal-save", "", "btn ghost small")}${proposal.status === "approved" ? button(proposal.executionMode === "manual" ? "Manuell starten" : "Ausführen", "execute-proposal", `data-id="${esc(proposal.id)}"`, "btn primary small") : button("Freigeben", "proposal-approve", "", "btn primary small")}</div></form></section></div>`;
+  overlay.innerHTML = `<div class="overlay"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="proposalTitle"><div class="modal-head"><div><div class="eyebrow">AUFGABE · ${esc(labels[proposal.status])}</div><h2 id="proposalTitle">Prüfen und anpassen</h2></div>${button("×", "close-modal", 'aria-label="Schließen"', "btn icon ghost")}</div><form id="proposalForm"><div class="field"><label for="proposalName">Titel</label><input id="proposalName" name="title" required value="${esc(proposal.title)}"></div><div class="field"><label for="proposalRationale">Warum?</label><textarea id="proposalRationale" name="rationale" required>${esc(proposal.rationale)}</textarea></div><div class="field"><label for="proposalAction">Konkreter Auftrag</label><textarea id="proposalAction" name="action" required>${esc(proposal.action)}</textarea></div><div class="form-row"><div class="field"><label for="proposalPriority">Priorität</label><select id="proposalPriority" name="priority">${["today", "soon", "watch"].map((item) => option(item, proposal.priority, labels[item])).join("")}</select></div><div class="field"><label for="proposalMode">Ausführung</label><select id="proposalMode" name="executionMode">${["research", "local-code", "manual"].map((item) => option(item, proposal.executionMode, labels[item] || labels.manualMode)).join("")}</select></div></div><div class="form-row"><div class="field"><label for="proposalEffort">Aufwand</label><select id="proposalEffort" name="effort">${["small", "medium", "large"].map((item) => option(item, proposal.effort, labels[item])).join("")}</select></div><div class="field"><label for="proposalConfidence">Sicherheit</label><select id="proposalConfidence" name="confidence">${["high", "medium", "low"].map((item) => option(item, proposal.confidence, labels[item])).join("")}</select></div></div><p class="note">Quelle: ${evidence(proposal.evidence)}. Freigabe startet noch keinen Lauf. „Manuell“ öffnet eine Aufgabe zum Nachhalten; Recherche und lokale Codearbeit starten Codex erst nach deinem Klick.</p><div class="subtle-divider"></div><div class="modal-actions">${button("Verwerfen", "proposal-reject", "", "btn danger small")}${button("Später", "proposal-defer", "", "btn ghost small")}${button("Speichern", "proposal-save", "", "btn ghost small")}${proposal.status === "approved" ? button(proposal.executionMode === "manual" ? "Manuell starten" : "Ausführen", "execute-proposal", `data-id="${esc(proposal.id)}"`, "btn primary small") : button("Freigeben", "proposal-approve", "", "btn primary small")}</div></form></section></div>`;
+  i18n.apply(overlay);
   overlay.querySelector("input")?.focus();
 }
 function skipModal(proposal) {
@@ -250,6 +358,7 @@ function skipModal(proposal) {
   ui.proposalId = proposal.id;
   ui.dirty = false;
   overlay.innerHTML = `<div class="overlay"><section class="modal skip-modal" role="dialog" aria-modal="true" aria-labelledby="skipTitle"><div class="modal-head"><div><div class="eyebrow">TAGESAUFGABE ÜBERSPRINGEN</div><h2 id="skipTitle">${esc(proposal.title)}</h2></div>${button("×", "close-modal", 'aria-label="Schließen"', "btn icon ghost")}</div><p class="body-copy">Die Aufgabe verschwindet aus deinem Tagesfokus. Der Master bekommt deine Entscheidung beim nächsten Abgleich.</p><form id="skipForm"><div class="field"><label for="skipReason">Hinweis an den Master (optional)</label><textarea id="skipReason" name="reason" maxlength="430" placeholder="Warum passt diese Aufgabe gerade nicht?"></textarea></div><div class="modal-actions">${button("Für später parken", "skip-defer", "", "btn ghost small")}${button("Verwerfen", "skip-reject", "", "btn danger small")}</div></form></section></div>`;
+  i18n.apply(overlay);
   overlay.querySelector("textarea")?.focus();
 }
 function closeModal() {
@@ -311,7 +420,7 @@ async function saveProposal(newStatus) {
   const values = new FormData(document.getElementById("proposalForm"));
   const patch = { title: String(values.get("title")), rationale: String(values.get("rationale")), action: String(values.get("action")), priority: String(values.get("priority")), effort: String(values.get("effort")), confidence: String(values.get("confidence")), executionMode: String(values.get("executionMode")), status: newStatus || proposal.status };
   if (["deferred", "rejected"].includes(newStatus)) {
-    patch.decisionNote = newStatus === "deferred" ? "Vom Nutzer für später geparkt." : "Vom Nutzer verworfen.";
+    patch.decisionNote = newStatus === "deferred" ? "Deferred by the user." : "Rejected by the user.";
   }
   await api("PATCH", `/api/proposals/${proposal.id}`, patch);
   if (newStatus === "approved") ui.proposalFilter = "all";
@@ -325,10 +434,10 @@ async function decideSkip(statusValue) {
   const proposal = data.proposals.find((item) => item.id === ui.proposalId);
   if (!proposal || !["proposed", "approved"].includes(proposal.status)) return;
   const reason = String(new FormData(document.getElementById("skipForm")).get("reason") || "").trim();
-  const prefix = statusValue === "deferred" ? "Tagesaufgabe vom Nutzer für später geparkt." : "Tagesaufgabe vom Nutzer verworfen.";
+  const prefix = statusValue === "deferred" ? "Daily task deferred by the user." : "Daily task rejected by the user.";
   await api("PATCH", `/api/proposals/${proposal.id}`, {
     status: statusValue,
-    decisionNote: reason ? `${prefix} Grund: ${reason}` : prefix,
+    decisionNote: reason ? `${prefix} Reason: ${reason}` : prefix,
   });
   closeModal();
   await refresh();
@@ -352,6 +461,8 @@ document.addEventListener("click", async (event) => {
   }
   const viewButton = event.target.closest("[data-view]");
   if (viewButton) {
+    if (ui.dirty && !window.confirm(tr("Ungespeicherte Änderungen verwerfen?"))) return;
+    stopNetworkPlayback();
     ui.view = viewButton.dataset.view;
     ui.agentId = null;
     ui.dirty = false;
@@ -363,13 +474,26 @@ document.addEventListener("click", async (event) => {
   const action = target.dataset.action;
   const id = target.dataset.id;
   try {
+    if (action === "network-select") { selectNetworkEvent(id); revealNetworkScene(); }
+    if (action === "network-play") {
+      if (ui.networkPlaying) { stopNetworkPlayback(); draw(); }
+      else startNetworkPlayback();
+    }
+    if (action === "network-restart") startNetworkPlayback(true);
+    if (action === "network-prev" || action === "network-next") {
+      const events = networkEvents();
+      const current = events.findIndex((item) => item.id === ui.networkId);
+      const next = Math.max(0, Math.min(events.length - 1, current + (action === "network-next" ? 1 : -1)));
+      if (events[next]) selectNetworkEvent(events[next].id);
+    }
+    if (action === "network-motion") { ui.networkMotion = !ui.networkMotion; draw(); }
     if (action === "daily") { await api("POST", "/api/daily/run", { full: target.dataset.full === "true" }); notify("Tageslauf gestartet."); await refresh(); }
     if (action === "run-agent") { await api("POST", `/api/agents/${id}/run`, {}); notify("Agent ist in der Warteschlange."); await refresh(); }
     if (action === "edit-agent") { ui.agentId = id; ui.view = "agents"; ui.dirty = false; draw(); }
     if (action === "new-agent") { ui.agentId = "new"; ui.dirty = false; draw(); }
     if (action === "close-agent") { ui.agentId = null; ui.dirty = false; draw(); }
     if (action === "delete-agent") {
-      if (!window.confirm("Dieses Agentenprofil aus der Konfiguration entfernen? Vorhandene Berichte bleiben erhalten.")) return;
+      if (!window.confirm(tr("Dieses Agentenprofil aus der Konfiguration entfernen? Vorhandene Berichte bleiben erhalten."))) return;
       const next = structuredClone(data.config);
       next.agents = next.agents.filter((item) => item.id !== id);
       await api("PUT", "/api/config", next);
@@ -377,6 +501,7 @@ document.addEventListener("click", async (event) => {
     }
     if (action === "proposal-filter") { ui.proposalFilter = target.dataset.filter; draw(); }
     if (action === "view-proposals") { ui.view = "proposals"; ui.proposalFilter = "all"; draw(); }
+    if (action === "view-agents") { ui.view = "agents"; draw(); }
     if (action === "open-proposal") showProposal(id);
     if (action === "skip-proposal") skipModal(data.proposals.find((item) => item.id === id));
     if (action === "close-modal") closeModal();
@@ -389,7 +514,7 @@ document.addEventListener("click", async (event) => {
     if (action === "execute-proposal") {
       if (ui.proposalId === id && ui.dirty) await saveProposal("approved");
       const proposal = data.proposals.find((item) => item.id === id);
-      if (proposal?.executionMode === "local-code" && !window.confirm(`Lokale Codearbeit starten?\n\n${proposal.title}\n\nDer Agent arbeitet in einem eigenen Worktree.`)) return;
+      if (proposal?.executionMode === "local-code" && !window.confirm(i18n.language === "en" ? `Start local code work?\n\n${proposal.title}\n\nThe agent will work in a separate worktree.` : `Lokale Codearbeit starten?\n\n${proposal.title}\n\nDer Agent arbeitet in einem eigenen Worktree.`)) return;
       const result = await api("POST", `/api/proposals/${id}/execute`, {});
       if (result.manual) {
         await refresh();
@@ -428,6 +553,32 @@ document.addEventListener("click", async (event) => {
     }
     if (action === "cancel-run") { await api("POST", `/api/runs/${id}/cancel`, {}); notify("Abbruch angefordert."); await refresh(); }
   } catch (error) { notify(error.message, true); }
+});
+document.addEventListener("change", (event) => {
+  if (event.target.id === "networkDay") {
+    stopNetworkPlayback();
+    ui.networkDay = event.target.value;
+    ui.networkId = null;
+    ui.networkFrozen = null;
+    ui.networkEnded = false;
+    draw();
+  }
+  if (event.target.id === "networkSpeed") {
+    ui.networkSpeed = [1, 2, 4].includes(Number(event.target.value)) ? Number(event.target.value) : 1;
+    if (ui.networkPlaying) scheduleNetworkFrame();
+  }
+  if (event.target.id === "networkScrub") {
+    const selected = networkEvents()[Number(event.target.value)];
+    if (selected) selectNetworkEvent(selected.id);
+  }
+});
+document.getElementById("themeSelect").addEventListener("change", (event) => setTheme(event.target.value));
+document.getElementById("languageSelect").addEventListener("change", (event) => {
+  i18n.setLanguage(event.target.value);
+  if (data) {
+    document.getElementById("todayLabel").textContent = new Intl.DateTimeFormat(locale(), { dateStyle: "full", timeZone: data.config.settings.timeZone }).format(new Date());
+    if (!ui.dirty) draw();
+  }
 });
 document.addEventListener("keydown", (event) => { if (event.key === "Escape" && ui.proposalId) closeModal(); });
 window.addEventListener("hashchange", () => {

@@ -24,6 +24,8 @@ import {
   worktreeRootFromChange,
 } from "./core.mjs";
 
+import { buildNetworkTimeline, availableTimelineDays } from "./network-timeline.mjs";
+
 const directory = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(directory, "..");
 const artifacts = join(projectRoot, "artifacts", "agent-console");
@@ -197,8 +199,8 @@ function masterContext() {
       try {
         const event = JSON.parse(line);
         if (event.type === "item.completed" && event.item?.type === "agent_message") return [String(event.item.text ?? "").slice(0, 300)];
-        if (event.type === "item.completed" && event.item?.type === "file_change") return [`Dateien geändert: ${event.item.changes?.length ?? 0}`];
-        if (event.type === "item.completed" && event.item?.type === "command_execution") return [`Befehl beendet: Code ${event.item.exit_code}`];
+        if (event.type === "item.completed" && event.item?.type === "file_change") return [`Files changed: ${event.item.changes?.length ?? 0}`];
+        if (event.type === "item.completed" && event.item?.type === "command_execution") return [`Command finished: exit code ${event.item.exit_code}`];
         if (event.type === "stderr" && /^Error:/i.test(event.text)) return [String(event.text).slice(0, 300)];
       } catch { /* Unvollständige Ereigniszeile */ }
       return [];
@@ -213,7 +215,7 @@ function masterContext() {
     };
   };
   return [
-    "Prüfe für jeden neuen Lauf den kompakten Protokollauszug und das Ergebnis. Bei Fehlern oder Unklarheiten lies das vollständige Protokoll gezielt unter logPath. Werte Status und Fehler ausdrücklich aus; kennzeichne ältere Signale. Worktree-Änderungen sind nicht in main übernommen oder veröffentlicht. Plane höchstens drei konkrete Tagesaufgaben und nenne bestehende Aufgaben mit exakt ihrem gespeicherten Titel, damit sie direkt geöffnet werden können. Weitere Themen gehören in die Beobachtungsliste. Behandle Nutzerentscheidungen als verbindlich: verworfene Aufgaben nicht erneut empfehlen, geparkte Aufgaben nicht erneut in den Tagesfokus setzen, bis der Nutzer sie reaktiviert. Das gilt auch bei einer neuen Formulierung desselben Themas. Erwähne den Entscheid und eine eventuelle Notiz im Briefing, statt einen sinngleichen Vorschlag anzulegen.",
+    "For each new run, inspect the compact log excerpt and result. On errors or uncertainty, read the full log at logPath selectively. Evaluate statuses and errors explicitly; label older signals. Worktree changes are not merged into main or published. Plan at most three concrete daily tasks and use the exact saved titles of existing tasks so they can open directly. Put other topics on the watchlist. Treat user decisions as binding: do not recommend rejected tasks again, and do not return deferred tasks to the daily focus until the user reactivates them. This also applies to rewordings of the same topic. Mention the decision and any note in the brief instead of creating an equivalent proposal. Respond in English.",
     JSON.stringify({
       userDecisions: inputs.decisions.map((item) => ({ proposalId: item.proposalId, title: item.title,
         status: item.status, updatedAt: item.updatedAt, decisionNote: item.decisionNote,
@@ -270,7 +272,7 @@ function runNext() {
       ? buildExecutionPrompt(run.proposalSnapshot)
       : buildResearchPrompt({
           kind: "specialist",
-          prompt: `Führe ausschließlich diese freigegebene Recherche aus: ${run.proposalSnapshot.action}`,
+          prompt: `Perform only this approved research task. Respond in English: ${run.proposalSnapshot.action}`,
         }, config, state.reports, new Date());
 
   let finished = false;
@@ -398,7 +400,10 @@ function publicState() {
   const latestMaster = state.runs.find((run) => run.type === "agent" && run.agentId === "master");
   const masterUpdating = latestMaster && ["queued", "running"].includes(latestMaster.status);
   const currentSignature = masterInputSignature(inputs);
+  const networkTimeline = buildNetworkTimeline({ config, runs: state.runs, proposals: state.proposals, reports: state.reports });
   return {
+    networkTimeline,
+    networkDays: availableTimelineDays(networkTimeline, config.settings.timeZone),
     config,
     runs: state.runs.slice(0, 60).map(({ agentSnapshot, proposalSnapshot, ...run }) => {
       const position = pending.findIndex((item) => item.id === run.id);
@@ -424,6 +429,9 @@ const staticFiles = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
+  ["/i18n.js", ["i18n.js", "text/javascript; charset=utf-8"]],
+  ["/network-ui.js", ["network-ui.js", "text/javascript; charset=utf-8"]],
+  ["/network.css", ["network.css", "text/css; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
 ]);
 

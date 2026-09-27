@@ -8,6 +8,18 @@ Node 22 und eine angemeldete Codex-CLI werden benötigt. Auf macOS [`start.comma
 
 Bei einem anderen CLI-Pfad kann `CODEX_BIN=/absoluter/pfad/zum/codex npm run agents:dashboard` verwendet werden. Der Port lässt sich mit `AGENT_CONSOLE_PORT` ändern; beim direkten Öffnen der HTML-Datei gilt der Standardport 43821.
 
+## Oberfläche
+
+Im Kopfbereich stehen die Desktop-Ansichten **CLEAR** (hell) und **ORBIT** (dunkel) sowie **Deutsch** und **English** zur Wahl. Design und Sprache werden nur im Browser gespeichert; sie ändern keine Agenten-Konfiguration oder laufenden Aufträge. Die Oberfläche übersetzt ihre Bedienelemente, während vorhandene Berichte, Vorschlagstexte und manuell eingegebene Inhalte in ihrer gespeicherten Originalsprache bleiben.
+
+Die Übersicht zeigt zuerst den Master, echte Zähler für eingerichtete Agenten, zu prüfende Vorschläge, aktive und wartende Läufe sowie den nächsten Schritt. **Zusammenspiel** zeigt Master als Kern einer Agenten-Sphäre. Eine helle gerichtete Spur und die Erklärung daneben ordnen das ausgewählte Ereignis in Recherche → Zusammenführen → Vorschlag → Nutzerentscheidung → Ausführung ein. Umlaufbahnen und Lichtpunkte sind schematische Animationen; sie behaupten keinen Live-Chat oder eine bereits erfolgte Verarbeitung beim Empfänger. Bewegung lässt sich abschalten und respektiert die Systemoption für reduzierte Bewegung.
+
+Der Tagesrückblick ordnet erhaltene Ereignisse nach der eingestellten Zeitzone **von früh nach spät**. Tageswahl, Schrittknöpfe, Zeitregler, Pause und 1×/2×/4×-Tempo steuern die Wiedergabe. Sie stoppt beim letzten Ereignis, ohne rückwärts zu springen oder automatisch zu wiederholen. „Erneut abspielen“ lädt den verfügbaren Tagesstand neu. Während einer Wiedergabe bleibt die gewählte Ereignisfolge stabil; laufende Agenten werden dadurch nicht gesteuert. Queue, Start und Ende eines Laufs sind getrennte Ereignisse mit ihren gespeicherten Zeitpunkten.
+
+Die Historie nutzt alle noch gespeicherten Läufe (die Laufdatenhaltung ist auf 100 begrenzt), vorhandene Berichte und Vorschläge. Die bisherige Beschränkung der Darstellung auf 30 Ereignisse entfällt. Frühere Vorschlagsbearbeitungen und Entscheidungen sind nicht vollständig versioniert: Wo nur der letzte Text oder Status erhalten ist, kennzeichnet die Ansicht diesen Stand ausdrücklich. Sie rekonstruiert keine fehlenden Freigaben aus einem späteren Abschlussstatus.
+
+Anweisungen an Codex und die Standard-Aufträge der Agenten sind unabhängig von der Anzeigesprache auf Englisch. Neue Agenten-Prompts sollen ebenfalls auf Englisch geschrieben werden. Bereits gespeicherte Berichte und ältere Laufsnapshots werden nicht rückwirkend übersetzt.
+
 ## Ablauf
 
 1. **Tagesbriefing starten** führt fällige Spezialisten aus und danach den Master. **Alle Spezialisten neu prüfen** erzwingt einen frischen vollständigen Lauf. Einzelne Agenten lassen sich jederzeit manuell starten.

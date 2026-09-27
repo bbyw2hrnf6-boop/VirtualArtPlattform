@@ -1,0 +1,311 @@
+{
+  "title": "LIEUVA Agentenzentrale - Drei Desktop-UI-Konzepte",
+  "date": "2026-09-26",
+  "desktop_only": true,
+  "image_count": 30,
+  "tool": "Built-in image_gen; no separate Astra model selection",
+  "pdf": "../pdf/lieuva-agentenzentrale-drei-ui-konzepte-2026-09-26.pdf",
+  "gallery": "index.html",
+  "assets": [
+    {
+      "concept": "01-clear",
+      "file": "01-clear/01-overview.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "sha256": "0551307d0e8e3ec4bd78e9fc0e7744bb712fdabfae6fcfda25a95dd851974cd0",
+      "prompt": "01-clear/01-overview.prompt.txt"
+    },
+    {
+      "concept": "01-clear",
+      "file": "01-clear/02-agents.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "328edfa05aabcca8781d91b278d60330a778e0238552fdbbe533a2e208eb014a",
+      "prompt": "01-clear/02-agents.prompt.txt"
+    },
+    {
+      "concept": "01-clear",
+      "file": "01-clear/03-profile.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "db53d8690f5400e3720450fcd37a63553e87ce8706661a840e0ede50bbd8d3fd",
+      "prompt": "01-clear/03-profile.prompt.txt"
+    },
+    {
+      "concept": "01-clear",
+      "file": "01-clear/04-proposals.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "019f5ec92fbeb7ac0573c30625ec67b74670f480d70e98cc2775c1fb5b6a305f",
+      "prompt": "01-clear/04-proposals.prompt.txt"
+    },
+    {
+      "concept": "01-clear",
+      "file": "01-clear/05-decision.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "f4cf87768f815301ff9e9559094a7d8f08d64a10107f6c71e0b195a0ddd8c2df",
+      "prompt": "01-clear/05-decision.prompt.txt"
+    },
+    {
+      "concept": "01-clear",
+      "file": "01-clear/06-runs.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "4423d9c55a45eb5c4b6ee641c72460876c1f0605c3d1f73eb9fe829d0f4fa655",
+      "prompt": "01-clear/06-runs.prompt.txt"
+    },
+    {
+      "concept": "01-clear",
+      "file": "01-clear/07-settings.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "sha256": "186d508b74533bda08db086a39366973b829e81155bd36f4d4820a6be7fe4d52",
+      "prompt": "01-clear/07-settings.prompt.txt"
+    },
+    {
+      "concept": "01-clear",
+      "file": "01-clear/08-network.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "97df636a9531c9d95166852ae6ab4df16f8cdb3dbb0c166859de9f05aeb04bea",
+      "prompt": "01-clear/08-network.prompt.txt"
+    },
+    {
+      "concept": "01-clear",
+      "file": "01-clear/09-components.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "c211393e684d21e0621547c247b4b5c09dabfbfe948c832bc73532b97616fb06",
+      "prompt": "01-clear/09-components.prompt.txt"
+    },
+    {
+      "concept": "01-clear",
+      "file": "01-clear/11-dialogs.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "ad96c9ba2290e61c27ea7340d1c4e9101830046146608618d5ef5189b47f40ed",
+      "prompt": "01-clear/11-dialogs.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/01-overview.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "5a9b413eeaede4d32b6e0197f6837bca3af4f2ade5d976d8ecca921c0b137427",
+      "prompt": "02-orbit/01-overview.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/02-agents.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "7d87cf5c98eda9ebf3c66c99df1e72cb5b4405c6bfe39d6ec1d3c6858a497fe4",
+      "prompt": "02-orbit/02-agents.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/03-profile.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "4489940adae60e52b112951e7583fdc7634e00823663021c218eac7c4867bc80",
+      "prompt": "02-orbit/03-profile.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/04-proposals.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "6448727ea6e6e882eeb64d02c2dbfe2428e13d9967e206b68a020530921992d0",
+      "prompt": "02-orbit/04-proposals.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/05-decision.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "4c382938d5024bc330a8156c044e3761120d93a336bc6a3bb6bcf7bee2e4d0a0",
+      "prompt": "02-orbit/05-decision.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/06-runs.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "3eecb97808b9dd93cd6626e9bbf48e733a571bbfc3cbfa2f2aeab186cf5fe6d8",
+      "prompt": "02-orbit/06-runs.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/07-settings.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "8725d7f2499c177fbf0fc45d5f85b824253a456b778e664c320365136db9ca55",
+      "prompt": "02-orbit/07-settings.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/08-network.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "35d0ba831f4625103b8f70f3d5b4be6ff5664ca1988ef71d520dd52bcdc08267",
+      "prompt": "02-orbit/08-network.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/09-components.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "sha256": "08f33464451e0c112df814a3001781ffeb98e0d299eaa903e7e5a698a45c7555",
+      "prompt": "02-orbit/09-components.prompt.txt"
+    },
+    {
+      "concept": "02-orbit",
+      "file": "02-orbit/11-dialogs.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "39e0bc0353a1f68dd41981823abe4059b984f397b31175dd9a2b0aa69240106d",
+      "prompt": "02-orbit/11-dialogs.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/01-overview.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "90c6349da56057c0687ddeec52e5eca78bf96f19ef76fa025e5d53d1714b2d8e",
+      "prompt": "03-atelier/01-overview.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/02-agents.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "9a6f854e28e4927233a013fa40d9270aaf0483f977b374d37a7ddb36a7c1b341",
+      "prompt": "03-atelier/02-agents.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/03-profile.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "sha256": "7a47f587e994305e352fde809d0de8ad9e3749c1d98ed249d195e4dc82620c3c",
+      "prompt": "03-atelier/03-profile.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/04-proposals.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "72e90883be327fe8191f623a80ab19f165ed1e646f4965830634bc86b62066d0",
+      "prompt": "03-atelier/04-proposals.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/05-decision.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "4f671e804d8f74a3c233627d900f9417288d581f4875d7507f0c01a063770b59",
+      "prompt": "03-atelier/05-decision.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/06-runs.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "0c8ac246d7b012cb19f77ab2a93fe37576334e94ca449d8c4e9065455f770c10",
+      "prompt": "03-atelier/06-runs.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/07-settings.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "954bc51246e6a9cdfb56c57d0d644a76fe088525ca9b256cfe358ac20e7557bf",
+      "prompt": "03-atelier/07-settings.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/08-network.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "aab12f8e7b747c1915ce5d9376483c867200d7a3244dd6b1afe44375187ffe55",
+      "prompt": "03-atelier/08-network.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/09-components.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "876eff4e42f5620a9a1cc5966aaa62fe6a3b5c71456dd3f3317a8e00a9b49b92",
+      "prompt": "03-atelier/09-components.prompt.txt"
+    },
+    {
+      "concept": "03-atelier",
+      "file": "03-atelier/11-dialogs.png",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "sha256": "64523e22ba40b65f27993ddc649a0d012584158ddeadebdedf9a39de2acb6ab9",
+      "prompt": "03-atelier/11-dialogs.prompt.txt"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "common": "Use case: ui-mockup. Produce a meticulously art-directed, high-fidelity, flat straight-on desktop web application screenshot for LIEUVA Agentenzentrale, a LOCAL single-user agent control dashboard. German UI. Target 1920x1200 landscape, extraordinarily crisp typography, beautiful spacing, high contrast and realistic working software. Fill the canvas with UI, no physical laptop, no browser chrome, no perspective, no stock photos, no robots, no random charts. A discreet label 'ENTWURF · BEISPIELDATEN' always visible. Persistent six-item navigation: Übersicht, Agenten, Vorschläge, Läufe, Zusammenspiel, Einstellungen. LIEUVA brand top left; status 'Lokal verbunden'. Six specialist agents plus ONE Master (seven total); roles: Qualität & Risiken, UX, Produktstrategie, Markt, SEO / GEO, 3D & Blender. Jobs execute serially: maximum one active job, queued jobs explicitly distinct. No peer-to-peer agent chat. Approval and execution are SEPARATE explicit steps. Local completion is not publication. Show readable short meaningful German text rather than many illegible paragraphs. Use generous touch targets and consistent elegant thin outline icons. Preserve this concept's design language across all screens.",
+  "screens": [
+    {
+      "id": "01-overview",
+      "title": "Übersicht",
+      "description": "Dashboard for 26. September 2026. Strong heading 'Dein Tag. Klar priorisiert.' Large restrained Master summary with two short sentences and 'Bericht öffnen'. Status line 'Master-Abgleich aktuell · 22:02'. Four compact factual counters: '7 eingerichtet', '2 zu prüfen', '0 aktiv', '0 warten'. Today's focus section contains exactly THREE completed compact rows with checkmarks: 'Crawl-Antworten prüfen', '2D-Fallback abgleichen', 'Mobilen Erfolgsdialog prüfen'; '3 von 3 erledigt'. Put next action near top, prominent '2 Vorschläge prüfen'. Lower small list shows two remaining proposals 'Künstlerpilot planen' and 'Galerieformat entwickeln'. Secondary 'Tagesbriefing starten' and tertiary 'Alle Spezialisten neu prüfen'. No extra fake daily tasks. The hero must feel calm and informative, not a marketing landing page."
+    },
+    {
+      "id": "02-agents",
+      "title": "Agenten",
+      "description": "Agent team page titled 'Dein Team aus sieben Agents'. One distinct full-width Master card above SIX specialist cards in a balanced three-column grid, all seven roles visible. Master consolidates reports, never implies peer collaboration. Each card: role, one-line remit, current state 'Bereit', separate dated 'Letzter Bericht · 26.09.', cadence, and clearly separated 'Einmal starten' and quiet 'Profil bearbeiten'. Top-right '+ Spezialist'. Master and Quality daily, others weekly. Focus on scanability and clear hierarchy. No avatars, use abstract geometric role symbols."
+    },
+    {
+      "id": "03-profile",
+      "title": "Agentenprofil",
+      "description": "Agent profile editing surface for 'UX' with workspace context visible and an elegant large right-side drawer or dedicated editor. Header 'Agentenprofil' and short help 'Änderungen gelten für neue Läufe.' Group fields into 'Auftrag' (Name UX, Kurzbeschreibung, a short editable rules text), 'Ausführung' (Modell 'gpt-6-luna', Reasoning 'low', Websuche 'Aus', Rhythmus 'Wöchentlich'), and 'Status' (Agent aktiv on). Distinct footer actions 'Abbrechen' secondary and 'Profil speichern' primary. Show a focused input with clear focus ring, and one small save confirmation specimen 'Profil gespeichert'. Keep text concise and editable fields convincingly rendered. Include quietly separated 'Spezialist entfernen' link, with a separate confirmation required before deletion. Keep technical model settings under an expanded 'Erweiterte Einstellungen' group."
+    },
+    {
+      "id": "04-proposals",
+      "title": "Vorschläge",
+      "description": "Proposal decision workspace. Heading 'Was als Nächstes zählt.' Header '2 zu prüfen'. Filters: 'Alle', 'Offen 2', 'Freigegeben 0', 'In Arbeit 0', 'Später 1', 'Erledigt', 'Verworfen'. Compact completed daily section 'Heute · 3 von 3 erledigt' as 3 checked rows. Main two open proposal cards/rows: 'Künstlerpilot planen' and 'Galerieformat entwickeln' with brief why, source agent, effort and mode 'Manuell'. Each has a prominent 'Prüfen' button. Visible quiet parked row 'Veröffentlichung & Zugriff prüfen' marked 'Später'. Master update note subtle. No execute button before approval. Mix elegant strong whitespace and useful information density."
+    },
+    {
+      "id": "05-decision",
+      "title": "Entscheiden & Parken",
+      "description": "Main proposal review screen for 'Galerieformat entwickeln'. The central review panel clearly separates 'Warum?', editable 'Konkreter Auftrag', 'Quelle', and meta dropdowns 'Priorität', 'Ausführung: Manuell', 'Aufwand', 'Einschätzung'. Only short meaningful text. Visible step indicator '1 Prüfen → 2 Freigeben → 3 Starten'. Current state 'Offen'. Primary action 'Freigeben', secondary 'Änderungen speichern', quiet 'Für später parken', destructive 'Verwerfen' visually separated. Plain help 'Freigeben startet noch keinen Lauf.' Include TWO small labeled state specimens in a complementary side column: 'Danach: Freigegeben' with 'Manuell starten', and 'Parken' with optional 'Hinweis an den Master' input and 'Für später parken'. Clearly labeled separate states, not simultaneously active dialogs. At foot of specimens mention manual completion 'Ergebnis eintragen' → 'Erledigt melden'."
+    },
+    {
+      "id": "06-runs",
+      "title": "Läufe & Ergebnis",
+      "description": "Run history with split master-detail layout. Heading 'Läufe & Ergebnisse'. Compact status filters 'Alle', 'Wartet', 'Läuft', 'Fertig', 'Abgebrochen', 'Fehler'. In this historical example '0 aktiv · 0 warten'. Left readable rows: completed Master, completed UX, interrupted Master, failed Markt. Right selected completed local-code run 'Mobilen Erfolgsdialog prüfen' with green 'Fertig' and tabs 'Bericht', 'Schritte', 'Protokoll'. Brief result and dated timeline, 'Separater Worktree' block with button 'Pfad kopieren'. Prominent restrained note 'Lokal abgeschlossen · noch nicht übernommen'. Small history example 'Keine neue Ausgabe' is amber info and never auto-cancel. Show quiet 'Bericht öffnen'. No deployment button, no fake network throughput."
+    },
+    {
+      "id": "07-settings",
+      "title": "Einstellungen",
+      "description": "Settings page with generous grouped form sections, readable hierarchy: 'Zeitplan' (Automatisch täglich starten toggle, Uhrzeit 09:00, Zeitzone Europe/Amsterdam); 'Master-Abgleich' (Nach neuen Ergebnissen aktualisieren toggle, helper 'Nach der Warteschlange'); 'Laufhinweise' (Hinweis nach 5 Minuten ohne Ausgabe, helper 'Ein stiller Lauf wird nicht automatisch beendet.'); 'Lokaler Betrieb' read-only card 'Verbunden', 'Serielle Ausführung', '0 aktive Läufe'. Crucial helper 'Automatik läuft, solange der lokale Server geöffnet ist.' Primary sticky 'Einstellungen speichern' button; calm saved-state indicator. Hide long CLI filesystem paths inside expandable 'Technische Details'. Do not introduce account settings, cloud switches, notifications or new server abilities."
+    },
+    {
+      "id": "08-network",
+      "title": "Zusammenspiel",
+      "description": "Spectacular but legible new 'Zusammenspiel' tab. Main directed graph, six small distinct specialist nodes grouped on the LEFT (Qualität & Risiken, UX, Produktstrategie, Markt, SEO / GEO, 3D & Blender), each connected TO ONE clearly larger Master node at CENTER. Directed path continues Master → Vorschläge → Deine Entscheidung → Auftrag → Ergebnis. Return path from Ergebnis AND decisions returns to Master. Use refined luminous or ink lines appropriate to palette, arrowheads and tiny packet dots as a still of chronological playback. Never connect specialists to each other. Mode chip 'Wiedergabe · Beispieldaten'; playback controls with play/pause, timeline scrubber and timestamp; '1 Lauf gleichzeitig'. Right side selected event inspector 'UX → Master', 'Bericht übergeben', short result and source 'Bericht öffnen'. Secondary switch 'Graph / Ereignisliste'. Distinct line legend 'Bericht', 'Entscheidung', 'Ergebnis' using line shapes as well as color. A beautiful network composition with negative space; feels dynamic, digital, polished and genuinely useful. No fake live badge or simultaneous active workers."
+    },
+    {
+      "id": "09-components",
+      "title": "Schaltflächen & Zustände",
+      "description": "A polished in-app design system sheet titled 'Klar handeln. Sicher verstehen.' Show coherent labeled specimens using this concept's style: Primary buttons 'Freigeben', 'Ausführen', 'Speichern'; secondary 'Prüfen', 'Profil bearbeiten', 'Bericht öffnen'; quiet 'Für später parken'; destructive outlined 'Verwerfen' and 'Lauf abbrechen'. Separate row states 'Standard', 'Hover', 'Fokus', 'Lädt', 'Deaktiviert'. Status chips all with symbol AND text 'Offen', 'Freigegeben', 'Wartet', 'Läuft', 'Fertig', 'Abgebrochen', 'Fehler', 'Später'. Three small feedback cards 'Keine offenen Vorschläge', 'Verbindung unterbrochen' with 'Erneut verbinden', 'Änderungen gespeichert'. One form validation specimen with German short error and focus ring. Tiny note '44 px Mindestziel · Status nie nur als Farbe'. Include buttons 'Ergebnis eintragen', 'Erledigt melden', 'Pfad kopieren', and 'Schließen'. Do not present as a functional product route; label 'UI-Bausteine'."
+    },
+    {
+      "id": "11-dialogs",
+      "title": "Dialoge & Sonderfälle",
+      "description": "A beautifully typeset UI interaction/state sheet with FOUR generously sized modal specimens in a two-by-two grid, each clearly independent and labeled. 1 'Lokale Codearbeit starten' with selected task name, 'Separater Worktree. Keine Veröffentlichung.', actions 'Abbrechen' and 'Lokal starten'. 2 'Manuelles Ergebnis' with multiline input label 'Was wurde erledigt? Ergebnis oder Nachweis', text example 'Konzept geprüft und Ergebnis dokumentiert.', actions 'Zurück auf Freigegeben' and 'Erledigt melden'. 3 'Ungespeicherte Änderungen' with 'Deine Eingaben wurden noch nicht gespeichert.', actions 'Weiter bearbeiten' and 'Änderungen verwerfen'. 4 'Spezialist entfernen?' with role name UX and 'Der Master bleibt erhalten.', actions 'Abbrechen' and outlined danger 'Entfernen'. Small supporting chips beneath show 'Lauf abbrechen' confirmation and 'Master erneut starten' retry action. This is a clearly labeled UI-Bausteine presentation, not four real dialogs simultaneously. Provide ample whitespace and clear hierarchy, consistent primary, secondary and danger treatments."
+    }
+  ],
+  "concepts": {
+    "01-clear": {
+      "name": "CLEAR",
+      "subtitle": "Ruhe, Fokus, Präzision",
+      "style": "Premium LIGHT productivity UI, warm near-white #F6F7F4 background, white surfaces, ink navy #16262B text, muted slate secondary, disciplined deep teal #126E65 primary. Narrow fixed left sidebar, one slim topbar, generous spacing, 12px card radius, subtle 1px separators, restrained soft shadows. Typography excellent modern Swiss sans, large clear headlines, aligned numerals. Clean architectural composition, calm confidence. Optional whisper-soft teal graph lines, no gradients or glass, no purple. Fine abstract logo square with letter L. Looks like a thoughtfully designed premium professional app, not generic card clutter."
+    },
+    "02-orbit": {
+      "name": "ORBIT",
+      "subtitle": "Digitale Energie, klare Kontrolle",
+      "style": "Premium DARK technical control-room UI, deep ink #090F1C canvas, layered blue-charcoal #121D2C surfaces, cool white #EAF2FB text, electric cyan #65D7EB primary, restrained periwinkle #9F9BEF secondary. Slim left rail expanded with labels and crisp slim topbar. Very subtle faint grid only behind network, 14px corners, razor-fine borders, precise spatial typography, clean data tables. Small luminous accents only at active selection and network paths. Futuristic but supremely readable, cinematic digital craft without sci-fi clutter. No purple gradient wallpaper, no giant glowing orbs, no holograms or floating screens."
+    },
+    "03-atelier": {
+      "name": "ATELIER",
+      "subtitle": "Kuratierte Ruhe für kreative Arbeit",
+      "style": "Premium WARM editorial workspace for an art/exhibition brand. Bone ivory #F3EEE6 background, warm white #FFFDFA surfaces, espresso #29261F text, muted rust #AC5137 primary and sage #78856E secondary. More editorial than a standard dashboard: wide top navigation with the six sections instead of a left sidebar, elegant thin dividers, asymmetric content columns, ample margins. Large refined serif section headline paired with very clear modern sans controls and data, tiny uppercase section labels. Flat cards, very subtle 6px radius, paper-like warmth without texture. Precision art-direction, gallery catalogue meets professional planning tool. Abstract line motif, no photos, no skeuomorphism or ornate decoration."
+    }
+  }
+}

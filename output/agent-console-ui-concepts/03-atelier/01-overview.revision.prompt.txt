@@ -1,0 +1,1 @@
+Edit this exact UI screenshot with one text correction only. Replace the subtitle "Sieben spezialisierte Agenten. Ein gemeinsames Ziel:" with "Sechs Spezialisten und ein Master. Ein gemeinsames Ziel:". Everything else, all layout, typography, colors, six navigation entries, counters and three completed task names must remain unchanged. Generate the corrected image, not prose.
