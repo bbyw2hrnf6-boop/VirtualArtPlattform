@@ -1,0 +1,31 @@
+1
+00:00:00,600 --> 00:00:06,525
+Meet your little team of big ideas. Welcome to Lieuva's Agent Control Center.
+
+2
+00:00:08,600 --> 00:00:17,900
+Six specialists explore different corners: quality, experience, strategy, market, search, and three D. Each one brings back a report.
+
+3
+00:00:19,417 --> 00:00:27,542
+Think of every report as a little parcel of discoveries. One by one, the specialists deliver their findings to the Master.
+
+4
+00:00:30,417 --> 00:00:39,217
+The Master opens the parcels, connects the clues, and asks: what matters most today? The answer becomes up to three suggested tasks.
+
+5
+00:00:42,417 --> 00:00:52,242
+Now, you are in charge. Review each task. Approve it, park it for later, or reject it. Approval saves your decision. Starting is a separate click.
+
+6
+00:00:56,417 --> 00:01:06,492
+Choose Execute for research or local code work. Choose Start manually when you will do the work yourself. The queue runs one agent job at a time.
+
+7
+00:01:10,417 --> 00:01:20,492
+Read the result, and record what really happened. With automatic Master sync enabled, results and decisions return to the Master after the queue is finished.
+
+8
+00:01:23,417 --> 00:01:31,692
+Now the next plan can reflect your progress. Explore, decide, do, and learn. One connected cycle, with you in control.
