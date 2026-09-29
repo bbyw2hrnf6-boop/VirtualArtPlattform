@@ -1,0 +1,82 @@
+[
+  {
+    "id": "M01",
+    "name": "Silver gneiss",
+    "base_color_srgb_hex": "#707573",
+    "roughness": 0.78,
+    "metallic": 0.0,
+    "notes": "large irregular slabs; directional veins; 2-6mm relief; 1.2m reference scale"
+  },
+  {
+    "id": "M02",
+    "name": "Warm mineral concrete",
+    "base_color_srgb_hex": "#b5b0a0",
+    "roughness": 0.72,
+    "metallic": 0.0,
+    "notes": "subtle pores; no giant gravel; 2.4m formwork scale; bevel6mm"
+  },
+  {
+    "id": "M03",
+    "name": "Smoked natural oak",
+    "base_color_srgb_hex": "#8e6944",
+    "roughness": 0.48,
+    "metallic": 0.0,
+    "notes": "0.16m floor/ceiling boards, longitudinal grain; restrained color spread"
+  },
+  {
+    "id": "M04",
+    "name": "Dark satin bronze",
+    "base_color_srgb_hex": "#514537",
+    "roughness": 0.3,
+    "metallic": 1.0,
+    "notes": "fine brushing aligned to frame; sparse edge variation"
+  },
+  {
+    "id": "M05",
+    "name": "Honed warm limestone",
+    "base_color_srgb_hex": "#b9b09a",
+    "roughness": 0.58,
+    "metallic": 0.0,
+    "notes": "tiles0.6x1.2m; joints2mm; low contrast pores; no mirror polish"
+  },
+  {
+    "id": "M06",
+    "name": "Ivory linen",
+    "base_color_srgb_hex": "#dfd7c6",
+    "roughness": 0.9,
+    "metallic": 0.0,
+    "notes": "weave0.7mm; cushions with actual seam geometry at close range"
+  },
+  {
+    "id": "M07",
+    "name": "Olive upholstery",
+    "base_color_srgb_hex": "#69705a",
+    "roughness": 0.85,
+    "metallic": 0.0,
+    "notes": "soft fibres; no plastic shine"
+  },
+  {
+    "id": "M08",
+    "name": "Architectural glass",
+    "base_color_srgb_hex": "#eef3ec",
+    "roughness": 0.06,
+    "metallic": 0.0,
+    "notes": "IOR1.45; transmission1 for offline render; 12mm concept thickness"
+  },
+  {
+    "id": "M09",
+    "name": "Pond water",
+    "base_color_srgb_hex": "#53615a",
+    "roughness": 0.09,
+    "metallic": 0.0,
+    "notes": "IOR1.333; actual shallow bed; ripple amplitude under3mm"
+  },
+  {
+    "id": "M10",
+    "name": "Plaster warm ivory",
+    "base_color_srgb_hex": "#d5d0c3",
+    "roughness": 0.8,
+    "metallic": 0.0,
+    "notes": "very fine surface grain"
+  }
+]

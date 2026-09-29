@@ -1,0 +1,541 @@
+{
+  "convention": "Right-handed Z up, metres; target look-at poses; adjust collision-free framing in actual scene",
+  "final_render_target": [
+    3840,
+    2160
+  ],
+  "cameras": [
+    {
+      "id": "C01",
+      "name": "Gesamtansicht aus Südwest",
+      "position_xyz": [
+        -13,
+        -14,
+        5
+      ],
+      "look_at_xyz": [
+        0,
+        0,
+        3
+      ],
+      "lens_mm": 26,
+      "sensor_width_mm": 36,
+      "reference_image": "images/exterior/01-hero-southwest.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C02",
+      "name": "Gesamtansicht aus Südost",
+      "position_xyz": [
+        14,
+        -13,
+        4
+      ],
+      "look_at_xyz": [
+        0,
+        0.5,
+        3
+      ],
+      "lens_mm": 26,
+      "sensor_width_mm": 36,
+      "reference_image": "images/exterior/02-southeast.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C03",
+      "name": "Rückseite und Eingang aus Nordost",
+      "position_xyz": [
+        12,
+        11,
+        6
+      ],
+      "look_at_xyz": [
+        0,
+        1,
+        4
+      ],
+      "lens_mm": 28,
+      "sensor_width_mm": 36,
+      "reference_image": "images/exterior/03-northeast.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C04",
+      "name": "Westseite und Eingang aus Nordwest",
+      "position_xyz": [
+        -13,
+        9,
+        6
+      ],
+      "look_at_xyz": [
+        -2,
+        0,
+        3
+      ],
+      "lens_mm": 28,
+      "sensor_width_mm": 36,
+      "reference_image": "images/exterior/04-northwest.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C05",
+      "name": "Dachlandschaft von oben",
+      "position_xyz": [
+        0,
+        -11,
+        19
+      ],
+      "look_at_xyz": [
+        0,
+        0,
+        2
+      ],
+      "lens_mm": 28,
+      "sensor_width_mm": 36,
+      "reference_image": "images/exterior/05-roof.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C06",
+      "name": "Wasserhof zur blauen Stunde",
+      "position_xyz": [
+        -13,
+        -14,
+        5
+      ],
+      "look_at_xyz": [
+        0,
+        0,
+        3
+      ],
+      "lens_mm": 26,
+      "sensor_width_mm": 36,
+      "reference_image": "images/exterior/06-blue-hour.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "blue_hour"
+    },
+    {
+      "id": "C07",
+      "name": "Wohnbereich: Blick von Südwest nach Nordost",
+      "position_xyz": [
+        -7.4,
+        -3.4,
+        1.7
+      ],
+      "look_at_xyz": [
+        -3.4,
+        0.8,
+        1.5
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/07-living-southwest.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C08",
+      "name": "Schlafzimmer: Hauptansicht",
+      "position_xyz": [
+        -1.6,
+        -0.5,
+        5.1
+      ],
+      "look_at_xyz": [
+        -6,
+        -2.1,
+        4.3
+      ],
+      "lens_mm": 24,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/08-bedroom.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C09",
+      "name": "Duschbad: Hauptansicht",
+      "position_xyz": [
+        -3.8,
+        1.7,
+        4.95
+      ],
+      "look_at_xyz": [
+        -2.1,
+        3.2,
+        4.5
+      ],
+      "lens_mm": 20,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/09-bathroom.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C10",
+      "name": "Arbeitszimmer: Hauptansicht",
+      "position_xyz": [
+        3.6,
+        2.7,
+        5.1
+      ],
+      "look_at_xyz": [
+        6,
+        -0.5,
+        4.6
+      ],
+      "lens_mm": 24,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/10-studio.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C11",
+      "name": "Wasserlounge: Blick zum Teich",
+      "position_xyz": [
+        7.35,
+        3.3,
+        1.7
+      ],
+      "look_at_xyz": [
+        4.4,
+        -0.9,
+        1.2
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/11-water-lounge.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C12",
+      "name": "Brücke: vom Wohnflügel ins Atelier",
+      "position_xyz": [
+        -0.6,
+        0.7,
+        5.1
+      ],
+      "look_at_xyz": [
+        3.4,
+        0.7,
+        5
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/12-bridge-east.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C13",
+      "name": "Innere Treppe und Eingang",
+      "position_xyz": [
+        -4.95,
+        3.05,
+        5.1
+      ],
+      "look_at_xyz": [
+        -6.6,
+        0.1,
+        1.7
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/13-stair-hall.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C14",
+      "name": "Wohnbereich: Gegenblick zum Wald",
+      "position_xyz": [
+        -1.6,
+        1.4,
+        1.7
+      ],
+      "look_at_xyz": [
+        -6,
+        -2,
+        1.2
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/14-living-northeast.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C15",
+      "name": "Wohnbereich: Westwand und Treppenzugang",
+      "position_xyz": [
+        -1.6,
+        -3.4,
+        1.7
+      ],
+      "look_at_xyz": [
+        -6,
+        0,
+        1.4
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/15-living-southeast.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C16",
+      "name": "Küche: Einbauten und Blick zum Wohnraum",
+      "position_xyz": [
+        -4.7,
+        2.5,
+        1.7
+      ],
+      "look_at_xyz": [
+        -2.5,
+        -2,
+        1.3
+      ],
+      "lens_mm": 24,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/16-kitchen-reverse.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C17",
+      "name": "Schlafzimmer: Kopfteil und Garderobe",
+      "position_xyz": [
+        -7.35,
+        -3.4,
+        5.1
+      ],
+      "look_at_xyz": [
+        -3.2,
+        -0.4,
+        4.5
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/17-bedroom-reverse.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C18",
+      "name": "Atelier: Bibliothek und Brückenzugang",
+      "position_xyz": [
+        7.4,
+        -0.9,
+        5.1
+      ],
+      "look_at_xyz": [
+        4.2,
+        2.8,
+        4.8
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/18-studio-reverse.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C19",
+      "name": "Wasserlounge: Felswand und Möblierung",
+      "position_xyz": [
+        3.6,
+        -0.9,
+        1.7
+      ],
+      "look_at_xyz": [
+        6.6,
+        3,
+        1.3
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/19-lounge-reverse.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C20",
+      "name": "Duschbad: Gegenansicht zur Tür",
+      "position_xyz": [
+        -1.55,
+        3.45,
+        5
+      ],
+      "look_at_xyz": [
+        -3.7,
+        1.8,
+        4.5
+      ],
+      "lens_mm": 20,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/20-bathroom-reverse.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C21",
+      "name": "Brücke: Rückweg zum Wohnflügel",
+      "position_xyz": [
+        2.6,
+        0.7,
+        5.1
+      ],
+      "look_at_xyz": [
+        -1.7,
+        0.7,
+        5
+      ],
+      "lens_mm": 22,
+      "sensor_width_mm": 36,
+      "reference_image": "images/interior/21-bridge-west.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C22",
+      "name": "Wohnraum: Decke und Lichtanschlüsse",
+      "position_xyz": [
+        -4.8,
+        -1.1,
+        1
+      ],
+      "look_at_xyz": [
+        -4.8,
+        -1.1,
+        3.05
+      ],
+      "lens_mm": 18,
+      "sensor_width_mm": 36,
+      "reference_image": "images/details/22-living-ceiling.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C23",
+      "name": "Wohnraum: Steinboden und Fensterschwelle",
+      "position_xyz": [
+        -3.2,
+        -1.4,
+        2.5
+      ],
+      "look_at_xyz": [
+        -3.2,
+        -1.4,
+        0.1
+      ],
+      "lens_mm": 28,
+      "sensor_width_mm": 36,
+      "reference_image": "images/details/23-living-floor.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C24",
+      "name": "Schlafzimmer: Fensterseite und Boden",
+      "position_xyz": [
+        -7.3,
+        -1.0,
+        5.1
+      ],
+      "look_at_xyz": [
+        -2,
+        -3,
+        4.7
+      ],
+      "lens_mm": 24,
+      "sensor_width_mm": 36,
+      "reference_image": "images/details/24-bedroom-third.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C25",
+      "name": "Atelier: Decke, Bibliothek und Fensterkopf",
+      "position_xyz": [
+        5.2,
+        1.4,
+        4.5
+      ],
+      "look_at_xyz": [
+        5.2,
+        1.4,
+        6.4
+      ],
+      "lens_mm": 18,
+      "sensor_width_mm": 36,
+      "reference_image": "images/details/25-studio-ceiling.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C26",
+      "name": "Wasserlounge: Decke und Felsanschluss",
+      "position_xyz": [
+        5.8,
+        0.9,
+        1.1
+      ],
+      "look_at_xyz": [
+        7.1,
+        3,
+        3
+      ],
+      "lens_mm": 20,
+      "sensor_width_mm": 36,
+      "reference_image": "images/details/26-lounge-ceiling.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C27",
+      "name": "Wasserlounge: Boden, Glas und Wasserlinie",
+      "position_xyz": [
+        5,
+        -0.2,
+        1.3
+      ],
+      "look_at_xyz": [
+        5,
+        -1.5,
+        0
+      ],
+      "lens_mm": 35,
+      "sensor_width_mm": 36,
+      "reference_image": "images/details/27-lounge-floor.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    },
+    {
+      "id": "C28",
+      "name": "Dachgarten: Stein, Blüten und Randdetail",
+      "position_xyz": [
+        -0.8,
+        -2,
+        8
+      ],
+      "look_at_xyz": [
+        -2,
+        -3,
+        7
+      ],
+      "lens_mm": 50,
+      "sensor_width_mm": 36,
+      "reference_image": "images/details/28-roof-planting.png",
+      "notes": "Planned Blender pose. Not a solved/calibrated pose from the generated image.",
+      "lighting": "late_afternoon"
+    }
+  ]
+}

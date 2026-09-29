@@ -1,0 +1,787 @@
+{
+  "total_images": 65,
+  "room_views": 30,
+  "sculpture_views": 35,
+  "images": [
+    {
+      "id": "A-SW",
+      "owner": "A",
+      "view": "SW",
+      "path": "views/A/SW.png",
+      "pixels": [
+        1672,
+        941
+      ],
+      "sha256": "46de401ac743f70d1d4840cfdcb6b181e6bb9b0d20ecc94daf01cf70410c2754",
+      "bytes": 1977578
+    },
+    {
+      "id": "A-SE",
+      "owner": "A",
+      "view": "SE",
+      "path": "views/A/SE.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "6dddbeb83590517591b042d080d6be90336d7487f8b5535eca3ad90edf4634cf",
+      "bytes": 2310978
+    },
+    {
+      "id": "A-NE",
+      "owner": "A",
+      "view": "NE",
+      "path": "views/A/NE.png",
+      "pixels": [
+        1402,
+        1122
+      ],
+      "sha256": "a7786f61159674ee0361fc859eace847b816fd9a357ff57fb23ec5884cb37766",
+      "bytes": 2173399
+    },
+    {
+      "id": "A-NW",
+      "owner": "A",
+      "view": "NW",
+      "path": "views/A/NW.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "c20b8d2d4e5668c994988bf49ba7cebb8a66f87c15d6630e2e070375f97d0452",
+      "bytes": 2365983
+    },
+    {
+      "id": "A-WALL-N",
+      "owner": "A",
+      "view": "WALL-N",
+      "path": "views/A/WALL-N.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "e4954af3df20b17f2e603dc8c2e40a926d12ce5f4a48e31ba61401f2fba7034d",
+      "bytes": 2414422
+    },
+    {
+      "id": "A-WALL-E",
+      "owner": "A",
+      "view": "WALL-E",
+      "path": "views/A/WALL-E.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "71d1984f27e8d8d6ea3089c4a4c41d86ac1e1fe8c8233f139d45ff461fc50f92",
+      "bytes": 2333823
+    },
+    {
+      "id": "A-WALL-S",
+      "owner": "A",
+      "view": "WALL-S",
+      "path": "views/A/WALL-S.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "de81ce30df9a035a9ba5fc0608acc15685cdbe3b0abe2f03cdcea96446320325",
+      "bytes": 2312888
+    },
+    {
+      "id": "A-WALL-W",
+      "owner": "A",
+      "view": "WALL-W",
+      "path": "views/A/WALL-W.png",
+      "pixels": [
+        1402,
+        1122
+      ],
+      "sha256": "420999e41e728aa989acfd0d0a0af5840550e9c16dab9940de9073d80a9849a3",
+      "bytes": 2022820
+    },
+    {
+      "id": "A-CEILING",
+      "owner": "A",
+      "view": "CEILING",
+      "path": "views/A/CEILING.png",
+      "pixels": [
+        1402,
+        1122
+      ],
+      "sha256": "0e7514bc39736b3724edb9b4467e15a9bb79bad7085682e224fbb08cd31ee391",
+      "bytes": 1618298
+    },
+    {
+      "id": "A-FLOOR",
+      "owner": "A",
+      "view": "FLOOR",
+      "path": "views/A/FLOOR.png",
+      "pixels": [
+        1402,
+        1122
+      ],
+      "sha256": "f6e839fe845fa982395b54b77ac9ba945288f7517afbc5286ec3dd1582963d3f",
+      "bytes": 2264028
+    },
+    {
+      "id": "B-SW",
+      "owner": "B",
+      "view": "SW",
+      "path": "views/B/SW.png",
+      "pixels": [
+        1672,
+        941
+      ],
+      "sha256": "83d0130106690040b6337148998c400f3392251e0c60b53ca333fb9246169390",
+      "bytes": 1853694
+    },
+    {
+      "id": "B-SE",
+      "owner": "B",
+      "view": "SE",
+      "path": "views/B/SE.png",
+      "pixels": [
+        1355,
+        1161
+      ],
+      "sha256": "a4cd814cae1a665fda9716358ac66e9381a448bf9a37d0397dd6a28073d74884",
+      "bytes": 2177919
+    },
+    {
+      "id": "B-NE",
+      "owner": "B",
+      "view": "NE",
+      "path": "views/B/NE.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "fb6616766e78575795506d7e99a46be21346d0f4598e2760e6feef0a3d8be07f",
+      "bytes": 2262349
+    },
+    {
+      "id": "B-NW",
+      "owner": "B",
+      "view": "NW",
+      "path": "views/B/NW.png",
+      "pixels": [
+        1355,
+        1160
+      ],
+      "sha256": "980cc10fc3b91dcfeea5b899cb489edb0e19f2e7cccaabbfea314c327779bd3c",
+      "bytes": 1997609
+    },
+    {
+      "id": "B-WALL-N",
+      "owner": "B",
+      "view": "WALL-N",
+      "path": "views/B/WALL-N.png",
+      "pixels": [
+        1355,
+        1161
+      ],
+      "sha256": "e5112eb1f7e8baa015251b2e06862dffa889fc21cf88456c9ec8c8cb08b45a68",
+      "bytes": 2162988
+    },
+    {
+      "id": "B-WALL-E",
+      "owner": "B",
+      "view": "WALL-E",
+      "path": "views/B/WALL-E.png",
+      "pixels": [
+        1355,
+        1161
+      ],
+      "sha256": "cf39ddd24e20afd5786df7a30537fcf124cd00fa5fbd71c7858baf65131c6c53",
+      "bytes": 1948802
+    },
+    {
+      "id": "B-WALL-S",
+      "owner": "B",
+      "view": "WALL-S",
+      "path": "views/B/WALL-S.png",
+      "pixels": [
+        1355,
+        1161
+      ],
+      "sha256": "a1373747dbdb8b0cac0e19173311a0f878dce1771752275b8dcef41eca22ddec",
+      "bytes": 1992735
+    },
+    {
+      "id": "B-WALL-W",
+      "owner": "B",
+      "view": "WALL-W",
+      "path": "views/B/WALL-W.png",
+      "pixels": [
+        1355,
+        1161
+      ],
+      "sha256": "737a11eeee5e499cdf55414e117b5ff4bc745086852a4393bfd77f3ae54af6cd",
+      "bytes": 2217744
+    },
+    {
+      "id": "B-CEILING",
+      "owner": "B",
+      "view": "CEILING",
+      "path": "views/B/CEILING.png",
+      "pixels": [
+        1448,
+        1086
+      ],
+      "sha256": "b5b33636747ba0d9a39966990b868d74ddadb2a3203e5d60b8e3918f5df4b3f3",
+      "bytes": 1272375
+    },
+    {
+      "id": "B-FLOOR",
+      "owner": "B",
+      "view": "FLOOR",
+      "path": "views/B/FLOOR.png",
+      "pixels": [
+        1355,
+        1161
+      ],
+      "sha256": "794a494f25b09aba64a265ad39ba4c8bb3d9f09096d81e4b91a81669ae9c7fe8",
+      "bytes": 2463801
+    },
+    {
+      "id": "C-SW",
+      "owner": "C",
+      "view": "SW",
+      "path": "views/C/SW.png",
+      "pixels": [
+        1672,
+        941
+      ],
+      "sha256": "30cac6fa9f91267f4c9d04d920dfea40effaa3b5b6cb721aeb07d8763f22952f",
+      "bytes": 2067429
+    },
+    {
+      "id": "C-SE",
+      "owner": "C",
+      "view": "SE",
+      "path": "views/C/SE.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "2a32b6f65b09d0068b6ca512c9b28fa73c3436bc0dce42b36bb2174d1e0c3ab9",
+      "bytes": 2298179
+    },
+    {
+      "id": "C-NE",
+      "owner": "C",
+      "view": "NE",
+      "path": "views/C/NE.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "ce93571a0884d49e9f889c3099eb55dc805d15324b7e52df873eef87a7fd622c",
+      "bytes": 2370931
+    },
+    {
+      "id": "C-NW",
+      "owner": "C",
+      "view": "NW",
+      "path": "views/C/NW.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "012885c2ec329e9840077ec60b42b815f61139f9946b52a3df28ec0d1aeb9303",
+      "bytes": 2250361
+    },
+    {
+      "id": "C-WALL-N",
+      "owner": "C",
+      "view": "WALL-N",
+      "path": "views/C/WALL-N.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "294119d229ae0b41f82935f51d56723b10bf3356fca1c0ef9961051c2d87cd41",
+      "bytes": 1974709
+    },
+    {
+      "id": "C-WALL-E",
+      "owner": "C",
+      "view": "WALL-E",
+      "path": "views/C/WALL-E.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "e4c8b55ba067202915f3428c8271e13ea38c190bc36410f767f0ba4bffabb58f",
+      "bytes": 2240104
+    },
+    {
+      "id": "C-WALL-S",
+      "owner": "C",
+      "view": "WALL-S",
+      "path": "views/C/WALL-S.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "8a6d6771b6a862ad20dfe9fd611624dd533ce687283f9aab937f211f15dd4f06",
+      "bytes": 2144199
+    },
+    {
+      "id": "C-WALL-W",
+      "owner": "C",
+      "view": "WALL-W",
+      "path": "views/C/WALL-W.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "ab78e5d5d81a66b53b6d638f5505ee2b683f4f6bccceded0adb763bd9f62a567",
+      "bytes": 2212621
+    },
+    {
+      "id": "C-CEILING",
+      "owner": "C",
+      "view": "CEILING",
+      "path": "views/C/CEILING.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "b583969bed805c45d97f6c6ced3eec0ac6fd31719f2cc3afb4f0f9ba8c60321c",
+      "bytes": 1756469
+    },
+    {
+      "id": "C-FLOOR",
+      "owner": "C",
+      "view": "FLOOR",
+      "path": "views/C/FLOOR.png",
+      "pixels": [
+        1942,
+        809
+      ],
+      "sha256": "15b59bbb488ae818623d55265919aeeae091c706cb9a7e096480a011451ced4f",
+      "bytes": 2315765
+    },
+    {
+      "id": "S01-HERO",
+      "owner": "S01",
+      "view": "HERO",
+      "path": "sculptures/S01/HERO.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "117462a9e751ea7ef948a743a6e7473911e7f38c818d0c03a572c0b1301157be",
+      "bytes": 2383747
+    },
+    {
+      "id": "S01-FRONT",
+      "owner": "S01",
+      "view": "FRONT",
+      "path": "sculptures/S01/FRONT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "2b58190b876a639ac8b6b604af16233d43ab365fa345799660fc4e9ced7ed3fc",
+      "bytes": 2241302
+    },
+    {
+      "id": "S01-BACK",
+      "owner": "S01",
+      "view": "BACK",
+      "path": "sculptures/S01/BACK.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "9c877a6b62e574644d208930397730ecb9c3bdd70b00135f8218206efc16de82",
+      "bytes": 2163255
+    },
+    {
+      "id": "S01-LEFT",
+      "owner": "S01",
+      "view": "LEFT",
+      "path": "sculptures/S01/LEFT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "202dc0e67c1113542c02db248fa74a10e6b1e137ab1a40c182db4e819393e886",
+      "bytes": 2287179
+    },
+    {
+      "id": "S01-RIGHT",
+      "owner": "S01",
+      "view": "RIGHT",
+      "path": "sculptures/S01/RIGHT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "332ede887bdb8a2da84cd7f9f0a03ad866fee3bf83b739593c28122330fff585",
+      "bytes": 2338686
+    },
+    {
+      "id": "S01-TOP",
+      "owner": "S01",
+      "view": "TOP",
+      "path": "sculptures/S01/TOP.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "d9f36c270b29b62a8b06894eb3bbe36073aec2361635094ad476483d0a23c81f",
+      "bytes": 2200748
+    },
+    {
+      "id": "S01-BOTTOM",
+      "owner": "S01",
+      "view": "BOTTOM",
+      "path": "sculptures/S01/BOTTOM.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "150e22f6a93b62c5e8b9081835d034daa245fee83da2f2a729cb84dfb608a271",
+      "bytes": 2228608
+    },
+    {
+      "id": "S02-HERO",
+      "owner": "S02",
+      "view": "HERO",
+      "path": "sculptures/S02/HERO.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "8c1b3efe6f2662d895a027337e02f5e2aa2e9e6b8b93d38efbdf701f56dadd5d",
+      "bytes": 1710809
+    },
+    {
+      "id": "S02-FRONT",
+      "owner": "S02",
+      "view": "FRONT",
+      "path": "sculptures/S02/FRONT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "7726c995baf87ae52e444cda48b2af38a26c3c60caed2dccec3f954305dbf860",
+      "bytes": 1715559
+    },
+    {
+      "id": "S02-BACK",
+      "owner": "S02",
+      "view": "BACK",
+      "path": "sculptures/S02/BACK.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "6f663f1f41b25f8e533a2d5c08e5227c5b7769eca6e16489c12314b20ac37b15",
+      "bytes": 1651992
+    },
+    {
+      "id": "S02-LEFT",
+      "owner": "S02",
+      "view": "LEFT",
+      "path": "sculptures/S02/LEFT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "de229704810db175c76a3908e396aa474337f545f4f1ffb33a2e8aaa583e9d99",
+      "bytes": 1644771
+    },
+    {
+      "id": "S02-RIGHT",
+      "owner": "S02",
+      "view": "RIGHT",
+      "path": "sculptures/S02/RIGHT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "b332f59d1481ad4bbc51b20dc99480b3aeb9e3e75be5d7ec5399523bae62c24a",
+      "bytes": 1628484
+    },
+    {
+      "id": "S02-TOP",
+      "owner": "S02",
+      "view": "TOP",
+      "path": "sculptures/S02/TOP.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "bbd49dbb1e56dd28ccffd5146b027320684c542d60d1e117956468ff515c989c",
+      "bytes": 1752804
+    },
+    {
+      "id": "S02-BOTTOM",
+      "owner": "S02",
+      "view": "BOTTOM",
+      "path": "sculptures/S02/BOTTOM.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "2f16701e6b79520ec5afe1cdcd694ef6f8ae769702d24aaebb076d05e3a0f022",
+      "bytes": 1830189
+    },
+    {
+      "id": "S03-HERO",
+      "owner": "S03",
+      "view": "HERO",
+      "path": "sculptures/S03/HERO.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "79fbbd98f8f59d9d8e62ee791f131eaa53f76b6e0289539d817623cd88a00ac6",
+      "bytes": 1684272
+    },
+    {
+      "id": "S03-FRONT",
+      "owner": "S03",
+      "view": "FRONT",
+      "path": "sculptures/S03/FRONT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "7040a3995a204a35f1c5e21cae6ef1f92e7d3f77ae4a1ef2642ffe31d23cdaa4",
+      "bytes": 1673673
+    },
+    {
+      "id": "S03-BACK",
+      "owner": "S03",
+      "view": "BACK",
+      "path": "sculptures/S03/BACK.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "71c94a3bc44c6fc4adae56af087c1edffe867a57929058433871e4a45c573547",
+      "bytes": 1668864
+    },
+    {
+      "id": "S03-LEFT",
+      "owner": "S03",
+      "view": "LEFT",
+      "path": "sculptures/S03/LEFT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "62a4d3d32d2ca8357924b98d57c3a092e5bf6efd93a69b4f87d87d9e23c002d7",
+      "bytes": 1626609
+    },
+    {
+      "id": "S03-RIGHT",
+      "owner": "S03",
+      "view": "RIGHT",
+      "path": "sculptures/S03/RIGHT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "2b29a3acd458f5856783e08223bf173b85c8dcbd9264b0f845504088131d30bf",
+      "bytes": 1607275
+    },
+    {
+      "id": "S03-TOP",
+      "owner": "S03",
+      "view": "TOP",
+      "path": "sculptures/S03/TOP.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "d215c55e90c161f4e29b1a107a818209eec76576ff88ac4450ba682ac6d62ec0",
+      "bytes": 1714340
+    },
+    {
+      "id": "S03-BOTTOM",
+      "owner": "S03",
+      "view": "BOTTOM",
+      "path": "sculptures/S03/BOTTOM.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "8e1a7dbedd4ac67a60655dae8028dc072e45a5b28a5c9e6c66207ec2fb470525",
+      "bytes": 1698130
+    },
+    {
+      "id": "S04-HERO",
+      "owner": "S04",
+      "view": "HERO",
+      "path": "sculptures/S04/HERO.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "70250cf4e2f3982e71881fbaa85983dce94dbca1d53e7cce068eaa2149223a55",
+      "bytes": 1705433
+    },
+    {
+      "id": "S04-FRONT",
+      "owner": "S04",
+      "view": "FRONT",
+      "path": "sculptures/S04/FRONT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "41031650becd8a2fab9bbf70c20e9e3412f07f2ccc4223120ed96743789284be",
+      "bytes": 1754353
+    },
+    {
+      "id": "S04-BACK",
+      "owner": "S04",
+      "view": "BACK",
+      "path": "sculptures/S04/BACK.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "ecd33118bd4006c93eacd6923697f215e16e5196c3fe1e8a0fc23569048cc9b2",
+      "bytes": 1785732
+    },
+    {
+      "id": "S04-LEFT",
+      "owner": "S04",
+      "view": "LEFT",
+      "path": "sculptures/S04/LEFT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "de61b94afc9fe8c92f21236913e2752c9a7c38f1075f215f28fa083f15f7ec1c",
+      "bytes": 1767566
+    },
+    {
+      "id": "S04-RIGHT",
+      "owner": "S04",
+      "view": "RIGHT",
+      "path": "sculptures/S04/RIGHT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "8a96c68a26e135be8a09a2da148e9d9a0f94b3151a654d1d0a0a5d012c3ef95b",
+      "bytes": 1780051
+    },
+    {
+      "id": "S04-TOP",
+      "owner": "S04",
+      "view": "TOP",
+      "path": "sculptures/S04/TOP.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "db59f204a03728e4af7da6150cf7d80a26a86e504adb85b74763c813d515006d",
+      "bytes": 2065436
+    },
+    {
+      "id": "S04-BOTTOM",
+      "owner": "S04",
+      "view": "BOTTOM",
+      "path": "sculptures/S04/BOTTOM.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "501379cf44b7704efe3ebf0ff9169af64fdb06113d932a0ce348a563578239ef",
+      "bytes": 1938313
+    },
+    {
+      "id": "S05-HERO",
+      "owner": "S05",
+      "view": "HERO",
+      "path": "sculptures/S05/HERO.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "dcd867deaee28edd1e83809235a4bf05d98e6c9956d5f5d7b4a293b5e49f291e",
+      "bytes": 2087946
+    },
+    {
+      "id": "S05-FRONT",
+      "owner": "S05",
+      "view": "FRONT",
+      "path": "sculptures/S05/FRONT.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "4285a2780b4d11e331c512c4cf3a34c92ad2a264ee6b2375ac21e2d3798dd131",
+      "bytes": 1934118
+    },
+    {
+      "id": "S05-BACK",
+      "owner": "S05",
+      "view": "BACK",
+      "path": "sculptures/S05/BACK.png",
+      "pixels": [
+        1254,
+        1254
+      ],
+      "sha256": "f13c71269f99256412b42e39b9b6fbbd680838f21f32644f527ce0a70ed2af2e",
+      "bytes": 1898507
+    },
+    {
+      "id": "S05-LEFT",
+      "owner": "S05",
+      "view": "LEFT",
+      "path": "sculptures/S05/LEFT.png",
+      "pixels": [
+        1774,
+        887
+      ],
+      "sha256": "5c373a43b412da457483de9fb0a4ef42f4b58d9d33785208585ddec3a2ddbad6",
+      "bytes": 1793870
+    },
+    {
+      "id": "S05-RIGHT",
+      "owner": "S05",
+      "view": "RIGHT",
+      "path": "sculptures/S05/RIGHT.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "e46400d27ca17631094331cc8c9cb303bd345d426209076d322903939ea7aaa5",
+      "bytes": 2005273
+    },
+    {
+      "id": "S05-TOP",
+      "owner": "S05",
+      "view": "TOP",
+      "path": "sculptures/S05/TOP.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "ee9b95b0035288bc81cc9b28c47217e3b491ec90cf2c9d0b2d337dc561f6eb12",
+      "bytes": 2019209
+    },
+    {
+      "id": "S05-BOTTOM",
+      "owner": "S05",
+      "view": "BOTTOM",
+      "path": "sculptures/S05/BOTTOM.png",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "88778611118807615328079ffbd773b454beea77d485e5a8cdf1b937d0d5e4c3",
+      "bytes": 2018095
+    }
+  ]
+}

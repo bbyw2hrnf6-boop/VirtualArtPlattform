@@ -1,0 +1,488 @@
+[
+  {
+    "id": "F01",
+    "zone": "L0-LIVING",
+    "kind": "Sofa",
+    "center_xyz": [
+      -6.9,
+      -2.2,
+      0.43
+    ],
+    "size_xyz": [
+      0.95,
+      2.4,
+      0.86
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M06",
+    "notes": "Back toward west wall; face east"
+  },
+  {
+    "id": "F02",
+    "zone": "L0-LIVING",
+    "kind": "Coffee table",
+    "center_xyz": [
+      -5.35,
+      -1.85,
+      0.19
+    ],
+    "size_xyz": [
+      1.0,
+      0.75,
+      0.38
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M05",
+    "notes": ""
+  },
+  {
+    "id": "F03",
+    "zone": "L0-LIVING",
+    "kind": "Lounge chair",
+    "center_xyz": [
+      -4.3,
+      -3.0,
+      0.4
+    ],
+    "size_xyz": [
+      0.8,
+      0.85,
+      0.8
+    ],
+    "rotation_z_degrees": 25,
+    "material": "M07",
+    "notes": ""
+  },
+  {
+    "id": "F04",
+    "zone": "L0-LIVING",
+    "kind": "Round dining table",
+    "center_xyz": [
+      -2.7,
+      -2.0,
+      0.375
+    ],
+    "size_xyz": [
+      1.3,
+      1.3,
+      0.75
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": ""
+  },
+  {
+    "id": "F050",
+    "zone": "L0-LIVING",
+    "kind": "Dining chair",
+    "center_xyz": [
+      -3.6,
+      -2,
+      0.45
+    ],
+    "size_xyz": [
+      0.48,
+      0.52,
+      0.9
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": "Orient toward dining table"
+  },
+  {
+    "id": "F051",
+    "zone": "L0-LIVING",
+    "kind": "Dining chair",
+    "center_xyz": [
+      -1.8000000000000003,
+      -2,
+      0.45
+    ],
+    "size_xyz": [
+      0.48,
+      0.52,
+      0.9
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": "Orient toward dining table"
+  },
+  {
+    "id": "F052",
+    "zone": "L0-LIVING",
+    "kind": "Dining chair",
+    "center_xyz": [
+      -2.7,
+      -2.9,
+      0.45
+    ],
+    "size_xyz": [
+      0.48,
+      0.52,
+      0.9
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": "Orient toward dining table"
+  },
+  {
+    "id": "F053",
+    "zone": "L0-LIVING",
+    "kind": "Dining chair",
+    "center_xyz": [
+      -2.7,
+      -1.1,
+      0.45
+    ],
+    "size_xyz": [
+      0.48,
+      0.52,
+      0.9
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": "Orient toward dining table"
+  },
+  {
+    "id": "F06",
+    "zone": "L0-KITCHEN",
+    "kind": "Island",
+    "center_xyz": [
+      -3.05,
+      0.15,
+      0.455
+    ],
+    "size_xyz": [
+      1.6,
+      0.8,
+      0.91
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M05",
+    "notes": ""
+  },
+  {
+    "id": "F07",
+    "zone": "L0-KITCHEN",
+    "kind": "Rear base cabinets",
+    "center_xyz": [
+      -2.7,
+      1.83,
+      0.455
+    ],
+    "size_xyz": [
+      2.8,
+      0.6,
+      0.91
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": ""
+  },
+  {
+    "id": "F08",
+    "zone": "L0-KITCHEN",
+    "kind": "Tall cabinet",
+    "center_xyz": [
+      -5.15,
+      1.3,
+      1.4
+    ],
+    "size_xyz": [
+      0.5,
+      1.4,
+      2.8
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": ""
+  },
+  {
+    "id": "F09",
+    "zone": "L0-WC",
+    "kind": "Toilet",
+    "center_xyz": [
+      -1.85,
+      3.3,
+      0.4
+    ],
+    "size_xyz": [
+      0.4,
+      0.7,
+      0.8
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M10",
+    "notes": ""
+  },
+  {
+    "id": "F10",
+    "zone": "L0-WC",
+    "kind": "Small basin",
+    "center_xyz": [
+      -3.3,
+      3.35,
+      0.85
+    ],
+    "size_xyz": [
+      0.45,
+      0.4,
+      0.16
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M05",
+    "notes": ""
+  },
+  {
+    "id": "F11",
+    "zone": "L1-BED",
+    "kind": "Bed",
+    "center_xyz": [
+      -6.4,
+      -2.15,
+      3.73
+    ],
+    "size_xyz": [
+      1.8,
+      2.1,
+      0.66
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M06",
+    "notes": "Headboard at north stepped partition y=-0.85; feet south"
+  },
+  {
+    "id": "F12",
+    "zone": "L1-BED",
+    "kind": "Wardrobe",
+    "center_xyz": [
+      -2.6,
+      -0.48,
+      4.8
+    ],
+    "size_xyz": [
+      2.3,
+      0.6,
+      2.8
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": ""
+  },
+  {
+    "id": "F13",
+    "zone": "L1-BED",
+    "kind": "Window chair",
+    "center_xyz": [
+      -2.3,
+      -2.9,
+      3.8
+    ],
+    "size_xyz": [
+      0.85,
+      0.85,
+      0.8
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M07",
+    "notes": ""
+  },
+  {
+    "id": "F14",
+    "zone": "L1-BATH",
+    "kind": "Walk-in shower",
+    "center_xyz": [
+      -1.9,
+      3.08,
+      4.5
+    ],
+    "size_xyz": [
+      1.0,
+      1.1,
+      2.2
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M08",
+    "notes": ""
+  },
+  {
+    "id": "F15",
+    "zone": "L1-BATH",
+    "kind": "Vanity",
+    "center_xyz": [
+      -3.45,
+      3.35,
+      4.25
+    ],
+    "size_xyz": [
+      1.0,
+      0.5,
+      0.2
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M05",
+    "notes": ""
+  },
+  {
+    "id": "F16",
+    "zone": "L1-BATH",
+    "kind": "Toilet",
+    "center_xyz": [
+      -1.85,
+      2.02,
+      3.8
+    ],
+    "size_xyz": [
+      0.45,
+      0.7,
+      0.8
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M10",
+    "notes": ""
+  },
+  {
+    "id": "F17",
+    "zone": "L1-STUDIO",
+    "kind": "Architect desk",
+    "center_xyz": [
+      5.55,
+      0.2,
+      3.775
+    ],
+    "size_xyz": [
+      2.0,
+      0.85,
+      0.75
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": ""
+  },
+  {
+    "id": "F18",
+    "zone": "L1-STUDIO",
+    "kind": "Library",
+    "center_xyz": [
+      5.5,
+      3.4,
+      4.85
+    ],
+    "size_xyz": [
+      3.8,
+      0.45,
+      2.9
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": ""
+  },
+  {
+    "id": "F19",
+    "zone": "L1-STUDIO",
+    "kind": "Desk chair",
+    "center_xyz": [
+      5.5,
+      1.1,
+      3.85
+    ],
+    "size_xyz": [
+      0.6,
+      0.6,
+      0.9
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M07",
+    "notes": ""
+  },
+  {
+    "id": "F20",
+    "zone": "L1-STUDIO",
+    "kind": "Reading chair",
+    "center_xyz": [
+      7.0,
+      -0.3,
+      3.8
+    ],
+    "size_xyz": [
+      0.8,
+      0.85,
+      0.8
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M06",
+    "notes": ""
+  },
+  {
+    "id": "F21",
+    "zone": "L0-LOUNGE",
+    "kind": "Low sofa",
+    "center_xyz": [
+      5.5,
+      2.75,
+      0.43
+    ],
+    "size_xyz": [
+      2.7,
+      0.95,
+      0.86
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M06",
+    "notes": ""
+  },
+  {
+    "id": "F22",
+    "zone": "L0-LOUNGE",
+    "kind": "Round coffee table",
+    "center_xyz": [
+      5.5,
+      1.2,
+      0.2
+    ],
+    "size_xyz": [
+      1.1,
+      1.1,
+      0.4
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M05",
+    "notes": ""
+  },
+  {
+    "id": "F23",
+    "zone": "L0-LOUNGE",
+    "kind": "Reading chair",
+    "center_xyz": [
+      7,
+      1.0,
+      0.4
+    ],
+    "size_xyz": [
+      0.8,
+      0.85,
+      0.8
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M07",
+    "notes": ""
+  },
+  {
+    "id": "F24",
+    "zone": "L0-LOUNGE",
+    "kind": "Oak low shelf",
+    "center_xyz": [
+      7.43,
+      2.1,
+      0.45
+    ],
+    "size_xyz": [
+      0.4,
+      2.2,
+      0.9
+    ],
+    "rotation_z_degrees": 0,
+    "material": "M03",
+    "notes": ""
+  }
+]

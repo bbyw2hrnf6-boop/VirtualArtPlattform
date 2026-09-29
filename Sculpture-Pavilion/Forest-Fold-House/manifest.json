@@ -1,0 +1,320 @@
+{
+  "project": "Forest Fold House",
+  "version": "1.0",
+  "created": "2026-09-16",
+  "generated_images": 28,
+  "plan_sheets": 8,
+  "book_pages": 41,
+  "files": [
+    {
+      "path": "CODEX-START.md",
+      "bytes": 2050,
+      "sha256": "8de9fcc8cb39529e53f9db4065fcba1c96884fd7b156d04b8a251da2e3574440"
+    },
+    {
+      "path": "Forest-Fold-House-Konzept.pdf",
+      "bytes": 33925218,
+      "sha256": "5d016938698a930bef0387dc0e3842797ccb8bb2fea7f1cbfd2febe363f187bc"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2065,
+      "sha256": "1f78380c65a8ceb8791b04b74a20ff29dc9f9b6c6c562fb5b4de1ec1a906d60c"
+    },
+    {
+      "path": "data/asset-index.json",
+      "bytes": 10023,
+      "sha256": "a7c5eaa2d423681ca2252fec0eef8aac5a3ac1b67055583660ca94ba52660fc3"
+    },
+    {
+      "path": "data/book-pages.json",
+      "bytes": 1406,
+      "sha256": "a65b6f1aab1d6957471c79fc73c3d3ff79d0a89636585aee410941f5d77ad81b"
+    },
+    {
+      "path": "data/cameras.json",
+      "bytes": 13248,
+      "sha256": "e0d0c0a85c5580a2995cc02cbcaf8585afc97a5f54802a2c19c81c4d565a8a22"
+    },
+    {
+      "path": "data/furniture.json",
+      "bytes": 7356,
+      "sha256": "6ee2bb9ebf57a64912bb00a20deff00ed92d537b1b3c459f98327cd3645471b2"
+    },
+    {
+      "path": "data/materials.json",
+      "bytes": 2117,
+      "sha256": "6111f848a9212795c41237e23671f096bf53d75f64d8f5f12c849d0751f77194"
+    },
+    {
+      "path": "data/scene.json",
+      "bytes": 16220,
+      "sha256": "87957e880b9035229520360f9f66b0f140574362de8b9956e871045bbec7114e"
+    },
+    {
+      "path": "data/surfaces.json",
+      "bytes": 2479,
+      "sha256": "7f7e810c4259f024d9d3cc143adbb0e9efc8d958c96a9e16a77d885389b1a2de"
+    },
+    {
+      "path": "docs/BLENDER-BRIEF.md",
+      "bytes": 5591,
+      "sha256": "b65ecd69a8c0270767c7c5e7be99ba53557c4c5ce852f3b7f1183d30be08d3c1"
+    },
+    {
+      "path": "docs/CONCEPT.md",
+      "bytes": 3253,
+      "sha256": "588fb8ec34efc7805cc3968fe29e84ede98a613d813344d8668ef1f9b55e5503"
+    },
+    {
+      "path": "docs/REFERENCE-NOTES.md",
+      "bytes": 2832,
+      "sha256": "b7f8f42482395e3552d1222ab575753c1aba177ebed584dc735ef0b65afe4919"
+    },
+    {
+      "path": "docs/SURFACE-SCHEDULE.md",
+      "bytes": 2522,
+      "sha256": "85962403684e866ebd71b3a89defabf6057c15ed71074f6565e8799a83d1e969"
+    },
+    {
+      "path": "images/details/22-living-ceiling.png",
+      "bytes": 2682397,
+      "sha256": "0939a97bf3dc3c75bceb44df7a7a5307074650146bb4e5d12b5438849b05c9a5"
+    },
+    {
+      "path": "images/details/23-living-floor.png",
+      "bytes": 3087451,
+      "sha256": "364cbcad391c8cb8b5eb49db01f4695fe41e34a292c63a1297f57aaa9b615f2e"
+    },
+    {
+      "path": "images/details/24-bedroom-third.png",
+      "bytes": 3175258,
+      "sha256": "83ff0e1f0f6badc0f1aaa1eb5b360efbebaa4fe83baf8bcf614ccc21e8be5d2e"
+    },
+    {
+      "path": "images/details/25-studio-ceiling.png",
+      "bytes": 2728144,
+      "sha256": "7e1933aa23edfb432d14cc88fbbb276e3e9af84e13811e685d994fe014d7aa3b"
+    },
+    {
+      "path": "images/details/26-lounge-ceiling.png",
+      "bytes": 3115735,
+      "sha256": "a8ccb26faaa25f73b405b21361ae79dbea4db48c5aeca6131995515b12e69295"
+    },
+    {
+      "path": "images/details/27-lounge-floor.png",
+      "bytes": 3169193,
+      "sha256": "bdba89fe54467985a548d99a7fddba6c728609287450518af187ffb2aa83f6b6"
+    },
+    {
+      "path": "images/details/28-roof-planting.png",
+      "bytes": 3203744,
+      "sha256": "a62eac7019e7fb36272ff9ed46ce23143ea451fd8e3d3149b711bdfaf79fafb1"
+    },
+    {
+      "path": "images/exterior/01-hero-southwest.png",
+      "bytes": 3546154,
+      "sha256": "2de18156f83bc8bfe5fc4de10bd5bb13561936f16a544b3ff02beb4ddd5d38f6"
+    },
+    {
+      "path": "images/exterior/02-southeast.png",
+      "bytes": 3542738,
+      "sha256": "222b79712d2df262a91b8ba1ca80a3d6ba7eedf6aaec664cc905359bf94a51a8"
+    },
+    {
+      "path": "images/exterior/03-northeast.png",
+      "bytes": 3621000,
+      "sha256": "6aeeb1645c8013b53499fa5df0939864c547a4e50a36317db89d26e2703d1a03"
+    },
+    {
+      "path": "images/exterior/04-northwest.png",
+      "bytes": 3732310,
+      "sha256": "e867e39b637c22604e51451af6419ab1cba02e9dd5286f1f21037583f4c86aec"
+    },
+    {
+      "path": "images/exterior/05-roof.png",
+      "bytes": 4084126,
+      "sha256": "77e7aa94b9dec4de6ef802243c8e84b42b135792be848d3b80254b6944c92ac0"
+    },
+    {
+      "path": "images/exterior/06-blue-hour.png",
+      "bytes": 3030959,
+      "sha256": "c0431b5711cb8277ea7a82897b0c741978bbd301ff1fcc6cc89595593aa747c0"
+    },
+    {
+      "path": "images/interior/07-living-southwest.png",
+      "bytes": 2927064,
+      "sha256": "32d79eaa3054ccd756dc10ccc82cf2e634e77973430b648d2194dcdf26049bd3"
+    },
+    {
+      "path": "images/interior/08-bedroom.png",
+      "bytes": 3147031,
+      "sha256": "40019d9076954a0c7b9ecc98dc8af18c30cf3f1fce689336ba9838d1ec9956a0"
+    },
+    {
+      "path": "images/interior/09-bathroom.png",
+      "bytes": 2793480,
+      "sha256": "6241a0671bc6b88eadaf54caad47d370b9d14ae7ad08cec193bfa5639a98d425"
+    },
+    {
+      "path": "images/interior/10-studio.png",
+      "bytes": 3336343,
+      "sha256": "c283a652f23fb04687b6b281d4a76a8963981d4f059dc1a3be24704faf2d7580"
+    },
+    {
+      "path": "images/interior/11-water-lounge.png",
+      "bytes": 3269424,
+      "sha256": "b1cc976201430be34736cbcc75810d8c7e9c714ae5b5faccf75bdffef26d88cb"
+    },
+    {
+      "path": "images/interior/12-bridge-east.png",
+      "bytes": 3455993,
+      "sha256": "e1c58c97eb25fe220580d0c96de1c5e9c16826c87830e3c16861bd97446d8827"
+    },
+    {
+      "path": "images/interior/13-stair-hall.png",
+      "bytes": 2587625,
+      "sha256": "6e96a3b815816f3b89de611ee057c28401eb00afe892dcba2e2cfea9e09be648"
+    },
+    {
+      "path": "images/interior/14-living-northeast.png",
+      "bytes": 3053871,
+      "sha256": "f442699c97af6e885fe639f1bf4066443e605af1165baf9b7399173aebd9529c"
+    },
+    {
+      "path": "images/interior/15-living-southeast.png",
+      "bytes": 2690929,
+      "sha256": "1d99269279b4b5a3776ccdf5570a6846e4a9a5bc32648b3c79d77ba89e3a6f37"
+    },
+    {
+      "path": "images/interior/16-kitchen-reverse.png",
+      "bytes": 2886496,
+      "sha256": "7bc0b0eb976598a057eee71642b7b6cd6116b964d05554fa0881cad6667cca18"
+    },
+    {
+      "path": "images/interior/17-bedroom-reverse.png",
+      "bytes": 2947014,
+      "sha256": "8a2b8a8d5702d29f0bfd17ca4b2ebaead541a13498063cc771e4d0e7b72b08a0"
+    },
+    {
+      "path": "images/interior/18-studio-reverse.png",
+      "bytes": 2881107,
+      "sha256": "b5a64d81d307b48454a232b3bfec26403cae74f029bf2f34c1ed141d04577226"
+    },
+    {
+      "path": "images/interior/19-lounge-reverse.png",
+      "bytes": 3168538,
+      "sha256": "feeeee97f84010c242f28963898457bfd9350adabf221c66d4a0f3499202834a"
+    },
+    {
+      "path": "images/interior/20-bathroom-reverse.png",
+      "bytes": 2880472,
+      "sha256": "03f0c3d083342ce618a2c00d535532c13fb0ceb765a9aa6fc6d5327dad127f28"
+    },
+    {
+      "path": "images/interior/21-bridge-west.png",
+      "bytes": 3424879,
+      "sha256": "4d6861cb7833ee0d2431cbfb162506363208e9b6c94cc71b3a98586bd887ce49"
+    },
+    {
+      "path": "index.html",
+      "bytes": 19730,
+      "sha256": "057657aea2a7c93df9a4ab619a63bebe6b34b85478b56722f0b0880154cebbe7"
+    },
+    {
+      "path": "plans/01-site.png",
+      "bytes": 176080,
+      "sha256": "ff5aebc31e7ec2cdd174923a08cce4508e543ebeef4e7904729ab8cd93168b92"
+    },
+    {
+      "path": "plans/01-site.svg",
+      "bytes": 13512,
+      "sha256": "79ceaba2479e9062f6017cbc46589567e86e439eb04bb1ece0de138052165d1e"
+    },
+    {
+      "path": "plans/02-lower-floor.png",
+      "bytes": 130912,
+      "sha256": "a2995ef7e9b0bceec3fff5a4725db99aa13a392c1b8c3509d23d23de5dabf91e"
+    },
+    {
+      "path": "plans/02-lower-floor.svg",
+      "bytes": 25227,
+      "sha256": "9ecd789ed6c290f282bea035799ca8c68ad081f7066ab7c6222c4e8ae234ea0d"
+    },
+    {
+      "path": "plans/03-upper-floor.png",
+      "bytes": 108606,
+      "sha256": "826a6cd9ddd72fc927a546371150cfe77f616ef2bf11db2fa925fc051b04e954"
+    },
+    {
+      "path": "plans/03-upper-floor.svg",
+      "bytes": 21866,
+      "sha256": "31e9b722ab1d12ae036020b4e733b691377c2cab9760145f3b842c3d5dfb9b6b"
+    },
+    {
+      "path": "plans/04-roof.png",
+      "bytes": 157013,
+      "sha256": "da55d164dec856e61ab18e4e366204c80c47c9922f349bb37646adf151a0f360"
+    },
+    {
+      "path": "plans/04-roof.svg",
+      "bytes": 33592,
+      "sha256": "0983ab88781d842e4a22c11f38ffa931982233a5e7891c556bdbdc7ab7ada654"
+    },
+    {
+      "path": "plans/05-ceiling-lower.png",
+      "bytes": 111079,
+      "sha256": "b7e55cc522872df833dd8bf05cc0e788aa13cf99abf5360a1b8468ed0356943b"
+    },
+    {
+      "path": "plans/05-ceiling-lower.svg",
+      "bytes": 32425,
+      "sha256": "1c1646757fb9ab178c3f73f40d099b058e26877df1caac8245f00ce3cc419a94"
+    },
+    {
+      "path": "plans/06-ceiling-upper.png",
+      "bytes": 111092,
+      "sha256": "bc2d64ca6bd7947e184ab1c04b8a6428dc655b5ecee54a25b9fe72e5c9ac1265"
+    },
+    {
+      "path": "plans/06-ceiling-upper.svg",
+      "bytes": 31592,
+      "sha256": "d857a96e71570fa97f5f9416ef79835de78469e2d11c431aba199eab7bed5109"
+    },
+    {
+      "path": "plans/07-sections.png",
+      "bytes": 121369,
+      "sha256": "5aa9461f8dba4d145e07b02e2ea7881e8573a6df26691781f4d52047212be838"
+    },
+    {
+      "path": "plans/07-sections.svg",
+      "bytes": 11245,
+      "sha256": "f1eba5dc11d84cdb01183163d28ec4b1bd43af24a8a43c18b9fae08ecce8eae8"
+    },
+    {
+      "path": "plans/08-elevations.png",
+      "bytes": 111184,
+      "sha256": "66410eb4f33dcf8f123fcca1c9fd72e7a9d1c56f0d9997860b864e483c19e818"
+    },
+    {
+      "path": "plans/08-elevations.svg",
+      "bytes": 13720,
+      "sha256": "a3000b19ca07e534d86f1e52fa95eacf871c9378b89ca8e458d5d5c94d276f8f"
+    },
+    {
+      "path": "prompts/generation.json",
+      "bytes": 65105,
+      "sha256": "68ef210cf97cef8d8d272babe13447e450133567a87fb480513b16d7adc7aae5"
+    },
+    {
+      "path": "references/gravity-garden.png",
+      "bytes": 4081710,
+      "sha256": "f0273efdf34abf806d6937be2047a3cacaad24563c4ad38ee526f3c281a72486"
+    },
+    {
+      "path": "references/tidal-fault.png",
+      "bytes": 3774790,
+      "sha256": "b80a64dcf8b76c8acc0bfe8631f50e18f96e0cdd51a6e8fa19393bd07bad23ce"
+    }
+  ]
+}
