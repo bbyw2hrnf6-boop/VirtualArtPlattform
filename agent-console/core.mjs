@@ -88,6 +88,19 @@ export function localClock(date, timeZone) {
   return { date: `${part("year")}-${part("month")}-${part("day")}`, time: `${part("hour")}:${part("minute")}` };
 }
 
+export function shouldStartScheduledDaily(state, now, timeZone, dailyTime, retryMs = 5 * 60_000) {
+  const clock = localClock(now, timeZone);
+  if (clock.time < dailyTime) return false;
+  if (state.daily.lastCompletedAt
+    && localClock(new Date(state.daily.lastCompletedAt), timeZone).date === clock.date) return false;
+  if (state.runs.some((run) => run.reason === "daily"
+    && ["queued", "running"].includes(run.status)
+    && localClock(new Date(run.createdAt || run.startedAt || now), timeZone).date === clock.date)) return false;
+  const lastAttempt = Date.parse(state.daily.lastAttemptAt || "");
+  return !Number.isFinite(lastAttempt) || now.getTime() - lastAttempt >= retryMs
+    || localClock(new Date(lastAttempt), timeZone).date !== clock.date;
+}
+
 export function dueAgents(config, reports, now = new Date()) {
   const current = localClock(now, config.settings.timeZone).date;
   return config.agents.filter((agent) => {

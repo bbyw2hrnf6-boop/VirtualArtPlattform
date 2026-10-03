@@ -14,6 +14,7 @@ import {
   pendingMasterInputs,
   recoverInterruptedState,
   runProgress,
+  shouldStartScheduledDaily,
   shouldQueueMaster,
   validateConfig,
   worktreeRootFromChange,
@@ -67,6 +68,22 @@ test("daily and weekly schedules use the configured local date", () => {
   assert.equal(due.includes("ux"), false);
   assert.equal(due.includes("product"), true);
   assert.equal(due.includes("market"), true);
+});
+
+test("scheduled daily retries failed launches and suppresses completed, active, and rapid retries", () => {
+  const now = new Date("2026-10-02T07:00:00Z");
+  const state = { daily: { lastLocalDate: "2026-10-02", lastCompletedAt: "2026-10-01T12:00:00Z" }, runs: [] };
+  assert.equal(shouldStartScheduledDaily(state, now, "Europe/Amsterdam", "09:00"), true);
+  state.daily.lastAttemptAt = "2026-10-02T06:59:00Z";
+  assert.equal(shouldStartScheduledDaily(state, now, "Europe/Amsterdam", "09:00"), false);
+  state.daily.lastAttemptAt = "2026-10-02T06:54:00Z";
+  assert.equal(shouldStartScheduledDaily(state, now, "Europe/Amsterdam", "09:00"), true);
+  state.runs.push({ reason: "daily", status: "queued", createdAt: now.toISOString() });
+  assert.equal(shouldStartScheduledDaily(state, now, "Europe/Amsterdam", "09:00"), false);
+  state.runs[0].status = "failed";
+  state.daily.lastCompletedAt = now.toISOString();
+  assert.equal(shouldStartScheduledDaily(state, now, "Europe/Amsterdam", "09:00"), false);
+  assert.equal(shouldStartScheduledDaily(state, new Date("2026-10-02T06:30:00Z"), "Europe/Amsterdam", "09:00"), false);
 });
 
 test("master prompt dates specialist reports instead of presenting old reports as new", () => {

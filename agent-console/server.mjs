@@ -2,7 +2,8 @@ import { spawn, execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, appendFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { dirname, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import {
   buildCodexArgs,
@@ -19,6 +20,7 @@ import {
   recoverInterruptedState,
   runProgress,
   selectDailyFocus,
+  shouldStartScheduledDaily,
   shouldQueueMaster,
   validateConfig,
   worktreeRootFromChange,
@@ -34,9 +36,15 @@ const configFile = join(directory, "config.json");
 const stateFile = join(artifacts, "state.json");
 const schemaFile = join(directory, "report.schema.json");
 const port = Number(process.env.AGENT_CONSOLE_PORT || 43821);
-const codexBin = process.env.CODEX_BIN ||
-  (existsSync("/Applications/ChatGPT.app/Contents/Resources/codex")
-    ? "/Applications/ChatGPT.app/Contents/Resources/codex" : "codex");
+const codexCandidates = [
+  "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+  "/Applications/ChatGPT.app/Contents/Resources/codex",
+  join(homedir(), ".local/bin/codex"),
+  "/opt/homebrew/bin/codex",
+  "/usr/local/bin/codex",
+  ...(process.env.PATH || "").split(delimiter).map((directory) => join(directory, "codex")),
+];
+const codexBin = process.env.CODEX_BIN || codexCandidates.find(existsSync) || "codex";
 
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("Ungültiger Port.");
 mkdirSync(runFiles, { recursive: true });
@@ -308,7 +316,7 @@ function runNext() {
               proposalId: state.proposals.find((proposal) =>
                 proposal.title.toLocaleLowerCase("de-DE").replace(/\s+/g, " ").trim()
                   === item.title.toLocaleLowerCase("de-DE").replace(/\s+/g, " ").trim())?.id || null }));
-            state.daily.lastCompletedAt = run.finishedAt;
+            if (run.reason === "daily") state.daily.lastCompletedAt = run.finishedAt;
             state.masterSync.lastInputs = run.sourceInputs;
             state.masterSync.lastCompletedSignature = run.sourceSignature;
             state.masterSync.lastCompletedAt = run.finishedAt;
@@ -348,7 +356,7 @@ function runNext() {
   }
 }
 
-function startDaily(full = false) {
+function startDaily(full = false, scheduled = false) {
   if (state.runs.some((run) => run.reason === "daily" && ["queued", "running"].includes(run.status))) {
     throw new Error("Ein Tageslauf ist bereits aktiv.");
   }
@@ -360,15 +368,16 @@ function startDaily(full = false) {
   const runs = specialists.map((agent) => makeAgentRun(agent, "daily"));
   runs.push(makeAgentRun(master, "daily"));
   state.daily.lastLocalDate = localClock(new Date(), config.settings.timeZone).date;
+  if (scheduled) state.daily.lastAttemptAt = nowIso();
   persist();
   return runs.map((run) => run.id);
 }
 
 function checkSchedule() {
   if (process.env.AGENT_CONSOLE_DISABLE_SCHEDULE === "1" || !config.settings.autoDaily) return;
-  const clock = localClock(new Date(), config.settings.timeZone);
-  if (clock.time >= config.settings.dailyTime && state.daily.lastLocalDate !== clock.date) {
-    try { startDaily(false); } catch (error) { console.error(`Tageslauf: ${error.message}`); }
+  const now = new Date();
+  if (shouldStartScheduledDaily(state, now, config.settings.timeZone, config.settings.dailyTime)) {
+    try { startDaily(false, true); } catch (error) { console.error(`Tageslauf: ${error.message}`); }
   }
 }
 
